@@ -1,0 +1,15 @@
+# Ignore node_modules của touring-fe
+touring-fe/node_modules/
+
+# Ignore build/dist
+touring-fe/dist/
+touring-fe/build/
+
+# Ignore file môi trường
+touring-fe/.env
+
+# IDE và OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
