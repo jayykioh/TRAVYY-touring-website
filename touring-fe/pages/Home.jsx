@@ -6,10 +6,11 @@ import MainLayout from '../layout/MainLayout'
 const Home = () => {
   return (
     <div>
-      <MainLayout />
-      <HeroSection />
-      <AboutSection />
-      <PromoSection />
+      <MainLayout>
+        <HeroSection />
+        <AboutSection />
+        <PromoSection />
+      </MainLayout>
     </div>
   )
 }
