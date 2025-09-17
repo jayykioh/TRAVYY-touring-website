@@ -130,61 +130,67 @@ const TourPromotions = () => {
           <h2 className="text-3xl font-bold text-gray-900 mb-8">Ưu đãi cho bạn</h2>
           
           <div className="relative">
-            <div className="flex space-x-6 overflow-hidden">
-              <div className="flex transition-transform duration-500 ease-in-out" style={{
-                transform: `translateX(-${currentPromoSlide * 33.33}%)`
-              }}>
-                {promotionalBanners.map((banner) => (
-                  <div
-                    key={banner.id}
-                    className="flex-shrink-0 w-1/3 min-w-[350px]"
-                  >
-                    <div className={`relative bg-gradient-to-r ${banner.bgColor} rounded-2xl overflow-hidden h-48 p-6 transform hover:scale-105 transition-all duration-300 cursor-pointer`}>
-                      <div className="absolute top-4 right-4 text-4xl opacity-80">
-                        {banner.icon}
-                      </div>
-                      
-                      <div className="h-full flex flex-col justify-between">
-                        <div>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <span className={`text-lg font-semibold ${banner.textColor}`}>
-                              {banner.title}
-                            </span>
-                            <span className={`text-4xl font-bold ${banner.textColor}`}>
-                              {banner.discount}
-                            </span>
-                          </div>
-                          <h3 className={`text-2xl font-bold ${banner.textColor} mb-1`}>
-                            {banner.subtitle}
-                          </h3>
-                          <p className={`${banner.textColor} opacity-90 text-sm`}>
-                            {banner.description}
-                          </p>
-                        </div>
-                        
-                        <button className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-6 py-2 rounded-full font-semibold transition-all duration-300 text-sm w-fit">
-                          {banner.buttonText}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+  <div className="overflow-hidden">
+    <div
+      className="flex gap-6 transition-transform duration-500 ease-in-out"
+      style={{
+        transform: `translateX(-${currentPromoSlide * (100 / 3 + 2)}%)`
+      }}
+    >
+      {promotionalBanners.map((banner) => (
+        <div
+          key={banner.id}
+          className="flex-shrink-0 w-1/3 min-w-[350px]"
+        >
+          <div
+            className={`relative bg-gradient-to-r ${banner.bgColor} rounded-2xl overflow-hidden h-48 p-6 transform hover:scale-105 transition-all duration-300 cursor-pointer`}
+          >
+            <div className="absolute top-4 right-4 text-4xl opacity-80">
+              {banner.icon}
             </div>
-          
-            <button
-              onClick={prevPromoSlide}
-              className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-4 bg-white shadow-lg rounded-full p-2 hover:shadow-xl transition-all duration-300"
-            >
-              <ChevronLeft className="w-6 h-6 text-gray-600" />
-            </button>
-            <button
-              onClick={nextPromoSlide}
-              className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-4 bg-white shadow-lg rounded-full p-2 hover:shadow-xl transition-all duration-300"
-            >
-              <ChevronRight className="w-6 h-6 text-gray-600" />
-            </button>
+
+            <div className="h-full flex flex-col justify-between">
+              <div>
+                <div className="flex items-center space-x-2 mb-2">
+                  <span className={`text-lg font-semibold ${banner.textColor}`}>
+                    {banner.title}
+                  </span>
+                  <span className={`text-4xl font-bold ${banner.textColor}`}>
+                    {banner.discount}
+                  </span>
+                </div>
+                <h3 className={`text-2xl font-bold ${banner.textColor} mb-1`}>
+                  {banner.subtitle}
+                </h3>
+                <p className={`${banner.textColor} opacity-90 text-sm`}>
+                  {banner.description}
+                </p>
+              </div>
+
+              <button className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-6 py-2 rounded-full font-semibold transition-all duration-300 text-sm w-fit active:scale-95">
+                {banner.buttonText}
+              </button>
+            </div>
           </div>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <button
+    onClick={prevPromoSlide}
+    className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-4 bg-white shadow-lg rounded-full p-2 hover:shadow-xl transition-all duration-300 active:scale-90"
+  >
+    <ChevronLeft className="w-6 h-6 text-gray-600" />
+  </button>
+  <button
+    onClick={nextPromoSlide}
+    className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-4 bg-white shadow-lg rounded-full p-2 hover:shadow-xl transition-all duration-300 active:scale-90"
+  >
+    <ChevronRight className="w-6 h-6 text-gray-600" />
+  </button>
+</div>
+
         </div>
 
 
@@ -292,6 +298,132 @@ const TourPromotions = () => {
             </div>
           </div>
         </div>
+
+        <div className="max-w-7xl mx-auto px-6 py-12">
+        {/* Title */}
+        <h2 className="text-3xl font-bold mb-8">Sáng tạo theo lối riêng</h2>
+
+        {/* Cards */}
+        <div className="grid md:grid-cols-2 gap-6">
+  {/* Card 1 */}
+  <div className="relative rounded-lg overflow-hidden shadow-lg group cursor-pointer">
+    {/* Background Image */}
+    <img
+      src="https://example.com/singapore.jpg"
+      alt="Staycation Singapore"
+      className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-500"
+    />
+    {/* Overlay Gradient */}
+    <div className="absolute inset-0 bg-gradient-to-t from-purple-700/70 to-transparent"></div>
+    {/* Content */}
+    <div className="absolute inset-0 flex flex-col justify-end p-6 text-white">
+      <h3 className="text-xl font-bold">Trải nghiệm độc đáo</h3>
+      <p className="mt-2 text-sm">
+        Khám phá những hoạt động chỉ có tại điểm đến, mang lại kỷ niệm khó quên
+        và cảm giác mới mẻ trong từng hành trình.
+      </p>
+      <button className="mt-4 bg-white text-gray-900 px-4 py-2 rounded self-start font-medium hover:bg-gray-200 transition active:scale-95">
+        Khám phá ngay
+      </button>
+    </div>
+  </div>
+
+  {/* Card 2 */}
+  <div className="relative rounded-lg overflow-hidden shadow-lg group cursor-pointer">
+    {/* Background Image */}
+    <img
+      src="https://example.com/dubai.jpg"
+      alt="Activities in Dubai"
+      className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-500"
+    />
+    {/* Overlay Gradient */}
+    <div className="absolute inset-0 bg-gradient-to-t from-orange-700/70 to-transparent"></div>
+    {/* Content */}
+    <div className="absolute inset-0 flex flex-col justify-end p-6 text-white">
+      <h3 className="text-xl font-bold">
+        Thiết kế tour theo phong cách của bạn
+      </h3>
+      <p className="mt-2 text-sm">
+        Tự do lựa chọn lịch trình, dịch vụ và trải nghiệm theo sở thích cá nhân
+        để chuyến đi thực sự mang dấu ấn riêng.
+      </p>
+      <button className="mt-4 bg-white text-gray-900 px-4 py-2 rounded self-start font-medium hover:bg-gray-200 transition active:scale-95">
+        Khám phá ngay
+      </button>
+    </div>
+  </div>
+</div>
+  
+      </div>
+      
+      <div className="max-w-7xl mx-auto px-6 py-12">
+  <h2 className="text-3xl font-bold mb-8">
+    Vì sao chọn chúng tôi
+  </h2>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+    {/* Card 1 */}
+    <div className="flex flex-col items-start text-left">
+      <img
+        src="/icons/possibilities.png"
+        alt="Discover"
+        className="w-12 h-12 mb-4"
+      />
+      <h3 className="text-lg font-semibold text-gray-900">
+        Tour hấp dẫn
+      </h3>
+      <p className="mt-2 text-gray-600 text-sm">
+        Hàng loạt tour du lịch đặc sắc, đa dạng điểm đến cho bạn lựa chọn và trải nghiệm trọn vẹn.
+      </p>
+    </div>
+
+    {/* Card 2 */}
+    <div className="flex flex-col items-start text-left">
+      <img
+        src="/icons/deals.png"
+        alt="Deals"
+        className="w-12 h-12 mb-4"
+      />
+      <h3 className="text-lg font-semibold text-gray-900">
+        Ưu đãi hấp dẫn
+      </h3>
+      <p className="mt-2 text-gray-600 text-sm">Tour chất lượng với giá hợp lý, nhiều khuyến mãi đặc biệt giúp bạn tiết kiệm chi phí.Hoạt động chất lượng, giá cả hợp lý. Thêm vào đó, bạn còn có thể tích điểm để tiết kiệm nhiều hơn.
+      </p>
+    </div>
+
+    {/* Card 3 */}
+    <div className="flex flex-col items-start text-left">
+      <img
+        src="/icons/explore.png"
+        alt="Explore"
+        className="w-12 h-12 mb-4"
+      />
+      <h3 className="text-lg font-semibold text-gray-900">
+        Lựa chọn chuyến đi theo ý bạn
+      </h3>
+      <p className="mt-2 text-gray-600 text-sm">
+        Tự do thiết kế lịch trình và chọn hoạt động phù hợp với sở thích của riêng bạn.
+      </p>
+    </div>
+
+    {/* Card 4 */}
+    <div className="flex flex-col items-start text-left">
+      <img
+        src="/icons/trust.png"
+        alt="Trust"
+        className="w-12 h-12 mb-4"
+      />
+      <h3 className="text-lg font-semibold text-gray-900">
+        Hành trình đáng tin cậy
+      </h3>
+      <p className="mt-2 text-gray-600 text-sm">
+        Đánh giá minh bạch, dịch vụ hỗ trợ nhanh chóng. Chúng tôi đồng hành cùng bạn trên mọi chuyến đi.
+      </p>
+    </div>
+  </div>
+</div>
+
+
 
       </div>
     </section>
