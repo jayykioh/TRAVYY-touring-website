@@ -3,9 +3,9 @@ import { ChevronLeft, ChevronRight, MapPin, Star, Clock, Users, Search, Calendar
 
 const TourHeroSection = () => {
   const [activeSlide, setActiveSlide] = useState(0);
-  const [searchDestination, setSearchDestination] = useState('');
-  const [searchDates, setSearchDates] = useState('');
-  const [searchGuests, setSearchGuests] = useState('2');
+  // const [searchDestination, setSearchDestination] = useState('');
+  // const [searchDates, setSearchDates] = useState('');
+  // const [searchGuests, setSearchGuests] = useState('2');
 
   const heroSlides = [
     {
@@ -122,7 +122,7 @@ const TourHeroSection = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             
             {/* Left Content */}
-            <div className="text-white space-y-6">
+            <div className="text-white space-y-6  pl-10">
               <div className="flex items-center space-x-2 text-orange-400">
                 <MapPin className="w-4 h-4" />
                 <span className="text-sm font-medium tracking-wide">
@@ -164,9 +164,9 @@ const TourHeroSection = () => {
                 </button>
               </div>
             </div>
-
+        
             {/* Right Content - Search Widget */}
-            <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 shadow-2xl">
+            {/* <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 shadow-2xl">
               <h3 className="text-2xl font-bold text-white mb-6">Plan Your Adventure</h3>
               
               <div className="space-y-4">
@@ -234,7 +234,7 @@ const TourHeroSection = () => {
                   </p>
                 </div>
               </div>
-            </div>
+            </div> */}
 
           </div>
         </div>
@@ -258,7 +258,7 @@ const TourHeroSection = () => {
       </div>
 
       {/* Floating Stats */}
-      <div className="absolute bottom-8 right-8 z-20 hidden lg:block">
+      <div className="absolute bottom-25 right-30 z-20 hidden lg:block">
         <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-3">
           <div className="text-white text-sm">
             <div className="font-semibold">4.8★ Average Rating</div>
