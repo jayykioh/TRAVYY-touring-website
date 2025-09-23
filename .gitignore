@@ -8,6 +8,16 @@ touring-fe/build/
 # Ignore file môi trường
 touring-fe/.env
 
+# Ignore node_modules của touring-be
+touring-be/node_modules/
+
+# Ignore build/dist
+touring-be/dist/
+touring-be/build/
+
+# Ignore file môi trường
+touring-be/.env
+
 # IDE và OS files
 .vscode/
 .idea/
