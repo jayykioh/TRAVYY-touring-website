@@ -323,7 +323,12 @@ export default function Header() {
           <div className="flex items-center justify-end gap-2 sm:gap-3">
             <button className="hidden sm:inline-flex items-center gap-1.5 text-gray-700 hover:text-blue-600 font-medium">
               <User className="w-5 h-5" />
-              <span className="text-sm">Login/Sign Up</span>
+              <Link to="/login" className="text-sm hover:underline">
+    Login
+  </Link>
+  <Link to="/register" className="text-sm hover:underline">
+    Register
+  </Link>
             </button>
 
             <Link
@@ -402,7 +407,7 @@ export default function Header() {
 
               <button className="inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2 text-sm mt-2">
                 <User className="w-4 h-4" />
-                Login / Sign Up
+                Login / Register
               </button>
             </nav>
           </div>
