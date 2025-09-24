@@ -216,7 +216,6 @@ const TourPromotions = () => {
           <div className="grid md:grid-cols-2 gap-6">
             {/* Card 1 */}
 
-
             <Link to={"/experiences"} className="relative rounded-lg overflow-hidden shadow-lg group cursor-pointer transform hover:scale-105 transition-all duration-500">
               <img
                 src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1170&auto=format&fit=crop"
