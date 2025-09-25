@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Globe, User, Menu, X, Search } from "lucide-react";
+import SearchBar from "./SearchBar";
 
 import {
   NavigationMenu,
@@ -145,6 +146,10 @@ export default function Header() {
     setIsMenuOpen(false);
   };
 
+  const handleSearchBarSearch = (query) => {
+    navigate(`/search?q=${encodeURIComponent(query)}`);
+  };
+
   return (
     <header
       className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -185,9 +190,16 @@ export default function Header() {
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                         {provinces.map((region) => (
                           <div key={region.region} className="space-y-1.5">
-                            <h4 className="text-xs font-medium text-gray-600 px-1 uppercase tracking-wide">
+                            {/* <h4 className="text-xs font-medium text-gray-600 px-1 uppercase tracking-wide">
                               {region.region}
-                            </h4>
+                            </h4> */}
+                            <Link
+      to={`/destinations/region/${region.regionSlug}`}
+      className="block text-xs font-medium text-gray-600 px-1 uppercase tracking-wide hover:text-gray-900 transition-colors"
+    >
+      {region.region}
+    </Link>
+
 
                             <ul className="space-y-0.5">
                               {region.items.map((p) => (
@@ -294,29 +306,10 @@ export default function Header() {
               </NavigationMenuList>
             </NavigationMenu>
 
-            <form
-              onSubmit={onSubmitSearch}
-              className="ml-4 flex-1 max-w-md lg:max-w-xs"
-            >
-              <div className="relative">
-                <input
-                  type="search"
-                  placeholder="Tìm tour, địa điểm..."
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  className="w-full rounded-full border border-gray-300 bg-white/80 px-4 py-2 pr-9 text-sm outline-none transition focus:ring-2 focus:ring-blue-500"
-                  aria-label="Search tours"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1"
-                  aria-label="Submit search"
-                  title="Tìm kiếm"
-                >
-                  <Search className="h-4 w-4 text-gray-500" />
-                </button>
-              </div>
-            </form>
+            {/* Search Bar */}
+            <div className="w-1/2">
+        <SearchBar />
+      </div>
           </div>
 
           {/* Actions + Mobile toggle */}
