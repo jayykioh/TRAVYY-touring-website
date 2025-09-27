@@ -16,7 +16,7 @@ export default function DestinationPage() {
 
   return (
     <div className="flex flex-col">
-        <MainLayout>
+        <>
 
         
   <div className="relative h-64 md:h-80 overflow-hidden">
@@ -81,7 +81,7 @@ export default function DestinationPage() {
         {/* FAQ */}
         {post.faq?.length > 0 && <FAQ items={post.faq} />}
       </main>
-       </MainLayout>
+       </>
     </div>
 
   );
