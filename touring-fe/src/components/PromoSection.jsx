@@ -1,59 +1,15 @@
 import React, { useState } from "react";
 import {
   ChevronRight,
-  Star,
-  Clock,
-  MapPin,
-  Users,
-  Calendar,
-  Percent,
-  Gift,
-  CreditCard,
   ChevronLeft,
   Heart,
 } from "lucide-react";
 import TourCard from "./TourCard";
 import { Link } from "react-router-dom";
-const TourPromotions = () => {
-  const [currentPromoSlide, setCurrentPromoSlide] = useState(0);
-  const [currentTourSlide, setCurrentTourSlide] = useState(0);
-  const [favorites, setFavorites] = useState(new Set([2, 4])); 
 
-  const promotionalBanners = [
-    {
-      id: 1,
-      title: "MỚI GIẢM",
-      discount: "50%",
-      subtitle: "SĂN DEAL SIÊU HOT",
-      description: "Tháng cuối năm",
-      buttonText: "Săn Deal ngay",
-      bgColor: "from-orange-500 to-pink-500",
-      textColor: "text-white",
-      icon: "🔥",
-    },
-    {
-      id: 2,
-      title: "Giảm tối đa",
-      discount: "8%",
-      subtitle: "mọi đơn hàng",
-      description: "Khi thanh toán bằng VISA",
-      buttonText: "Săn mã ngay!",
-      bgColor: "from-blue-600 to-blue-800",
-      textColor: "text-white",
-      icon: "💳",
-    },
-    {
-      id: 3,
-      title: "Ưu đại được yêu thích",
-      discount: "12%",
-      subtitle: "Khách sạn và Trải nghiệm",
-      description: "Giảm từ 10% trở lên",
-      buttonText: "Khám phá ngay",
-      bgColor: "from-purple-500 to-indigo-600",
-      textColor: "text-white",
-      icon: "🎁",
-    },
-  ];
+const TourPromotions = () => {
+  const [currentTourSlide, setCurrentTourSlide] = useState(0);
+  const [favorites, setFavorites] = useState(new Set([2, 4]));
 
   const featuredTours = [
     {
@@ -126,24 +82,9 @@ const TourPromotions = () => {
   const handleFavoriteToggle = (tourId) => {
     setFavorites((prev) => {
       const newFavorites = new Set(prev);
-      if (newFavorites.has(tourId)) {
-        newFavorites.delete(tourId);
-      } else {
-        newFavorites.add(tourId);
-      }
+      newFavorites.has(tourId) ? newFavorites.delete(tourId) : newFavorites.add(tourId);
       return newFavorites;
     });
-  };
-
-  const nextPromoSlide = () => {
-    setCurrentPromoSlide((prev) => (prev + 1) % promotionalBanners.length);
-  };
-
-  const prevPromoSlide = () => {
-    setCurrentPromoSlide(
-      (prev) =>
-        (prev - 1 + promotionalBanners.length) % promotionalBanners.length
-    );
   };
 
   const nextTourSlide = () => {
@@ -182,7 +123,7 @@ const TourPromotions = () => {
 
           <div className="relative overflow-hidden">
             <div
-              className="flex space-x-4 transition-transform duration-500 ease-in-out"
+              className="flex gap-x-4 transition-transform duration-500 ease-in-out"
               style={{ transform: `translateX(-${currentTourSlide * 33.33}%)` }}
             >
               {featuredTours.map((tour) => (
@@ -212,11 +153,11 @@ const TourPromotions = () => {
         {/* Creative sections */}
         <div className="max-w-7xl mx-auto px-6 py-12">
           <h2 className="text-3xl font-bold mb-8">Sáng tạo theo lối riêng</h2>
-
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Card 1 */}
-
-            <Link to={"/experiences"} className="relative rounded-lg overflow-hidden shadow-lg group cursor-pointer transform hover:scale-105 transition-all duration-500">
+            <Link
+              to={"/experiences"}
+              className="relative rounded-lg overflow-hidden shadow-lg group cursor-pointer transform hover:scale-105 transition-all duration-500"
+            >
               <img
                 src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1170&auto=format&fit=crop"
                 alt="Trải nghiệm độc đáo"
@@ -235,8 +176,10 @@ const TourPromotions = () => {
               </div>
             </Link>
 
-
-            <Link to={"/customTour"} className="relative rounded-lg overflow-hidden shadow-lg group cursor-pointer transform hover:scale-105 transition-all duration-500">
+            <Link
+              to={"/customTour"}
+              className="relative rounded-lg overflow-hidden shadow-lg group cursor-pointer transform hover:scale-105 transition-all duration-500"
+            >
               <img
                 src="https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=1170&auto=format&fit=crop"
                 alt="Thiết kế tour theo phong cách"
