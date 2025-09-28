@@ -46,6 +46,7 @@ passport.use(
             googleId: profile.id,
             name: profile.displayName,
             email: profile.emails[0].value,
+            role: null, // Mặc định không có vai trò  
           });
           await user.save();
         }
@@ -61,42 +62,45 @@ passport.use(
 // =========================
 // Facebook Strategy
 // =========================
-passport.use(
-  new FacebookStrategy(
-    {
-      clientID: process.env.FACEBOOK_APP_ID,
-      clientSecret: process.env.FACEBOOK_APP_SECRET,
-      callbackURL: process.env.FACEBOOK_CALLBACK_URL,
-      profileFields: ["id", "displayName", "emails"],
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        let user = await User.findOne({ facebookId: profile.id });
+// passport.use(
+//   new FacebookStrategy(
+//     {
+//       clientID: process.env.FACEBOOK_APP_ID,
+//       clientSecret: process.env.FACEBOOK_APP_SECRET,
+//       callbackURL: process.env.FACEBOOK_CALLBACK_URL,
+//       profileFields: ["id", "displayName", "emails"],
+//     },
+//     async (accessToken, refreshToken, profile, done) => {
+//       try {
+//         let user = await User.findOne({ facebookId: profile.id });
 
-        if (!user) {
-          user = new User({
-            facebookId: profile.id,
-            name: profile.displayName,
-            email: profile.emails?.[0]?.value || "",
-          });
-          await user.save();
-        }
+//         if (!user) {
+//           user = new User({
+//             facebookId: profile.id,
+//             name: profile.displayName,
+//             email: profile.emails?.[0]?.value || "",
+//           });
+//           await user.save();
+//         }
 
-        return done(null, user);
-      } catch (err) {
-        return done(err, false);
-      }
-    }
-  )
-);
+//         return done(null, user);
+//       } catch (err) {
+//         return done(err, false);
+//       }
+//     }
+//   )
+// );
 
 // =========================
 // Serialize & Deserialize
 // =========================
 passport.serializeUser((user, done) => {
-  done(null, user.id); // chỉ lưu id vào session
+  done(null, user.id); // chỉ lưu id vào session, để session phân biệt
 });
 
+// Khi có request, passport sẽ lấy id từ session và tìm user trong DB
+// rồi gắn vào req.user
+// (nếu không tìm thấy user, req.user = null) 
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await User.findById(id);

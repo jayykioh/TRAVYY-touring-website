@@ -80,7 +80,7 @@ const TourHeroSection = () => {
       setActiveSlide((prev) => (prev + 1) % heroSlides.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, []);
+  }, [heroSlides.length]);
 
   useEffect(() => {
     const next = (activeSlide + 1) % heroSlides.length;

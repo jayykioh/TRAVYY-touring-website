@@ -23,7 +23,7 @@ function Register() {
       await axios.post("http://localhost:5000/api/auth/phone/send-otp", { phone: form.phone });
       alert("OTP sent!");
     } catch (err) {
-      alert("Send OTP failed");
+      alert("Send OTP failed",err);
     }
   };
 
@@ -36,7 +36,7 @@ function Register() {
       });
       alert("Phone verified! Token: " + res.data.token);
     } catch (err) {
-      alert("OTP verify failed");
+      alert("OTP verify failed",err);
     }
   };
 
