@@ -1,15 +1,12 @@
 import { Outlet, NavLink } from "react-router-dom";
 import { useAuth } from "../auth/context";
-import MainLayout from "@/layout/MainLayout";
 export default function ProfileLayout() {
   const { user } = useAuth();
 
   return (
-    <MainLayout> 
     <div className="min-h-[calc(100vh-64px)] bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
-          {/* SIDEBAR */}
           <aside className="space-y-4">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
               <div className="flex items-center gap-4">
@@ -62,6 +59,5 @@ export default function ProfileLayout() {
         </div>
       </div>
     </div>
-    </MainLayout>
   );
 }

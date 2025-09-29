@@ -1,30 +1,31 @@
 import { useState } from "react";
 import { useAuth } from "../auth/context";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function RolePopup() {
-  const { user, setUser } = useAuth();
+  const { user, setUser, withAuth } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
   if (!user || user.role !== null) return null;
 
   async function chooseRole(role) {
+    if (loading) return;
     try {
       setLoading(true);
-      const res = await fetch("/api/auth/set-role", {
+      const res = await withAuth("/api/auth/set-role", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ role }),
+        body: JSON.stringify({ role }), // "Traveler" | "TourGuide" | "TravelAgency"
       });
-      if (!res.ok) throw new Error("Failed to set role");
-      const updatedUser = await res.json();
 
-      setUser(updatedUser); // update context
-      navigate("/profile"); // chuyển sang trang profile
+      setUser(res.user);
+      toast.success("Role set successfully");
+      navigate("/profile", { replace: true });
     } catch (err) {
-      alert(err.message);
+      const msg = err?.body?.error || err?.body?.message || err.message || "Set role failed";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

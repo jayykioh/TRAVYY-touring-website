@@ -4,7 +4,6 @@ const bcrypt = require("bcrypt");
 const locationSchema = new mongoose.Schema({
   provinceId: String,
   provinceName: String,
-  districtId: String,
   wardId: String,
   wardName: String,
   addressLine: String  // số nhà, tên đường (optional)
@@ -15,6 +14,7 @@ const userSchema = new mongoose.Schema({
   password: String,
   phone: { type: String, unique: true, sparse: true },
   phoneVerified: { type: Boolean, default: false },
+  username: String,
   name: String,
   googleId: String,
   facebookId: String,

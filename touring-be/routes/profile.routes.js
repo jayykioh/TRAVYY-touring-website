@@ -1,9 +1,9 @@
-// routes/profile.routes.js
 const router = require("express").Router();
-const authRequired = require("../middlewares/authRequired");
-const { updateProfile } = require("../controller/profile.controller");
+const authJwt = require("../middlewares/authJwt");  
+const { updateProfile, getProfile } = require("../controller/profile.controller");
 
-router.patch("/", authRequired, updateProfile);
-router.post("/", authRequired, updateProfile);
+router.get("/", authJwt, getProfile);
+
+router.patch("/", authJwt, updateProfile);
 
 module.exports = router;

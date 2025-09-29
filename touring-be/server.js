@@ -10,6 +10,8 @@ const compression = require("compression");
 const morgan = require("morgan");
 const profileRoutes = require("./routes/profile.routes");
 const authRoutes = require("./routes/auth.routes");
+const cookieParser = require("cookie-parser");
+
 
 const vnAddrRoutes = require("./middlewares/vnAddress.routes");
 require("./middlewares/passport");
@@ -23,18 +25,15 @@ app.use(helmet());
 app.use(compression());
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan(isProd ? "combined" : "dev"));
+app.use(cookieParser());
 
 // --- CORS: chỉ bật ở DEV (FE chạy http://localhost:5173) ---
-if (!isProd) {
-  app.use(
-    cors({
-      origin: "http://localhost:5173",
-      credentials: true,
-      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-    })
-  );
-}
+ app.use(cors({
+ origin: isProd ? process.env.CLIENT_ORIGIN : "http://localhost:5173",
+  credentials: true,
+ methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+ }));
 
 // Nếu chạy sau reverse proxy (Nginx/Traefik) thì bật (đặc biệt khi dùng cookie secure)
 if (isProd) {

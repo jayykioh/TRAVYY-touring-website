@@ -1,4 +1,3 @@
-
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./auth/context";
 
@@ -6,7 +5,6 @@ import MainLayout from "./layout/MainLayout";
 import Home from "./pages/Home";
 import MainHome from "./pages/MainHome";
 import DestinationPage from "./pages/Blogs";
-import SearchResults from "./pages/SearchResults";
 import DiscountCodesPage from "./pages/DiscountCodesPage"; // Import trang mã giảm giá
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -15,6 +13,7 @@ import ProfileInfo from "./components/ProfileInfo";
 import ProfileOrders from "./components/ProfileOrders";
 import ProfileReviews from "./components/ProfileReviews";
 import RolePopup from "./components/RolePopup";
+import OAuthCallback from "./pages/OAuthCallback";
 
 // Route guard
 function ProtectedRoute({ children }) {
@@ -37,9 +36,23 @@ export default function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/destinations/:slug" element={<DestinationPage />} />
-          <Route path="/search" element={<SearchResults />} />
           <Route path="/home" element={<MainHome />} />
           <Route path="/discount-codes" element={<DiscountCodesPage />} />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfileLayout />
+              </ProtectedRoute>
+            }
+          >
+            {/* 👇 Nếu chỉ vào /profile thì redirect sang /profile/info */}
+            <Route index element={<Navigate to="info" replace />} />
+            <Route path="info" element={<ProfileInfo />} />
+            <Route path="orders" element={<ProfileOrders />} />
+            <Route path="reviews" element={<ProfileReviews />} />
+          </Route>
         </Route>
 
         {/* Auth routes */}
@@ -47,21 +60,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
 
         {/* Profile routes (protected) */}
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <ProfileLayout />
-            </ProtectedRoute>
-          }
-        >
-          {/* 👇 Nếu chỉ vào /profile thì redirect sang /profile/info */}
-          <Route index element={<Navigate to="info" replace />} />
-          <Route path="info" element={<ProfileInfo />} />
-          <Route path="orders" element={<ProfileOrders />} />
-          <Route path="reviews" element={<ProfileReviews />} />
-        </Route>
-
+        <Route path="/oauth/callback" element={<OAuthCallback/>}></Route>
         {/* 404 fallback */}
         <Route path="*" element={<div className="p-6">404</div>} />
       </Routes>
@@ -71,4 +70,3 @@ export default function App() {
     </>
   );
 }
-

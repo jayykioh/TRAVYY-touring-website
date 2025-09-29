@@ -1,107 +1,130 @@
+// routes/auth.routes.js
 const router = require("express").Router();
 const passport = require("passport");
-const {
-  register,
-  login,
-  phoneOtpSend,
-  phoneOtpVerify,
-} = require("../controller/auth.controller");
+const { signAccess, signRefresh, verifyRefresh, newId } = require("../utils/jwt");
+const authJwt = require("../middlewares/authJwt");
+const User = require("../models/User");
+const { register, login } = require("../controller/auth.controller");
 
-// =========================
-// Email Register / Login
-// =========================
+const isProd = process.env.NODE_ENV === "production";
+
+/* =========================
+   Email Register / Login
+   ========================= */
 router.post("/register", register);
 router.post("/login", login);
 
-// =========================
-// Google Login
-// =========================
+/* =========================
+   Google Login (Hybrid JWT)
+   ========================= */
 router.get(
   "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
+  passport.authenticate("google", { scope: ["profile", "email"], session: false })
 );
 
 router.get(
   "/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: "http://localhost:5173/login",
-  }),
-  (req, res) => {
-    // Sau khi login thành công, redirect về FE
-    res.redirect("http://localhost:5173/");
+  passport.authenticate("google", { session: false, failureRedirect: "http://localhost:5173/login" }),
+  async (req, res) => {
+    try {
+      // user đã được tạo / upsert trong passport strategy
+      const user = req.user; // mongoose doc hoặc plain object
+      const jti = newId();
+
+      // (access token không cần trả ở redirect; FE sẽ gọi /refresh)
+      const refreshToken = signRefresh({ jti, userId: user.id });
+
+      // Set refresh cookie theo môi trường
+      res.cookie("refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: isProd,                    // dev: false, prod: true (HTTPS)
+        sameSite: isProd ? "none" : "lax", // dev: 'lax'
+        path: "/api/auth",
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 ngày
+      });
+
+      // Redirect sạch -> FE gọi POST /api/auth/refresh để lấy access
+      return res.redirect("http://localhost:5173/oauth/callback");
+    } catch (e) {
+      console.error("google/callback error:", e);
+      return res.status(500).json({ message: "OAuth callback error" });
+    }
   }
 );
 
-router.post("/set-role", async (req, res) => {
-  if (!req.user) return res.status(401).json({ error: "Unauthenticated" });
+/* =========================
+   Refresh -> Access token
+   ========================= */
+router.post("/refresh", async (req, res) => {
+  const t = req.cookies?.refresh_token;
+  if (!t) return res.status(401).json({ message: "Missing refresh" });
 
+  try {
+    const p = verifyRefresh(t); // { sub: userId, jti, iat, exp, ... }
+
+    // (khuyến nghị) Kiểm tra jti trong DB/Redis nếu có rotate/revoke
+    const user = await User.findById(p.sub).select("role");
+    if (!user) return res.status(401).json({ message: "Invalid refresh" });
+
+    const access = signAccess({ id: p.sub, role: user.role || "Traveler" });
+    return res.json({ accessToken: access });
+  } catch {
+    return res.status(401).json({ message: "Invalid refresh" });
+  }
+});
+
+/* =========================
+   Me (trả FULL user để FE hiển thị Profile)
+   ========================= */
+router.get("/me", authJwt, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.sub).select("-password");
+    if (!user) return res.status(404).json({ message: "Not found" });
+    res.set("Cache-Control", "no-store");
+    return res.json(user);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+   Set role (JWT guard)
+   ========================= */
+router.post("/set-role", authJwt, async (req, res) => {
   const { role } = req.body;
-  if (!["Traveler", "TourGuide", "TravelAgency"].includes(role)) {
+  const allowed = ["Traveler", "TourGuide", "TravelAgency"];
+  if (!allowed.includes(role)) {
     return res.status(400).json({ error: "Invalid role" });
   }
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user.sub,
+      { $set: { role } },
+      { new: true, runValidators: true }
+    ).select("-password");
 
-  req.user.role = role;
-  await req.user.save();
-  res.json({ message: "Role set successfully", user: req.user });
-});
-
-// =========================
-// Facebook Login
-// =========================
-// router.get(
-//   "/facebook",
-//   passport.authenticate("facebook", { scope: ["email"] })
-// );
-
-// router.get(
-//   "/facebook/callback",
-//   passport.authenticate("facebook", {
-//     failureRedirect: "http://localhost:5173/login",
-//   }),
-//   (req, res) => {
-//     res.redirect("http://localhost:5173/");
-//   }
-// );
-
-// =========================
-// Phone Login (OTP)
-// =========================
-// router.post("/phone/send-otp", phoneOtpSend);
-// router.post("/phone/verify-otp", phoneOtpVerify);
-
-// Lấy user từ session (nếu có) và trả về cho FE
-// FE sẽ dùng API này để kiểm tra user đã login chưa
-router.get("/me", (req, res) => {
-  if (!req.user) return res.status(401).json({ error: "Unauthenticated" });
-  const u = req.user.toObject ? req.user.toObject() : req.user;
-  delete u.password;
-  return res.json(u); // có phone, location.*
-});
-
-router.post("/logout", (req, res, next) => {
-  console.log("HIT /api/auth/logout", {
-    sid: req.sessionID,
-    hasUser: !!req.user,
-    hasSession: !!req.session,
-  });
-
-  // ❗ Không có session: không gọi req.logout, chỉ xoá cookie
-  if (!req.session) {
-    res.clearCookie("sid", { path: "/" });
-    return res.status(200).json({ ok: true, note: "no session" });
+    if (!user) return res.status(404).json({ message: "Not found" });
+    return res.json({ message: "Role set successfully", user });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: "Server error" });
   }
-
-  // ❗ Passport v0.6+: dùng keepSessionInfo để Passport KHÔNG gọi session.regenerate
-  req.logout({ keepSessionInfo: true }, (err) => {
-    if (err) return next(err);
-
-    req.session.destroy((e) => {
-      if (e) console.error("session.destroy error:", e);
-      res.clearCookie("sid", { path: "/" }); // tên cookie của bạn là 'sid'
-      return res.status(200).json({ ok: true });
-    });
-  });
 });
 
+router.post("/logout", async (req, res) => {
+  try {
+    res.clearCookie("refresh_token", {
+      httpOnly: true,
+      secure: isProd,                    // prod: true (HTTPS)
+      sameSite: isProd ? "none" : "lax", // trùng với lúc set
+      path: "/api/auth",
+    });
+    return res.status(200).json({ ok: true, message: "Logged out" });
+  } catch (e) {
+    console.error("logout error:", e);
+    return res.status(200).json({ ok: true }); 
+  }
+});
 
 module.exports = router;

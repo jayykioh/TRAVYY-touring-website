@@ -1,195 +1,199 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../auth/context";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 
-/* ---- fetch helpers ---- */
+/* ========== Utilities ========== */
 async function apiFetch(path, opts = {}) {
   const r = await fetch(path, {
     credentials: "include",
     headers: { Accept: "application/json", ...(opts.headers || {}) },
     ...opts,
   });
-  if (!r.ok) {
-    const msg =
-      (
-        await r
-          .clone()
-          .json()
-          .catch(() => null)
-      )?.message ||
-      (await r.text().catch(() => "")) ||
-      `HTTP ${r.status}`;
-    throw new Error(msg);
-  }
   const ct = r.headers.get("content-type") || "";
-  return ct.includes("application/json") ? r.json() : null;
+  const body = ct.includes("application/json") ? await r.json().catch(() => null) : null;
+  if (!r.ok) {
+    const err = new Error(`HTTP ${r.status}`);
+    err.status = r.status;
+    err.body = body;
+    throw err;
+  }
+  return body;
 }
-const apiGet = (p, opts) => apiFetch(p, { method: "GET", ...opts });
+const apiGet = (path, opts) => apiFetch(path, { method: "GET", ...opts });
 
+const validatePhoneNumber = (phone) => {
+  if (!phone) return "";
+  const phoneRegex = /^(03|05|07|08|09)\d{8}$/;
+  return phoneRegex.test(phone) ? "" : "Invalid phone number format (e.g: 09xxxxxxxx, 03xxxxxxxx...)";
+};
+const validateUsername = (u) => {
+  if (!u) return ""; // optional
+  return /^[a-z0-9_]{3,20}$/i.test(u) ? "" : "3–20 ký tự; chỉ chữ, số, dấu gạch dưới (_).";
+};
+
+function usePrevious(value) {
+  const ref = useRef(value);
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref.current;
+}
+
+/* ========== Component ========== */
 export default function ProfileInfo() {
-  const { user, setUser } = useAuth();
+  const { user, setUser, withAuth } = useAuth();
 
-  const [name, setName] = useState(user?.name || "");
-  const [phone, setPhone] = useState(user?.phone || "");
-  const [provinceId, setProvinceId] = useState(
-    user?.location?.provinceId || ""
-  );
-  const [wardId, setWardId] = useState(user?.location?.wardId || "");
-  const [addressLine, setAddressLine] = useState(
-    user?.location?.addressLine || ""
-  );
+  const phoneInputRef = useRef(null);
+  const usernameInputRef = useRef(null);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    name: "",
+    username: "",
+    phone: "",
+    provinceId: "",
+    wardId: "",
+    addressLine: "",
+  });
   const [phoneError, setPhoneError] = useState("");
-  // options
+  const [usernameError, setUsernameError] = useState("");
   const [provinces, setProvinces] = useState([]);
   const [wards, setWards] = useState([]);
-
-  // loading
   const [saving, setSaving] = useState(false);
 
-  // flag để tránh reset khi re-sync từ user (ví dụ sau khi save)
-  const skipResetOnProvince = useRef(false);
+  // Baseline from user (for dirty check)
+  const baseline = useMemo(
+    () => ({
+      name: user?.name ?? "",
+      username: user?.username ?? "",
+      phone: user?.phone ?? "",
+      provinceId: String(user?.location?.provinceId ?? ""),
+      wardId: String(user?.location?.wardId ?? ""),
+      addressLine: user?.location?.addressLine ?? "",
+    }),
+    [user]
+  );
 
-  // baseline để detect dirty - moved inside component to always get fresh user data
-  const getBaseline = () => ({
-    name: user?.name || "",
-    phone: user?.phone || "",
-    location: {
-      provinceId: user?.location?.provinceId || "",
-      wardId: user?.location?.wardId || "",
-      addressLine: user?.location?.addressLine || "",
-    },
-  });
+  // Dirty check
+  const formDirty = useMemo(
+    () => Object.keys(baseline).some((k) => (formData[k] ?? "") !== baseline[k]),
+    [formData, baseline]
+  );
 
-  const formDirty = (() => {
-    const baseline = getBaseline();
-    return (
-      (name ?? "") !== baseline.name ||
-      (phone ?? "") !== baseline.phone ||
-      (provinceId ?? "") !== baseline.location.provinceId ||
-      (wardId ?? "") !== baseline.location.wardId ||
-      (addressLine ?? "") !== baseline.location.addressLine
-    );
-  })();
-
-  // re-sync khi user thay đổi (sau khi save)
+  // Hydrate form when user changes
   useEffect(() => {
-    if (user) {
-      skipResetOnProvince.current = true;
+    if (!user) return;
+    setFormData(baseline);
+  }, [baseline, user]);
 
-      setName(user.name || "");
-      setPhone(user.phone || "");
-      setProvinceId(user.location?.provinceId || "");
-      setWardId(user.location?.wardId || "");
-      setAddressLine(user.location?.addressLine || "");
-    }
-  }, [user]);
-
-  // load provinces
+  // Load provinces 1 time
   useEffect(() => {
     const ac = new AbortController();
     apiGet("/api/vn/provinces", { signal: ac.signal })
       .then(setProvinces)
-      .catch((error) => {
-        if (error.name !== 'AbortError') {
-          console.error('Failed to load provinces:', error);
-          toast.error('Failed to load provinces');
+      .catch((e) => {
+        if (e.name !== "AbortError") {
+          console.error("Failed to load provinces:", e);
+          toast.error("Failed to load provinces");
         }
       });
     return () => ac.abort();
   }, []);
 
-  // load wards khi province thay đổi
+  // Load wards when province changes; reset wardId only if user actually changed province
+  const prevProvinceId = usePrevious(formData.provinceId);
   useEffect(() => {
+    const prov = formData.provinceId;
+    if (!prov) {
+      setWards([]);
+      return;
+    }
     const ac = new AbortController();
 
-    if (!skipResetOnProvince.current) {
-      setWards([]);
-      setWardId("");
+    if (prevProvinceId && prevProvinceId !== prov) {
+      setFormData((fd) => ({ ...fd, wardId: "" }));
     }
 
-    if (provinceId) {
-      apiGet(`/api/vn/wards?province_id=${provinceId}`, { signal: ac.signal })
-        .then(setWards)
-        .catch((error) => {
-          if (error.name !== 'AbortError') {
-            console.error('Failed to load wards:', error);
-            toast.error('Failed to load wards');
-          }
-        });
-    }
+    apiGet(`/api/vn/wards?province_id=${prov}`, { signal: ac.signal })
+      .then((data) => setWards(Array.isArray(data) ? data : []))
+      .catch((e) => {
+        if (e.name !== "AbortError") {
+          console.error("Failed to load wards:", e);
+          toast.error("Failed to load wards");
+        }
+      });
 
-    skipResetOnProvince.current = false;
     return () => ac.abort();
-  }, [provinceId]);
+  }, [formData.provinceId, prevProvinceId]);
 
-  async function saveAll(e) {
-    e?.preventDefault();
-    
-    if (!name.trim()) {
-      toast.error("Name is required");
-      return;
-    }
-    
-    if (!provinceId || !wardId) {
-      toast.error("Please select Province and Ward");
-      return;
-    }
-    
-    // Validate phone if provided
-    if (phone && phoneError) {
-      toast.error("Please fix phone number format");
-      return;
-    }
-    
-    setSaving(true);
-    
-    try {
-      const updated = await toast.promise(
-        apiFetch("/api/profile/info", {
+  // Update form helper
+  const updateFormData = useCallback((updates) => {
+    setFormData((prev) => ({ ...prev, ...updates }));
+  }, []);
+
+  // Handle input changes
+  const handleInputChange = useCallback(
+    (field, value) => {
+      if (field === "phone") setPhoneError(validatePhoneNumber(value));
+      if (field === "username") setUsernameError(validateUsername(value));
+      updateFormData({ [field]: value });
+    },
+    [updateFormData]
+  );
+
+  // Save
+  const saveProfile = useCallback(
+    async (e) => {
+      e?.preventDefault();
+
+      const { name, username, phone, provinceId, wardId, addressLine } = formData;
+      if (!name.trim()) return toast.error("Name is required");
+      if (!provinceId || !wardId) return toast.error("Please select Province and Ward");
+      if (phone && phoneError) return toast.error("Please fix phone number format");
+      if (username && usernameError) return toast.error("Please fix username");
+
+      setSaving(true);
+      try {
+        await withAuth("/api/profile/info", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: name.trim(),
-            phone: (phone ?? "").trim(),
-            location: { 
-              provinceId, 
-              wardId, 
-              addressLine: (addressLine ?? "").trim() 
-            },
+            username: (username || "").trim().toLowerCase(),
+            phone: phone.trim(),
+            location: { provinceId, wardId, addressLine: addressLine.trim() },
           }),
-        }),
-        {
-          loading: "Saving profile...",
-          success: "Profile saved successfully!",
-          error: (error) => `Save failed: ${error.message}`,
+        });
+
+        const freshUser = await withAuth("/api/profile/info");
+        setUser(freshUser);
+        setPhoneError("");
+        setUsernameError("");
+        toast.success("Profile saved successfully!");
+      } catch (err) {
+        if (err?.status === 409 && err?.body?.error === "PHONE_TAKEN") {
+          setPhoneError(err.body.message || "Phone number already in use.");
+          phoneInputRef.current?.focus();
+          return;
         }
-      );
-
-      setUser(updated);
-    } catch (error) {
-      console.error('Save error:', error);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  // Phone validation function
-  const validatePhone = (phoneValue) => {
-    if (!phoneValue) {
-      setPhoneError("");
-      return;
-    }
-    
-    const phoneRegex = /^(03|05|07|08|09)\d{8}$/;
-    if (!phoneRegex.test(phoneValue)) {
-      setPhoneError(
-        "Invalid phone number format (e.g: 09xxxxxxxx, 03xxxxxxxx...)"
-      );
-    } else {
-      setPhoneError("");
-    }
-  };
+        if (err?.status === 409 && err?.body?.error === "USERNAME_TAKEN") {
+          setUsernameError(err.body.message || "Username already in use.");
+          usernameInputRef.current?.focus();
+          return;
+        }
+        if (err?.status === 400 && err?.body?.error === "VALIDATION_ERROR") {
+          toast.error(err.body.message || "Validation failed");
+          return;
+        }
+        console.error("Save error:", err);
+        toast.error(err?.body?.message || `Save failed (${err?.status || "ERR"})`);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [formData, phoneError, usernameError, withAuth, setUser]
+  );
 
   if (!user) return <div className="p-6">Loading...</div>;
 
@@ -203,55 +207,61 @@ export default function ProfileInfo() {
           </p>
         </div>
 
-        <form onSubmit={saveAll} className="p-6 space-y-6">
+        <form onSubmit={saveProfile} className="p-6 space-y-6">
           {/* Name */}
-          <Section title="Name">
+          <FormSection title="Name">
             <input
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={formData.name}
+              onChange={(e) => handleInputChange("name", e.target.value)}
               className="mt-1 w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none"
               required
             />
-          </Section>
+          </FormSection>
 
-          {/* Phone */}
-          <Section title="Phone">
+          {/* Username */}
+          <FormSection title="Username">
             <input
               type="text"
-              value={phone}
-              onChange={(e) => {
-                const val = e.target.value;
-                setPhone(val);
-                validatePhone(val);
-              }}
-              placeholder="Enter phone number"
+              ref={usernameInputRef}
+              value={formData.username}
+              onChange={(e) => handleInputChange("username", e.target.value.toLowerCase())}
+              placeholder="username (a-z, 0-9, _)"
               className={`mt-1 w-full px-4 py-2 rounded-lg border focus:ring-2 focus:outline-none ${
-                phoneError
-                  ? "border-red-500 focus:ring-red-500"
-                  : "focus:ring-blue-500"
+                usernameError ? "border-red-500 focus:ring-red-500" : "focus:ring-blue-500"
               }`}
             />
-            {phoneError && (
-              <p className="mt-1 text-sm text-red-600">{phoneError}</p>
-            )}
-          </Section>
+            {usernameError && <p className="mt-1 text-sm text-red-600">{usernameError}</p>}
+          </FormSection>
 
-          {/* Location (Province & Ward) */}
+          {/* Phone */}
+          <FormSection title="Phone">
+            <input
+              type="text"
+              ref={phoneInputRef}
+              value={formData.phone}
+              onChange={(e) => handleInputChange("phone", e.target.value)}
+              placeholder="Enter phone number"
+              className={`mt-1 w-full px-4 py-2 rounded-lg border focus:ring-2 focus:outline-none ${
+                phoneError ? "border-red-500 focus:ring-red-500" : "focus:ring-blue-500"
+              }`}
+            />
+            {phoneError && <p className="mt-1 text-sm text-red-600">{phoneError}</p>}
+          </FormSection>
+
+          {/* Location */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-600">
-                Province *
-              </label>
+              <label className="block text-sm font-medium text-gray-600">Province *</label>
               <select
-                value={provinceId}
-                onChange={(e) => setProvinceId(e.target.value)}
+                value={formData.provinceId}
+                onChange={(e) => handleInputChange("provinceId", e.target.value)}
                 className="mt-1 w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 required
               >
                 <option value="">-- Select Province --</option>
                 {provinces.map((p) => (
-                  <option key={p.id} value={p.id}>
+                  <option key={p.id} value={String(p.id)}>
                     {p.name}
                   </option>
                 ))}
@@ -259,19 +269,17 @@ export default function ProfileInfo() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-600">
-                Ward *
-              </label>
+              <label className="block text-sm font-medium text-gray-600">Ward *</label>
               <select
-                value={wardId}
-                onChange={(e) => setWardId(e.target.value)}
-                disabled={!provinceId || wards.length === 0}
+                value={formData.wardId}
+                onChange={(e) => handleInputChange("wardId", e.target.value)}
+                disabled={!formData.provinceId || wards.length === 0}
                 className="mt-1 w-full px-4 py-2 rounded-lg border disabled:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 required
               >
                 <option value="">-- Select Ward --</option>
                 {wards.map((w) => (
-                  <option key={w.id} value={w.id}>
+                  <option key={w.id} value={String(w.id)}>
                     {w.name}
                   </option>
                 ))}
@@ -280,44 +288,28 @@ export default function ProfileInfo() {
           </div>
 
           {/* Address line */}
-          <Section title="Address line (optional)">
+          <FormSection title="Address line (optional)">
             <input
               type="text"
-              value={addressLine}
-              onChange={(e) => setAddressLine(e.target.value)}
+              value={formData.addressLine}
+              onChange={(e) => handleInputChange("addressLine", e.target.value)}
               placeholder="House number, street..."
               className="mt-1 w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
-          </Section>
+          </FormSection>
 
-          {/* Email & Role (read-only) */}
+          {/* Read-only fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-600">Email</label>
-              <input
-                type="text"
-                value={user.email || ""}
-                disabled
-                className="mt-1 w-full px-4 py-2 rounded-lg border bg-gray-100 text-gray-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-600">Role</label>
-              <input
-                type="text"
-                value={user.role || ""}
-                disabled
-                className="mt-1 w-full px-4 py-2 rounded-lg border bg-gray-100 text-gray-600"
-              />
-            </div>
+            <ReadOnlyField label="Email" value={user.email || ""} />
+            <ReadOnlyField label="Role" value={user.role || ""} />
           </div>
 
-          {/* Save */}
+          {/* Save button */}
           {formDirty && (
             <div className="flex justify-end pt-4">
               <button
                 type="submit"
-                disabled={saving || !!phoneError}
+                disabled={saving || !!phoneError || !!usernameError}
                 className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium transition-colors"
               >
                 {saving ? "Saving..." : "Save profile"}
@@ -326,19 +318,32 @@ export default function ProfileInfo() {
           )}
         </form>
       </div>
-      <Toaster/>
     </>
   );
 }
 
-/* ---- UI helpers ---- */
-function Section({ title, children }) {
+/* ========== Small components ========== */
+function FormSection({ title, children }) {
   return (
     <div className="p-5 border rounded-xl">
       <div className="mb-3">
         <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
       </div>
       {children}
+    </div>
+  );
+}
+
+function ReadOnlyField({ label, value }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-600">{label}</label>
+      <input
+        type="text"
+        value={value}
+        disabled
+        className="mt-1 w-full px-4 py-2 rounded-lg border bg-gray-100 text-gray-600"
+      />
     </div>
   );
 }
