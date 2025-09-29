@@ -1,4 +1,4 @@
-
+// file app
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./auth/context";
 
@@ -6,7 +6,9 @@ import MainLayout from "./layout/MainLayout";
 import Home from "./pages/Home";
 import MainHome from "./pages/MainHome";
 import DestinationPage from "./pages/Blogs";
-import SearchResults from "./pages/SearchResults";
+import RegionTours from "./components/RegionTours";
+// import SearchResults from "./pages/SearchResults";
+import TourDetailPage from "./pages/TourDetailPage";
 import DiscountCodesPage from "./pages/DiscountCodesPage"; // Import trang mã giảm giá
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -37,9 +39,11 @@ export default function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/destinations/:slug" element={<DestinationPage />} />
-          <Route path="/search" element={<SearchResults />} />
+          {/* <Route path="/search" element={<SearchResults />} /> */}
           <Route path="/home" element={<MainHome />} />
           <Route path="/discount-codes" element={<DiscountCodesPage />} />
+          <Route path="/tours/:id" element={<TourDetailPage />} />
+          <Route path="/region/:slug" element={<RegionTours />} />
         </Route>
 
         {/* Auth routes */}

@@ -8,6 +8,7 @@ import VietnamDestinations from "../components/VietnamDestinations";
 import TrustedPartners from "../components/TrustedPartners";
 import QuickBooking from "../components/QuickBooking";
 import WhyChooseUs from "../components/WhyChooseUs";
+import TourDetailPage from "../pages/TourDetailPage";
 
 export default function MainHome() {
   return (
@@ -20,7 +21,6 @@ export default function MainHome() {
      
       {/* Tour promotions với điều hướng tới trang mã giảm giá */}
       <TourPromotions />
-     
       {/* Why Choose Us */}
       <WhyChooseUs />
      
