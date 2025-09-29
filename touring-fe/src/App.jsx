@@ -1,3 +1,4 @@
+// App.jsx
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./auth/context";
 
@@ -5,10 +6,13 @@ import MainLayout from "./layout/MainLayout";
 import Home from "./pages/Home";
 import MainHome from "./pages/MainHome";
 import DestinationPage from "./pages/Blogs";
-import DiscountCodesPage from "./pages/DiscountCodesPage"; // Import trang mã giảm giá
+import RegionTours from "./components/RegionTours";
+// import SearchResults from "./pages/SearchResults";
+import TourDetailPage from "./pages/TourDetailPage";
+import DiscountCodesPage from "./pages/DiscountCodesPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import ProfileLayout from "./pages/UserProfile"; // Layout có <Outlet />
+import ProfileLayout from "./pages/UserProfile";
 import ProfileInfo from "./components/ProfileInfo";
 import ProfileOrders from "./components/ProfileOrders";
 import ProfileReviews from "./components/ProfileReviews";
@@ -32,12 +36,16 @@ export default function App() {
   return (
     <>
       <Routes>
-        {/* Routes có MainLayout */}
+        {/* ----- Public + Main layout ----- */}
         <Route element={<MainLayout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/destinations/:slug" element={<DestinationPage />} />
+          {/* Nếu muốn / tự động là Home khi chưa login, MainHome khi đã login */}
+          <Route path="/" element={isAuth ? <MainHome /> : <Home />} />
           <Route path="/home" element={<MainHome />} />
+          <Route path="/destinations/:slug" element={<DestinationPage />} />
+          {/* <Route path="/search" element={<SearchResults />} /> */}
           <Route path="/discount-codes" element={<DiscountCodesPage />} />
+          <Route path="/tours/:id" element={<TourDetailPage />} />
+          <Route path="/region/:slug" element={<RegionTours />} />
 
           <Route
             path="/profile"
@@ -47,7 +55,7 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            {/* 👇 Nếu chỉ vào /profile thì redirect sang /profile/info */}
+            {/* /profile -> /profile/info */}
             <Route index element={<Navigate to="info" replace />} />
             <Route path="info" element={<ProfileInfo />} />
             <Route path="orders" element={<ProfileOrders />} />
@@ -55,18 +63,19 @@ export default function App() {
           </Route>
         </Route>
 
-        {/* Auth routes */}
+        {/* ----- Auth routes (public) ----- */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/oauth/callback" element={<OAuthCallback />} />
 
-        {/* Profile routes (protected) */}
-        <Route path="/oauth/callback" element={<OAuthCallback/>}></Route>
-        {/* 404 fallback */}
+        {/* ----- 404 ----- */}
         <Route path="*" element={<div className="p-6">404</div>} />
       </Routes>
 
-      {/* Popup chọn role */}
-      {isAuth && (!user.role || user.role === "uninitialized") && <RolePopup />}
+      {/* Popup chọn role sau khi login */}
+      {isAuth && (!user?.role || user.role === "uninitialized") && (
+        <RolePopup />
+      )}
     </>
   );
 }
