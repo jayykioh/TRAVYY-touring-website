@@ -27,12 +27,10 @@ export default function BlogPage() {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  // Hiển thị loading
   if (loading) {
     return <div className="p-6 text-center">⏳ Đang tải dữ liệu...</div>;
   }
 
-  // Hiển thị lỗi hoặc không tìm thấy
   if (error || !blog) {
     return (
       <div className="p-6 text-center text-lg text-red-500">
@@ -41,7 +39,6 @@ export default function BlogPage() {
     );
   }
 
-  // Hiển thị nội dung blog
   return (
     <div className="flex flex-col">
       {/* Banner */}
@@ -63,14 +60,47 @@ export default function BlogPage() {
 
       {/* Nội dung chính */}
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-10">
-        {/* Mô tả ngắn */}
-        {blog.description && (
-          <p className="md:text-lg p-4 text-muted-foreground text-xl">
-            {blog.description}
-          </p>
+        {/* Description + Map side by side */}
+        {(blog.description || (blog.location?.lat && blog.location?.lng)) && (
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start bg-white rounded-lg ">
+            {/* Description */}
+            {blog.description && (
+              <div>
+                <h2 className="text-2xl font-bold mb-4">Mô tả</h2>
+                <p className="text-gray-700 leading-relaxed">
+                  {blog.description}
+                </p>
+              </div>
+            )}
+
+            {/* Map */}
+            {blog.location?.lat && blog.location?.lng && (
+              <div>
+                <h2 className="text-2xl font-bold mb-4">📍 Vị trí</h2>
+                <div className="rounded-lg overflow-hidden ">
+                  <iframe
+                    src={`https://maps.google.com/maps?q=${blog.location.lat},${blog.location.lng}&z=14&output=embed`}
+                    width="100%"
+                    height="300"
+                    style={{ border: 0 }}
+                    allowFullScreen=""
+                    loading="lazy"
+                  ></iframe>
+                </div>
+                <a
+                  href={`https://www.google.com/maps?q=${blog.location.lat},${blog.location.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block mt-2 text-blue-600 hover:underline text-sm"
+                >
+                  🔗 Xem trên Google Maps
+                </a>
+              </div>
+            )}
+          </section>
         )}
 
-        {/* Hoạt động & trải nghiệm */}
+        {/* Vui chơi & Trải nghiệm */}
         {blog.activities?.length > 0 && (
           <Section title="Vui chơi & Trải nghiệm">
             <CardGrid items={blog.activities} />
@@ -98,7 +128,7 @@ export default function BlogPage() {
           </Section>
         )}
 
-        {/* Thông tin nhanh */}
+        {/* QuickInfo */}
         {blog.quickInfo && Object.keys(blog.quickInfo).length > 0 && (
           <QuickInfo info={blog.quickInfo} />
         )}
@@ -152,30 +182,27 @@ function CardGrid({ items }) {
 }
 
 function QuickInfo({ info }) {
-  return (
-    <div className="bg-white rounded-lg p-6 shadow-md space-y-4">
-      <h2 className="text-2xl font-bold text-gray-900">Thông tin nhanh</h2>
+  const infoList = [
+    { icon: "☀️", label: "Thời tiết", value: info.weather },
+    { icon: "📌", label: "Mùa lý tưởng", value: info.bestSeason },
+    { icon: "⏳", label: "Thời gian gợi ý", value: info.duration },
+    { icon: "💬", label: "Ngôn ngữ", value: info.language },
+    
+  ].filter((i) => i.value);
 
-      {info.weather && <InfoRow label="☀️ Thời tiết" value={info.weather} />}
-      {info.bestSeason && (
-        <InfoRow label="📌 Mùa lý tưởng" value={info.bestSeason} />
-      )}
-      {info.duration && (
-        <InfoRow label="⏳ Thời gian gợi ý" value={info.duration} />
-      )}
-      {info.language && <InfoRow label="💬 Ngôn ngữ" value={info.language} />}
-      {info.distance && (
-        <InfoRow label="📍 Khoảng cách" value={info.distance} />
-      )}
-    </div>
-  );
-}
-
-function InfoRow({ label, value }) {
   return (
-    <div>
-      <p className="text-sm font-semibold text-gray-600">{label}</p>
-      <p className="text-gray-800">{value}</p>
+    <div className="bg-white rounded-lg p-6 shadow-md">
+      <h2 className="text-2xl font-bold text-gray-900 mb-4">Thông tin nhanh</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {infoList.map((item, idx) => (
+          <div key={idx} className="flex flex-col bg-gray-50 rounded-lg p-3">
+            <span className="text-sm font-semibold text-gray-600">
+              {item.icon} {item.label}
+            </span>
+            <span className="text-gray-800">{item.value}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
