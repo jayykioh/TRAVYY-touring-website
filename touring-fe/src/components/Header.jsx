@@ -13,11 +13,11 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
-} from "@/components/navigation-menu";
+} from "../components/ui/navigation-menu";
 import UserMenu from "./UsersMenu";
 
 const tours = [
-  {
+  { 
     title: "Miền Bắc",
     href: "/tours/north",
     description: "Hà Nội, Sapa, Hạ Long và nhiều điểm đến nổi tiếng.",
