@@ -1,89 +1,112 @@
 import { useParams } from "react-router-dom";
-import { mockBlogs } from "../mockdata/blogs";
-import MainLayout from "@/layout/MainLayout";
+import { useEffect, useState } from "react";
 
-export default function DestinationPage() {
+export default function BlogPage() {
   const { slug } = useParams();
-  const post = mockBlogs.find((b) => b.slug === slug);
+  const [blog, setBlog] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  if (!post) {
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+
+    fetch(`http://localhost:4000/api/blogs/${slug}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Network response was not ok");
+        return res.json();
+      })
+      .then((data) => {
+        console.log("Blog data from API:", data);
+        setBlog(data);
+      })
+      .catch((err) => {
+        console.error("Error fetching blog:", err);
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
+  }, [slug]);
+
+  // Hiển thị loading
+  if (loading) {
+    return <div className="p-6 text-center">⏳ Đang tải dữ liệu...</div>;
+  }
+
+  // Hiển thị lỗi hoặc không tìm thấy
+  if (error || !blog) {
     return (
       <div className="p-6 text-center text-lg text-red-500">
-        404 — Không tìm thấy địa điểm: {slug}
+        404 — Không tìm thấy blog: {slug}
       </div>
     );
   }
 
+  // Hiển thị nội dung blog
   return (
     <div className="flex flex-col">
-        <>
-
-        
-  <div className="relative h-64 md:h-80 overflow-hidden">
-  <img 
-    src={post.banner}
-    alt={post.title}
-    className="w-full h-full object-cover"
-    loading="lazy"
-    decoding="async"
-  />
-  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-  <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-    <h1 className="text-white text-2xl md:text-5xl font-extrabold leading-[1.1] tracking-tight">
-      {post.title}
-    </h1>
-  </div>
-</div>
+      {/* Banner */}
+      <div className="relative h-64 md:h-80 overflow-hidden">
+        <img
+          src={blog.banner}
+          alt={blog.title}
+          className="w-full h-full object-cover"
+          loading="lazy"
+          decoding="async"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+          <h1 className="text-white text-2xl md:text-5xl font-extrabold leading-[1.1] tracking-tight">
+            {blog.title}
+          </h1>
+        </div>
+      </div>
 
       {/* Nội dung chính */}
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-10">
         {/* Mô tả ngắn */}
-        {post.description && (
-          <p className="md:text-lg p-4 text-muted-foreground text-xl">{post.description}</p>
+        {blog.description && (
+          <p className="md:text-lg p-4 text-muted-foreground text-xl">
+            {blog.description}
+          </p>
         )}
 
-
-
         {/* Hoạt động & trải nghiệm */}
-        {post.activities?.length > 0 && (
+        {blog.activities?.length > 0 && (
           <Section title="Vui chơi & Trải nghiệm">
-            <CardGrid items={post.activities} />
+            <CardGrid items={blog.activities} />
           </Section>
         )}
 
         {/* Điểm tham quan */}
-        {post.sightseeing?.length > 0 && (
+        {blog.sightseeing?.length > 0 && (
           <Section title="Điểm tham quan">
-            <CardGrid items={post.sightseeing} />
+            <CardGrid items={blog.sightseeing} />
           </Section>
         )}
 
         {/* Phương tiện */}
-        {post.transport?.length > 0 && (
+        {blog.transport?.length > 0 && (
           <Section title="Phương tiện di chuyển">
-            <CardGrid items={post.transport} />
+            <CardGrid items={blog.transport} />
           </Section>
         )}
 
         {/* Khách sạn */}
-        {post.hotels?.length > 0 && (
+        {blog.hotels?.length > 0 && (
           <Section title="Khách sạn ở khu vực">
-            <CardGrid items={post.hotels} />
+            <CardGrid items={blog.hotels} />
           </Section>
         )}
 
-
         {/* Thông tin nhanh */}
-        {post.quickInfo && Object.keys(post.quickInfo).length > 0 && (
-          <QuickInfo info={post.quickInfo} />
+        {blog.quickInfo && Object.keys(blog.quickInfo).length > 0 && (
+          <QuickInfo info={blog.quickInfo} />
         )}
 
         {/* FAQ */}
-        {post.faq?.length > 0 && <FAQ items={post.faq} />}
+        {blog.faq?.length > 0 && <FAQ items={blog.faq} />}
       </main>
-       </>
     </div>
-
   );
 }
 
@@ -130,15 +153,29 @@ function CardGrid({ items }) {
 
 function QuickInfo({ info }) {
   return (
-    <div className="bg-gray-50 rounded-lg p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-      {Object.entries(info).map(([key, value]) => (
-        <div key={key}>
-          <p className="text-sm font-semibold text-gray-600 capitalize">
-            {formatLabel(key)}
-          </p>
-          <p className="text-gray-800">{value}</p>
-        </div>
-      ))}
+    <div className="bg-white rounded-lg p-6 shadow-md space-y-4">
+      <h2 className="text-2xl font-bold text-gray-900">Thông tin nhanh</h2>
+
+      {info.weather && <InfoRow label="☀️ Thời tiết" value={info.weather} />}
+      {info.bestSeason && (
+        <InfoRow label="📌 Mùa lý tưởng" value={info.bestSeason} />
+      )}
+      {info.duration && (
+        <InfoRow label="⏳ Thời gian gợi ý" value={info.duration} />
+      )}
+      {info.language && <InfoRow label="💬 Ngôn ngữ" value={info.language} />}
+      {info.distance && (
+        <InfoRow label="📍 Khoảng cách" value={info.distance} />
+      )}
+    </div>
+  );
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <div>
+      <p className="text-sm font-semibold text-gray-600">{label}</p>
+      <p className="text-gray-800">{value}</p>
     </div>
   );
 }
@@ -160,16 +197,4 @@ function FAQ({ items }) {
       ))}
     </div>
   );
-}
-
-function formatLabel(key) {
-  const map = {
-    weather: "Thời tiết",
-    bestSeason: "Mùa đẹp nhất",
-    duration: "Thời gian gợi ý",
-    language: "Ngôn ngữ",
-    distance: "Khoảng cách"
-  };
-  return map[key] || key;
- 
 }
