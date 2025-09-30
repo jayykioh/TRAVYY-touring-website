@@ -12,6 +12,7 @@ const profileRoutes = require("./routes/profile.routes");
 const authRoutes = require("./routes/auth.routes");
 const cookieParser = require("cookie-parser");
 
+const blogRoutes = require("./routes/blogs");
 
 const vnAddrRoutes = require("./middlewares/vnAddress.routes");
 require("./middlewares/passport");
@@ -77,6 +78,11 @@ app.use("/api/profile/info", profileRoutes);
 
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
+
+
+app.use("/api/blogs", blogRoutes);
+
+
 
 // --- Global error handler (chốt đuôi) ---
 app.use((err, _req, res, _next) => {
