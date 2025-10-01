@@ -1,88 +1,29 @@
-import React, { useState } from "react";
-import {
-  ChevronRight,
-  ChevronLeft,
-  Heart,
-} from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ChevronRight, ChevronLeft, Heart } from "lucide-react";
 import TourCard from "./TourCard";
 import { Link } from "react-router-dom";
 
 const TourPromotions = () => {
   const [currentTourSlide, setCurrentTourSlide] = useState(0);
   const [favorites, setFavorites] = useState(new Set([2, 4]));
+  const [featuredTours, setFeaturedTours] = useState([]);
 
-  const featuredTours = [
-    {
-      id: 1,
-      image:
-        "https://images.unsplash.com/photo-1744902505884-d8ccfb88e319?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      category: "Dịch vụ du lịch",
-      location: "Đà Nẵng",
-      title: "Dịch Vụ Đón Tiễn Ưu Tiên Tại Sân Bay Đà Nẵng (DAD)",
-      rating: 4.5,
-      reviews: 1820,
-      booked: "35K+",
-      originalPrice: 650000,
-      currentPrice: 585000,
-      tags: ["Đặt trước cho ngày mai", "Miễn phí hủy"],
-      isPopular: false,
-    },
-    {
-      id: 2,
-      image:
-        "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?q=80&w=1528&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      category: "Công viên & Khu vui chơi",
-      location: "Đà Nẵng",
-      title: "Vé Sun World Ba Na Hills & Cầu Vàng (kèm cáp treo)",
-      rating: 4.7,
-      reviews: 5347,
-      booked: "70K+",
-      originalPrice: 900000,
-      currentPrice: 810000,
-      discount: 10,
-      tags: ["Đặt ngay hôm nay", "Miễn phí hủy"],
-      isPopular: true,
-    },
-    {
-      id: 3,
-      image:
-        "https://images.unsplash.com/photo-1701397955118-79059690ef50?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      category: "Tour",
-      location: "Đà Nẵng / Quảng Nam - Hội An",
-      title:
-        "Ngũ Hành Sơn – Phố Cổ Hội An – Thuyền Sông Hoài (tour trong ngày)",
-      rating: 4.5,
-      reviews: 5273,
-      booked: "30K+",
-      originalPrice: 950000,
-      currentPrice: 807500,
-      discount: 15,
-      tags: ["Đặt trước cho ngày mai", "Đón tại khách sạn"],
-      isPopular: false,
-    },
-    {
-      id: 4,
-      image:
-        "https://images.unsplash.com/photo-1506358517354-a0b210578f0d?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      category: "Tour",
-      location: "Quảng Nam - Hội An",
-      title:
-        "Bình Minh Thánh Địa Mỹ Sơn & Thuyền Thúng Rừng Dừa Bảy Mẫu (từ Đà Nẵng/Hội An)",
-      rating: 4.8,
-      reviews: 1312,
-      booked: "9K+",
-      originalPrice: 1200000,
-      currentPrice: 960000,
-      discount: 20,
-      tags: ["Tour riêng", "Đón tại khách sạn"],
-      isPopular: true,
-    },
-  ];
+  useEffect(() => {
+    fetch("http://localhost:4000/api/tours")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("Tours from API:", data);
+        setFeaturedTours(data);
+      })
+      .catch((err) => console.error("Error fetching tours:", err));
+  }, []);
 
   const handleFavoriteToggle = (tourId) => {
     setFavorites((prev) => {
       const newFavorites = new Set(prev);
-      newFavorites.has(tourId) ? newFavorites.delete(tourId) : newFavorites.add(tourId);
+      newFavorites.has(tourId)
+        ? newFavorites.delete(tourId)
+        : newFavorites.add(tourId);
       return newFavorites;
     });
   };
@@ -127,22 +68,22 @@ const TourPromotions = () => {
               style={{ transform: `translateX(-${currentTourSlide * 33.33}%)` }}
             >
               {featuredTours.map((tour) => (
-                <div key={tour.id} className="flex-shrink-0">
+                <div key={tour._id} className="flex-shrink-0">
+                  {/* discount={tour.discount}
+                     
+                      */}
                   <TourCard
-                    to={`/tours/${tour.id}`}
-                    image={tour.image}
-                    title={tour.title}
-                    location={tour.location}
+                    to={`/tours/${tour._id}`}
+                    image={tour.imageItems?.[0]?.imageUrl}
+                    title={tour.description}
+                    location={tour.locations?.[0]?.name || "Địa điểm"}
                     tags={tour.tags}
-                    rating={tour.rating}
-                    reviews={tour.reviews}
-                    bookedText={`${tour.booked} Đã được đặt`}
-                    priceFrom={tour.currentPrice.toString()}
-                    originalPrice={tour.originalPrice}
-                    discount={tour.discount}
-                    isPopular={tour.isPopular}
-                    isFav={favorites.has(tour.id)}
-                    onFav={() => handleFavoriteToggle(tour.id)}
+                    bookedText={`${tour.usageCount} Đã được đặt`}
+                    rating={tour.isRating}
+                    reviews={tour.isReview}
+                    priceFrom={tour.basePrice.toString()}
+                    originalPrice={tour.basePrice}
+                    onFav={() => handleFavoriteToggle(tour._id)}
                   />
                 </div>
               ))}

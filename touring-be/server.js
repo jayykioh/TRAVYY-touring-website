@@ -11,7 +11,7 @@ const morgan = require("morgan");
 const profileRoutes = require("./routes/profile.routes");
 const authRoutes = require("./routes/auth.routes");
 const cookieParser = require("cookie-parser");
-
+const tourRoutes = require("./routes/tour.routes");
 const blogRoutes = require("./routes/blogs");
 
 const vnAddrRoutes = require("./middlewares/vnAddress.routes"); 
@@ -20,6 +20,17 @@ require("./middlewares/passport");
 const app = express();
 const isProd = process.env.NODE_ENV === "production";
 const PORT = process.env.PORT || 5000;
+const corsOrigin = isProd ? process.env.CLIENT_ORIGIN : "http://localhost:5173";
+console.log("CORS allow origin:", corsOrigin);
+
+app.use(
+  cors({
+    origin: isProd ? process.env.CLIENT_ORIGIN : "http://localhost:5173",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // --- Core middlewares --- ( cho bảo mật, logging, body parsing, v.v. )
 app.use(helmet());
@@ -29,19 +40,13 @@ app.use(morgan(isProd ? "combined" : "dev"));
 app.use(cookieParser());
 
 // --- CORS: chỉ bật ở DEV (FE chạy http://localhost:5173) ---
- app.use(cors({
- origin: isProd ? process.env.CLIENT_ORIGIN : "http://localhost:5173",
-  credentials: true,
- methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
- }));
 
 // Nếu chạy sau reverse proxy (Nginx/Traefik) thì bật (đặc biệt khi dùng cookie secure)
 if (isProd) {
   app.set("trust proxy", 1);
 }
 
-// --- Session store (không dùng MemoryStore ở prod) 
+// --- Session store (không dùng MemoryStore ở prod)
 app.use(
   session({
     name: "sid",
@@ -55,7 +60,7 @@ app.use(
     }),
     cookie: {
       httpOnly: true,
-      secure: isProd,            // Prod + HTTPS
+      secure: isProd, // Prod + HTTPS
       sameSite: isProd ? "lax" : "lax", // cùng domain: lax là hợp lý
       // Nếu sau này FE/BE KHÁC domain và vẫn muốn cookie:
       // sameSite: "none", secure: true
@@ -79,26 +84,33 @@ app.use("/api/profile/info", profileRoutes);
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
-
 app.use("/api/blogs", blogRoutes);
-
-
 
 // --- Global error handler (chốt đuôi) ---
 app.use((err, _req, res, _next) => {
   console.error(err);
-  res.status(500).json({ error: "INTERNAL_ERROR", message: err.message || "Server error" });
+  res
+    .status(500)
+    .json({ error: "INTERNAL_ERROR", message: err.message || "Server error" });
 });
 
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("MongoDB connected");
-    app.listen(PORT, () => console.log(`API listening on http://localhost:${PORT}`));
+    app.listen(PORT, () =>
+      console.log(`API listening on http://localhost:${PORT}`)
+    );
   })
   .catch((e) => {
     console.error("Mongo connect error:", e);
     process.exit(1);
   });
+
+app.get("/test", (req, res) => {
+  res.json({ ok: true });
+});
+
+app.use("/api/tours", tourRoutes);
 
 module.exports = app;
