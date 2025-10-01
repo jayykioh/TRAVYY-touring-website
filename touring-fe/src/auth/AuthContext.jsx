@@ -24,11 +24,11 @@ export default function AuthProvider({ children }) {
   const [accessToken, setAccessToken] = useState(null); // ⬅️ giữ access in-memory
   const [booting, setBooting] = useState(true);
 
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (username, password) => {
     const res = await api(`${API_BASE}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ username, password }),
     });
     if (res?.accessToken) setAccessToken(res.accessToken);
     if (res?.user) setUser(res.user);

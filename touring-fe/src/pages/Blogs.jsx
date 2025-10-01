@@ -11,7 +11,7 @@ export default function BlogPage() {
     setLoading(true);
     setError(null);
 
-    fetch(`http://localhost:5000/api/blogs/${slug}`)
+    fetch(`/api/blogs/${slug}`)
       .then((res) => {
         if (!res.ok) throw new Error("Network response was not ok");
         return res.json();

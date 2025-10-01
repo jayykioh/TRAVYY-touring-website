@@ -17,9 +17,8 @@ export default function RolePopup() {
       const res = await withAuth("/api/auth/set-role", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }), // "Traveler" | "TourGuide" | "TravelAgency"
+        body: JSON.stringify({ role }), 
       });
-
       setUser(res.user);
       toast.success("Role set successfully");
       navigate("/profile", { replace: true });

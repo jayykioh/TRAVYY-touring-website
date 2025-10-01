@@ -6,7 +6,7 @@ import AboutSection from "../components/AboutSection";
 import PromoSection from "../components/PromoSection";
 import MainLayout from "../layout/MainLayout";
 
-export default function Home() {
+export default function LandingPage() {
   return (
     <>
       <HeroSection />

@@ -14,7 +14,7 @@ const cookieParser = require("cookie-parser");
 
 const blogRoutes = require("./routes/blogs");
 
-const vnAddrRoutes = require("./middlewares/vnAddress.routes");
+const vnAddrRoutes = require("./middlewares/vnAddress.routes"); 
 require("./middlewares/passport");
 
 const app = express();

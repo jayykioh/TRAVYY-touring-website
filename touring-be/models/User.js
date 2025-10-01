@@ -6,21 +6,20 @@ const locationSchema = new mongoose.Schema({
   provinceName: String,
   wardId: String,
   wardName: String,
-  addressLine: String  // số nhà, tên đường (optional)
+  addressLine: String 
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({
   email: { type: String, unique: true, sparse: true },
   password: String,
   phone: { type: String, unique: true, sparse: true },
-  phoneVerified: { type: Boolean, default: false },
   username: String,
   name: String,
   googleId: String,
   facebookId: String,
   role: { 
     type: String, 
-    enum: ["Traveler", "TourGuide", "TravelAgency", "Admin"],
+    enum: ["Traveler", "TourGuide"  , "TravelAgency", "Admin"],
     default: null
   },
   location: locationSchema  
