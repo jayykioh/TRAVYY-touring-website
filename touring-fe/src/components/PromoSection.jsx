@@ -9,7 +9,7 @@ const TourPromotions = () => {
   const [featuredTours, setFeaturedTours] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:4000/api/tours")
+    fetch("/api/tours")
       .then((res) => res.json())
       .then((data) => {
         console.log("Tours from API:", data);

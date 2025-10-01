@@ -1,7 +1,7 @@
 // controller/auth.controller.js
 const bcrypt = require("bcryptjs");
 const { z } = require("zod");
-const User = require("../models/User");
+const User = require("../models/Users");
 const { signAccess, signRefresh, newId } = require("../utils/jwt");
 
 const isProd = process.env.NODE_ENV === "production";

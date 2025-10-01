@@ -1,4 +1,4 @@
-const User = require("../models/User");
+const User = require("../models/Users");
 const { z } = require("zod");
 
 const VN_PHONE = /^(03|05|07|08|09)\d{8}$/;
