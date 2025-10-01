@@ -12,13 +12,18 @@ export default function TourDetailPage() {
   const [allTours, setAllTours] = useState([]);
 
   useEffect(() => {
-    fetch(`http://localhost:4000/api/tours/${id}`)
+
+    fetch(`http://localhost:5000/api/tours/${id}`)
+
       .then((res) => res.json())
       .then((data) => setTour(data))
       .catch((err) => console.error("Error fetching tour:", err));
 
     // Lấy danh sách để gợi ý
-    fetch("http://localhost:4000/api/tours")
+
+    fetch("http://localhost:5000/api/tours")
+
+
       .then((res) => res.json())
       .then((data) => setAllTours(data))
       .catch((err) => console.error("Error fetching tours:", err));
@@ -31,9 +36,9 @@ export default function TourDetailPage() {
   }, [tourId]);
 
   const [isFav, setIsFav] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("");
+  // const [selectedDate, setSelectedDate] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [showAllPhotos, setShowAllPhotos] = useState(false);
+  // const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [showMoreService, setShowMoreService] = useState(false);
   const navigate = useNavigate();
 
@@ -160,7 +165,7 @@ export default function TourDetailPage() {
                 />
                 <div className="absolute inset-0 bg-black bg-opacity-40 rounded-lg flex items-center justify-center">
                   <button
-                    onClick={() => setShowAllPhotos(true)}
+                    // onClick={() => setShowAllPhotos(true)}
                     className="text-white font-medium text-sm"
                   >
                     Thư viện ảnh
