@@ -12,13 +12,18 @@ export default function TourDetailPage() {
   const [allTours, setAllTours] = useState([]);
 
   useEffect(() => {
+
     fetch(`http://localhost:5000/api/tours/${id}`)
+
       .then((res) => res.json())
       .then((data) => setTour(data))
       .catch((err) => console.error("Error fetching tour:", err));
 
     // Lấy danh sách để gợi ý
+
     fetch("http://localhost:5000/api/tours")
+
+
       .then((res) => res.json())
       .then((data) => setAllTours(data))
       .catch((err) => console.error("Error fetching tours:", err));
