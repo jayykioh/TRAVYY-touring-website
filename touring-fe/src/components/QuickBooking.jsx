@@ -1,21 +1,35 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // ✅ Import useNavigate
-import { Search, MapPin, Calendar, Users } from "lucide-react";
+import { Search, MapPin, Calendar, Users, Filter, Sparkles, Plane } from "lucide-react";
 
 const QuickBooking = () => {
-  const navigate = useNavigate(); // ✅ Khởi tạo navigate
-  
   const [bookingData, setBookingData] = useState({
     destination: "",
     checkIn: "",
     checkOut: "",
-    guests: 2
+    guests: 2,
+    category: "all"
   });
 
-  const [openDropdown, setOpenDropdown] = useState(null);
+  const [focusedField, setFocusedField] = useState(null);
 
   const popularDestinations = [
     "Đà Nẵng", "Hội An", "Huế", "Nha Trang", "Phú Quốc", "Sapa"
+  ];
+
+  const categories = [
+    { value: "all", label: "Tất cả", emoji: "🌟" },
+    { value: "culture", label: "Văn hóa", emoji: "🏛️" },
+    { value: "adventure", label: "Phiêu lưu", emoji: "⛰️" },
+    { value: "beach", label: "Biển", emoji: "🏖️" },
+    { value: "mountain", label: "Núi", emoji: "🗻" },
+    { value: "food", label: "Ẩm thực", emoji: "🍜" }
+  ];
+
+  const quickSuggestions = [
+    { text: "Tour Đà Nẵng 3N2Đ", gradient: "from-blue-500 to-purple-600" },
+    { text: "Hội An 1 ngày", gradient: "from-yellow-500 to-orange-600" },
+    { text: "Ba Na Hills", gradient: "from-green-500 to-teal-600" },
+    { text: "Huế cố đô", gradient: "from-purple-500 to-pink-600" }
   ];
 
   const handleInputChange = (field, value) => {
@@ -24,199 +38,204 @@ const QuickBooking = () => {
 
   const handleSearch = () => {
     console.log("Searching with:", bookingData);
-    
-    // ✅ Tạo URL parameters
-    const params = new URLSearchParams({
-      destination: bookingData.destination || "",
-      checkIn: bookingData.checkIn || "",
-      checkOut: bookingData.checkOut || "",
-      guests: bookingData.guests.toString()
-    });
-    
-    // ✅ Chuyển hướng đến trang SearchResults với parameters
-    navigate(`/search-results?${params.toString()}`);
-    
-    setOpenDropdown(null);
-  };
-
-  const toggleDropdown = (dropdown) => {
-    setOpenDropdown(openDropdown === dropdown ? null : dropdown);
+    // Navigate to search results
   };
 
   return (
-    <section className="relative bg-gradient-to-br from-blue-50 to-purple-50 py-12">
-      <div className="max-w-6xl mx-auto px-4">
-        {/* Search Bar */}
-        <div className="relative bg-white rounded-full shadow-2xl border border-gray-200 p-2 flex items-stretch">
-          
-          {/* Destination */}
-          <div className="relative flex-1 border-r border-gray-200">
-            <button
-              onClick={() => toggleDropdown('destination')}
-              className="w-full h-full flex items-center gap-3 px-6 py-4 hover:bg-gray-50 rounded-l-full transition-all"
-            >
-              <MapPin className="w-5 h-5 text-gray-600" />
-              <div className="text-left flex-1">
-                <div className="text-xs font-medium text-gray-500">Điểm đến</div>
-                <div className="text-sm font-semibold text-gray-900 truncate">
-                  {bookingData.destination || "Bạn muốn đến đâu?"}
-                </div>
-              </div>
-            </button>
-
-            {/* Dropdown */}
-            {openDropdown === 'destination' && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 z-50">
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm điểm đến..."
-                  value={bookingData.destination}
-                  onChange={(e) => handleInputChange("destination", e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === ' ') {
-                      e.stopPropagation();
-                    }
-                  }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                  autoFocus
-                />
-                <div className="mt-3">
-                  <div className="text-xs font-semibold text-gray-500 mb-2 px-2">Địa điểm phổ biến</div>
-                  <div className="space-y-1">
-                    {popularDestinations.map((dest, index) => (
-                      <button
-                        key={index}
-                        onClick={() => {
-                          handleInputChange("destination", dest);
-                          setOpenDropdown(null);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-blue-50 rounded-lg transition-all text-sm font-medium text-gray-700"
-                      >
-                        {dest}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Date Range */}
-          <div className="relative flex-1 border-r border-gray-200">
-            <button
-              onClick={() => toggleDropdown('dates')}
-              className="w-full h-full flex items-center gap-3 px-6 py-4 hover:bg-gray-50 transition-all"
-            >
-              <Calendar className="w-5 h-5 text-gray-600" />
-              <div className="text-left flex-1">
-                <div className="text-xs font-medium text-gray-500">Ngày</div>
-                <div className="text-sm font-semibold text-gray-900">
-                  {bookingData.checkIn && bookingData.checkOut
-                    ? `${bookingData.checkIn} - ${bookingData.checkOut}`
-                    : "Chọn ngày"}
-                </div>
-              </div>
-            </button>
-
-            {/* Dropdown */}
-            {openDropdown === 'dates' && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 z-50">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-2">Ngày bắt đầu</label>
-                    <input
-                      type="date"
-                      value={bookingData.checkIn}
-                      onChange={(e) => handleInputChange("checkIn", e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-2">Ngày kết thúc</label>
-                    <input
-                      type="date"
-                      value={bookingData.checkOut}
-                      onChange={(e) => handleInputChange("checkOut", e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                    />
-                  </div>
-                  <button
-                    onClick={() => setOpenDropdown(null)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all"
-                  >
-                    Xác nhận
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Guests */}
-          <div className="relative flex-1">
-            <button
-              onClick={() => toggleDropdown('guests')}
-              className="w-full h-full flex items-center gap-3 px-6 py-4 hover:bg-gray-50 transition-all"
-            >
-              <Users className="w-5 h-5 text-gray-600" />
-              <div className="text-left flex-1">
-                <div className="text-xs font-medium text-gray-500">Số khách</div>
-                <div className="text-sm font-semibold text-gray-900">
-                  {bookingData.guests} người
-                </div>
-              </div>
-            </button>
-
-            {/* Dropdown */}
-            {openDropdown === 'guests' && (
-              <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 z-50">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-3">Số lượng khách</label>
-                    <div className="flex items-center justify-between">
-                      <button
-                        onClick={() => handleInputChange("guests", Math.max(1, bookingData.guests - 1))}
-                        className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full font-bold text-gray-700 transition-all"
-                      >
-                        -
-                      </button>
-                      <span className="text-2xl font-bold text-gray-900">{bookingData.guests}</span>
-                      <button
-                        onClick={() => handleInputChange("guests", Math.min(20, bookingData.guests + 1))}
-                        className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full font-bold text-gray-700 transition-all"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setOpenDropdown(null)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all"
-                  >
-                    Xác nhận
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Search Button */}
-          <button
-            onClick={handleSearch}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-4 rounded-full ml-2 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg"
-          >
-            <Search className="w-5 h-5" />
-            <span>Tìm</span>
-          </button>
-        </div>
+    <section className="relative bg-white shadow-2xl border-t-4 border-gradient-to-r from-blue-500 to-purple-600 overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 opacity-0">
+        <div className="absolute top-4 left-4 w-32 h-32 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-4 right-4 w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full blur-2xl"></div>
       </div>
 
-      {/* Click outside to close dropdown */}
-      {openDropdown && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setOpenDropdown(null)}
-        ></div>
-      )}
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Plane className="w-6 h-6 text-blue-600" />
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Tìm kiếm chuyến đi
+            </h2>
+            <Sparkles className="w-6 h-6 text-purple-600" />
+          </div>
+          <p className="text-gray-600 text-sm">Khám phá những điểm đến tuyệt vời nhất Việt Nam</p>
+        </div>
+
+        <div className="backdrop-blur-sm bg-white/80 rounded-2xl shadow-xl border border-white/20 p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 items-center">
+            {/* Destination */}
+            <div className="relative lg:col-span-2">
+              <div className={`group flex items-center border-2 rounded-xl px-4 py-4 transition-all duration-300 ${
+                focusedField === 'destination' 
+                  ? 'border-blue-500 bg-blue-50/50 shadow-lg scale-105' 
+                  : 'border-gray-200 hover:border-blue-300 hover:shadow-md'
+              }`}>
+                <MapPin className={`w-5 h-5 mr-3 transition-colors ${
+                  focusedField === 'destination' ? 'text-blue-500' : 'text-gray-400'
+                }`} />
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Điểm đến</label>
+                  <input
+                    type="text"
+                    placeholder="Bạn muốn đi đâu?"
+                    value={bookingData.destination}
+                    onChange={(e) => handleInputChange("destination", e.target.value)}
+                    onFocus={() => setFocusedField('destination')}
+                    onBlur={() => setFocusedField(null)}
+                    className="w-full outline-none text-gray-900 placeholder-gray-400 bg-transparent font-medium"
+                    list="destinations"
+                  />
+                  <datalist id="destinations">
+                    {popularDestinations.map((dest, index) => (
+                      <option key={index} value={dest} />
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+            </div>
+
+            {/* Check-in Date */}
+            <div className="relative">
+              <div className={`group flex items-center border-2 rounded-xl px-4 py-4 transition-all duration-300 ${
+                focusedField === 'checkIn' 
+                  ? 'border-green-500 bg-green-50/50 shadow-lg scale-105' 
+                  : 'border-gray-200 hover:border-green-300 hover:shadow-md'
+              }`}>
+                <Calendar className={`w-5 h-5 mr-3 transition-colors ${
+                  focusedField === 'checkIn' ? 'text-green-500' : 'text-gray-400'
+                }`} />
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Ngày đi</label>
+                  <input
+                    type="date"
+                    value={bookingData.checkIn}
+                    onChange={(e) => handleInputChange("checkIn", e.target.value)}
+                    onFocus={() => setFocusedField('checkIn')}
+                    onBlur={() => setFocusedField(null)}
+                    className="w-full outline-none text-gray-900 bg-transparent font-medium"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Check-out Date */}
+            <div className="relative">
+              <div className={`group flex items-center border-2 rounded-xl px-4 py-4 transition-all duration-300 ${
+                focusedField === 'checkOut' 
+                  ? 'border-orange-500 bg-orange-50/50 shadow-lg scale-105' 
+                  : 'border-gray-200 hover:border-orange-300 hover:shadow-md'
+              }`}>
+                <Calendar className={`w-5 h-5 mr-3 transition-colors ${
+                  focusedField === 'checkOut' ? 'text-orange-500' : 'text-gray-400'
+                }`} />
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Ngày về</label>
+                  <input
+                    type="date"
+                    value={bookingData.checkOut}
+                    onChange={(e) => handleInputChange("checkOut", e.target.value)}
+                    onFocus={() => setFocusedField('checkOut')}
+                    onBlur={() => setFocusedField(null)}
+                    className="w-full outline-none text-gray-900 bg-transparent font-medium"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Guests */}
+            <div className="relative">
+              <div className={`group flex items-center border-2 rounded-xl px-4 py-4 transition-all duration-300 ${
+                focusedField === 'guests' 
+                  ? 'border-purple-500 bg-purple-50/50 shadow-lg scale-105' 
+                  : 'border-gray-200 hover:border-purple-300 hover:shadow-md'
+              }`}>
+                <Users className={`w-5 h-5 mr-3 transition-colors ${
+                  focusedField === 'guests' ? 'text-purple-500' : 'text-gray-400'
+                }`} />
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Số khách</label>
+                  <select
+                    value={bookingData.guests}
+                    onChange={(e) => handleInputChange("guests", e.target.value)}
+                    onFocus={() => setFocusedField('guests')}
+                    onBlur={() => setFocusedField(null)}
+                    className="w-full outline-none text-gray-900 bg-transparent font-medium"
+                  >
+                    {[1,2,3,4,5,6,7,8].map(num => (
+                      <option key={num} value={num}>
+                        {num} khách
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Category Filter */}
+            <div className="relative">
+              <div className={`group flex items-center border-2 rounded-xl px-4 py-4 transition-all duration-300 ${
+                focusedField === 'category' 
+                  ? 'border-pink-500 bg-pink-50/50 shadow-lg scale-105' 
+                  : 'border-gray-200 hover:border-pink-300 hover:shadow-md'
+              }`}>
+                <Filter className={`w-5 h-5 mr-3 transition-colors ${
+                  focusedField === 'category' ? 'text-pink-500' : 'text-gray-400'
+                }`} />
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Loại tour</label>
+                  <select
+                    value={bookingData.category}
+                    onChange={(e) => handleInputChange("category", e.target.value)}
+                    onFocus={() => setFocusedField('category')}
+                    onBlur={() => setFocusedField(null)}
+                    className="w-full outline-none text-gray-900 bg-transparent font-medium"
+                  >
+                    {categories.map(cat => (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.emoji} {cat.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Search Button */}
+            <div className="lg:col-span-1">
+              <button
+                onClick={handleSearch}
+                className="group relative w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl flex items-center justify-center gap-2 overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                <Search className="w-5 h-5 transform group-hover:rotate-12 transition-transform duration-300" />
+                <span className="hidden sm:inline relative z-10">Tìm kiếm</span>
+                <div className="absolute inset-0 bg-white opacity-0 group-active:opacity-10 transition-opacity duration-150"></div>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Suggestions */}
+          <div className="mt-6 lg:block">
+            <div className="flex flex-wrap gap-3 items-center">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-600">Gợi ý phổ biến:</span>
+              </div>
+              {quickSuggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleInputChange("destination", suggestion.text)}
+                  className={`group relative text-sm font-medium text-white px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg bg-gradient-to-r ${suggestion.gradient} overflow-hidden`}
+                >
+                  <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                  <span className="relative z-10">{suggestion.text}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
   );
 };
