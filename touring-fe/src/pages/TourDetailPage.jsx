@@ -305,13 +305,56 @@ export default function TourDetailPage() {
               </div>
 
               {/* Map placeholder */}
-              <div className="rounded-2xl p-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
-                <h2 className="text-xl font-bold text-gray-900 mb-4 pl-3 border-l-4 border-gray-800/80">
+              {/* Map placeholder */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-xl font-bold text-blue-600 mb-4 border-l-4 border-blue-500 pl-3">
                   Địa điểm
                 </h2>
-                <div className="w-full h-64 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 border border-white/50 flex items-center justify-center">
-                  <p className="text-gray-500">Bản đồ sẽ hiển thị ở đây</p>
-                </div>
+
+                {(() => {
+                  // blog: location.lat/lng
+                  // if (tour?.location?.lat && tour?.location?.lng) {
+                  //   return (
+                  //     <iframe
+                  //       title="Tour location"
+                  //       width="100%"
+                  //       height="400"
+                  //       style={{ border: 0 }}
+                  //       loading="lazy"
+                  //       allowFullScreen
+                  //       referrerPolicy="no-referrer-when-downgrade"
+                  //       src={`https://maps.google.com/maps?q=${tour.location.lat},${tour.location.lng}&z=14&hl=vi&output=embed`}
+                  //     />
+                  //   );
+                  // }
+
+                  // tour: locations[0].coordinates;
+                  if (
+                    Array.isArray(tour?.locations) &&
+                    tour.locations[0]?.coordinates?.lat &&
+                    tour.locations[0]?.coordinates?.lng
+                  ) {
+                    const { lat, lng } = tour.locations[0].coordinates;
+                    return (
+                      <iframe
+                        title="Tour location"
+                        width="100%"
+                        height="400"
+                        style={{ border: 0 }}
+                        loading="lazy"
+                        allowFullScreen
+                        referrerPolicy="no-referrer-when-downgrade"
+                        src={`https://maps.google.com/maps?q=${lat},${lng}&z=14&hl=vi&output=embed`}
+                      />
+                    );
+                  }
+
+                  return (
+                    <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
+                      <p className="text-gray-500">Không có dữ liệu địa điểm</p>
+                    </div>
+                  );
+                })()}
               </div>
 
               <Reviews tour={tour} />
@@ -616,8 +659,12 @@ function getTitle(t) {
   return t?.title ?? t?.name ?? t?.description ?? "Tour";
 }
 function getLocation(t) {
-  return t?.location ?? t?.locations?.[0]?.name ?? "Địa điểm";
+  if (t?.location?.address) return t.location.address; // blog
+  if (Array.isArray(t?.locations) && t.locations[0]?.name)
+    return t.locations[0].name; // tour
+  return "Địa điểm";
 }
+
 function getMainImage(t) {
   return (
     t?.imageItems?.[0]?.imageUrl ??
