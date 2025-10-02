@@ -103,28 +103,56 @@ export default function BlogPage() {
         {/* Vui chơi & Trải nghiệm */}
         {blog.activities?.length > 0 && (
           <Section title="Vui chơi & Trải nghiệm">
-            <CardGrid items={blog.activities} />
+            <CardGrid
+              items={blog.activities.map((a) => ({
+                name: a.name,
+                price: a.price,
+                description: a.description,
+                img: a.image, // đổi key từ image → img
+              }))}
+            />
           </Section>
         )}
 
         {/* Điểm tham quan */}
         {blog.sightseeing?.length > 0 && (
-          <Section title="Điểm tham quan">
-            <CardGrid items={blog.sightseeing} />
+          <Section title="Vui chơi & Trải nghiệm">
+            <CardGrid
+              items={blog.sightseeing.map((a) => ({
+                name: a.name,
+                price: a.price,
+                description: a.description,
+                img: a.image, // đổi key từ image → img
+              }))}
+            />
           </Section>
         )}
 
         {/* Phương tiện */}
         {blog.transport?.length > 0 && (
-          <Section title="Phương tiện di chuyển">
-            <CardGrid items={blog.transport} />
+          <Section title="Vui chơi & Trải nghiệm">
+            <CardGrid
+              items={blog.transport.map((a) => ({
+                name: a.name,
+                price: a.price,
+                description: a.description,
+                img: a.image,
+              }))}
+            />
           </Section>
         )}
 
         {/* Khách sạn */}
         {blog.hotels?.length > 0 && (
-          <Section title="Khách sạn ở khu vực">
-            <CardGrid items={blog.hotels} />
+          <Section title="Vui chơi & Trải nghiệm">
+            <CardGrid
+              items={blog.hotels.map((a) => ({
+                name: a.name,
+                price: a.price,
+                description: a.description,
+                img: a.image,
+              }))}
+            />
           </Section>
         )}
 
@@ -187,7 +215,6 @@ function QuickInfo({ info }) {
     { icon: "📌", label: "Mùa lý tưởng", value: info.bestSeason },
     { icon: "⏳", label: "Thời gian gợi ý", value: info.duration },
     { icon: "💬", label: "Ngôn ngữ", value: info.language },
-    
   ].filter((i) => i.value);
 
   return (

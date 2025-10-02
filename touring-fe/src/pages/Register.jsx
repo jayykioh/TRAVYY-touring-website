@@ -536,46 +536,55 @@ export default function Register() {
                     </div>
 
                     {/* Role */}
-                   {/* Role */}
-<div>
-  <div className="relative">
-    <Briefcase
-      className="absolute left-4 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none"
-      size={20}
-    />
+                    <div>
+                      <div className="relative">
+                        <Briefcase
+                          className="absolute left-4 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none"
+                          size={20}
+                        />
 
-    <select
-      name="role"
-      value={form.role}
-      onChange={onChange}
-      className={`w-full pl-12 pr-4 py-3.5 rounded-2xl 
+                        <select
+                          name="role"
+                          value={form.role}
+                          onChange={onChange}
+                          className={`w-full pl-12 pr-4 py-3.5 rounded-2xl 
                   backdrop-blur-md bg-white/10
-                  border ${errors.role ? "border-red-400/70" : "border-white/20"}
+                  border ${
+                    errors.role ? "border-red-400/70" : "border-white/20"
+                  }
                   text-white placeholder:text-white/60
                   focus:outline-none focus:ring-2
-                  ${errors.role ? "focus:ring-red-400/50" : "focus:ring-white/40"}
+                  ${
+                    errors.role
+                      ? "focus:ring-red-400/50"
+                      : "focus:ring-white/40"
+                  }
                   transition-all appearance-none`}
-    >
-      <option value="" className="bg-slate-800/70 text-white backdrop-blur-md">
-        Chọn vai trò
-      </option>
-      {ROLES.map((r) => (
-        <option
-          key={r.value}
-          value={r.value}
-          className="bg-slate-800/70 text-white backdrop-blur-md hover:bg-slate-700/70"
-        >
-          {r.label}
-        </option>
-      ))}
-    </select>
-  </div>
+                        >
+                          <option
+                            value=""
+                            className="bg-slate-800/70 text-white backdrop-blur-md"
+                          >
+                            Chọn vai trò
+                          </option>
+                          {ROLES.map((r) => (
+                            <option
+                              key={r.value}
+                              value={r.value}
+                              className="bg-slate-800/70 text-white backdrop-blur-md hover:bg-slate-700/70"
+                            >
+                              {r.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-  {errors.role && (
-    <p className="text-red-300 text-sm mt-1">{errors.role}</p>
-  )}
-</div>
-
+                      {errors.role && (
+                        <p className="text-red-300 text-sm mt-1">
+                          {errors.role}
+                        </p>
+                      )}
+                    </div>
 
                     {/* Location: Province / Ward */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

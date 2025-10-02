@@ -14,9 +14,7 @@ import {
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { useAuth } from "../auth/context";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
-
+const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
 function Login() {
   const [form, setForm] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
@@ -47,7 +45,7 @@ function Login() {
   };
 
   const facebookLogin = () => {
-    window.location.href = `${API}/api/auth/facebook`;
+  window.location.href = `${API}/api/auth/facebook`;
   };
 
   return (

@@ -41,14 +41,23 @@ export default function OrderSummary({ subtotal, total, cartItems }) {
             value={promoCode}
             onChange={(e) => setPromoCode(e.target.value)}
             placeholder="Nhập mã"
-            className="flex-1 px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-orange-500"
+            className="flex-1 px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <button
-            onClick={applyPromo}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg"
-          >
-            Áp dụng
-          </button>
+<button
+  onClick={applyPromo}
+  className="px-6 py-2 bg-white text-gray-800 font-medium 
+             rounded-xl shadow-sm border border-gray-200
+             hover:bg-gray-50 hover:scale-105 
+             active:scale-95
+             transition-all duration-300 ease-in-out
+             focus:outline-none focus:ring-2 focus:ring-gray-300"
+>
+  Áp dụng
+</button>
+
+
+
+
         </div>
         {appliedPromo && (
           <div className="mt-2 flex items-center gap-2 text-green-600 text-sm">
@@ -76,7 +85,7 @@ export default function OrderSummary({ subtotal, total, cartItems }) {
         )}
         <div className="border-t pt-2 flex justify-between items-center">
           <span className="font-semibold text-gray-800">Tổng thanh toán:</span>
-          <span className="text-2xl font-bold text-orange-600">
+          <span className="text-2xl font-bold text-blue-600">
             ₫{finalTotal.toLocaleString()}
           </span>
         </div>
@@ -89,7 +98,7 @@ export default function OrderSummary({ subtotal, total, cartItems }) {
             (i) => i.available && i.selected && (i.adults > 0 || i.children > 0)
           ).length === 0
         }
-        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-xl font-bold hover:shadow-xl disabled:opacity-50"
+        className="w-full py-3 rounded-2xl font-semibold border border-black/10 bg-blue-600 text-white transform hover:scale-105 transition-transform duration-300 ease-in-out"
       >
         Thanh Toán
       </button>

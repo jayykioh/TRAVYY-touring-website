@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { AuthCtx } from "./context";
-const API_BASE = "http://localhost:5000";
+const API_BASE = "http://localhost:4000";
 // helper fetch: luôn gửi cookie (để BE đọc refresh_token)
 async function api(input, init = {}) {
   const r = await fetch(input, {
@@ -66,10 +66,10 @@ const withAuth = useCallback(async (input, init = {}) => {
   useEffect(() => {
     (async () => {
       try {
-        const r = await api("http://localhost:5000/api/auth/refresh", { method: "POST" });
+        const r = await api("http://localhost:4000/api/auth/refresh", { method: "POST" });
         if (r?.accessToken) {
           setAccessToken(r.accessToken);
-          const me = await api("http://localhost:5000/api/auth/me", {
+          const me = await api("http://localhost:4000/api/auth/me", {
             headers: { Authorization: `Bearer ${r.accessToken}` },
           }).catch(() => null);
           if (me) {
@@ -91,7 +91,7 @@ const withAuth = useCallback(async (input, init = {}) => {
 
   async function logout() {
     try {
-      await api("http://localhost:5000/api/auth/logout", { method: "POST" });
+      await api("http://localhost:4000/api/auth/logout", { method: "POST" });
     } catch (err) {
       console.error("Logout error:", err);
     } finally {

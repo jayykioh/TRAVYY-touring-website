@@ -1,5 +1,4 @@
 "use client";
-
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -14,7 +13,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../auth/context";
 import provinces from "@/mockdata/header_bestspot";
-
+import {useCart} from "../hooks/useCart";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -24,7 +23,6 @@ import {
   NavigationMenuTrigger,
 } from "../components/ui/navigation-menu";
 import UserMenu from "./UsersMenu";
-
 const tours = [
   {
     title: "Miền Bắc",
@@ -42,61 +40,24 @@ const tours = [
     description: "TP.HCM, Cần Thơ, miền Tây sông nước và Côn Đảo.",
   },
 ];
+import logo from "../assets/logo.png"
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [q, setQ] = React.useState("");
-  const [cartCount, setCartCount] = React.useState(0);
   const navigate = useNavigate();
-
+   const { items } = useCart();
+const cartCount = React.useMemo(
+  () => new Set(items.map(i => i.id)).size,
+  [items]
+);
   const { isAuth } = useAuth();
-
-  // scroll shadow / blur
   React.useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  // ---- Cart badge: đọc từ localStorage + lắng nghe update ----
-  const getCartCount = React.useCallback(() => {
-    try {
-      const raw =
-        localStorage.getItem("cart") || localStorage.getItem("cartItems");
-      if (!raw) return 0;
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr)) {
-        return arr.reduce((sum, item) => sum + (item?.quantity ?? 1), 0);
-      }
-      return 0;
-    } catch {
-      return 0;
-    }
-  }, []);
-
-  React.useEffect(() => {
-    setCartCount(getCartCount());
-
-    const onStorage = (e) => {
-      if (e.key === "cart" || e.key === "cartItems") {
-        setCartCount(getCartCount());
-      }
-    };
-    const onCartUpdated = () => setCartCount(getCartCount());
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("cart:updated", onCartUpdated);
-
-    // Optional: khi tab lấy lại focus, refresh badge
-    const onFocus = () => setCartCount(getCartCount());
-    window.addEventListener("focus", onFocus);
-
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("cart:updated", onCartUpdated);
-      window.removeEventListener("focus", onFocus);
-    };
-  }, [getCartCount]);
 
   // search
   const onSubmitSearch = (e) => {
@@ -121,12 +82,9 @@ export default function Header() {
         <div className="grid grid-cols-2 md:grid-cols-[auto_1fr_auto] items-center gap-3 md:gap-4 h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 md:gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-blue-500 to-pink-500 grid place-items-center shrink-0 ring-1 ring-white/50">
-              <Globe className="w-5 h-5 text-white" />
+            <div className="w-14 h-14 rounded-xl">
+              <img src={logo}/>
             </div>
-            <span className="text-lg sm:text-xl font-bold text-gray-900">
-              Travyy
-            </span>
           </Link>
 
           {/* Navigation + Search (Tablet/Desktop). Ẩn trên mobile */}
@@ -135,9 +93,7 @@ export default function Header() {
               <NavigationMenuList className="items-center">
                 {/* Địa danh nổi tiếng */}
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger
-                    className="rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-gray-800 hover:bg-white/30 hover:border-white/40 transition"
-                  >
+                  <NavigationMenuTrigger className="rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-gray-800 hover:bg-white/30 hover:border-white/40 transition">
                     Địa danh nổi tiếng
                   </NavigationMenuTrigger>
                   <NavigationMenuContent className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-2xl">
@@ -190,12 +146,8 @@ export default function Header() {
                     </div>
                   </NavigationMenuContent>
                 </NavigationMenuItem>
-
-                {/* Tour nổi tiếng */}
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger
-                    className="rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-gray-800 hover:bg-white/30 hover:border-white/40 transition"
-                  >
+                  <NavigationMenuTrigger className="rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-gray-800 hover:bg-white/30 hover:border-white/40 transition">
                     Tour nổi tiếng
                   </NavigationMenuTrigger>
                   <NavigationMenuContent className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-2xl">
@@ -231,9 +183,7 @@ export default function Header() {
 
                 {/* Khám phá ngay */}
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger
-                    className="rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-gray-800 hover:bg-white/30 hover:border-white/40 transition"
-                  >
+                  <NavigationMenuTrigger className="rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-gray-800 hover:bg-white/30 hover:border-white/40 transition">
                     Khám phá ngay
                   </NavigationMenuTrigger>
                   <NavigationMenuContent className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-2xl">

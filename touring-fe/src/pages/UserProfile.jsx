@@ -6,7 +6,6 @@ export default function ProfileLayout() {
   const { user } = useAuth();
   const { pathname } = useLocation();
 
-  // Giống TourDetailPage: đổi route con là scroll lên đầu
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
   }, [pathname]);

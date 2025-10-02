@@ -3,8 +3,8 @@ export const mockBlogs = [
   {
     slug: "sapa",
     title: "Khám phá Sapa",
- description:
-  "Sapa là một thị trấn vùng cao nằm ở phía Tây Bắc Việt Nam, nổi tiếng với vẻ đẹp huyền ảo của mây trời và dãy Hoàng Liên Sơn hùng vĩ. Không khí ở đây mát mẻ quanh năm, đặc biệt là mùa thu và mùa xuân khi ruộng bậc thang vào mùa lúa chín hoặc phủ sương sớm trắng xóa. Sapa còn là nơi giao thoa văn hóa của nhiều dân tộc thiểu số như H’Mông, Dao, Giáy, Tày, với những phiên chợ tình đầy sắc màu và phong tục đặc trưng. Du khách đến đây có thể chinh phục đỉnh Fansipan – nóc nhà Đông Dương bằng cáp treo hoặc trekking, khám phá bản Cát Cát, Lao Chải, Tả Van, dạo chợ đêm Sapa, thưởng thức đồ nướng nóng hổi giữa tiết trời se lạnh và tắm lá thuốc Dao để thư giãn sau chuyến đi. Đây là điểm đến hoàn hảo cho những ai yêu thiên nhiên, muốn trải nghiệm văn hóa bản địa và tìm cảm giác bình yên giữa núi rừng.",
+    description:
+      "Sapa là một thị trấn vùng cao nằm ở phía Tây Bắc Việt Nam, nổi tiếng với vẻ đẹp huyền ảo của mây trời và dãy Hoàng Liên Sơn hùng vĩ. Không khí ở đây mát mẻ quanh năm, đặc biệt là mùa thu và mùa xuân khi ruộng bậc thang vào mùa lúa chín hoặc phủ sương sớm trắng xóa. Sapa còn là nơi giao thoa văn hóa của nhiều dân tộc thiểu số như H’Mông, Dao, Giáy, Tày, với những phiên chợ tình đầy sắc màu và phong tục đặc trưng. Du khách đến đây có thể chinh phục đỉnh Fansipan – nóc nhà Đông Dương bằng cáp treo hoặc trekking, khám phá bản Cát Cát, Lao Chải, Tả Van, dạo chợ đêm Sapa, thưởng thức đồ nướng nóng hổi giữa tiết trời se lạnh và tắm lá thuốc Dao để thư giãn sau chuyến đi. Đây là điểm đến hoàn hảo cho những ai yêu thiên nhiên, muốn trải nghiệm văn hóa bản địa và tìm cảm giác bình yên giữa núi rừng.",
     banner:
       "https://d18sx48tl6nre5.cloudfront.net/webp_xl_114bd83483fe4e1aae51be8734881dcf.webp",
     activities: [
@@ -12,19 +12,22 @@ export const mockBlogs = [
         name: "Cáp treo Fansipan",
         price: "790.000đ",
         img: "https://images.unsplash.com/photo-1533750516457-a7f992034fec?q=80&w=400",
-        description: "Trải nghiệm cáp treo lên đỉnh Fansipan – nóc nhà Đông Dương.",
+        description:
+          "Trải nghiệm cáp treo lên đỉnh Fansipan – nóc nhà Đông Dương.",
       },
       {
         name: "Tour trekking bản Cát Cát",
         price: "1.200.000đ",
         img: "https://images.unsplash.com/photo-1554196541-ebb205b6e0a3?q=80&w=400",
-        description: "Khám phá bản làng người H’Mông, check-in suối và cối xay gió.",
+        description:
+          "Khám phá bản làng người H’Mông, check-in suối và cối xay gió.",
       },
       {
         name: "Tắm lá Dao Đỏ",
         price: "150.000đ",
         img: "https://images.unsplash.com/photo-1554188248-986adbb73f56?q=80&w=400",
-        description: "Thư giãn sau chuyến trekking với bài thuốc tắm lá Dao nổi tiếng.",
+        description:
+          "Thư giãn sau chuyến trekking với bài thuốc tắm lá Dao nổi tiếng.",
       },
     ],
     sightseeing: [
@@ -97,8 +100,8 @@ export const mockBlogs = [
   {
     slug: "ha-noi",
     title: "Khám phá Hà Nội",
-description:
-  "Hà Nội – trái tim của Việt Nam – là thành phố mang đậm dấu ấn nghìn năm văn hiến, nơi lưu giữ vô số di tích lịch sử, đền chùa cổ kính và kiến trúc Pháp cổ duyên dáng. Không khí Hà Nội là sự kết hợp giữa nhịp sống hiện đại và nét hoài cổ: buổi sáng thong thả nhâm nhi ly cà phê trứng bên hồ Hoàn Kiếm, buổi trưa thưởng thức phở nóng hay bún chả, buổi tối dạo quanh phố cổ 36 phố phường với ánh đèn vàng và tiếng rao quen thuộc. Du khách có thể tham quan Lăng Chủ tịch Hồ Chí Minh, Văn Miếu – Quốc Tử Giám, chùa Một Cột, các bảo tàng hoặc đi xe buýt hai tầng ngắm thành phố về đêm. Hà Nội còn là thiên đường ẩm thực với vô số món ăn đường phố, quán cà phê view đẹp, và các khu chợ truyền thống. Đây là nơi lý tưởng để cảm nhận nét văn hóa Việt Nam đậm chất thơ và sự hiếu khách nồng hậu của người dân thủ đô.",
+    description:
+      "Hà Nội – trái tim của Việt Nam – là thành phố mang đậm dấu ấn nghìn năm văn hiến, nơi lưu giữ vô số di tích lịch sử, đền chùa cổ kính và kiến trúc Pháp cổ duyên dáng. Không khí Hà Nội là sự kết hợp giữa nhịp sống hiện đại và nét hoài cổ: buổi sáng thong thả nhâm nhi ly cà phê trứng bên hồ Hoàn Kiếm, buổi trưa thưởng thức phở nóng hay bún chả, buổi tối dạo quanh phố cổ 36 phố phường với ánh đèn vàng và tiếng rao quen thuộc. Du khách có thể tham quan Lăng Chủ tịch Hồ Chí Minh, Văn Miếu – Quốc Tử Giám, chùa Một Cột, các bảo tàng hoặc đi xe buýt hai tầng ngắm thành phố về đêm. Hà Nội còn là thiên đường ẩm thực với vô số món ăn đường phố, quán cà phê view đẹp, và các khu chợ truyền thống. Đây là nơi lý tưởng để cảm nhận nét văn hóa Việt Nam đậm chất thơ và sự hiếu khách nồng hậu của người dân thủ đô.",
     banner:
       "https://vj-prod-website-cms.s3.ap-southeast-1.amazonaws.com/shutterstock1391898416-1646649508378.png",
     activities: [
@@ -106,13 +109,15 @@ description:
         name: "City Tour Hà Nội",
         price: "900.000đ",
         img: "https://images.unsplash.com/photo-1603354350317-6f7aaa5911c2?q=80&w=400",
-        description: "Tham quan Lăng Bác, Văn Miếu, Hồ Hoàn Kiếm, chùa Một Cột trong 1 ngày.",
+        description:
+          "Tham quan Lăng Bác, Văn Miếu, Hồ Hoàn Kiếm, chùa Một Cột trong 1 ngày.",
       },
       {
         name: "Food Tour Phố Cổ",
         price: "600.000đ",
         img: "https://images.unsplash.com/photo-1576402187878-974f5bb01013?q=80&w=400",
-        description: "Thưởng thức phở, bún chả, cà phê trứng, nem rán tại khu phố cổ.",
+        description:
+          "Thưởng thức phở, bún chả, cà phê trứng, nem rán tại khu phố cổ.",
       },
       {
         name: "Tour xe buýt 2 tầng",
