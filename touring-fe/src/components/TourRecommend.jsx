@@ -1,28 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { ChevronRight, ChevronLeft, Heart } from "lucide-react";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import TourCard from "./TourCard";
-import { Link } from "react-router-dom";
+import { useAuth } from "../auth/context"; // 👈 thêm
 
 const TourPromotions = () => {
+  const { user } = useAuth(); // 👈 lấy user.token
   const [currentTourSlide, setCurrentTourSlide] = useState(0);
-
-  const [favorites, setFavorites] = useState(() => {
-    try {
-      const raw = localStorage.getItem("FAVORITES");
-      const arr = raw ? JSON.parse(raw) : [];
-      return new Set(arr);
-    } catch {
-      return new Set();
-    }
-  });
+  const [favorites, setFavorites] = useState(new Set());
   const [featuredTours, setFeaturedTours] = useState([]);
 
+  // 👉 Lấy danh sách tour
   useEffect(() => {
-<<<<<<< HEAD:touring-fe/src/components/PromoSection.jsx
-    fetch("http://localhost:5000/api/tours")
-=======
     fetch("/api/tours")
->>>>>>> origin/main:touring-fe/src/components/TourRecommend.jsx
       .then((res) => res.json())
       .then((data) => {
         console.log("Tours from API:", data);
@@ -31,14 +20,45 @@ const TourPromotions = () => {
       .catch((err) => console.error("Error fetching tours:", err));
   }, []);
 
-  const handleFavoriteToggle = (tourId) => {
-    setFavorites((prev) => {
-      const newFavorites = new Set(prev);
-      newFavorites.has(tourId)
-        ? newFavorites.delete(tourId)
-        : newFavorites.add(tourId);
-      return newFavorites;
-    });
+  // 👉 Lấy wishlist từ server
+  useEffect(() => {
+    if (!user?.token) return;
+    fetch("/api/wishlist", {
+      headers: { Authorization: `Bearer ${user.token}` },
+    })
+    .then((res) => res.json())
+    .then((res) => {
+  if (res.success) {
+    setFavorites(new Set(res.data.map((item) => String(item.tourId._id))));
+  }
+})
+      .catch((err) => console.error("Error fetching wishlist:", err));
+  }, [user]);
+
+  // 👉 Toggle wishlist trên server
+  const handleFavoriteToggle = async (tourId) => {
+    if (!user?.token) {
+      alert("Bạn cần đăng nhập để dùng wishlist");
+      return;
+    }
+    try {
+      const res = await fetch("/api/wishlist/toggle", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ tourId }),
+      });
+      const data = await res.json();
+      setFavorites((prev) => {
+        const newSet = new Set(prev);
+        data.isFav ? newSet.add(tourId) : newSet.delete(tourId);
+        return newSet;
+      });
+    } catch (err) {
+      console.error("Error toggling wishlist:", err);
+    }
   };
 
   const nextTourSlide = () => {
@@ -82,10 +102,8 @@ const TourPromotions = () => {
             >
               {featuredTours.map((tour) => (
                 <div key={tour._id} className="flex-shrink-0">
-                  {/* discount={tour.discount}
-                     
-                      */}
                   <TourCard
+                    id={tour._id}
                     to={`/tours/${tour._id}`}
                     image={tour.imageItems?.[0]?.imageUrl}
                     title={tour.description}
