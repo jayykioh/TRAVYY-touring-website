@@ -1,7 +1,14 @@
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/context";
+import { useEffect } from "react";
+
 export default function ProfileLayout() {
   const { user } = useAuth();
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+  }, [pathname]);
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-gray-50">
@@ -27,7 +34,6 @@ export default function ProfileLayout() {
             <nav className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y">
               {[
                 ["Thông tin khách hàng", "info"],
-                ["Giỏ hàng / Đơn đã mua", "orders"],
                 ["Mã giảm giá", "vouchers"],
                 ["Lịch sử chuyến đi", "trips"],
                 ["Đánh giá", "reviews"],

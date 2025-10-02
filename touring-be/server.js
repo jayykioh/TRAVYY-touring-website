@@ -20,7 +20,7 @@ const wishlistRoutes = require("./routes/wishlist.routes");
 const app = express(); // 👉 PHẢI có trước
 
 const isProd = process.env.NODE_ENV === "production";
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 4000;
 
 // --- Core middlewares ---
 app.use(helmet());

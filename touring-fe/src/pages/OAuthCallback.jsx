@@ -8,7 +8,7 @@ export default function OAuthCallback() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch("http://localhost:5000/api/auth/refresh", {
+        const r = await fetch("/api/auth/refresh", {
           method: "POST",
           credentials: "include",
           headers: { Accept: "application/json" },
