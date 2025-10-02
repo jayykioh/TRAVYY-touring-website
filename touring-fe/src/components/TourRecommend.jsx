@@ -92,7 +92,7 @@ const TourPromotions = () => {
                     reviews={tour.isReview}
                     priceFrom={tour.basePrice.toString()}
                     originalPrice={tour.basePrice}
-                      isFav={favorites.has(tour._id)} 
+                    isFav={favorites.has(tour._id)}
                     onFav={() => handleFavoriteToggle(tour._id)}
                   />
                 </div>

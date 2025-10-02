@@ -7,11 +7,13 @@ import OrderSummary from "../components/OrderSummary";
 export default function Cart() {
   const {
     items,
-    removeItem,
-    updateQty,
-    toggleSelect,
-    totals: { allSubtotal, selectedSubtotal, canCheckout, hasChildrenWithoutAdults, selectedQty },
+    remove,        
+    qty,           
+    select,        
+    totals,     
   } = useCart();
+
+  const { allSubtotal, selectedSubtotal, canCheckout, hasChildrenWithoutAdults, selectedQty } = totals;
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -23,11 +25,18 @@ export default function Cart() {
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => (
             <CartItemCard
-              key={item.id}
+              key={`${item.id}-${item.date || ""}`}
               item={item}
-              onRemove={removeItem}
-              onUpdateQuantity={(id, field, delta) => updateQty(id, field, delta)}
-              onToggleSelect={toggleSelect}
+
+              // CartItemCard hiện đang gọi onRemove(id) → mình wrap để luôn dùng item.id/item.date
+              onRemove={() => remove(item.id, item.date)}
+
+              // CartItemCard gọi onUpdateQuantity(id, field, delta)
+              // -> mình bỏ qua id do đã có trong closure
+              onUpdateQuantity={(_id, field, delta) => qty(item.id, item.date, field, delta)}
+
+              // CartItemCard gọi onToggleSelect(id)
+              onToggleSelect={() => select(item.id, item.date)}
             />
           ))}
         </div>
@@ -37,7 +46,6 @@ export default function Cart() {
           subtotal={allSubtotal}
           discount={0}
           total={selectedSubtotal}
-          // (tuỳ) truyền cờ để disable nút thanh toán
           canCheckout={canCheckout}
           hasChildrenWithoutAdults={hasChildrenWithoutAdults}
           selectedQty={selectedQty}

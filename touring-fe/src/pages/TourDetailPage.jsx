@@ -7,7 +7,7 @@ import { useCart } from "../hooks/useCart";
 export default function TourDetailPage() {
   const { id: routeId } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { add } = useCart();
 
   const [tour, setTour] = useState(null);
   const [allTours, setAllTours] = useState([]);
@@ -88,7 +88,7 @@ export default function TourDetailPage() {
 
   const handleAdd = () => {
     if (!tour) return;
-    addToCart({
+    add({
       id: getId(tour),
       name: getTitle(tour),
       image: getMainImage(tour),
@@ -98,7 +98,6 @@ export default function TourDetailPage() {
       available: true,
       selected: true,
     });
-    navigate("/shoppingcarts");
   };
 
   const increaseQuantity = () => setQuantity((n) => n + 1);
@@ -307,54 +306,41 @@ export default function TourDetailPage() {
               {/* Map placeholder */}
               {/* Map placeholder */}
               <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-bold text-blue-600 mb-4 border-l-4 border-blue-500 pl-3">
+                <h2 className="text-xl font-bold text-black mb-4 border-l-4 border-black pl-3">
                   Địa điểm
                 </h2>
 
-                {(() => {
-                  // blog: location.lat/lng
-                  // if (tour?.location?.lat && tour?.location?.lng) {
-                  //   return (
-                  //     <iframe
-                  //       title="Tour location"
-                  //       width="100%"
-                  //       height="400"
-                  //       style={{ border: 0 }}
-                  //       loading="lazy"
-                  //       allowFullScreen
-                  //       referrerPolicy="no-referrer-when-downgrade"
-                  //       src={`https://maps.google.com/maps?q=${tour.location.lat},${tour.location.lng}&z=14&hl=vi&output=embed`}
-                  //     />
-                  //   );
-                  // }
-
-                  // tour: locations[0].coordinates;
-                  if (
-                    Array.isArray(tour?.locations) &&
-                    tour.locations[0]?.coordinates?.lat &&
-                    tour.locations[0]?.coordinates?.lng
-                  ) {
-                    const { lat, lng } = tour.locations[0].coordinates;
-                    return (
-                      <iframe
-                        title="Tour location"
-                        width="100%"
-                        height="400"
-                        style={{ border: 0 }}
-                        loading="lazy"
-                        allowFullScreen
-                        referrerPolicy="no-referrer-when-downgrade"
-                        src={`https://maps.google.com/maps?q=${lat},${lng}&z=14&hl=vi&output=embed`}
-                      />
-                    );
-                  }
-
-                  return (
-                    <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-                      <p className="text-gray-500">Không có dữ liệu địa điểm</p>
-                    </div>
-                  );
-                })()}
+                <div className="rounded-2xl overflow-hidden backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
+                  <div className="relative w-full aspect-[16/9] md:h-80">
+                    {(() => {
+                      if (
+                        Array.isArray(tour?.locations) &&
+                        tour.locations[0]?.coordinates?.lat &&
+                        tour.locations[0]?.coordinates?.lng
+                      ) {
+                        const { lat, lng } = tour.locations[0].coordinates;
+                        return (
+                          <iframe
+                            title="Tour location"
+                            className="absolute inset-0 w-full h-full"
+                            style={{ border: 0 }}
+                            loading="lazy"
+                            allowFullScreen
+                            referrerPolicy="no-referrer-when-downgrade"
+                            src={`https://maps.google.com/maps?q=${lat},${lng}&z=14&hl=vi&output=embed`}
+                          />
+                        );
+                      }
+                      return (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                          <p className="text-gray-500">
+                            Không có dữ liệu địa điểm
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
               </div>
 
               <Reviews tour={tour} />
