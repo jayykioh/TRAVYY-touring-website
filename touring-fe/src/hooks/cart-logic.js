@@ -1,39 +1,40 @@
-export const STORAGE_KEY = "touring_cart_v1";
+export const STORAGE_KEY = "cart:v1"; // có version để sau này migrate dễ
 
-export function safeNumber(n, fallback = 0) {
+export function safeNumber(n, fb = 0) {
   const x = Number(n);
-  return Number.isFinite(x) ? x : fallback;
+  return Number.isFinite(x) ? x : fb;
 }
 
 export function normalizeItem(raw) {
-  const adultPrice = safeNumber(raw.price ?? raw.adultPrice, 0);
-  const childPrice = Math.round(adultPrice * 0.5); // 50%
-  const adults = Math.max(0, safeNumber(raw.adults, 0));
-  const children = Math.max(0, safeNumber(raw.children, 0));
+  const priceAdult = safeNumber(raw.adultPrice ?? raw.price, 0);
+  const priceChild = safeNumber(raw.childPrice, Math.round(priceAdult * 0.5));
   return {
     id: raw.id,
     name: raw.name || raw.title || "",
-    subtitle: raw.subtitle || "",
-    image: raw.image || "",
     date: raw.date || "",
-    duration: raw.duration || "",
-    locations: raw.locations || "",
-    adultPrice,
-    childPrice,
-    adults,
-    children,
-    available: raw.available !== false,
+    adults: Math.max(0, safeNumber(raw.adults, 0)),
+    children: Math.max(0, safeNumber(raw.children, 0)),
+    adultPrice: priceAdult,
+    childPrice: priceChild,
     selected: raw.selected !== false,
+    available: raw.available !== false,
+    image: raw.image || "",
   };
+}
+
+export function initCartState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeItem) : [];
+  } catch { return []; }
 }
 
 export function cartReducer(state, action) {
   switch (action.type) {
-    case "INIT_FROM_STORAGE":
-      return Array.isArray(action.payload) ? action.payload : state;
-    case "ADD_ITEM": {
+    case "ADD": {
       const inc = normalizeItem(action.payload);
-      const idx = state.findIndex((i) => i.id === inc.id);
+      const idx = state.findIndex(i => i.id === inc.id && i.date === inc.date);
       if (idx !== -1) {
         const next = [...state];
         const cur = next[idx];
@@ -47,28 +48,32 @@ export function cartReducer(state, action) {
       }
       return [inc, ...state];
     }
-    case "REMOVE_ITEM":
-      return state.filter((i) => i.id !== action.payload);
-    case "UPDATE_QTY": {
-      const { id, field, delta } = action.payload;
-      return state.map((i) =>
-        i.id === id
-          ? { ...i, [field]: Math.max(0, safeNumber(i[field]) + safeNumber(delta)) }
+    case "REMOVE":
+      return state.filter(i => !(i.id === action.payload.id && i.date === action.payload.date));
+    case "QTY":
+      return state.map(i =>
+        (i.id === action.payload.id && i.date === action.payload.date)
+          ? { ...i, [action.payload.field]: Math.max(0, safeNumber(i[action.payload.field]) + safeNumber(action.payload.delta)) }
           : i
       );
-    }
-    case "TOGGLE_SELECT":
-      return state.map((i) =>
-        i.id === action.payload ? { ...i, selected: !i.selected } : i
+    case "SELECT":
+      return state.map(i =>
+        (i.id === action.payload.id && i.date === action.payload.date)
+          ? { ...i, selected: !i.selected }
+          : i
       );
-    case "SET_AVAILABLE": {
-      const { id, available } = action.payload;
-      return state.map((i) => (i.id === id ? { ...i, available: !!available } : i));
-    }
+    case "AVAILABLE":
+      return state.map(i =>
+        (i.id === action.payload.id && i.date === action.payload.date)
+          ? { ...i, available: !!action.payload.available }
+          : i
+      );
     case "CLEAR_UNAVAILABLE":
-      return state.filter((i) => i.available);
+      return state.filter(i => i.available);
     case "CLEAR_ALL":
       return [];
+    case "__REPLACE__":
+      return Array.isArray(action.payload) ? action.payload.map(normalizeItem) : state;
     default:
       return state;
   }
