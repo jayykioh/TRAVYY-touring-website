@@ -5,11 +5,13 @@ import { Link } from "react-router-dom";
 
 const TourPromotions = () => {
   const [currentTourSlide, setCurrentTourSlide] = useState(0);
-  const [favorites, setFavorites] = useState(new Set([2, 4]));
+
+  const [setFavorites] = useState(() => () => {});
   const [featuredTours, setFeaturedTours] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:4000/api/tours")
+    fetch("http://localhost:5000/api/tours")
+
       .then((res) => res.json())
       .then((data) => {
         console.log("Tours from API:", data);
