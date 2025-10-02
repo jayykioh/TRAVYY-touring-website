@@ -37,4 +37,6 @@ const TravelAgencySchema = new mongoose.Schema(
   { timestamps: true, collection: "travel_agency" } // chỉ rõ collection trong MongoDB
 );
 
+
 module.exports = mongoose.model("TravelAgency", TravelAgencySchema);
+
