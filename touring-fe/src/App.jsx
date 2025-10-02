@@ -18,7 +18,7 @@ import ProfileOrders from "./components/ProfileOrders";
 import ProfileReviews from "./components/ProfileReviews";
 import RolePopup from "./components/RolePopup";
 import OAuthCallback from "./pages/OAuthCallback";
-
+import WishlistPage from "./pages/WishlistPage";
 // Route guard
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
@@ -60,6 +60,7 @@ export default function App() {
             <Route path="info" element={<ProfileInfo />} />
             <Route path="orders" element={<ProfileOrders />} />
             <Route path="reviews" element={<ProfileReviews />} />
+            <Route path="favorites" element={<WishlistPage />} />
           </Route>
         </Route>
 
