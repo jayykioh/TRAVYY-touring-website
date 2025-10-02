@@ -1,15 +1,15 @@
 // App.jsx
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./auth/context";
-
 import MainLayout from "./layout/MainLayout";
 import Home from "./pages/Home";
 import MainHome from "./pages/MainHome";
 import DestinationPage from "./pages/Blogs";
 import RegionTours from "./components/RegionTours";
-// import SearchResults from "./pages/SearchResults";
+import SearchResults from "./pages/SearchResults";
 import TourDetailPage from "./pages/TourDetailPage";
 import DiscountCodesPage from "./pages/DiscountCodesPage";
+import BlogDetailPage from "./pages/BlogDetailPage"; // ✅ THÊM IMPORT NÀY
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProfileLayout from "./pages/UserProfile";
@@ -19,7 +19,7 @@ import ProfileReviews from "./components/ProfileReviews";
 import RolePopup from "./components/RolePopup";
 import OAuthCallback from "./pages/OAuthCallback";
 
-// Route guard
+// Route guard function
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
   if (booting) return <p className="p-6">Loading...</p>;
@@ -30,9 +30,8 @@ function ProtectedRoute({ children }) {
 export default function App() {
   const { booting, isAuth, user } = useAuth();
   console.log("Auth state:", { isAuth, user });
-
   if (booting) return <p className="p-6">Loading app...</p>;
-
+  
   return (
     <>
       <Routes>
@@ -42,11 +41,12 @@ export default function App() {
           <Route path="/" element={isAuth ? <MainHome /> : <Home />} />
           <Route path="/home" element={<MainHome />} />
           <Route path="/destinations/:slug" element={<DestinationPage />} />
-          {/* <Route path="/search" element={<SearchResults />} /> */}
+          <Route path="/search-results" element={<SearchResults />} />
           <Route path="/discount-codes" element={<DiscountCodesPage />} />
           <Route path="/tours/:id" element={<TourDetailPage />} />
           <Route path="/region/:slug" element={<RegionTours />} />
-
+          <Route path="/blog/:id" element={<BlogDetailPage />} /> {/* ✅ THÊM ROUTE NÀY */}
+          
           <Route
             path="/profile"
             element={
@@ -78,4 +78,4 @@ export default function App() {
       )}
     </>
   );
-}
+}   

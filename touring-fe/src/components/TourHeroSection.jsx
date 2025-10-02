@@ -229,7 +229,7 @@ const TourHeroSection = () => {
       </button>
 
       {/* Auto-play control */}
-      <button
+      {/* <button
         onClick={() => setIsAutoPlay(!isAutoPlay)}
         className="absolute top-4 right-4 z-30 
                    bg-black/20 hover:bg-black/40 backdrop-blur-sm
@@ -242,7 +242,7 @@ const TourHeroSection = () => {
           <Pause className="w-4 h-4" /> : 
           <Play className="w-4 h-4" />
         }
-      </button>
+      </button> */}
 
       {/* Main Content */}
       <div className="relative z-20 h-full flex items-center">
