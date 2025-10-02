@@ -20,22 +20,21 @@ export default function MainHome() {
       <QuickBooking />
      
       {/* Tour promotions với điều hướng tới trang mã giảm giá */}
-
       <TourPromotions />
-
       {/* Why Choose Us */}
-      {/* <WhyChooseUs /> */}
+      <WhyChooseUs />
      
       {/* FAQ */}
-      {/* <FAQ/> */}
+      <FAQ/>
      
       {/* Travel Blog & Guides */}
       <TravelBlog />
      
-
+      {/* Trusted Partners */}
+      <TrustedPartners />
       
       {/* Vietnam Destinations */}
-      {/* <VietnamDestinations /> */}
+      <VietnamDestinations />
      
       {/* About Section */}
       <AboutSection />
