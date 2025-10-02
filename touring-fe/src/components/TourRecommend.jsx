@@ -5,7 +5,16 @@ import { Link } from "react-router-dom";
 
 const TourPromotions = () => {
   const [currentTourSlide, setCurrentTourSlide] = useState(0);
-  const [favorites, setFavorites] = useState(new Set([2, 4]));
+
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const raw = localStorage.getItem("FAVORITES");
+      const arr = raw ? JSON.parse(raw) : [];
+      return new Set(arr);
+    } catch {
+      return new Set();
+    }
+  });
   const [featuredTours, setFeaturedTours] = useState([]);
 
   useEffect(() => {

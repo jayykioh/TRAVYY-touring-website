@@ -38,6 +38,13 @@ export default function UserMenu() {
             Profile
           </Link>
           <Link
+              to="/profile/favorites"
+              className="block px-4 py-2 text-sm hover:bg-gray-100"
+              onClick={() => setOpen(false)}
+            >
+              Wishlist
+          </Link>
+          <Link
             to="/shoppingcarts"
             className="block px-4 py-2 text-sm hover:bg-gray-100"
             onClick={() => setOpen(false)}
