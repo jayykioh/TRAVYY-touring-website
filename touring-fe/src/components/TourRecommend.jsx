@@ -18,7 +18,11 @@ const TourPromotions = () => {
   const [featuredTours, setFeaturedTours] = useState([]);
 
   useEffect(() => {
+<<<<<<< HEAD:touring-fe/src/components/PromoSection.jsx
+    fetch("http://localhost:5000/api/tours")
+=======
     fetch("/api/tours")
+>>>>>>> origin/main:touring-fe/src/components/TourRecommend.jsx
       .then((res) => res.json())
       .then((data) => {
         console.log("Tours from API:", data);
