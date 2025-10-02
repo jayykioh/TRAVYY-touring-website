@@ -1,173 +1,219 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Heart, MapPin, Star, Plus, Minus } from "lucide-react";
-// import { destinationList } from "../mockdata/destinationList";
 import TourCard from "../components/TourCard";
-import { useEffect } from "react";
+import { useCart } from "../hooks/useCart";
 
 export default function TourDetailPage() {
-  const { id } = useParams();
-  const tourId = id;
+  const { id: routeId } = useParams();
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
+
   const [tour, setTour] = useState(null);
   const [allTours, setAllTours] = useState([]);
-
-  useEffect(() => {
-
-    fetch(`http://localhost:5000/api/tours/${id}`)
-
-      .then((res) => res.json())
-      .then((data) => setTour(data))
-      .catch((err) => console.error("Error fetching tour:", err));
-
-    // Lấy danh sách để gợi ý
-
-    fetch("http://localhost:5000/api/tours")
-
-
-      .then((res) => res.json())
-      .then((data) => setAllTours(data))
-      .catch((err) => console.error("Error fetching tours:", err));
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [id]);
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [tourId]);
-
   const [isFav, setIsFav] = useState(false);
-  // const [selectedDate, setSelectedDate] = useState("");
   const [quantity, setQuantity] = useState(1);
-  // const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [showMoreService, setShowMoreService] = useState(false);
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [errMsg, setErrMsg] = useState("");
 
-  // const allTours = Object.values(destinationList).flat();
-  // const tour = allTours.find((t) => t.id.toString() === tourId);
+  useEffect(() => {
+    let ignore = false;
+    const ac = new AbortController();
 
-  // if (!tour) return <div className="p-6">Không tìm thấy tour</div>;
+    async function load() {
+      try {
+        setLoading(true);
+        setErrMsg("");
 
-  // const suggestedTours = allTours.filter((t) => t.id !== tour.id).slice(0, 4);
+        const [tourRes, listRes] = await Promise.all([
+          fetch(`/api/tours/${routeId}`, { signal: ac.signal }),
+          fetch(`/api/tours`, { signal: ac.signal }),
+        ]);
 
-  const increaseQuantity = () => setQuantity((prev) => prev + 1);
-  const decreaseQuantity = () => setQuantity((prev) => Math.max(1, prev - 1));
+        if (!tourRes.ok) throw new Error(`Tour ${routeId} not found`);
+        if (!listRes.ok) throw new Error(`Cannot load tours list`);
 
-  const discountPercent = tour?.originalPrice
-    ? Math.round(
-        ((tour.originalPrice - tour.currentPrice) / tour.originalPrice) * 100
-      )
-    : null;
+        const [tourData, listData] = await Promise.all([
+          tourRes.json(),
+          listRes.json(),
+        ]);
 
-  if (!tour) {
-    return <div className="p-6">Đang tải tour...</div>;
-  }
+        if (!ignore) {
+          setTour(tourData);
+          setAllTours(Array.isArray(listData) ? listData : []);
+        }
+      } catch (e) {
+        if (!ignore && e.name !== "AbortError") {
+          setErrMsg(e.message || "Lỗi tải dữ liệu");
+        }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }
 
-  const handleFavorite = () => setIsFav(!isFav);
+    load();
+    window.scrollTo({ top: 0, behavior: "smooth" });
 
-  const handleBooking = () => {
-    alert(
-      `Đặt tour: ${tour.title}\nSố lượng: ${quantity}\nTổng tiền: ${(
-        tour.currentPrice * quantity
-      ).toLocaleString()}₫`
-    );
+    return () => {
+      ignore = true;
+      ac.abort();
+    };
+  }, [routeId]);
+
+  const currentPrice = tour?.currentPrice ?? tour?.basePrice ?? 0;
+  const originalPrice = tour?.originalPrice ?? tour?.basePrice ?? null;
+  const unitPrice = toNumber(currentPrice);
+  const unitOriginal = toNumber(originalPrice);
+
+  const subtotal = useMemo(() => unitPrice * quantity, [unitPrice, quantity]);
+  const originalSubtotal = useMemo(
+    () =>
+      unitOriginal && unitOriginal !== unitPrice
+        ? unitOriginal * quantity
+        : null,
+    [unitOriginal, unitPrice, quantity]
+  );
+
+  const discountPercent = useMemo(() => {
+    if (!originalPrice || !currentPrice || originalPrice <= currentPrice)
+      return null;
+    return Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+  }, [originalPrice, currentPrice]);
+
+  const suggestedTours = useMemo(() => {
+    const curId = getId(tour);
+    return allTours.filter((t) => getId(t) !== curId).slice(0, 4);
+  }, [allTours, tour]);
+
+  const handleAdd = () => {
+    if (!tour) return;
+    addToCart({
+      id: getId(tour),
+      name: getTitle(tour),
+      image: getMainImage(tour),
+      adults: quantity,
+      children: 0,
+      price: currentPrice,
+      available: true,
+      selected: true,
+    });
+    navigate("/shoppingcarts");
   };
 
-  const suggestedTours = allTours
-    .filter((t) => t._id !== tour?._id)
-    .slice(0, 4);
+  const increaseQuantity = () => setQuantity((n) => n + 1);
+  const decreaseQuantity = () => setQuantity((n) => Math.max(1, n - 1));
+  const handleFavorite = () => setIsFav((v) => !v);
+
+  if (loading) return <div className="p-6">Đang tải tour...</div>;
+  if (errMsg) return <div className="p-6 text-red-600">Lỗi: {errMsg}</div>;
+  if (!tour) return <div className="p-6">Không tìm thấy tour</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Breadcrumb */}
-      <div className="bg-white px-4 py-3 border-b">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center text-sm text-gray-600">
-            <span className="text-blue-500 font-medium">Travyy Travel</span>
-            <span className="mx-2">›</span>
-            <span>{tour.location}</span>
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,rgba(245,247,250,1),rgba(237,241,245,1))]">
+      {/* Breadcrumb (glass) */}
+      <div className="sticky top-0 z-10 backdrop-blur-xl bg-white/60 border-b border-white/40">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center text-sm text-gray-700">
+            <span className="font-semibold text-gray-900">Travyy Travel</span>
+            <span className="mx-2 text-gray-400">›</span>
+            <span className="truncate">{getLocation(tour)}</span>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                {tour.title}
+        {/* Header card (glass) */}
+        <div className="rounded-2xl p-6 mb-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+          <div className="flex justify-between items-start mb-4 gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 leading-tight">
+                {getTitle(tour)}
               </h1>
-              <div className="flex items-center gap-4 text-sm">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                 <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                  <span className="font-semibold">{tour.rating}</span>
+                  <Star className="w-4 h-4 text-amber-400 fill-current" />
+                  <span className="font-semibold">{tour?.rating ?? "—"}</span>
                   <span className="text-gray-500">
-                    ({tour.reviews?.toLocaleString()} Đánh giá)
+                    ({formatNumber(tour?.reviews)} Đánh giá)
                   </span>
                 </div>
                 <div className="flex items-center gap-1 text-gray-600">
-                  <span>{tour.booked} Đã đặt</span>
+                  <span>
+                    {formatNumber(tour?.usageCount ?? tour?.booked)} Đã đặt
+                  </span>
                 </div>
                 <div className="flex items-center gap-1 text-gray-600">
                   <MapPin className="w-4 h-4" />
-                  <span>{tour.location}</span>
+                  <span className="truncate">{getLocation(tour)}</span>
                 </div>
               </div>
             </div>
+
             <button
               onClick={handleFavorite}
-              className={`p-2 rounded-full border ${
+              className={`shrink-0 p-2 rounded-full border transition-all hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 ${
                 isFav
-                  ? "bg-red-50 border-red-200"
-                  : "bg-gray-50 border-gray-200"
-              } hover:shadow-sm transition-all`}
+                  ? "bg-rose-50 border-rose-200"
+                  : "bg-white/70 border-white/60"
+              }`}
+              aria-label="Yêu thích"
             >
               <Heart
                 className={`w-5 h-5 ${
-                  isFav ? "text-red-500 fill-current" : "text-gray-400"
+                  isFav ? "text-rose-500 fill-current" : "text-gray-400"
                 }`}
               />
             </button>
           </div>
 
-          {/* Image Gallery */}
+          {/* Image Gallery (giữ bố cục, skin glass nhẹ) */}
           <div className="grid grid-cols-4 gap-2 mb-6">
             <div className="col-span-4 md:col-span-2 relative">
               <img
-                src={tour.image}
+                src={tour.imageItems?.[0]?.imageUrl}
                 alt={tour.title}
-                className="w-full h-64 md:h-80 object-cover rounded-lg"
+                className="w-full h-64 md:h-80 object-cover rounded-2xl"
               />
             </div>
             <div className="col-span-2 md:col-span-1 grid grid-rows-2 gap-2">
               <img
-                src={tour.gallery?.[0] || tour.image}
+                src={
+                  tour.imageItems?.[1]?.imageUrl ||
+                  tour.imageItems?.[0]?.imageUrl
+                }
                 alt="Gallery 1"
-                className="w-full h-32 md:h-39 object-cover rounded-lg"
+                className="w-full h-32 md:h-39 object-cover rounded-2xl"
               />
               <img
-                src={tour.gallery?.[1] || tour.image}
+                src={
+                  tour.imageItems?.[2]?.imageUrl ||
+                  tour.imageItems?.[0]?.imageUrl
+                }
                 alt="Gallery 2"
-                className="w-full h-32 md:h-39 object-cover rounded-lg"
+                className="w-full h-32 md:h-39 object-cover rounded-2xl"
               />
             </div>
             <div className="col-span-2 md:col-span-1 grid grid-rows-2 gap-2">
               <img
-                src={tour.gallery?.[0] || tour.image}
+                src={
+                  tour.imageItems?.[3]?.imageUrl ||
+                  tour.imageItems?.[0]?.imageUrl
+                }
                 alt="Gallery 3"
-                className="w-full h-32 md:h-39 object-cover rounded-lg"
+                className="w-full h-32 md:h-39 object-cover rounded-2xl"
               />
               <div className="relative">
                 <img
-                  src={tour.gallery?.[1] || tour.image}
+                  src={
+                    tour.imageItems?.[4]?.imageUrl ||
+                    tour.imageItems?.[0]?.imageUrl
+                  }
                   alt="Gallery 4"
-                  className="w-full h-32 md:h-39 object-cover rounded-lg"
+                  className="w-full h-32 md:h-39 object-cover rounded-2xl"
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-40 rounded-lg flex items-center justify-center">
-                  <button
-                    // onClick={() => setShowAllPhotos(true)}
-                    className="text-white font-medium text-sm"
-                  >
+                <div className="absolute inset-0 bg-black/30 rounded-2xl flex items-center justify-center">
+                  <button className="text-white font-medium text-sm px-3 py-1 rounded-full border border-white/50 backdrop-blur-md">
                     Thư viện ảnh
                   </button>
                 </div>
@@ -175,300 +221,419 @@ export default function TourDetailPage() {
             </div>
           </div>
 
-          {/* Service Description */}
-          <div className="bg-blue-50 p-4 rounded-lg mb-6">
+          {/* Service Description (glass info) */}
+          <div className="p-4 rounded-2xl mb-6 backdrop-blur-xl bg-white/60 border border-white/50">
             <div className="flex items-start gap-3">
               <div className="text-2xl">🎉</div>
               <div className="space-y-2 text-sm">
                 <p>
                   • Dịch vụ đón/tiễn ưu tiên tại sân bay (fast track) sẽ giúp
-                  quý khách tiết kiệm thời gian, đặc biệt vào các khung giờ cao
-                  điểm, trong quá trình chờ đợi làm thủ tục tại sân bay.
+                  quý khách tiết kiệm thời gian.
                 </p>
                 <p>
-                  • Tại sân bay, đại diện của chúng tôi sẽ chào đón quý khách và
-                  hỗ trợ quý khách trong mọi thủ tục giấy tờ tại sân bay một
-                  cách nhanh chóng và thuận tiện nhất
+                  • Đại diện của chúng tôi sẽ chào đón và hỗ trợ quý khách làm
+                  thủ tục nhanh chóng, thuận tiện.
                 </p>
-                {!showMoreService && (
+                {!showMoreService ? (
                   <button
                     onClick={() => setShowMoreService(true)}
-                    className="text-blue-600 font-medium underline text-sm"
+                    className="text-gray-900 font-medium underline text-sm hover:opacity-80"
                   >
                     Xem thêm ›
                   </button>
-                )}
-
-                {showMoreService && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    {tour.moreServiceInfo}
+                ) : (
+                  <p className="text-sm text-gray-700 mt-2">
+                    {tour?.moreServiceInfo || "Hiện chưa có thông tin thêm."}
                   </p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Priority Banner */}
+          {/* Priority Banner: bỏ gradient → chip glass */}
           <div
-            //cần tạo thêm route /discounts trong App.jsx
             onClick={() => navigate("/discounts")}
-            className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-3 rounded-lg cursor-pointer border border-gray-300 hover:shadow-lg transition-shadow duration-300"
+            className="cursor-pointer rounded-2xl px-4 py-3 backdrop-blur-xl bg-white/60 border border-white/50 hover:bg-white/70 transition-colors"
           >
-            <div className="flex items-center justify-between text-white font-semibold">
+            <div className="flex items-center justify-between text-gray-900 font-semibold">
               <span>Ưu đãi cho bạn</span>
               <div className="flex items-center gap-2">
-                <span className="bg-white text-blue-500 text-xs px-2 py-1 rounded">
-                  Giảm 9%
+                <span className="text-xs px-2 py-1 rounded-full border border-black/10 bg-black/5">
+                  {discountPercent ? `Giảm ${discountPercent}%` : "Deal hot"}
                 </span>
-                <span>›</span>
+                <span aria-hidden>›</span>
               </div>
             </div>
           </div>
 
           {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+            {/* Left */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Important Notes */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-bold text-blue-600 mb-4 border-l-4 border-blue-500 pl-3">
+              {/* Notes (glass card) */}
+              <div className="rounded-2xl p-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 pl-3 border-l-4 border-gray-800/80">
                   Những điều cần lưu ý
                 </h2>
                 <div className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold mb-2">Xác nhận</h3>
-                    <p className="text-sm text-gray-600">
-                      • Xác nhận ngay tức thời. Nếu bạn không nhận được email
-                      xác nhận đơn hàng, hãy liên hệ với chúng tôi
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-2">Điều kiện</h3>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p>• Trẻ em từ 2+ tuổi sẽ được tính phí như người lớn</p>
-                      <p>
-                        • Trẻ em dưới 2 tuổi được miễn phí nhưng phải đi cùng ít
-                        nhất một người lớn. Nếu bạn có trẻ em dưới 2 tuổi đi
-                        kèm, vui lòng cung cấp họ tên đầy đủ, quốc tịch và năm
-                        sinh tại trang thanh toán
-                      </p>
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-2">Thông tin thêm</h3>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p>
-                        • <strong>Chú ý:</strong> Travyy và nhà cung cấp dịch vụ
-                        sẽ không chịu trách nhiệm cho những vấn đề liên quan đến
-                        VISA của quý khách. Dịch vụ đón tiễn ưu tiên không bao
-                        gồm dịch vụ VISA
-                      </p>
-                      <p>• Not available from 00:00 AM to 05:00 AM everyday.</p>
-                      <p>• Support Hotline: +84866624188</p>
-                      <p>
-                        {" "}
-                        <p>
-                          {tour.itinerary?.[0]?.description ||
-                            "Chưa có lịch trình"}
-                        </p>
-                      </p>
-                    </div>
-                  </div>
+                  <Section title="Xác nhận">
+                    <li>
+                      Xác nhận ngay tức thời. Nếu không nhận được email xác
+                      nhận, hãy liên hệ với chúng tôi.
+                    </li>
+                  </Section>
+                  <Section title="Điều kiện">
+                    <li>Trẻ em từ 2+ tuổi được tính phí như người lớn.</li>
+                    <li>
+                      Trẻ dưới 2 tuổi miễn phí nhưng phải đi cùng ít nhất một
+                      người lớn.
+                    </li>
+                  </Section>
+                  <Section title="Thông tin thêm">
+                    <li>
+                      <strong>Chú ý:</strong> Dịch vụ đón tiễn ưu tiên không bao
+                      gồm dịch vụ VISA.
+                    </li>
+                    <li>Not available from 00:00–05:00 h hằng ngày.</li>
+                    <li>Hotline: +84866624188</li>
+                    <li>
+                      {tour?.itinerary?.[0]?.description ||
+                        "Chưa có lịch trình"}
+                    </li>
+                  </Section>
                 </div>
               </div>
 
-              {/* Map Section */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-bold text-blue-600 mb-4 border-l-4 border-blue-500 pl-3">
+              {/* Map placeholder */}
+              <div className="rounded-2xl p-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 pl-3 border-l-4 border-gray-800/80">
                   Địa điểm
                 </h2>
-                <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
+                <div className="w-full h-64 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 border border-white/50 flex items-center justify-center">
                   <p className="text-gray-500">Bản đồ sẽ hiển thị ở đây</p>
                 </div>
               </div>
 
-              {/* Reviews Section */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-bold text-blue-600 mb-4 border-l-4 border-blue-500 pl-3">
-                  Đánh giá
-                </h2>
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="flex items-center gap-2">
-                    <div className="text-3xl">😊</div>
-                    <div>
-                      <div className="text-2xl font-bold text-orange-600">
-                        {tour.rating}
-                      </div>
-                      <div className="text-sm text-gray-500">Hài lòng</div>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    / 5 | {tour.reviews?.toLocaleString()} Đánh giá
-                  </div>
-                </div>
-
-                {/* Review Filters */}
-                <div className="flex gap-2 mb-4 flex-wrap">
-                  <button className="px-3 py-1 text-sm border border-orange-300 text-orange-600 rounded-full">
-                    Đánh giá phù hợp nhất
-                  </button>
-                  <button className="px-3 py-1 text-sm border border-gray-300 rounded-full">
-                    Tất cả
-                  </button>
-                  <button className="px-3 py-1 text-sm border border-gray-300 rounded-full">
-                    Có hình ảnh
-                  </button>
-                  <button className="px-3 py-1 text-sm border border-gray-300 rounded-full">
-                    Chỉ tiếng Việt
-                  </button>
-                </div>
-
-                {/* Sample Review */}
-                <div className="border-t pt-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-amber-200 rounded-full flex items-center justify-center text-sm font-semibold">
-                      J
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-sm">
-                          Joselle ********
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          2025/07/29
-                        </span>
-                        <div className="flex items-center gap-1 ml-auto">
-                          <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded">
-                            Hài lòng
-                          </span>
-                          <span className="text-yellow-500 text-sm">5.0</span>
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-2">
-                        Đánh giá cho: Chuyến Bay Đêm • Chuyến bay quốc tế • Ưu
-                        tiên
-                      </p>
-                      <p className="text-sm">
-                        Một giá đình cả hài bé mới biết đi và một em bé đây là
-                        một lần đi KHÔNG CẦN PHẢI SUY NGHĨ. Sân bay TSN không có
-                        hàng ưu tiên, vì vậy dịch vụ này rất cần thiết, đặc biệt
-                        đối với những người phải bắt chuyến bay khác, như chúng
-                        tôi. Rất đáng giá.
-                      </p>
-                      <button className="text-sm text-blue-600 underline mt-2">
-                        Hiển thị đánh giá gốc (NỘI dung tiếng đã được dịch)
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <Reviews tour={tour} />
+              <FAQSection />
             </div>
 
-            {/* Right Sidebar - Booking */}
+            {/* Right – Booking (glass sidebar) */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow-sm p-6 sticky top-6">
-                <h3 className="font-semibold mb-4">Số lượng</h3>
-
-                <div className="flex items-center justify-between mb-6">
-                  <span className="text-gray-700">Người lớn</span>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={decreaseQuantity}
-                      className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-50"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    <span className="w-8 text-center">{quantity}</span>
-                    <button
-                      onClick={increaseQuantity}
-                      className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-50"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="border-t pt-4 mb-6">
-                  <div className="flex items-baseline gap-2 mb-2">
-                    <span className="text-2xl font-bold">
-                      ₫ {tour.currentPrice?.toLocaleString()}
-                    </span>
-                    {tour.originalPrice && (
-                      <span className="text-gray-400 line-through text-sm">
-                        ₫ {tour.originalPrice?.toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                  {discountPercent && (
-                    <div className="flex gap-2">
-                      <span className="bg-red-500 text-white text-xs px-2 py-1 rounded">
-                        Sale
-                      </span>
-                      <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded">
-                        Giảm {discountPercent}%
-                      </span>
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-500 mt-2">
-                    Vui lòng hoàn tất các mục yêu cầu để chuyển đến bước tiếp
-                    theo
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <button
-                    onClick={handleBooking}
-                    className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
-                  >
-                    Thêm vào giỏ hàng
-                  </button>
-                  <button
-                    onClick={handleBooking}
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                  >
-                    Đặt ngay
-                  </button>
-                </div>
-              </div>
+              <BookingSidebar
+                tour={tour}
+                quantity={quantity}
+                onIncrease={increaseQuantity}
+                onDecrease={decreaseQuantity}
+                discountPercent={discountPercent}
+                onBooking={handleAdd}
+                currentPrice={unitPrice}
+                originalPrice={unitOriginal}
+                subtotal={subtotal}
+                originalSubtotal={originalSubtotal}
+                onAdd={handleAdd}
+              />
             </div>
-          </div>
-
-          {/* FAQ Section */}
-          <div className="mt-8 bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-bold text-blue-600 mb-4 border-l-4 border-blue-500 pl-3">
-              Câu hỏi thường gặp
-            </h2>
-            <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-              Hỗ trợ khách hàng
-            </button>
           </div>
 
           {/* Related Tours */}
-          <div className="mt-8 bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-bold text-blue-600 mb-6 border-l-4 border-blue-500 pl-3">
-              Bạn có thể sẽ thích
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {suggestedTours.map((t) => (
-                <TourCard
-                  key={t._id}
-                  to={`/tours/${t._id}`}
-                  image={t.imageItems?.[0]?.imageUrl}
-                  title={t.description}
-                  location={t.locations?.[0]?.name || "Địa điểm"}
-                  rating={t.isRating}
-                  reviews={t.isReview}
-                  bookedText={`${t.usageCount} Đã được đặt`}
-                  priceFrom={t.basePrice}
-                  originalPrice={t.basePrice}
-                  onFav={() => handleFavorite(t._id)}
-                  isFav={isFav}
-                />
-              ))}
-            </div>
+          <RelatedTours
+            tours={suggestedTours}
+            onFav={handleFavorite}
+            isFav={isFav}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================= Sub-components ================= */
+
+function Section({ title, children }) {
+  return (
+    <div>
+      <h3 className="font-semibold mb-2 text-gray-900">{title}</h3>
+      <ul className="text-sm text-gray-700 space-y-1 list-disc pl-5">
+        {children}
+      </ul>
+    </div>
+  );
+}
+
+function Gallery({ tour }) {
+  const mainImg = getMainImage(tour);
+  const g0 = tour?.gallery?.[0] || mainImg;
+  const g1 = tour?.gallery?.[1] || mainImg;
+
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      <div className="col-span-4 md:col-span-2">
+        <img
+          src={mainImg}
+          alt={getTitle(tour)}
+          className="w-full h-64 md:h-80 object-cover rounded-2xl"
+        />
+      </div>
+      <div className="col-span-2 md:col-span-1 grid grid-rows-2 gap-2">
+        <img
+          src={g0}
+          alt="Gallery 1"
+          className="w-full h-32 object-cover rounded-2xl"
+        />
+        <img
+          src={g1}
+          alt="Gallery 2"
+          className="w-full h-32 object-cover rounded-2xl"
+        />
+      </div>
+      <div className="col-span-2 md:col-span-1 grid grid-rows-2 gap-2">
+        <img
+          src={g0}
+          alt="Gallery 3"
+          className="w-full h-32 object-cover rounded-2xl"
+        />
+        <div className="relative">
+          <img
+            src={g1}
+            alt="Gallery 4"
+            className="w-full h-32 object-cover rounded-2xl"
+          />
+          <div className="absolute inset-0 bg-black/30 rounded-2xl flex items-center justify-center">
+            <button className="text-white font-medium text-sm px-3 py-1 rounded-full border border-white/50 backdrop-blur-md">
+              Thư viện ảnh
+            </button>
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+function Reviews({ tour }) {
+  return (
+    <div className="rounded-2xl p-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+      <h2 className="text-xl font-bold text-gray-900 mb-4 pl-3 border-l-4 border-gray-800/80">
+        Đánh giá
+      </h2>
+      <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-2">
+          <div className="text-3xl">😊</div>
+          <div>
+            <div className="text-2xl font-bold text-gray-900">
+              {tour?.rating ?? "—"}
+            </div>
+            <div className="text-sm text-gray-600">Hài lòng</div>
+          </div>
+        </div>
+        <div className="text-sm text-gray-700">
+          / 5 | {formatNumber(tour?.reviews)} Đánh giá
+        </div>
+      </div>
+
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <button className="px-3 py-1 text-sm rounded-full border border-black/10 bg-black/5 hover:bg-black/10">
+          Đánh giá phù hợp nhất
+        </button>
+        <button className="px-3 py-1 text-sm rounded-full border border-black/10 bg-white/50 hover:bg-white/70">
+          Tất cả
+        </button>
+        <button className="px-3 py-1 text-sm rounded-full border border-black/10 bg-white/50 hover:bg-white/70">
+          Có hình ảnh
+        </button>
+        <button className="px-3 py-1 text-sm rounded-full border border-black/10 bg-white/50 hover:bg-white/70">
+          Chỉ tiếng Việt
+        </button>
+      </div>
+
+      <div className="border-t border-white/60 pt-4">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-amber-200 rounded-full flex items-center justify-center text-sm font-semibold">
+            J
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-semibold text-sm text-gray-900">
+                Joselle ********
+              </span>
+              <span className="text-xs text-gray-500">2025/07/29</span>
+              <div className="flex items-center gap-1 ml-auto">
+                <span className="text-xs text-emerald-700 bg-emerald-100 px-2 py-1 rounded">
+                  Hài lòng
+                </span>
+                <span className="text-amber-500 text-sm">5.0</span>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-2">
+              Đánh giá cho: Chuyến Bay Đêm • Chuyến bay quốc tế • Ưu tiên
+            </p>
+            <p className="text-sm text-gray-800">
+              Dịch vụ rất cần thiết khi phải nối chuyến. Rất đáng giá.
+            </p>
+            <button className="text-sm text-gray-900 underline mt-2 hover:opacity-80">
+              Hiển thị đánh giá gốc
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BookingSidebar({
+  quantity,
+  onIncrease,
+  onDecrease,
+  discountPercent,
+  onBooking,
+  currentPrice,
+  originalSubtotal,
+  subtotal,
+  onAdd,
+}) {
+  return (
+    <div className="rounded-2xl p-6 sticky top-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+      <h3 className="font-semibold mb-4 text-gray-900">Số lượng</h3>
+      <div className="flex items-center justify-between mb-6">
+        <span className="text-gray-800">Người lớn</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onDecrease}
+            className="w-9 h-9 border border-black/10 rounded-full hover:bg-black/5 transform hover:scale-110 transition-transform duration-500 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-300"
+            aria-label="Giảm số lượng"
+          >
+            <Minus className="w-4 h-4 mx-auto" />
+          </button>
+          <span className="w-8 text-center tabular-nums">{quantity}</span>
+          <button
+            onClick={onIncrease}
+            className="w-9 h-9 border border-black/10 rounded-full hover:bg-black/5 hover:scale-110  focus:outline-none focus:ring-2 focus:ring-gray-300"
+            aria-label="Tăng số lượng"
+          >
+            <Plus className="w-4 h-4 mx-auto" />
+          </button>
+        </div>
+      </div>
+
+      <div className="border-t border-white/60 pt-4 mb-6">
+        <div className="flex items-baseline gap-2 mb-2">
+          <span className="text-2xl font-bold text-gray-900">
+            ₫ {formatCurrency(subtotal)}
+          </span>
+          {originalSubtotal && originalSubtotal !== subtotal && (
+            <span className="text-gray-400 line-through text-sm">
+              ₫ {formatCurrency(originalSubtotal)}
+            </span>
+          )}
+        </div>
+
+        {/* Nếu vẫn muốn show đơn giá/ người */}
+        <div className="text-xs text-gray-600">
+          (Đơn giá: ₫ {formatCurrency(currentPrice)} / người)
+        </div>
+
+        {discountPercent && (
+          <div className="flex gap-2 mt-2">
+            <span className="text-xs px-2 py-1 rounded-full border border-rose-200 bg-rose-50 text-rose-600">
+              Sale
+            </span>
+            <span className="text-xs px-2 py-1 rounded-full border border-rose-200 bg-rose-50 text-rose-600">
+              Giảm {discountPercent}%
+            </span>
+          </div>
+        )}
+        <p className="text-xs text-gray-600 mt-2">
+          Vui lòng hoàn tất các mục yêu cầu để chuyển đến bước tiếp theo
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <button
+          onClick={onAdd}
+          className="w-full py-3 rounded-2xl font-semibold border border-black/10 bg-blue-600 text-white transform hover:scale-105 transition-transform duration-300 ease-in-out"
+        >
+          Thêm vào giỏ hàng
+        </button>
+        <button
+          onClick={onBooking}
+          className="w-full py-3 rounded-2xl font-semibold border border-black/10 bg-blue-800 text-white transform hover:scale-105 transition-transform duration-300 ease-in-out"
+        >
+          Đặt ngay
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FAQSection() {
+  return (
+    <div className="mt-8 rounded-2xl p-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+      <h2 className="text-xl font-bold text-gray-900 mb-4 pl-3 border-l-4 border-gray-800/80">
+        Câu hỏi thường gặp
+      </h2>
+      <button className="px-4 py-2 rounded-full text-sm border border-black/10 bg-white/70 hover:bg-white/90">
+        Hỗ trợ khách hàng
+      </button>
+    </div>
+  );
+}
+
+function RelatedTours({ tours, onFav, isFav }) {
+  return (
+    <div className="mt-8 rounded-2xl p-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+      <h2 className="text-xl font-bold text-gray-900 mb-6 pl-3 border-l-4 border-gray-800/80">
+        Bạn có thể sẽ thích
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {tours.map((t) => {
+          const id = getId(t);
+          return (
+            <TourCard
+              key={id}
+              to={`/tours/${id}`}
+              image={getMainImage(t)}
+              title={getTitle(t)}
+              location={getLocation(t)}
+              rating={t?.rating ?? t?.isRating ?? 4.8}
+              reviews={t?.reviews ?? t?.isReview ?? 0}
+              bookedText={`${formatNumber(t?.usageCount ?? t?.booked)} Đã đặt`}
+              priceFrom={t?.currentPrice ?? t?.basePrice ?? 0}
+              originalPrice={t?.originalPrice ?? t?.basePrice}
+              onFav={() => onFav(id)}
+              isFav={isFav}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function getId(t) {
+  return t?._id ?? t?.id ?? String(t?.slug ?? "");
+}
+function getTitle(t) {
+  return t?.title ?? t?.name ?? t?.description ?? "Tour";
+}
+function getLocation(t) {
+  return t?.location ?? t?.locations?.[0]?.name ?? "Địa điểm";
+}
+function getMainImage(t) {
+  return (
+    t?.imageItems?.[0]?.imageUrl ??
+    t?.image ??
+    t?.gallery?.[0] ??
+    "https://via.placeholder.com/800x600"
+  );
+}
+function formatNumber(n) {
+  if (typeof n !== "number") return "0";
+  return n.toLocaleString();
+}
+function toNumber(x) {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : 0;
+}
+function formatCurrency(n) {
+  return new Intl.NumberFormat("vi-VN").format(toNumber(n));
 }

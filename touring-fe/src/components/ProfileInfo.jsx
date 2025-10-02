@@ -23,13 +23,18 @@ async function apiFetch(path, opts = {}) {
 const apiGet = (path, opts) => apiFetch(path, { method: "GET", ...opts });
 
 const validatePhoneNumber = (phone) => {
-  if (!phone) return "";
+  if (!phone) return ""; 
   const phoneRegex = /^(03|05|07|08|09)\d{8}$/;
-  return phoneRegex.test(phone) ? "" : "Invalid phone number format (e.g: 09xxxxxxxx, 03xxxxxxxx...)";
+  return phoneRegex.test(phone)
+    ? ""
+    : "Số điện thoại không hợp lệ (ví dụ: 09xxxxxxxx, 03xxxxxxxx...)";
 };
 const validateUsername = (u) => {
-  if (!u) return ""; // optional
-  return /^[a-z0-9_]{3,20}$/i.test(u) ? "" : "3–20 ký tự; chỉ chữ, số, dấu gạch dưới (_).";
+  if (!u) return ""; 
+  const usernameRegex = /^[\p{L}\p{N}_]{3,20}$/u;
+  return usernameRegex.test(u)
+    ? ""
+    : "Tên đăng nhập phải dài 3–20 ký tự; chỉ chứa chữ, số hoặc dấu gạch dưới (_).";
 };
 
 function usePrevious(value) {

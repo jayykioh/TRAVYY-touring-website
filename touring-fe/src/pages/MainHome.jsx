@@ -1,6 +1,6 @@
 import React from "react";
 import TourHeroSection from "../components/TourHeroSection";
-import TourPromotions from "../components/TourPromotions";
+import TourPromotions from "../components/TourRecommend";
 import AboutSection from "../components/AboutSection";
 import TravelBlog from "../components/TravelBlog";
 import FAQ from "../components/FAQ";

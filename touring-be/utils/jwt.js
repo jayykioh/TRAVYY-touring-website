@@ -6,7 +6,6 @@ const ACCESS_TTL  = process.env.ACCESS_TTL  || "10m";
 const REFRESH_TTL = process.env.REFRESH_TTL || "30d";
 
 function signAccess(user) {
-  // user: { id, role }
   return jwt.sign(
     { sub: user.id, role: user.role || "Traveler" },
     process.env.JWT_ACCESS_SECRET,

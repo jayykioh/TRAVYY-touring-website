@@ -1,14 +1,15 @@
 // controller/auth.controller.js
 const bcrypt = require("bcryptjs");
 const { z } = require("zod");
-const User = require("../models/User");
+const User = require("../models/Users");
 const { signAccess, signRefresh, newId } = require("../utils/jwt");
 
 const isProd = process.env.NODE_ENV === "production";
 const ALLOWED_ROLES = ["Traveler", "TourGuide", "TravelAgency"];
 
 const VN_PHONE = /^(03|05|07|08|09)\d{8}$/;
-const USERNAME = /^[a-z0-9_]{3,20}$/i;
+const USERNAME = /^[\p{L}\p{N}_]{3,20}$/u;
+
 
 const RegisterSchema = z.object({
   email: z.string().email("Email không hợp lệ").transform(v => v.trim().toLowerCase()),
@@ -111,9 +112,9 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
     // cần lấy field password => đừng .select("-password") ở query này
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ username });
     if (!user) return res.status(400).json({ message: "Invalid email or password" });
 
     const match = await bcrypt.compare(password, user.password);

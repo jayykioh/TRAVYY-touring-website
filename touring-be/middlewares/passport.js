@@ -2,7 +2,7 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const FacebookStrategy = require("passport-facebook").Strategy;
 const LocalStrategy = require("passport-local").Strategy;
-const User = require("../models/User"); // mongoose model
+const User = require("../models/Users"); // mongoose model
 const bcrypt = require("bcryptjs");
 
 // =========================

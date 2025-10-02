@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { AuthCtx } from "./context";
-const API_BASE = "http://localhost:5000";
+const API_BASE = "http://localhost:4000";
 // helper fetch: luôn gửi cookie (để BE đọc refresh_token)
 async function api(input, init = {}) {
   const r = await fetch(input, {
@@ -24,11 +24,11 @@ export default function AuthProvider({ children }) {
   const [accessToken, setAccessToken] = useState(null); // ⬅️ giữ access in-memory
   const [booting, setBooting] = useState(true);
 
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (username, password) => {
     const res = await api(`${API_BASE}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ username, password }),
     });
     if (res?.accessToken) setAccessToken(res.accessToken);
     if (res?.user) setUser(res.user);
@@ -66,10 +66,10 @@ const withAuth = useCallback(async (input, init = {}) => {
   useEffect(() => {
     (async () => {
       try {
-        const r = await api("http://localhost:5000/api/auth/refresh", { method: "POST" });
+        const r = await api("http://localhost:4000/api/auth/refresh", { method: "POST" });
         if (r?.accessToken) {
           setAccessToken(r.accessToken);
-          const me = await api("http://localhost:5000/api/auth/me", {
+          const me = await api("http://localhost:4000/api/auth/me", {
             headers: { Authorization: `Bearer ${r.accessToken}` },
           }).catch(() => null);
           if (me) {
@@ -91,7 +91,7 @@ const withAuth = useCallback(async (input, init = {}) => {
 
   async function logout() {
     try {
-      await api("http://localhost:5000/api/auth/logout", { method: "POST" });
+      await api("http://localhost:4000/api/auth/logout", { method: "POST" });
     } catch (err) {
       console.error("Logout error:", err);
     } finally {

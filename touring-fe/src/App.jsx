@@ -2,7 +2,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./auth/context";
 import MainLayout from "./layout/MainLayout";
-import Home from "./pages/Home";
+import LandingPage from "./pages/LandingPage";
 import MainHome from "./pages/MainHome";
 import DestinationPage from "./pages/Blogs";
 import RegionTours from "./components/RegionTours";
@@ -14,12 +14,17 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProfileLayout from "./pages/UserProfile";
 import ProfileInfo from "./components/ProfileInfo";
-import ProfileOrders from "./components/ProfileOrders";
 import ProfileReviews from "./components/ProfileReviews";
 import RolePopup from "./components/RolePopup";
 import OAuthCallback from "./pages/OAuthCallback";
+<<<<<<< HEAD
 
 // Route guard function
+=======
+import Cart from "./pages/Cart";
+import WishlistPage from "./pages/WishlistPage";
+// Route guard
+>>>>>>> origin/main
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
   if (booting) return <p className="p-6">Loading...</p>;
@@ -38,15 +43,19 @@ export default function App() {
         {/* ----- Public + Main layout ----- */}
         <Route element={<MainLayout />}>
           {/* Nếu muốn / tự động là Home khi chưa login, MainHome khi đã login */}
-          <Route path="/" element={isAuth ? <MainHome /> : <Home />} />
+          <Route path="/" element={isAuth ? <MainHome /> : <LandingPage />} />
           <Route path="/home" element={<MainHome />} />
           <Route path="/destinations/:slug" element={<DestinationPage />} />
           <Route path="/search-results" element={<SearchResults />} />
           <Route path="/discount-codes" element={<DiscountCodesPage />} />
           <Route path="/tours/:id" element={<TourDetailPage />} />
           <Route path="/region/:slug" element={<RegionTours />} />
+<<<<<<< HEAD
           <Route path="/blog/:id" element={<BlogDetailPage />} /> {/* ✅ THÊM ROUTE NÀY */}
           
+=======
+            <Route path="/shoppingcarts" element={<Cart/> }/>
+>>>>>>> origin/main
           <Route
             path="/profile"
             element={
@@ -58,8 +67,8 @@ export default function App() {
             {/* /profile -> /profile/info */}
             <Route index element={<Navigate to="info" replace />} />
             <Route path="info" element={<ProfileInfo />} />
-            <Route path="orders" element={<ProfileOrders />} />
             <Route path="reviews" element={<ProfileReviews />} />
+            <Route path="favorites" element={<WishlistPage />} />
           </Route>
         </Route>
 
@@ -78,4 +87,8 @@ export default function App() {
       )}
     </>
   );
+<<<<<<< HEAD
 }   
+=======
+}
+>>>>>>> origin/main

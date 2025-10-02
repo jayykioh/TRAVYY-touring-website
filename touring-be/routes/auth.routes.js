@@ -3,7 +3,7 @@ const router = require("express").Router();
 const passport = require("passport");
 const { signAccess, signRefresh, verifyRefresh, newId } = require("../utils/jwt");
 const authJwt = require("../middlewares/authJwt");
-const User = require("../models/User");
+const User = require("../models/Users");
 const { register, login } = require("../controller/auth.controller");
 
 const isProd = process.env.NODE_ENV === "production";

@@ -1,8 +1,8 @@
-const User = require("../models/User");
+const User = require("../models/Users");
 const { z } = require("zod");
 
 const VN_PHONE = /^(03|05|07|08|09)\d{8}$/;
-const USERNAME = /^[a-z0-9_]{3,20}$/i;
+const USERNAME = /^[\p{L}\p{N}_]{3,20}$/u;
 
 const UpdateSchema = z.object({
   name: z.string().min(1, "Tên không được để trống").trim(),
