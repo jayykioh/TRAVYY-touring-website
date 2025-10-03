@@ -3,12 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Heart, MapPin, Star, Plus, Minus } from "lucide-react";
 import TourCard from "../components/TourCard";
 import { useCart } from "../hooks/useCart";
+import { useAuth } from "../auth/context";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { createPortal } from "react-dom";
 
 export default function TourDetailPage() {
   const { id: routeId } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-
+  const { user } = useAuth();
   const [tour, setTour] = useState(null);
   const [allTours, setAllTours] = useState([]);
   const [isFav, setIsFav] = useState(false);
@@ -16,7 +19,8 @@ export default function TourDetailPage() {
   const [showMoreService, setShowMoreService] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState("");
-
+  //Galery modal state
+  const [openGallery, setOpenGallery] = useState(false);
   useEffect(() => {
     let ignore = false;
     const ac = new AbortController();
@@ -41,6 +45,14 @@ export default function TourDetailPage() {
 
         if (!ignore) {
           setTour(tourData);
+          if (user?.token) {
+            fetch(`/api/wishlist/check/${tourData._id}`, {
+              headers: { Authorization: `Bearer ${user.token}` },
+            })
+              .then((res) => res.json())
+              .then((data) => setIsFav(data.isFav))
+              .catch(() => {});
+          }
           setAllTours(Array.isArray(listData) ? listData : []);
         }
       } catch (e) {
@@ -59,7 +71,7 @@ export default function TourDetailPage() {
       ignore = true;
       ac.abort();
     };
-  }, [routeId]);
+  }, [routeId, user?.token]);
 
   const currentPrice = tour?.currentPrice ?? tour?.basePrice ?? 0;
   const originalPrice = tour?.originalPrice ?? tour?.basePrice ?? null;
@@ -103,7 +115,26 @@ export default function TourDetailPage() {
 
   const increaseQuantity = () => setQuantity((n) => n + 1);
   const decreaseQuantity = () => setQuantity((n) => Math.max(1, n - 1));
-  const handleFavorite = () => setIsFav((v) => !v);
+  const handleFavorite = async () => {
+    if (!user?.token) {
+      alert("Bạn cần đăng nhập để thêm vào wishlist");
+      return;
+    }
+    try {
+      const res = await fetch("/api/wishlist/toggle", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ tourId: getId(tour) }),
+      });
+      const data = await res.json();
+      setIsFav(data.isFav); // BE trả về true/false
+    } catch (err) {
+      console.error("Error toggling wishlist:", err);
+    }
+  };
 
   if (loading) return <div className="p-6">Đang tải tour...</div>;
   if (errMsg) return <div className="p-6 text-red-600">Lỗi: {errMsg}</div>;
@@ -133,9 +164,9 @@ export default function TourDetailPage() {
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 text-amber-400 fill-current" />
-                  <span className="font-semibold">{tour?.rating ?? "—"}</span>
+                  <span className="font-semibold">{tour?.isRating ?? "—"}</span>
                   <span className="text-gray-500">
-                    ({formatNumber(tour?.reviews)} Đánh giá)
+                    ({formatNumber(tour?.isReview)} Đánh giá)
                   </span>
                 </div>
                 <div className="flex items-center gap-1 text-gray-600">
@@ -174,6 +205,7 @@ export default function TourDetailPage() {
                 src={tour.imageItems?.[0]?.imageUrl}
                 alt={tour.title}
                 className="w-full h-64 md:h-80 object-cover rounded-2xl"
+                onClick={() => setOpenGallery(true)}
               />
             </div>
             <div className="col-span-2 md:col-span-1 grid grid-rows-2 gap-2">
@@ -184,6 +216,7 @@ export default function TourDetailPage() {
                 }
                 alt="Gallery 1"
                 className="w-full h-32 md:h-39 object-cover rounded-2xl"
+                onClick={() => setOpenGallery(true)}
               />
               <img
                 src={
@@ -192,6 +225,7 @@ export default function TourDetailPage() {
                 }
                 alt="Gallery 2"
                 className="w-full h-32 md:h-39 object-cover rounded-2xl"
+                onClick={() => setOpenGallery(true)}
               />
             </div>
             <div className="col-span-2 md:col-span-1 grid grid-rows-2 gap-2">
@@ -202,6 +236,7 @@ export default function TourDetailPage() {
                 }
                 alt="Gallery 3"
                 className="w-full h-32 md:h-39 object-cover rounded-2xl"
+                onClick={() => setOpenGallery(true)}
               />
               <div className="relative">
                 <img
@@ -211,9 +246,13 @@ export default function TourDetailPage() {
                   }
                   alt="Gallery 4"
                   className="w-full h-32 md:h-39 object-cover rounded-2xl"
+                  onClick={() => setOpenGallery(true)}
                 />
                 <div className="absolute inset-0 bg-black/30 rounded-2xl flex items-center justify-center">
-                  <button className="text-white font-medium text-sm px-3 py-1 rounded-full border border-white/50 backdrop-blur-md">
+                  <button
+                    onClick={() => setOpenGallery(true)}
+                    className="text-white font-medium text-sm px-3 py-1 rounded-full border border-white/50 backdrop-blur-md"
+                  >
                     Thư viện ảnh
                   </button>
                 </div>
@@ -221,6 +260,13 @@ export default function TourDetailPage() {
             </div>
           </div>
 
+          {/* 🔽 Thêm modal ngay sau block gallery */}
+          {openGallery && (
+            <ImageGalleryModal
+              images={tour.imageItems}
+              onClose={() => setOpenGallery(false)}
+            />
+          )}
           {/* Service Description (glass info) */}
           <div className="p-4 rounded-2xl mb-6 backdrop-blur-xl bg-white/60 border border-white/50">
             <div className="flex items-start gap-3">
@@ -628,27 +674,111 @@ function RelatedTours({ tours, onFav, isFav }) {
         Bạn có thể sẽ thích
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {tours.map((t) => {
-          const id = getId(t);
+        {tours.map((tour) => {
+          const id = getId(tour);
           return (
             <TourCard
-              key={id}
-              to={`/tours/${id}`}
-              image={getMainImage(t)}
-              title={getTitle(t)}
-              location={getLocation(t)}
-              rating={t?.rating ?? t?.isRating ?? 4.8}
-              reviews={t?.reviews ?? t?.isReview ?? 0}
-              bookedText={`${formatNumber(t?.usageCount ?? t?.booked)} Đã đặt`}
-              priceFrom={t?.currentPrice ?? t?.basePrice ?? 0}
-              originalPrice={t?.originalPrice ?? t?.basePrice}
-              onFav={() => onFav(id)}
-              isFav={isFav}
+              id={tour._id}
+              to={`/tours/${tour._id}`}
+              image={tour.imageItems?.[0]?.imageUrl}
+              title={tour.description}
+              location={tour.locations?.[0]?.name || "Địa điểm"}
+              tags={tour.tags}
+              bookedText={`${tour.usageCount} Đã được đặt`}
+              rating={tour.isRating}
+              reviews={tour.isReview}
+              priceFrom={tour.basePrice.toString()}
+              originalPrice={tour.basePrice}
+              onFav={() => handleFavoriteToggle(id)}
             />
           );
         })}
       </div>
     </div>
+  );
+}
+
+function ImageGalleryModal({ images, onClose }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  if (!images?.length) return null;
+
+  const prevImage = () =>
+    setCurrentIndex((i) => (i === 0 ? images.length - 1 : i - 1));
+  const nextImage = () =>
+    setCurrentIndex((i) => (i === images.length - 1 ? 0 : i + 1));
+  const goToImage = (i) => setCurrentIndex(i);
+
+  // ⌨️ Thêm hỗ trợ phím (←, →, ESC)
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === "ArrowLeft") prevImage();
+      if (e.key === "ArrowRight") nextImage();
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm">
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white shadow-lg transition"
+      >
+        <X className="w-6 h-6" />
+      </button>
+
+      {/* Main image */}
+      <div className="flex-1 flex items-center justify-center w-full max-w-6xl">
+        {/* Prev */}
+        <button
+          onClick={prevImage}
+          className="absolute left-4 md:left-10 p-3 rounded-full bg-black/40 hover:bg-black/60 text-white"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+
+        <img
+          src={images[currentIndex].imageUrl || images[currentIndex]}
+          alt={`Ảnh ${currentIndex + 1}`}
+          className="max-h-[80vh] max-w-[90vw] object-contain rounded-xl shadow-xl"
+        />
+
+        {/* Next */}
+        <button
+          onClick={nextImage}
+          className="absolute right-4 md:right-10 p-3 rounded-full bg-black/40 hover:bg-black/60 text-white"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+
+        {/* Counter */}
+        <span className="absolute bottom-6 right-6 text-white text-sm bg-black/50 px-3 py-1 rounded-lg">
+          {currentIndex + 1} / {images.length}
+        </span>
+      </div>
+
+      {/* Thumbnails */}
+      <div className="flex gap-2 mt-4 mb-6 overflow-x-auto px-4">
+        {images.map((img, i) => (
+          <img
+            key={i}
+            src={img.imageUrl || img}
+            onClick={() => goToImage(i)}
+            alt={`Thumbnail ${i + 1}`}
+            className={`h-20 w-28 object-cover rounded-lg cursor-pointer transition 
+              ${
+                i === currentIndex
+                  ? "ring-2 ring-white"
+                  : "opacity-70 hover:opacity-100"
+              }`}
+          />
+        ))}
+      </div>
+    </div>,
+    document.body
   );
 }
 
