@@ -4,6 +4,8 @@ import { Heart, MapPin, Star, Plus, Minus } from "lucide-react";
 import TourCard from "../components/TourCard";
 import { useCart } from "../hooks/useCart";
 import { useAuth } from "../auth/context";
+import BreadcrumbNav from "@/components/BreadcrumbNav"
+
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { createPortal } from "react-dom";
 
@@ -143,13 +145,14 @@ export default function TourDetailPage() {
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,rgba(245,247,250,1),rgba(237,241,245,1))]">
       {/* Breadcrumb (glass) */}
-      <div className="sticky top-0 z-10 backdrop-blur-xl bg-white/60 border-b border-white/40">
+     <div className="sticky top-0 z-10 backdrop-blur-xl bg-white/60 border-b border-white/40">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center text-sm text-gray-700">
-            <span className="font-semibold text-gray-900">Travyy Travel</span>
-            <span className="mx-2 text-gray-400">›</span>
-            <span className="truncate">{getLocation(tour)}</span>
-          </div>
+          <BreadcrumbNav
+            items={[
+              { label: "Travyy Travel", href: "/" },            
+              { label: getTitle(tour), href: `/tours/${routeId}` }
+            ]}
+          />
         </div>
       </div>
 
