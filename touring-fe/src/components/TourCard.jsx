@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Heart, Star } from "lucide-react";
 
 export default function TourCard({
+  id,
   to = "#",
   image,
   title,
@@ -36,7 +37,7 @@ export default function TourCard({
           type="button"
           onClick={(e) => {
             e.preventDefault();
-            onFav?.();
+            onFav(id);
           }}
           aria-label={isFav ? "Bỏ yêu thích" : "Thêm yêu thích"}
           className="absolute right-3 top-3 grid place-items-center rounded-full bg-white/90 backdrop-blur-sm p-2.5 shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 transition-all duration-300 ease-out hover:bg-white z-10"

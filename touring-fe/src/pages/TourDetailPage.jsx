@@ -3,12 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Heart, MapPin, Star, Plus, Minus } from "lucide-react";
 import TourCard from "../components/TourCard";
 import { useCart } from "../hooks/useCart";
-
+import { useAuth } from "../auth/context";
 export default function TourDetailPage() {
   const { id: routeId } = useParams();
   const navigate = useNavigate();
   const { add } = useCart();
-
+const { user } = useAuth();
   const [tour, setTour] = useState(null);
   const [allTours, setAllTours] = useState([]);
   const [isFav, setIsFav] = useState(false);
@@ -41,6 +41,14 @@ export default function TourDetailPage() {
 
         if (!ignore) {
           setTour(tourData);
+          if (user?.token) {
+  fetch(`/api/wishlist/check/${tourData._id}`, {
+    headers: { Authorization: `Bearer ${user.token}` },
+  })
+    .then((res) => res.json())
+    .then((data) => setIsFav(data.isFav))
+    .catch(() => {});
+}
           setAllTours(Array.isArray(listData) ? listData : []);
         }
       } catch (e) {
@@ -59,7 +67,7 @@ export default function TourDetailPage() {
       ignore = true;
       ac.abort();
     };
-  }, [routeId]);
+}, [routeId, user?.token]);
 
   const currentPrice = tour?.currentPrice ?? tour?.basePrice ?? 0;
   const originalPrice = tour?.originalPrice ?? tour?.basePrice ?? null;
@@ -102,8 +110,26 @@ export default function TourDetailPage() {
 
   const increaseQuantity = () => setQuantity((n) => n + 1);
   const decreaseQuantity = () => setQuantity((n) => Math.max(1, n - 1));
-  const handleFavorite = () => setIsFav((v) => !v);
-
+const handleFavorite = async () => {
+  if (!user?.token) {
+    alert("Bạn cần đăng nhập để thêm vào wishlist");
+    return;
+  }
+  try {
+    const res = await fetch("/api/wishlist/toggle", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${user.token}`,
+      },
+      body: JSON.stringify({ tourId: getId(tour) }),
+    });
+    const data = await res.json();
+    setIsFav(data.isFav); // BE trả về true/false
+  } catch (err) {
+    console.error("Error toggling wishlist:", err);
+  }
+};
   if (loading) return <div className="p-6">Đang tải tour...</div>;
   if (errMsg) return <div className="p-6 text-red-600">Lỗi: {errMsg}</div>;
   if (!tour) return <div className="p-6">Không tìm thấy tour</div>;

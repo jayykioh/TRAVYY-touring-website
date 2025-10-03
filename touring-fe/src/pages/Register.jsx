@@ -65,7 +65,7 @@ export default function Register() {
   useEffect(() => {
     let cancelled = false;
     axios
-      .get(`${API_BASE}/api/vn/provinces`)
+      .get(`/api/vn/provinces`)
       .then(({ data }) => {
         if (!cancelled) setProvinces(Array.isArray(data) ? data : []);
       })
@@ -89,7 +89,7 @@ export default function Register() {
     }
     let cancelled = false;
     axios
-      .get(`${API_BASE}/api/vn/wards`, {
+      .get(`/api/vn/wards`, {
         params: { province_id: form.provinceId },
       })
       .then(({ data }) => {
@@ -167,7 +167,7 @@ export default function Register() {
         addressLine: form.addressLine.trim(),
       };
 
-      await axios.post(`${API_BASE}/api/auth/register`, payload, {
+      await axios.post(`/api/auth/register`, payload, {
         withCredentials: true,
         headers: {
           "Content-Type": "application/json",
@@ -248,7 +248,7 @@ export default function Register() {
               {/* Google OAuth */}
               <div className="mb-6">
                 <a
-                  href={`${API_BASE}/api/auth/google`}
+                  href={`/api/auth/google`}
                   className="flex items-center justify-center w-full px-4 py-3.5 rounded-2xl
                  backdrop-blur-md bg-white/10 border border-white/20
                  hover:bg-white/20 text-white transition-all"
