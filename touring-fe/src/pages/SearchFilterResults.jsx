@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ArrowLeft, MapPin, Calendar, Users, Star, Clock, Heart, Filter, ChevronDown } from "lucide-react";
 import { destinationList } from "../mockdata/destinationList"; // ✅ Đường dẫn chính xác
 
-const SearchResults = () => {
+const SearchfilterResults = () => {
   const [searchParams, setSearchParams] = useState({
     destination: "",
     checkIn: "",
@@ -306,4 +306,4 @@ const SearchResults = () => {
   );
 };
 
-export default SearchResults;
+export default SearchfilterResults;

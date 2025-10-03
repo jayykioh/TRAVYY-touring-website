@@ -275,6 +275,13 @@ const TourHeroSection = () => {
           </div>
         </div>
       </div>
+
+      {/* Touch hint */}
+      <div className="absolute z-20 block sm:hidden left-1/2 -translate-x-1/2 bottom-10">
+        <div className="text-white/70 text-xs text-center px-4">
+          Swipe to explore more destinations
+        </div>
+      </div>
     </section>
   );
 };
