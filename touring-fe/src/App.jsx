@@ -7,7 +7,11 @@ import LandingPage from "./pages/LandingPage";
 import MainHome from "./pages/MainHome";
 import DestinationPage from "./pages/Blogs";
 import RegionTours from "./components/RegionTours";
+<<<<<<< HEAD
 // import SearchResults from "./pages/SearchResults";
+=======
+import SearchResults from "./pages/SearchFilterResults";
+>>>>>>> ad409ae (Cập nhật nhỏlanding, up blog đã được chinh sua, doi lai searchfilter dong thoi doi ten cua file do)
 import TourDetailPage from "./pages/TourDetailPage";
 import DiscountCodesPage from "./pages/DiscountCodesPage";
 import Login from "./pages/Login";
