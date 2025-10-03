@@ -25,17 +25,23 @@ export default function AuthProvider({ children }) {
   const [booting, setBooting] = useState(true);
 
   const login = useCallback(async (username, password) => {
-    const res = await api(`${API_BASE}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    if (res?.accessToken) setAccessToken(res.accessToken);
-    if (res?.user) setUser(res.user);
-    return res?.user;
-  }, []);
+  const res = await api(`${API_BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
 
+  if (res?.accessToken) {
+    setAccessToken(res.accessToken);
+  }
 
+  if (res?.user) {
+    // 👇 gộp token vào user luôn
+    setUser({ ...res.user, token: res.accessToken });
+  }
+
+  return res?.user;
+}, []);
 
 
 
@@ -74,7 +80,7 @@ const withAuth = useCallback(async (input, init = {}) => {
           }).catch(() => null);
           if (me) {
             if (!me.role) me.role = null; // giữ logic role null như bạn cũ
-            setUser(me);
+            setUser({ ...me, token: r.accessToken }); 
           } else {
             setUser(null);
           }
