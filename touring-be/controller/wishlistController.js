@@ -2,7 +2,7 @@
 const mongoose = require("mongoose");
 const Wishlist = require("../models/Wishlist");
 const Tour = require("../models/Tours");
-
+const Location = require("../models/Location");
 // Helper ép ObjectId an toàn
 const toObjectId = (id) => new mongoose.Types.ObjectId(id);
 
@@ -14,7 +14,13 @@ async function getMyWishlist(req, res) {
       .populate({
         path: "tourId",
         model: Tour,
-        select: "title location price images rating",
+        select:
+          "title description imageItems basePrice isRating isReview usageCount locations",
+        populate: {
+          path: "locations",
+          model: Location,
+          select: "name country",
+        },
       })
       .lean();
 
@@ -33,16 +39,26 @@ async function addToWishlist(req, res) {
   try {
     const userId = toObjectId(req.user.sub);
     const { tourId } = req.body;
-    if (!tourId) return res.status(400).json({ success: false, message: "tourId is required" });
+    if (!tourId)
+      return res
+        .status(400)
+        .json({ success: false, message: "tourId is required" });
 
     const tour = await Tour.findById(tourId);
-    if (!tour) return res.status(404).json({ success: false, message: "Tour not found" });
+    if (!tour)
+      return res
+        .status(404)
+        .json({ success: false, message: "Tour not found" });
 
     const doc = await Wishlist.create({ userId, tourId: toObjectId(tourId) });
-    return res.status(201).json({ success: true, data: doc, message: "Added to wishlist" });
+    return res
+      .status(201)
+      .json({ success: true, data: doc, message: "Added to wishlist" });
   } catch (e) {
     if (e.code === 11000) {
-      return res.status(200).json({ success: false, message: "Already in wishlist" });
+      return res
+        .status(200)
+        .json({ success: false, message: "Already in wishlist" });
     }
     console.error("addToWishlist error:", e);
     return res.status(500).json({ success: false, error: e.message });
@@ -68,19 +84,33 @@ async function toggleWishlist(req, res) {
   try {
     const userId = toObjectId(req.user.sub);
     const { tourId } = req.body;
-    if (!tourId) return res.status(400).json({ success: false, message: "tourId is required" });
+    if (!tourId)
+      return res
+        .status(400)
+        .json({ success: false, message: "tourId is required" });
 
-    const found = await Wishlist.findOne({ userId, tourId: toObjectId(tourId) });
+    const found = await Wishlist.findOne({
+      userId,
+      tourId: toObjectId(tourId),
+    });
     if (found) {
       await Wishlist.deleteOne({ _id: found._id });
-      return res.json({ success: true, isFav: false, message: "Removed from wishlist" });
+      return res.json({
+        success: true,
+        isFav: false,
+        message: "Removed from wishlist",
+      });
     } else {
       await Wishlist.create({ userId, tourId: toObjectId(tourId) });
-      return res.status(201).json({ success: true, isFav: true, message: "Added to wishlist" });
+      return res
+        .status(201)
+        .json({ success: true, isFav: true, message: "Added to wishlist" });
     }
   } catch (e) {
     if (e.code === 11000) {
-      return res.status(200).json({ success: true, isFav: true, message: "Already in wishlist" });
+      return res
+        .status(200)
+        .json({ success: true, isFav: true, message: "Already in wishlist" });
     }
     console.error("toggleWishlist error:", e);
     return res.status(500).json({ success: false, error: e.message });
@@ -92,7 +122,10 @@ async function checkOne(req, res) {
   try {
     const userId = toObjectId(req.user.sub);
     const { tourId } = req.params;
-    const exists = await Wishlist.exists({ userId, tourId: toObjectId(tourId) });
+    const exists = await Wishlist.exists({
+      userId,
+      tourId: toObjectId(tourId),
+    });
     return res.json({ success: true, isFav: !!exists });
   } catch (e) {
     console.error("checkOne error:", e);
@@ -104,12 +137,17 @@ async function checkOne(req, res) {
 async function checkMany(req, res) {
   try {
     const userId = toObjectId(req.user.sub);
-    const ids = (req.query.ids || "").split(",").filter(Boolean).map(toObjectId);
+    const ids = (req.query.ids || "")
+      .split(",")
+      .filter(Boolean)
+      .map(toObjectId);
 
     const rows = await Wishlist.find({
       userId,
       tourId: { $in: ids },
-    }).select("tourId").lean();
+    })
+      .select("tourId")
+      .lean();
 
     const favIds = rows.map((r) => String(r.tourId));
     return res.json({ success: true, favIds });
