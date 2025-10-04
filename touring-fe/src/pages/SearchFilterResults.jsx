@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin, Calendar, Users, Star, Clock, Heart, Filter, ChevronDown } from "lucide-react";
-import { destinationList } from "../mockdata/destinationList"; // ✅ Đường dẫn chính xác
-
+import { destinationList } from "../mockdata/destinationList";
+import TourCard from "../components/TourCard";
 const SearchfilterResults = () => {
+  const location = useLocation();
+  const navigate = useNavigate(); // ✅ Thêm navigate
   const [searchParams, setSearchParams] = useState({
     destination: "",
     checkIn: "",
@@ -13,61 +16,66 @@ const SearchfilterResults = () => {
   const [sortBy, setSortBy] = useState("popular");
   const [priceRange, setPriceRange] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [suggestedTours, setSuggestedTours] = useState([]);
 
   useEffect(() => {
-    // Lấy dữ liệu từ URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = new URLSearchParams(location.search);
+    const destination = urlParams.get('destination') || '';
+
     const params = {
-      destination: urlParams.get('destination') || '',
+      destination,
       checkIn: urlParams.get('checkIn') || '',
       checkOut: urlParams.get('checkOut') || '',
       guests: urlParams.get('guests') || '2'
     };
-    setSearchParams(params);
 
-    // Lọc tours dựa trên destination
-    filterTours(params.destination);
-  }, []);
+    setSearchParams(params);
+    filterTours(destination);
+  }, [location.search]);
+
+  const cityMap = {
+    danang: "danang",
+    đanang: "danang",
+    hoian: "hoian",
+    nhatrang: "nhatrang",
+    hanoi: "hanoi",
+    tphcm: "tphcm",
+    phuquoc: "phuquoc"
+  };
 
   const filterTours = (destination) => {
     let tours = [];
     
-    // Tìm tours theo destination
-    const destKey = destination.toLowerCase().replace(/\s+/g, '').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    
-    // Map các tên thành phố với key trong destinationList
-    const cityMap = {
-      'danang': 'danang',
-      'đanang': 'danang',
-      'hoian': 'hoian',
-      'hộian': 'hoian',
-      'nhatrang': 'nhatrang',
-      'hanoi': 'hanoi',
-      'hànội': 'hanoi',
-      'hanội': 'hanoi',
-      'tphcm': 'tphcm',
-      'hochiminh': 'tphcm',
-      'saigon': 'tphcm',
-      'phuquoc': 'phuquoc',
-      'phúquốc': 'phuquoc'
-    };
+    // Nếu có destination cụ thể
+    if (destination) {
+      const destKey = destination.toLowerCase().replace(/\s+/g, '').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const mappedKey = cityMap[destKey];
 
-    const mappedKey = cityMap[destKey];
-    
-    if (mappedKey && destinationList[mappedKey]) {
-      tours = destinationList[mappedKey];
+      // CHỈ lấy tour từ destination đó
+      if (mappedKey && destinationList[mappedKey]) {
+        tours = destinationList[mappedKey];
+      }
+      // Nếu không tìm thấy => tours = []
     } else {
-      // Nếu không tìm thấy, hiển thị tất cả tours
+      // Không có destination => hiển thị tất cả
       tours = Object.values(destinationList).flat();
     }
 
-    // Sắp xếp
     tours = sortTours(tours, sortBy);
-    
-    // Lọc theo giá
     tours = filterByPrice(tours, priceRange);
 
     setFilteredTours(tours);
+    
+    // Lấy tour gợi ý khi không có kết quả
+    if (tours.length === 0) {
+      const allTours = Object.values(destinationList).flat();
+      const randomSuggestions = allTours
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 8);
+      setSuggestedTours(randomSuggestions);
+    } else {
+      setSuggestedTours([]);
+    }
   };
 
   const sortTours = (tours, sortType) => {
@@ -114,6 +122,11 @@ const SearchfilterResults = () => {
     window.history.back();
   };
 
+  // ✅ Thêm function navigate đến tour detail
+  const handleTourClick = (tourId) => {
+    navigate(`/tours/${tourId}`);
+  };
+
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -126,6 +139,8 @@ const SearchfilterResults = () => {
     const date = new Date(dateString);
     return date.toLocaleDateString('vi-VN');
   };
+
+  
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -165,7 +180,7 @@ const SearchfilterResults = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-5xl mx-auto px-12 py-6">
         {/* Filters Bar */}
         <div className="bg-white rounded-xl shadow-md p-4 mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -203,91 +218,18 @@ const SearchfilterResults = () => {
           </div>
         </div>
 
-        {/* Tours Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Tours Grid - 4 COLUMNS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredTours.map((tour) => (
-            <div
-              key={tour.id}
-              className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-            >
-              {/* Image */}
-              <div className="relative h-48 overflow-hidden">
-                <img
-                  src={tour.image}
-                  alt={tour.title}
-                  className="w-full h-full object-cover"
-                />
-                {tour.isPopular && (
-                  <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                    Phổ biến
-                  </div>
-                )}
-                {tour.discount && (
-                  <div className="absolute top-3 right-3 bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                    -{tour.discount}%
-                  </div>
-                )}
-                <button className="absolute bottom-3 right-3 bg-white p-2 rounded-full shadow-lg hover:bg-gray-100 transition-all">
-                  <Heart className="w-5 h-5 text-gray-600" />
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                    {tour.category}
-                  </span>
-                  <span className="text-xs text-gray-500">{tour.location}</span>
-                </div>
-
-                <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
-                  {tour.title}
-                </h3>
-
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-semibold">{tour.rating}</span>
-                  </div>
-                  <span className="text-xs text-gray-500">({tour.reviews} đánh giá)</span>
-                  <span className="text-xs text-gray-400">• {tour.booked} đã đặt</span>
-                </div>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {tour.tags.slice(0, 2).map((tag, index) => (
-                    <span
-                      key={index}
-                      className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Price */}
-                <div className="flex items-end justify-between pt-3 border-t border-gray-200">
-                  <div>
-                    {tour.originalPrice > tour.currentPrice && (
-                      <div className="text-xs text-gray-400 line-through">
-                        {formatPrice(tour.originalPrice)}
-                      </div>
-                    )}
-                    <div className="text-xl font-bold text-blue-600">
-                      {formatPrice(tour.currentPrice)}
-                    </div>
-                  </div>
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition-all">
-                    Đặt ngay
-                  </button>
-                </div>
-              </div>
-            </div>
+            <TourCard 
+              key={tour.id} 
+              tour={tour} 
+              onClick={() => handleTourClick(tour.id)}
+            />
           ))}
         </div>
 
-        {/* Empty State */}
+        {/* Empty State with Suggested Tours */}
         {filteredTours.length === 0 && (
           <div className="text-center py-12">
             <div className="text-gray-400 mb-4">
@@ -296,9 +238,27 @@ const SearchfilterResults = () => {
             <h3 className="text-xl font-bold text-gray-900 mb-2">
               Không tìm thấy tour phù hợp
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-8">
               Vui lòng thử tìm kiếm với điểm đến khác hoặc thay đổi bộ lọc
             </p>
+
+            {/* Suggested Tours */}
+            {suggestedTours.length > 0 && (
+              <div className="mt-8">
+                <h4 className="text-2xl font-bold text-gray-900 mb-6 text-left">
+                  🌟 Tour gợi ý cho bạn
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {suggestedTours.map((tour) => (
+                    <TourCard 
+                      key={tour.id} 
+                      tour={tour} 
+                      onClick={() => handleTourClick(tour.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

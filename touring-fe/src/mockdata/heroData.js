@@ -12,11 +12,12 @@ export const heroSlides = [
     category: "Văn hóa lịch sử",
     price: "từ 650.000₫",
     images: {
-      desktop: "https://i.pinimg.com/736x/c9/da/5f/c9da5f6e6f465e308604fa3d8b3a4211.jpg",
+      desktop: "https://i.pinimg.com/1200x/a0/dc/ea/a0dcea78bf3790cd0970aa63eb1c3138.jpg",
       webp: "https://i.pinimg.com/736x/c9/da/5f/c9da5f6e6f465e308604fa3d8b3a4211.jpg",
       tablet: "https://i.pinimg.com/736x/c9/da/5f/c9da5f6e6f465e308604fa3d8b3a4211.jpg",
       mobile: "https://i.pinimg.com/736x/c9/da/5f/c9da5f6e6f465e308604fa3d8b3a4211.jpg"
-    }
+    },
+    videoUrl: "https://www.youtube.com/embed/9nYDcx31DlU?si=S1xHbe8MBE_9tYhB"
   },
   {
     id: 2,
@@ -33,7 +34,8 @@ export const heroSlides = [
       webp: "https://i.pinimg.com/736x/79/8f/c4/798fc4327101187f2f647949f3ef5284.jpg",
       tablet: "https://i.pinimg.com/736x/79/8f/c4/798fc4327101187f2f647949f3ef5284.jpg",
       mobile: "https://i.pinimg.com/736x/79/8f/c4/798fc4327101187f2f647949f3ef5284.jpg"
-    }
+    },
+    videoUrl: "https://www.youtube.com/embed/8BfymkVZfww?si=eN_eFY7n1bRLcolG"
   },
   {
     id: 3,
@@ -50,7 +52,8 @@ export const heroSlides = [
       webp: "https://i.pinimg.com/736x/39/f2/08/39f208ed0cdb75defa9ca2b60c0527e8.jpg",
       tablet: "https://i.pinimg.com/736x/39/f2/08/39f208ed0cdb75defa9ca2b60c0527e8.jpg",
       mobile: "https://i.pinimg.com/736x/39/f2/08/39f208ed0cdb75defa9ca2b60c0527e8.jpg"
-    }
+    },
+    videoUrl: "https://www.youtube.com/embed/dHf8-s-gsEA?si=EuU7eh1K7ALXQzrK"
   },
   {
     id: 4,
@@ -67,7 +70,9 @@ export const heroSlides = [
       webp: "https://images.unsplash.com/photo-1528127269322-539801943592?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
       tablet: "https://images.unsplash.com/photo-1528127269322-539801943592?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
       mobile: "https://images.unsplash.com/photo-1528127269322-539801943592?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
-    }
+    },
+    videoUrl: "https://www.youtube.com/embed/vt9OL_sJ5gA?si=p8_48wFeWndsh-8G"
+
   },
   {
     id: 5,
@@ -84,7 +89,9 @@ export const heroSlides = [
       webp: "https://i.pinimg.com/1200x/e4/83/68/e4836889b026dade1726f7101b6c4f09.jpg",
       tablet: "https://i.pinimg.com/1200x/e4/83/68/e4836889b026dade1726f7101b6c4f09.jpg",
       mobile: "https://i.pinimg.com/1200x/e4/83/68/e4836889b026dade1726f7101b6c4f09.jpg"
-    }
+    },
+    videoUrl: "https://www.youtube.com/embed/EIMRO50r09I?si=a8iqPHdMsOFGZ5s0"
+
   },
   {
     id: 6,
@@ -101,7 +108,9 @@ export const heroSlides = [
       webp: "https://images.unsplash.com/photo-1545389336-cf090694435e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2128&q=80&fm=webp",
       tablet: "https://images.unsplash.com/photo-1545389336-cf090694435e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1024&q=80",
       mobile: "https://images.unsplash.com/photo-1545389336-cf090694435e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=768&q=80"
-    }
+    },
+    videoUrl: "https://www.youtube.com/embed/KMJXtZb6IUk?si=ZTgXI203C3FzpOAU"
+
   },
   {
     id: 7,
@@ -118,7 +127,9 @@ export const heroSlides = [
       webp: "https://i.pinimg.com/1200x/db/71/4e/db714eb743f61d88965cddd7b07cfa28.jpg",
       tablet: "https://i.pinimg.com/1200x/db/71/4e/db714eb743f61d88965cddd7b07cfa28.jpg",
       mobile: "https://i.pinimg.com/1200x/db/71/4e/db714eb743f61d88965cddd7b07cfa28.jpg"
-    }
+    },
+    videoUrl: "https://www.youtube.com/embed/MT8vPndyDa8?si=e_AmyTjC-bXAAl2G"
+
   },
   {
     id: 8,
@@ -135,7 +146,9 @@ export const heroSlides = [
       webp: "https://i.pinimg.com/736x/76/0b/61/760b6133d946214cba05b61f5f5f3817.jpg",
       tablet: "https://i.pinimg.com/736x/76/0b/61/760b6133d946214cba05b61f5f5f3817.jpg",
       mobile: "https://i.pinimg.com/736x/76/0b/61/760b6133d946214cba05b61f5f5f3817.jpg"
-    }
+    },
+    videoUrl: "https://www.youtube.com/embed/MDJrgQHaNG4?si=9U9_WjZ4UlTR2sG9"
+
   },
   {
     id: 9,
@@ -152,7 +165,9 @@ export const heroSlides = [
       webp: "https://images.unsplash.com/photo-1583417319070-4a69db38a482?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80&fm=webp",
       tablet: "https://images.unsplash.com/photo-1583417319070-4a69db38a482?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1024&q=80",
       mobile: "https://images.unsplash.com/photo-1583417319070-4a69db38a482?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=768&q=80"
-    }
+    },
+    videoUrl: "https://www.youtube.com/embed/uUL6pCWAX78?si=BAavz38QPVdwB84j"
+
   },
   {
     id: 10,
@@ -169,7 +184,9 @@ export const heroSlides = [
       webp: "https://i.pinimg.com/1200x/e0/05/53/e005534fae6501adb82e077161b0a67c.jpg",
       tablet: "https://i.pinimg.com/1200x/e0/05/53/e005534fae6501adb82e077161b0a67c.jpg",
       mobile: "https://i.pinimg.com/1200x/e0/05/53/e005534fae6501adb82e077161b0a67c.jpg"
-    }
+    },
+    videoUrl: "https://www.youtube.com/embed/Yra8PgE28lo?si=xfWhnMd08FxLSM34"
+
   },
   {
     id: 11,
@@ -186,7 +203,9 @@ export const heroSlides = [
       webp: "https://i.pinimg.com/1200x/74/3f/fb/743ffba55dee0f1b9a5c1800c496c91a.jpg",
       tablet: "https://i.pinimg.com/1200x/74/3f/fb/743ffba55dee0f1b9a5c1800c496c91a.jpg",
       mobile: "https://i.pinimg.com/1200x/74/3f/fb/743ffba55dee0f1b9a5c1800c496c91a.jpg"
-    }
+    },
+    videoUrl: "https://www.youtube.com/embed/Yi5ofNj1IJE?si=riqjM56ZWvP5QOVo"
+
   },
   {
     id: 12,
@@ -203,7 +222,9 @@ export const heroSlides = [
       webp: "https://i.pinimg.com/1200x/d1/4b/65/d14b65c055c39e4f4d0cb224f41ac79a.jpg",
       tablet: "https://i.pinimg.com/1200x/d1/4b/65/d14b65c055c39e4f4d0cb224f41ac79a.jpg",
       mobile: "https://i.pinimg.com/1200x/d1/4b/65/d14b65c055c39e4f4d0cb224f41ac79a.jpg"
-    }
+    },
+    videoUrl: "https://www.youtube.com/embed/K1ie-Vgss-Q?si=LjD4v_NHTDzgyCmT"
+
   }
 ];
 
