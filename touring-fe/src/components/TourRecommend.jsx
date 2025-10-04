@@ -3,7 +3,7 @@ import { ChevronRight, ChevronLeft } from "lucide-react";
 import TourCard from "./TourCard";
 import { useAuth } from "../auth/context";
 import { useNavigate } from "react-router-dom";
-
+import { toast, Toaster } from "sonner";
 const TourPromotions = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -41,7 +41,7 @@ const TourPromotions = () => {
   // 👉 Toggle wishlist trên server
   const handleFavoriteToggle = async (tourId) => {
     if (!user?.token) {
-      alert("Bạn cần đăng nhập để dùng wishlist");
+     toast.error("Bạn cần đăng nhập để dùng wishlist");
       return;
     }
     try {
@@ -228,6 +228,7 @@ const TourPromotions = () => {
           </div>
         </div>
       </section>
+      <Toaster richColors closeButton />
     </div>
   );
 };
