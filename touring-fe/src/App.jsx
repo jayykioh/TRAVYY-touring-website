@@ -9,7 +9,7 @@ import RegionTours from "./components/RegionTours";
 import SearchResults from "./pages/SearchFilterResults";
 import TourDetailPage from "./pages/TourDetailPage";
 import DiscountCodesPage from "./pages/DiscountCodesPage";
-import BlogDetailPage from "./pages/BlogDetailPage"; // ✅ THÊM IMPORT NÀY
+import BlogDetailPage from "./pages/BlogDetailPage"; 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProfileLayout from "./pages/UserProfile";
@@ -19,10 +19,14 @@ import RolePopup from "./components/RolePopup";
 import OAuthCallback from "./pages/OAuthCallback";
 import Cart from "./pages/Cart";
 import WishlistPage from "./pages/WishlistPage";
+import LoadingScreen from "./components/LoadingScreen";
+import NotFoundPage from "./pages/NotFound";
+
+
 
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
-  if (booting) return <p className="p-6">Loading...</p>;
+  if (booting) return <LoadingScreen />;
   if (!isAuth) return <Navigate to="/login" replace />;
   return children;
 }
@@ -30,7 +34,7 @@ function ProtectedRoute({ children }) {
 export default function App() {
   const { booting, isAuth, user } = useAuth();
   console.log("Auth state:", { isAuth, user });
-  if (booting) return <p className="p-6">Loading app...</p>;
+  if (booting) return <LoadingScreen />;
   
   return (
     <>
@@ -71,7 +75,7 @@ export default function App() {
         <Route path="/oauth/callback" element={<OAuthCallback />} />
 
         {/* ----- 404 ----- */}
-        <Route path="*" element={<div className="p-6">404</div>} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
 
       {/* Popup chọn role sau khi login */}

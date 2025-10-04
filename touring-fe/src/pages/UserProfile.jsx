@@ -1,7 +1,6 @@
 import { Outlet, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/context";
 import { useEffect } from "react";
-
 export default function ProfileLayout() {
   const { user } = useAuth();
   const { pathname } = useLocation();

@@ -8,11 +8,12 @@ import BreadcrumbNav from "@/components/BreadcrumbNav"
 
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { createPortal } from "react-dom";
+import LoadingScreen from "@/components/LoadingScreen";
 
 export default function TourDetailPage() {
   const { id: routeId } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { add } = useCart();
   const { user } = useAuth();
   const [tour, setTour] = useState(null);
   const [allTours, setAllTours] = useState([]);
@@ -102,7 +103,7 @@ export default function TourDetailPage() {
 
   const handleAdd = () => {
     if (!tour) return;
-    addToCart({
+    add({
       id: getId(tour),
       name: getTitle(tour),
       image: getMainImage(tour),
@@ -112,7 +113,6 @@ export default function TourDetailPage() {
       available: true,
       selected: true,
     });
-    navigate("/shoppingcarts");
   };
 
   const increaseQuantity = () => setQuantity((n) => n + 1);
@@ -138,7 +138,7 @@ export default function TourDetailPage() {
     }
   };
 
-  if (loading) return <div className="p-6">Đang tải tour...</div>;
+  if (loading) return <LoadingScreen />
   if (errMsg) return <div className="p-6 text-red-600">Lỗi: {errMsg}</div>;
   if (!tour) return <div className="p-6">Không tìm thấy tour</div>;
 
@@ -647,7 +647,7 @@ function BookingSidebar({
           Thêm vào giỏ hàng
         </button>
         <button
-          onClick={onBooking}
+          onClick={onAdd}
           className="w-full py-3 rounded-2xl font-semibold border border-black/10 bg-blue-800 text-white transform hover:scale-105 transition-transform duration-300 ease-in-out"
         >
           Đặt ngay
