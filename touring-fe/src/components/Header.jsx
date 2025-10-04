@@ -13,6 +13,8 @@ import {
 import { useAuth } from "../auth/context";
 import provinces from "@/mockdata/header_bestspot";
 import { useCart } from "../hooks/useCart"; // ✅ dùng 1 lần
+import SearchBar from "./SearchBar"; 
+
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -55,9 +57,17 @@ export default function Header() {
     e.preventDefault();
     const query = q.trim();
     if (!query) return;
-    navigate(`/search?q=${encodeURIComponent(query)}`);
+    navigate(`/search-results?q=${encodeURIComponent(query)}`);
     setIsMenuOpen(false);
   };
+
+  const [bookingData, setBookingData] = React.useState({
+  destination: "",
+  checkIn: "",
+  checkOut: "",
+  guests: 2
+});
+
 
   return (
     <header
@@ -194,21 +204,11 @@ export default function Header() {
             </NavigationMenu>
 
             {/* Search */}
-            <form onSubmit={onSubmitSearch} className="ml-4 flex-1 max-w-md lg:max-w-xs">
-              <div className="relative">
-                <input
-                  type="search"
-                  placeholder="Tìm tour, địa điểm..."
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  className="w-full rounded-full border border-white/30 bg-white/20 backdrop-blur-md px-4 py-2 pr-9 text-sm text-gray-900 placeholder:text-gray-500 outline-none transition focus:ring-2 focus:ring-blue-500/60 focus:border-white/40 shadow-[inset_0_1px_0_rgba(255,255,255,.3)]"
-                  aria-label="Search tours"
-                />
-                <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 p-1" aria-label="Submit search" title="Tìm kiếm">
-                  <Search className="h-4 w-4 text-gray-500" />
-                </button>
-              </div>
-            </form>
+            
+                <div className="ml-4 flex-1 max-w-md lg:max-w-lg">
+  <SearchBar bookingData={bookingData} setBookingData={setBookingData} />
+</div>
+
           </div>
 
           {/* Actions + Mobile toggle */}
