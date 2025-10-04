@@ -9,9 +9,10 @@ import {
   Pause,
   Play
 } from "lucide-react";
-
+import TravelBlog from "./TravelBlog";
 // Import data from heroData.js
 import { heroSlides } from "../mockdata/heroData";
+import VideoModal from "./VideoModal";
 const TourHeroSection = () => {
   const [activeSlide, setActiveSlide] = useState(0);
   const [imageLoaded, setImageLoaded] = useState({});
@@ -19,7 +20,8 @@ const TourHeroSection = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
-
+  const [videoUrl, setVideoUrl] = useState(null);
+  const [showVideo, setShowVideo] = useState(false);
   // Auto-slide functionality
   useEffect(() => {
     if (!isAutoPlay) return;
@@ -228,22 +230,6 @@ const TourHeroSection = () => {
         <div className="absolute inset-0 rounded-full bg-gradient-to-l from-sky-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </button>
 
-      {/* Auto-play control */}
-      <button
-        onClick={() => setIsAutoPlay(!isAutoPlay)}
-        className="absolute top-4 right-4 z-30 
-                   bg-black/20 hover:bg-black/40 backdrop-blur-sm
-                   text-white rounded-full p-2
-                   transition-all duration-300 hover:scale-110
-                   border border-white/20"
-        aria-label={isAutoPlay ? "Tạm dừng" : "Phát"}
-      >
-        {isAutoPlay ? 
-          <Pause className="w-4 h-4" /> : 
-          <Play className="w-4 h-4" />
-        }
-      </button>
-
       {/* Main Content */}
       <div className="relative z-20 h-full flex items-center">
         <div className="w-full mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 max-w-7xl">
@@ -299,13 +285,19 @@ const TourHeroSection = () => {
                   <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <span className="relative">Đặt Tour {current.price}</span>
                 </button>
-                <button className="group w-full sm:w-auto flex items-center justify-center gap-3 
-                                   bg-white/10 backdrop-blur-md border border-white/30 text-white 
-                                   rounded-full px-6 py-4 hover:bg-white/20 
-                                   transition-all duration-300 hover:scale-105 active:scale-95">
-                  <PlayCircle className="w-5 h-5 transition-transform group-hover:scale-110" />
-                  <span>Xem Video</span>
-                </button>
+                <button
+  onClick={() => {
+    setVideoUrl(current.videoUrl); // lấy từ slide hiện tại
+    setShowVideo(true);
+  }}
+  className="group w-full sm:w-auto flex items-center justify-center gap-3 
+             bg-white/10 backdrop-blur-md border border-white/30 text-white 
+             rounded-full px-6 py-4 hover:bg-white/20 
+             transition-all duration-300 hover:scale-105 active:scale-95">
+  <PlayCircle className="w-5 h-5 transition-transform group-hover:scale-110" />
+  <span>Xem Video</span>
+</button>
+
               </div>
             </div>
           </div>
@@ -355,6 +347,10 @@ const TourHeroSection = () => {
           }}
         />
       </div>
+      <VideoModal 
+  videoUrl={showVideo ? videoUrl : null} 
+  onClose={() => setShowVideo(false)} 
+/>
     </section>
   );
 };
