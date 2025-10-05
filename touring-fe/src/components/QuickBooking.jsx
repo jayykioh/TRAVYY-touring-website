@@ -34,7 +34,7 @@ const QuickBooking = () => {
     });
     
     // ✅ Chuyển hướng đến trang SearchResults với parameters
-    navigate(`/search-results?${params.toString()}`);
+    navigate(`/search-filter-results?${params.toString()}`);
     
     setOpenDropdown(null);
   };
@@ -77,7 +77,7 @@ const QuickBooking = () => {
                       e.stopPropagation();
                     }
                   }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none focus:border-[#02A0AA] focus:ring-[#02A0AA]/30 transition-all"
                   autoFocus
                 />
                 <div className="mt-3">
@@ -128,7 +128,7 @@ const QuickBooking = () => {
                       type="date"
                       value={bookingData.checkIn}
                       onChange={(e) => handleInputChange("checkIn", e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none focus:border-[#02A0AA] focus:ring-[#02A0AA]/30 transition-all"
                     />
                   </div>
                   <div>
@@ -137,15 +137,16 @@ const QuickBooking = () => {
                       type="date"
                       value={bookingData.checkOut}
                       onChange={(e) => handleInputChange("checkOut", e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl outline-none focus:border-[#02A0AA] focus:ring-[#02A0AA]/30 transition-all"
                     />
                   </div>
                   <button
-                    onClick={() => setOpenDropdown(null)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all"
-                  >
-                    Xác nhận
-                  </button>
+  onClick={() => setOpenDropdown(null)}
+  className="w-full bg-[#02A0AA] hover:bg-[#028e98] text-white font-semibold py-3 rounded-xl transition-all"
+>
+  Xác nhận
+</button>
+
                 </div>
               </div>
             )}
@@ -189,11 +190,12 @@ const QuickBooking = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => setOpenDropdown(null)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all"
-                  >
-                    Xác nhận
-                  </button>
+  onClick={() => setOpenDropdown(null)}
+  className="w-full bg-[#02A0AA] hover:bg-[#028e98] text-white font-semibold py-3 rounded-xl transition-all"
+>
+  Xác nhận
+</button>
+
                 </div>
               </div>
             )}
@@ -201,12 +203,13 @@ const QuickBooking = () => {
 
           {/* Search Button */}
           <button
-            onClick={handleSearch}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-4 rounded-full ml-2 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg"
-          >
-            <Search className="w-5 h-5" />
-            <span>Tìm</span>
-          </button>
+  onClick={handleSearch}
+  className="bg-[#02A0AA] hover:bg-[#028e98] text-white font-bold px-8 py-4 rounded-full ml-2 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg"
+>
+  <Search className="w-5 h-5" />
+  <span>Tìm</span>
+</button>
+
         </div>
       </div>
 
