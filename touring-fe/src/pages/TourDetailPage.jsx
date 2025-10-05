@@ -642,13 +642,13 @@ function BookingSidebar({
       <div className="space-y-3">
         <button
           onClick={onAdd}
-          className="w-full py-3 rounded-2xl font-semibold border border-black/10 bg-blue-600 text-white transform hover:scale-105 transition-transform duration-300 ease-in-out"
+          className="w-full py-3 rounded-2xl font-semibold border border-black/10 bg-[#02A0AA] text-white transform hover:scale-105 transition-transform duration-300 ease-in-out"
         >
           Thêm vào giỏ hàng
         </button>
         <button
           onClick={onAdd}
-          className="w-full py-3 rounded-2xl font-semibold border border-black/10 bg-blue-800 text-white transform hover:scale-105 transition-transform duration-300 ease-in-out"
+          className="w-full py-3 rounded-2xl font-semibold border border-black/10 bg-[#029faacc] text-white transform hover:scale-105 transition-transform duration-300 ease-in-out"
         >
           Đặt ngay
         </button>

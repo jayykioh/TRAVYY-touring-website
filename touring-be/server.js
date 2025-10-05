@@ -16,9 +16,10 @@ const blogRoutes = require("./routes/blogs");
 const vnAddrRoutes = require("./middlewares/vnAddress.routes");
 require("./middlewares/passport");
 const wishlistRoutes = require("./routes/wishlist.routes");
+const cartRoutes = require("./routes/carts.routes");
 
-const app = express(); // 👉 PHẢI có trước
 
+const app = express(); 
 const isProd = process.env.NODE_ENV === "production";
 const PORT = process.env.PORT || 4000;
 
@@ -68,6 +69,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/profile/info", profileRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/tours", tourRoutes);
+app.use("/api/cart", cartRoutes);
 
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));

@@ -21,8 +21,8 @@ import Cart from "./pages/Cart";
 import WishlistPage from "./pages/WishlistPage";
 import LoadingScreen from "./components/LoadingScreen";
 import NotFoundPage from "./pages/NotFound";
-
-
+import RegionDetailPage from "./pages/RegionDetailPage";
+import RegionPage from "./pages/RegionPage"; 
 
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
@@ -49,6 +49,8 @@ export default function App() {
           <Route path="/discount-codes" element={<DiscountCodesPage />} />
           <Route path="/tours/:id" element={<TourDetailPage />} />
           <Route path="/region/:slug" element={<RegionTours />} />
+          <Route path="/region/:slug/detail" element={<RegionDetailPage />} />
+          <Route path="/region/all" element={<RegionPage />} />
 
           <Route path="/blog/:id" element={<BlogDetailPage />} /> {/* ✅ THÊM ROUTE NÀY */}
             <Route path="/shoppingcarts" element={<Cart/> }/>

@@ -3,43 +3,36 @@ import { useAuth } from "../auth/context";
 import TourCard from "../components/TourCard";
 
 export default function WishlistPage() {
-  const { user } = useAuth();
+  const { withAuth, booting, isAuth } = useAuth();
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Lấy wishlist khi user thay đổi
   useEffect(() => {
-    if (!user) return;
-    setLoading(true);
+    if (booting || !isAuth) return;
 
-    fetch(`/api/wishlist`, {
-  headers: { Authorization: `Bearer ${user.token}` }
- })
-      .then((res) => res.json())
-.then((res) => {
-  if (res.success) {
-    setWishlist(res.data);
-  }
-})
-      .catch((err) => console.error("Error loading wishlist:", err))
-      .finally(() => setLoading(false));
-  }, [user]);
+    setLoading(true);
+    (async () => {
+      try {
+        const res = await withAuth("/api/wishlist", {
+          method: "GET",
+          headers: { "Cache-Control": "no-store" }, 
+        });
+        if (res?.success) {
+          setWishlist(res.data);
+        }
+      } catch (err) {
+        console.error("Error loading wishlist:", err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [booting, isAuth, withAuth]);
 
   // Xoá tour khỏi wishlist
   const handleRemove = async (tourId) => {
     try {
-      const res = await fetch(`/api/wishlist/${tourId}`, {
-   method: "DELETE",
-   headers: { Authorization: `Bearer ${user.token}` }
- })
-      if (res.ok) {
-        setWishlist((prev) =>
-          prev.filter((item) =>
-            item.tour ? item.tour._id !== tourId : item._id !== tourId
-          )
-        );
-      } else {
-        console.error("Failed to remove from wishlist");
+      const res = await withAuth(`/api/wishlist/${tourId}`, { method: "DELETE" });
+      if (res?.success) {
+        setWishlist((prev) => prev.filter((item) => String(item.tourId?._id || item._id) !== String(tourId)));
       }
     } catch (err) {
       console.error("Error removing from wishlist:", err);
@@ -47,24 +40,20 @@ export default function WishlistPage() {
   };
 
   // Loading UI
-  if (loading) {
+  if (booting || loading) {
     return <div className="p-6">⏳ Đang tải wishlist...</div>;
   }
 
   // Empty UI
   if (!wishlist.length) {
-    return (
-      <div className="p-6 text-gray-500">
-        📭 Chưa có tour nào trong danh sách yêu thích.
-      </div>
-    );
+    return <div className="p-6 text-gray-500">📭 Chưa có tour nào trong danh sách yêu thích.</div>;
   }
 
   // Hiển thị danh sách wishlist
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {wishlist.map((item) => {
-        const tour = item.tourId || item;
+        const tour = item.tourId || item; // khi populate tourId từ BE
         return (
           <TourCard
             key={tour._id}
