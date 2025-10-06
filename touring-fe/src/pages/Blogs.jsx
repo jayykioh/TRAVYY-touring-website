@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-
+import LocationCard from "@/components/LocationCard";
 export default function BlogPage() {
   const { slug } = useParams();
   const [blog, setBlog] = useState(null);
@@ -62,10 +62,10 @@ export default function BlogPage() {
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-10">
         {/* Description + Map side by side */}
         {(blog.description || (blog.location?.lat && blog.location?.lng)) && (
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start bg-white rounded-lg ">
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             {/* Description */}
             {blog.description && (
-              <div>
+              <div className="bg-white rounded-lg p-6 shadow">
                 <h2 className="text-2xl font-bold mb-4">Mô tả</h2>
                 <p className="text-gray-700 leading-relaxed">
                   {blog.description}
@@ -73,29 +73,14 @@ export default function BlogPage() {
               </div>
             )}
 
-            {/* Map */}
+            {/* Map — dùng LocationCard, bo góc + responsive, fit với card trắng */}
             {blog.location?.lat && blog.location?.lng && (
-              <div>
-                <h2 className="text-2xl font-bold mb-4">📍 Vị trí</h2>
-                <div className="rounded-lg overflow-hidden ">
-                  <iframe
-                    src={`https://maps.google.com/maps?q=${blog.location.lat},${blog.location.lng}&z=14&output=embed`}
-                    width="100%"
-                    height="300"
-                    style={{ border: 0 }}
-                    allowFullScreen=""
-                    loading="lazy"
-                  ></iframe>
-                </div>
-                <a
-                  href={`https://www.google.com/maps?q=${blog.location.lat},${blog.location.lng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block mt-2 text-blue-600 hover:underline text-sm"
-                >
-                  🔗 Xem trên Google Maps
-                </a>
-              </div>
+              <LocationCard
+                lat={blog.location.lat}
+                lng={blog.location.lng}
+                title="📍 Vị trí"
+                variant="plain" // để đồng bộ style các card trắng của trang Blog
+              />
             )}
           </section>
         )}
@@ -116,7 +101,7 @@ export default function BlogPage() {
 
         {/* Điểm tham quan */}
         {blog.sightseeing?.length > 0 && (
-          <Section title="Vui chơi & Trải nghiệm">
+          <Section title="Điểm tham quan">
             <CardGrid
               items={blog.sightseeing.map((a) => ({
                 name: a.name,
@@ -130,7 +115,7 @@ export default function BlogPage() {
 
         {/* Phương tiện */}
         {blog.transport?.length > 0 && (
-          <Section title="Vui chơi & Trải nghiệm">
+          <Section title="Phương tiện">
             <CardGrid
               items={blog.transport.map((a) => ({
                 name: a.name,
@@ -144,7 +129,7 @@ export default function BlogPage() {
 
         {/* Khách sạn */}
         {blog.hotels?.length > 0 && (
-          <Section title="Vui chơi & Trải nghiệm">
+          <Section title="Khách sạn">
             <CardGrid
               items={blog.hotels.map((a) => ({
                 name: a.name,

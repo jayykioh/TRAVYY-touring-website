@@ -5,7 +5,7 @@ import "./index.css";
 import App from "./App";
 import AuthProvider from "./auth/AuthContext";
 import { Toaster } from "sonner";
-import CartProvider from "./components/CartContext";
+import {CartProvider} from "./components/CartContext";
 
 
 createRoot(document.getElementById("root")).render(

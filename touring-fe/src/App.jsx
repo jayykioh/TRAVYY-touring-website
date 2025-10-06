@@ -22,8 +22,8 @@ import Cart from "./pages/Cart";
 import WishlistPage from "./pages/WishlistPage";
 import LoadingScreen from "./components/LoadingScreen";
 import NotFoundPage from "./pages/NotFound";
-
-
+import BookingPage from "./pages/BookingPage";
+import BookingHistory from "./pages/BookingHistory";
 
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
@@ -53,10 +53,11 @@ export default function App() {
           <Route path="/region/:slug" element={<RegionTours />} />
           {/* <Route path="/region/:slug/detail" element={<RegionDetailPage />} /> */}
           {/* <Route path="/region/all" element={<RegionPage />} /> */}
-
+         <Route path="/booking" element={<BookingPage />} />
           <Route path="/blog/:id" element={<BlogDetailPage />} /> {/* ✅ THÊM ROUTE NÀY */}
-            <Route path="/shoppingcarts" element={<Cart/> }/>
+          <Route path="/shoppingcarts" element={<Cart />} />
 
+          <Route path="/my-bookings" element={<BookingHistory />} />
           <Route
             path="/profile"
             element={

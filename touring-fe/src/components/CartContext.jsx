@@ -1,66 +1,79 @@
-"use client";
-import React, { createContext, useEffect, useMemo, useReducer } from "react";
-import { STORAGE_KEY, cartReducer, initCartState, safeNumber } from "@/hooks/cart-logic";
+// components/CartContext.jsx
+import { createContext, useEffect, useState, useCallback } from "react";
+import { useAuth } from "../auth/context";
 
 export const CartContext = createContext(null);
 
-export default function CartProvider({ children }) {
-  // 1) Khởi tạo đồng bộ từ localStorage (rehydrate)
-  const [items, dispatch] = useReducer(cartReducer, [], initCartState);
+export function CartProvider({ children }) {
+  const { user, withAuth } = useAuth() || {};
+  const isAuth = !!user?.token;
 
-  // 2) Persist mỗi khi đổi
-  useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {
-      console.log("Lỗi khi persist lỗi");
-    }
-  }, [items]);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // 3) (Optional) Đồng bộ đa tab
+  const replace = useCallback((nextItems) => {
+    setItems(Array.isArray(nextItems) ? nextItems : []);
+  }, []);
+
+  // load cart on auth change
   useEffect(() => {
-    const onStorage = (e) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        try {
-          const next = JSON.parse(e.newValue);
-          // replace state nếu khác
-          if (JSON.stringify(items) !== e.newValue) {
-            dispatch({ type: "__REPLACE__", payload: next });
-          }
-        } catch {
-          console.log("Error khi đồng bộ");
-        }
+    let cancelled = false;
+    (async () => {
+      if (!isAuth) return replace([]);
+      setLoading(true);
+      try {
+        const res = await withAuth("/api/cart", { method: "GET" });
+        if (!cancelled) replace(res?.items || []);
+      } catch {
+        if (!cancelled) replace([]);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [items]);
+    })();
+    return () => { cancelled = true; };
+  }, [isAuth, withAuth, replace]);
 
-  // Actions
-  const add        = (item)                  => dispatch({ type: "ADD", payload: item });
-  const remove     = (id, date)              => dispatch({ type: "REMOVE", payload: { id, date } });
-  const qty        = (id, date, field, d)    => dispatch({ type: "QTY", payload: { id, date, field, delta: d } });
-  const select     = (id, date)              => dispatch({ type: "SELECT", payload: { id, date } });
-  const available  = (id, date, v)           => dispatch({ type: "AVAILABLE", payload: { id, date, available: v } });
-  const clearAll   = ()                      => dispatch({ type: "CLEAR_ALL" });
-  const clearAvail = ()                      => dispatch({ type: "CLEAR_UNAVAILABLE" });
+  // totals (tính trên FE từ snapshot giá)
+// ... giữ nguyên import & state
 
-  // Selectors
-  const totals = useMemo(() => {
-    const valid = items.filter(i => i.available && (safeNumber(i.adults) > 0 || safeNumber(i.children) > 0));
-    const selected = valid.filter(i => i.selected);
+// totals (tính trên FE từ snapshot giá)
+const totals = items.reduce(
+  (acc, it) => {
+    const line =
+      (Number(it.adultPrice) || 0) * (Number(it.adults) || 0) +
+      (Number(it.childPrice) || 0) * (Number(it.children) || 0);
 
-    const sum = (arr) => arr.reduce((s,i)=> s + i.adults*i.adultPrice + i.children*i.childPrice, 0);
+    if (it.selected) {
+      acc.selected += line;
+      acc.cartCountSelected += 1;
+      acc.paxSelected += (Number(it.adults) || 0) + (Number(it.children) || 0);
+    }
 
-    const allSubtotal = sum(valid);
-    const selectedSubtotal = sum(selected);
-    const selectedQty = selected.reduce((s,i)=> s + safeNumber(i.adults) + safeNumber(i.children), 0);
-    const hasChildrenNoAdults = selected.some(i => i.children > 0 && i.adults === 0);
-    const canCheckout = selected.length > 0 && selectedSubtotal > 0 && !hasChildrenNoAdults && selectedQty > 0;
+    acc.all += line;
+    acc.cartCountAll += 1;
+    acc.paxAll += (Number(it.adults) || 0) + (Number(it.children) || 0);
+    return acc;
+  },
+  {
+    selected: 0,
+    all: 0,
+    cartCountAll: 0,        // 👈 tổng số dòng trong giỏ
+    cartCountSelected: 0,   // 👈 số dòng đã tick chọn
+    paxAll: 0,              // tổng khách (người lớn + trẻ em) tất cả dòng
+    paxSelected: 0,         // tổng khách của dòng đã chọn
+  }
+);
 
-    const cartCountAll = items.length;
+// ... value = { loading, items, totals, replace }
 
-    return { allSubtotal, selectedSubtotal, selectedQty, hasChildrenNoAdults, canCheckout, cartCountAll };
-  }, [items]);
 
-  const value = { items, add, remove, qty, select, available, clearAll, clearAvail, totals };
+  const value = {
+    loading,
+    items,
+    totals,
+    replace,
+    // các action sẽ được “bọc” ở useCart (để giữ UI gọn)
+  };
+
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

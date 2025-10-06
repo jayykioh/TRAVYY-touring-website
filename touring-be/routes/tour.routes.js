@@ -61,9 +61,7 @@ router.delete("/:id", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
-    const tour = await Tour.findById(req.params.id)
-      .populate("locations", "name country coordinates")
-      .populate("agencyId", "name contact");
+    const tour = await Tour.findById(req.params.id);
     if (!tour) return res.status(404).json({ message: "Tour not found" });
     res.json(tour);
   } catch (err) {

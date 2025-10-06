@@ -44,7 +44,7 @@ const QuickBooking = () => {
   };
 
   return (
-    <section className="relative bg-gradient-to-br from-blue-50 to-purple-50 py-12">
+    <section className="relative py-12">
       <div className="max-w-6xl mx-auto px-4">
         {/* Search Bar */}
         <div className="relative bg-white rounded-full shadow-2xl border border-gray-200 p-2 flex items-stretch">

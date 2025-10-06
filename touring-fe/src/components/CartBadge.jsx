@@ -1,4 +1,3 @@
-// src/components/CartBadge.jsx
 import { AnimatePresence, motion } from "framer-motion";
 
 export default function CartBadge({ count }) {
@@ -13,7 +12,7 @@ export default function CartBadge({ count }) {
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.6, y: -6, opacity: 0 }}
         transition={{ type: "spring", stiffness: 500, damping: 25, mass: 0.6 }}
-        className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-blue-600 text-white text-[11px] grid place-items-center shadow-sm will-change-transform"
+        className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-[#02A0AA] text-white text-[11px] grid place-items-center shadow-sm will-change-transform"
       >
         <motion.span
           key={`n-${display}`}

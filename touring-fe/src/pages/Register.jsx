@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/select";
 
 axios.defaults.withCredentials = true;
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const VN_PHONE = /^(03|05|07|08|09)\d{8}$/;
 const USERNAME = /^[a-z0-9_]{3,20}$/i;

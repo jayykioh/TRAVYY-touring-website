@@ -2,17 +2,13 @@ import React, { useState, useEffect } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import TourCard from "./TourCard";
 import { useAuth } from "../auth/context";
-import { useNavigate } from "react-router-dom";
-
+import { toast, Toaster } from "sonner";
 const TourPromotions = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
+  const { user } = useAuth(); // 👈 lấy user.token
   const [currentTourSlide, setCurrentTourSlide] = useState(0);
   const [favorites, setFavorites] = useState(new Set());
   const [featuredTours, setFeaturedTours] = useState([]);
 
-  // 👉 Lấy danh sách tour từ API
   useEffect(() => {
     fetch("/api/tours")
       .then((res) => res.json())
@@ -29,19 +25,19 @@ const TourPromotions = () => {
     fetch("/api/wishlist", {
       headers: { Authorization: `Bearer ${user.token}` },
     })
-      .then((res) => res.json())
-      .then((res) => {
-        if (res.success) {
-          setFavorites(new Set(res.data.map((item) => String(item.tourId._id))));
-        }
-      })
+    .then((res) => res.json())
+    .then((res) => {
+  if (res.success) {
+    setFavorites(new Set(res.data.map((item) => String(item.tourId._id))));
+  }
+})
       .catch((err) => console.error("Error fetching wishlist:", err));
   }, [user]);
 
   // 👉 Toggle wishlist trên server
   const handleFavoriteToggle = async (tourId) => {
     if (!user?.token) {
-      alert("Bạn cần đăng nhập để dùng wishlist");
+     toast.error("Bạn cần đăng nhập để dùng wishlist");
       return;
     }
     try {
@@ -65,9 +61,7 @@ const TourPromotions = () => {
   };
 
   const nextTourSlide = () => {
-    setCurrentTourSlide((prev) =>
-      Math.min(prev + 1, featuredTours.length - 3)
-    );
+    setCurrentTourSlide((prev) => Math.min(prev + 1, featuredTours.length - 3));
   };
 
   const prevTourSlide = () => {
@@ -130,6 +124,7 @@ const TourPromotions = () => {
           </div>
         </div>
       </div>
+       <Toaster richColors closeButton />
     </section>
   );
 };
