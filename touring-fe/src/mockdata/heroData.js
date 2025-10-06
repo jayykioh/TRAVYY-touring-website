@@ -12,10 +12,10 @@ export const heroSlides = [
     category: "Văn hóa lịch sử",
     price: "từ 650.000₫",
     images: {
-      desktop: "https://i.pinimg.com/1200x/a0/dc/ea/a0dcea78bf3790cd0970aa63eb1c3138.jpg",
-      webp: "https://i.pinimg.com/736x/c9/da/5f/c9da5f6e6f465e308604fa3d8b3a4211.jpg",
-      tablet: "https://i.pinimg.com/736x/c9/da/5f/c9da5f6e6f465e308604fa3d8b3a4211.jpg",
-      mobile: "https://i.pinimg.com/736x/c9/da/5f/c9da5f6e6f465e308604fa3d8b3a4211.jpg"
+      desktop: "https://res.cloudinary.com/dzjm0cviz/image/upload/v1759336726/1_thanh_pho_hoi_an_duoc_unesco_cong_nhan_la_di_san_van_hoa_the_gioi_noi_tieng_voi_nhung_ngoi_nha_co_kinh_62c7183de4_ujxgbq.jpg",
+      webp: "https://res.cloudinary.com/dzjm0cviz/image/upload/v1759336726/1_thanh_pho_hoi_an_duoc_unesco_cong_nhan_la_di_san_van_hoa_the_gioi_noi_tieng_voi_nhung_ngoi_nha_co_kinh_62c7183de4_ujxgbq.jpg",
+      tablet: "https://res.cloudinary.com/dzjm0cviz/image/upload/v1759336726/1_thanh_pho_hoi_an_duoc_unesco_cong_nhan_la_di_san_van_hoa_the_gioi_noi_tieng_voi_nhung_ngoi_nha_co_kinh_62c7183de4_ujxgbq.jpg",
+      mobile: "https://res.cloudinary.com/dzjm0cviz/image/upload/v1759336726/1_thanh_pho_hoi_an_duoc_unesco_cong_nhan_la_di_san_van_hoa_the_gioi_noi_tieng_voi_nhung_ngoi_nha_co_kinh_62c7183de4_ujxgbq.jpg"
     },
     videoUrl: "https://www.youtube.com/embed/9nYDcx31DlU?si=S1xHbe8MBE_9tYhB"
   },

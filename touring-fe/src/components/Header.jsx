@@ -42,9 +42,8 @@ export default function Header() {
   const navigate = useNavigate();
 
   const { isAuth } = useAuth();
-  const { totals } = useCart();                 // ✅ lấy 1 lần
-  const cartCount = totals?.cartCountAll ?? 0;  // ✅ tránh undefined
-
+  const { items, totals } = useCart();                 // ✅ lấy 1 lần
+const cartCount = totals?.cartCountSelected?? totals?.cartCountAll?? items?.length?? 0;
   // scroll shadow / blur
   React.useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 10);
