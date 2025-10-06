@@ -6,6 +6,15 @@ export default function WishlistPage() {
   const { user } = useAuth();
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [favorites, setFavorites] = useState(new Set());
+
+  const handleFavoriteToggle = (tourId) => {
+    setFavorites((prev) => {
+      const newSet = new Set(prev);
+      newSet.has(tourId) ? newSet.delete(tourId) : newSet.add(tourId);
+      return newSet;
+    });
+  };
 
   // Lấy wishlist khi user thay đổi
   useEffect(() => {
@@ -13,14 +22,14 @@ export default function WishlistPage() {
     setLoading(true);
 
     fetch(`/api/wishlist`, {
-  headers: { Authorization: `Bearer ${user.token}` }
- })
+      headers: { Authorization: `Bearer ${user.token}` },
+    })
       .then((res) => res.json())
-.then((res) => {
-  if (res.success) {
-    setWishlist(res.data);
-  }
-})
+      .then((res) => {
+        if (res.success) {
+          setWishlist(res.data);
+        }
+      })
       .catch((err) => console.error("Error loading wishlist:", err))
       .finally(() => setLoading(false));
   }, [user]);
@@ -29,9 +38,9 @@ export default function WishlistPage() {
   const handleRemove = async (tourId) => {
     try {
       const res = await fetch(`/api/wishlist/${tourId}`, {
-   method: "DELETE",
-   headers: { Authorization: `Bearer ${user.token}` }
- })
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
       if (res.ok) {
         setWishlist((prev) =>
           prev.filter((item) =>
@@ -67,17 +76,19 @@ export default function WishlistPage() {
         const tour = item.tourId || item;
         return (
           <TourCard
-            key={tour._id}
+            id={tour._id}
             to={`/tours/${tour._id}`}
             image={tour.imageItems?.[0]?.imageUrl}
-            title={tour.title}
-            location={tour.location}
-            rating={tour.rating}
-            reviews={tour.reviews}
-            bookedText={`${tour.usageCount || 0} Đã đặt`}
-            priceFrom={tour.basePrice}
-            isFav={true}
-            onFav={() => handleRemove(tour._id)}
+            title={tour.description}
+            location={tour.locations?.[0]?.name || "Địa điểm"}
+            tags={tour.tags}
+            bookedText={`${tour.usageCount} Đã được đặt`}
+            rating={tour.isRating}
+            reviews={tour.isReview}
+            priceFrom={tour.basePrice.toString()}
+            originalPrice={tour.basePrice}
+            isFav={favorites.has(tour._id)}
+            onFav={() => handleFavoriteToggle(tour._id)}
           />
         );
       })}

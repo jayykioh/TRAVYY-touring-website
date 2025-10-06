@@ -1,29 +1,50 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Heart, MapPin, Star, Plus, Minus } from "lucide-react";
+import {
+  Heart,
+  MapPin,
+  Star,
+  Plus,
+  Minus,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
 import TourCard from "../components/TourCard";
 import { useCart } from "../hooks/useCart";
 import { useAuth } from "../auth/context";
-import BreadcrumbNav from "@/components/BreadcrumbNav"
-
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import BreadcrumbNav from "@/components/BreadcrumbNav";
 import { createPortal } from "react-dom";
-import LoadingScreen from "@/components/LoadingScreen";
+import { toast, Toaster } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
+import LocationCard from "../components/LocationCard";
 
 export default function TourDetailPage() {
   const { id: routeId } = useParams();
   const navigate = useNavigate();
   const { add } = useCart();
   const { user } = useAuth();
+
   const [tour, setTour] = useState(null);
   const [allTours, setAllTours] = useState([]);
   const [isFav, setIsFav] = useState(false);
-  const [quantity, setQuantity] = useState(1);
-  const [showMoreService, setShowMoreService] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState("");
-  //Galery modal state
+
+  const primaryLoc = Array.isArray(tour?.locations) ? tour.locations[0] : null;
+  const lat = primaryLoc?.coordinates?.lat ?? primaryLoc?.lat ?? null;
+  const lng = primaryLoc?.coordinates?.lng ?? primaryLoc?.lng ?? null;
+  const title = primaryLoc?.name || "Địa điểm";
+  // gallery modal
   const [openGallery, setOpenGallery] = useState(false);
+
+  // số lượng vé
+  const [qtyAdult, setQtyAdult] = useState(1);
+  const [qtyChild, setQtyChild] = useState(0);
+
+  // show more service
+  const [showMoreService, setShowMoreService] = useState(false);
+
   useEffect(() => {
     let ignore = false;
     const ac = new AbortController();
@@ -76,50 +97,114 @@ export default function TourDetailPage() {
     };
   }, [routeId, user?.token]);
 
-  const currentPrice = tour?.currentPrice ?? tour?.basePrice ?? 0;
-  const originalPrice = tour?.originalPrice ?? tour?.basePrice ?? null;
-  const unitPrice = toNumber(currentPrice);
-  const unitOriginal = toNumber(originalPrice);
+  /* ========== GIÁ + NGÀY ========== */
 
-  const subtotal = useMemo(() => unitPrice * quantity, [unitPrice, quantity]);
-  const originalSubtotal = useMemo(
-    () =>
-      unitOriginal && unitOriginal !== unitPrice
-        ? unitOriginal * quantity
-        : null,
-    [unitOriginal, unitPrice, quantity]
+  // danh sách departure mở
+  const openDeps = useMemo(() => {
+    const arr = Array.isArray(tour?.departures) ? tour.departures : [];
+    return arr.filter(
+      (d) => d?.status === "open" && typeof d?.date === "string"
+    );
+  }, [tour]);
+
+  const openDates = useMemo(() => openDeps.map((d) => d.date), [openDeps]);
+
+  // auto chọn ngày mở gần nhất
+  const nearestOpenDate = useMemo(() => {
+    if (!openDates.length) return "";
+    return openDates.slice().sort((a, b) => new Date(a) - new Date(b))[0];
+  }, [openDates]);
+
+  const [selectedDate, setSelectedDate] = useState("");
+  useEffect(() => {
+    setSelectedDate(nearestOpenDate || "");
+  }, [nearestOpenDate]);
+
+  // departure đang chọn
+  const selectedDeparture = useMemo(
+    () => openDeps.find((d) => d.date === selectedDate),
+    [openDeps, selectedDate]
+  );
+
+  // giá người lớn / trẻ em theo ngày (fallback basePrice nếu thiếu)
+  const priceAdult = toNumber(
+    selectedDeparture?.priceAdult ?? tour?.basePrice ?? 0
+  );
+  const priceChild = toNumber(
+    selectedDeparture?.priceChild ??
+      Math.round((selectedDeparture?.priceAdult ?? tour?.basePrice ?? 0) * 0.5)
+  );
+
+  // giá gốc (dùng để tính % giảm)
+  const originalAdult = toNumber(
+    selectedDeparture?.priceOriginalAdult ??
+      selectedDeparture?.priceOriginal ??
+      tour?.originalPrice ??
+      null
   );
 
   const discountPercent = useMemo(() => {
-    if (!originalPrice || !currentPrice || originalPrice <= currentPrice)
-      return null;
-    return Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
-  }, [originalPrice, currentPrice]);
+    if (!originalAdult || originalAdult <= priceAdult) return null;
+    return Math.round(((originalAdult - priceAdult) / originalAdult) * 100);
+  }, [originalAdult, priceAdult]);
 
+  // tổng tiền
+  const subtotal = useMemo(
+    () => priceAdult * qtyAdult + priceChild * qtyChild,
+    [priceAdult, qtyAdult, priceChild, qtyChild]
+  );
+
+  const originalSubtotal = useMemo(() => {
+    if (!originalAdult || originalAdult === priceAdult) return null;
+    return originalAdult * qtyAdult + priceChild * qtyChild; // chỉ gạch phần người lớn nếu có giá gốc
+  }, [originalAdult, priceAdult, qtyAdult, priceChild, qtyChild]);
+
+  // gợi ý tour
   const suggestedTours = useMemo(() => {
     const curId = getId(tour);
     return allTours.filter((t) => getId(t) !== curId).slice(0, 4);
   }, [allTours, tour]);
 
+  /* ========== HÀNH ĐỘNG ========== */
+
   const handleAdd = () => {
     if (!tour) return;
-    add({
-      id: getId(tour),
-      name: getTitle(tour),
-      image: getMainImage(tour),
-      adults: quantity,
-      children: 0,
-      price: currentPrice,
-      available: true,
-      selected: true,
-    });
+    if (!user?.token) {
+      toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng");
+      return;
+    }
+    if (!selectedDate || !openDates.includes(selectedDate)) {
+      toast("Vui lòng chọn ngày khởi hành hợp lệ");
+      return;
+    }
+    if (qtyAdult <= 0) {
+      toast.error("Phải có ít nhất 1 người lớn");
+      return;
+    }
+
+    add(
+      {
+        id: getId(tour),
+        name: getTitle(tour),
+        image: getMainImage(tour),
+        price: priceAdult, // hiển thị; BE sẽ áp lại giá authoritative
+        available: true,
+        selected: true,
+      },
+      qtyAdult,
+      {
+        date: selectedDate,
+        adults: qtyAdult,
+        children: qtyChild,
+        priceAdult,
+        priceChild,
+      }
+    );
   };
 
-  const increaseQuantity = () => setQuantity((n) => n + 1);
-  const decreaseQuantity = () => setQuantity((n) => Math.max(1, n - 1));
   const handleFavorite = async () => {
     if (!user?.token) {
-      alert("Bạn cần đăng nhập để thêm vào wishlist");
+      toast("Bạn cần đăng nhập để thêm vào wishlist");
       return;
     }
     try {
@@ -132,25 +217,125 @@ export default function TourDetailPage() {
         body: JSON.stringify({ tourId: getId(tour) }),
       });
       const data = await res.json();
-      setIsFav(data.isFav); // BE trả về true/false
+      setIsFav(data.isFav);
     } catch (err) {
       console.error("Error toggling wishlist:", err);
     }
   };
 
-  if (loading) return <LoadingScreen />
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,rgba(245,247,250,1),rgba(237,241,245,1))]">
+        {/* breadcrumb skeleton */}
+        <div className="sticky top-0 z-10 backdrop-blur-xl bg-white/60 border-b border-white/40">
+          <div className="max-w-7xl mx-auto px-4 py-3">
+            <Skeleton className="h-5 w-64 rounded-md" />
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+          {/* header card */}
+          <div className="rounded-2xl p-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+            <div className="flex justify-between items-start gap-4 mb-4">
+              <div className="flex-1 space-y-3">
+                <Skeleton className="h-7 w-2/3" />
+                <div className="flex gap-3">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-4 w-36" />
+                </div>
+              </div>
+              <Skeleton className="h-10 w-10 rounded-full" />
+            </div>
+
+            {/* gallery grid */}
+            <div className="grid grid-cols-4 gap-2 mb-6">
+              <Skeleton className="col-span-4 md:col-span-2 h-64 md:h-80 rounded-2xl" />
+              <div className="col-span-2 md:col-span-1 grid grid-rows-2 gap-2">
+                <Skeleton className="h-32 md:h-39 rounded-2xl" />
+                <Skeleton className="h-32 md:h-39 rounded-2xl" />
+              </div>
+              <div className="col-span-2 md:col-span-1 grid grid-rows-2 gap-2">
+                <Skeleton className="h-32 md:h-39 rounded-2xl" />
+                <Skeleton className="h-32 md:h-39 rounded-2xl" />
+              </div>
+            </div>
+
+            {/* 2 cột: content + booking */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+              {/* left content */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="rounded-2xl p-6 backdrop-blur-xl bg-white/60 border border-white/50">
+                  <Skeleton className="h-6 w-52 mb-4" />
+                  <div className="space-y-3">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </div>
+                </div>
+                <div className="rounded-2xl p-6 bg-white/60 border border-white/50">
+                  <Skeleton className="h-6 w-40 mb-4" />
+                  <Skeleton className="h-64 w-full rounded-lg" />
+                </div>
+                <div className="rounded-2xl p-6 bg-white/60 border border-white/50">
+                  <Skeleton className="h-6 w-32 mb-4" />
+                  <Skeleton className="h-24 w-full rounded-lg" />
+                </div>
+              </div>
+
+              {/* booking sidebar */}
+              <div className="lg:col-span-1">
+                <div className="rounded-2xl p-6 sticky top-6 bg-white/60 border border-white/50">
+                  <Skeleton className="h-5 w-44 mb-3" />
+                  <div className="flex flex-wrap gap-2 mb-5">
+                    <Skeleton className="h-8 w-24 rounded-full" />
+                    <Skeleton className="h-8 w-28 rounded-full" />
+                    <Skeleton className="h-8 w-20 rounded-full" />
+                  </div>
+
+                  <Skeleton className="h-5 w-24 mb-4" />
+
+                  <div className="space-y-4 mb-6">
+                    <Skeleton className="h-10 w-full rounded-xl" />
+                    <Skeleton className="h-10 w-full rounded-xl" />
+                  </div>
+
+                  <div className="space-y-3">
+                    <Skeleton className="h-11 w-full rounded-2xl" />
+                    <Skeleton className="h-11 w-full rounded-2xl" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* related */}
+            <div className="mt-8 rounded-2xl p-6 bg-white/60 border border-white/50">
+              <Skeleton className="h-6 w-56 mb-6" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Skeleton className="h-60 rounded-xl" />
+                <Skeleton className="h-60 rounded-xl" />
+                <Skeleton className="h-60 rounded-xl" />
+                <Skeleton className="h-60 rounded-xl" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (errMsg) return <div className="p-6 text-red-600">Lỗi: {errMsg}</div>;
   if (!tour) return <div className="p-6">Không tìm thấy tour</div>;
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,rgba(245,247,250,1),rgba(237,241,245,1))]">
       {/* Breadcrumb (glass) */}
-     <div className="sticky top-0 z-10 backdrop-blur-xl bg-white/60 border-b border-white/40">
+      <div className="sticky top-0 z-10 backdrop-blur-xl bg-white/60 border-b border-white/40">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <BreadcrumbNav
             items={[
-              { label: "Travyy Travel", href: "/" },            
-              { label: getTitle(tour), href: `/tours/${routeId}` }
+              { label: "Travyy Travel", href: "/" },
+              { label: getTitle(tour), href: `/tours/${routeId}` },
             ]}
           />
         </div>
@@ -201,7 +386,7 @@ export default function TourDetailPage() {
             </button>
           </div>
 
-          {/* Image Gallery (giữ bố cục, skin glass nhẹ) */}
+          {/* Image Gallery */}
           <div className="grid grid-cols-4 gap-2 mb-6">
             <div className="col-span-4 md:col-span-2 relative">
               <img
@@ -263,14 +448,14 @@ export default function TourDetailPage() {
             </div>
           </div>
 
-          {/* 🔽 Thêm modal ngay sau block gallery */}
           {openGallery && (
             <ImageGalleryModal
               images={tour.imageItems}
               onClose={() => setOpenGallery(false)}
             />
           )}
-          {/* Service Description (glass info) */}
+
+          {/* Service Description */}
           <div className="p-4 rounded-2xl mb-6 backdrop-blur-xl bg-white/60 border border-white/50">
             <div className="flex items-start gap-3">
               <div className="text-2xl">🎉</div>
@@ -299,7 +484,7 @@ export default function TourDetailPage() {
             </div>
           </div>
 
-          {/* Priority Banner: bỏ gradient → chip glass */}
+          {/* Priority Banner */}
           <div
             onClick={() => navigate("/discounts")}
             className="cursor-pointer rounded-2xl px-4 py-3 backdrop-blur-xl bg-white/60 border border-white/50 hover:bg-white/70 transition-colors"
@@ -319,7 +504,7 @@ export default function TourDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
             {/* Left */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Notes (glass card) */}
+              {/* Notes */}
               <div className="rounded-2xl p-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
                 <h2 className="text-xl font-bold text-gray-900 mb-4 pl-3 border-l-4 border-gray-800/80">
                   Những điều cần lưu ý
@@ -353,59 +538,9 @@ export default function TourDetailPage() {
                 </div>
               </div>
 
-              {/* Map placeholder */}
-              {/* Map placeholder */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-bold text-blue-600 mb-4 border-l-4 border-blue-500 pl-3">
-                  Địa điểm
-                </h2>
-
-                {(() => {
-                  // blog: location.lat/lng
-                  // if (tour?.location?.lat && tour?.location?.lng) {
-                  //   return (
-                  //     <iframe
-                  //       title="Tour location"
-                  //       width="100%"
-                  //       height="400"
-                  //       style={{ border: 0 }}
-                  //       loading="lazy"
-                  //       allowFullScreen
-                  //       referrerPolicy="no-referrer-when-downgrade"
-                  //       src={`https://maps.google.com/maps?q=${tour.location.lat},${tour.location.lng}&z=14&hl=vi&output=embed`}
-                  //     />
-                  //   );
-                  // }
-
-                  // tour: locations[0].coordinates;
-                  if (
-                    Array.isArray(tour?.locations) &&
-                    tour.locations[0]?.coordinates?.lat &&
-                    tour.locations[0]?.coordinates?.lng
-                  ) {
-                    const { lat, lng } = tour.locations[0].coordinates;
-                    return (
-                      <iframe
-                        title="Tour location"
-                        width="100%"
-                        height="400"
-                        style={{ border: 0 }}
-                        loading="lazy"
-                        allowFullScreen
-                        referrerPolicy="no-referrer-when-downgrade"
-                        src={`https://maps.google.com/maps?q=${lat},${lng}&z=14&hl=vi&output=embed`}
-                      />
-                    );
-                  }
-
-                  return (
-                    <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-                      <p className="text-gray-500">Không có dữ liệu địa điểm</p>
-                    </div>
-                  );
-                })()}
+              <div className="mt-6">
+                <LocationCard lat={lat} lng={lng} title={title} />
               </div>
-
               <Reviews tour={tour} />
               <FAQSection />
             </div>
@@ -413,16 +548,22 @@ export default function TourDetailPage() {
             {/* Right – Booking (glass sidebar) */}
             <div className="lg:col-span-1">
               <BookingSidebar
-                tour={tour}
-                quantity={quantity}
-                onIncrease={increaseQuantity}
-                onDecrease={decreaseQuantity}
+                // ngày
+                openDeps={openDeps}
+                selectedDate={selectedDate}
+                onSelectDate={setSelectedDate}
+                // số lượng
+                qtyAdult={qtyAdult}
+                setQtyAdult={setQtyAdult}
+                qtyChild={qtyChild}
+                setQtyChild={setQtyChild}
+                // giá + tổng
+                priceAdult={priceAdult}
+                priceChild={priceChild}
                 discountPercent={discountPercent}
-                onBooking={handleAdd}
-                currentPrice={unitPrice}
-                originalPrice={unitOriginal}
                 subtotal={subtotal}
                 originalSubtotal={originalSubtotal}
+                // action
                 onAdd={handleAdd}
               />
             </div>
@@ -449,55 +590,6 @@ function Section({ title, children }) {
       <ul className="text-sm text-gray-700 space-y-1 list-disc pl-5">
         {children}
       </ul>
-    </div>
-  );
-}
-
-function Gallery({ tour }) {
-  const mainImg = getMainImage(tour);
-  const g0 = tour?.gallery?.[0] || mainImg;
-  const g1 = tour?.gallery?.[1] || mainImg;
-
-  return (
-    <div className="grid grid-cols-4 gap-2">
-      <div className="col-span-4 md:col-span-2">
-        <img
-          src={mainImg}
-          alt={getTitle(tour)}
-          className="w-full h-64 md:h-80 object-cover rounded-2xl"
-        />
-      </div>
-      <div className="col-span-2 md:col-span-1 grid grid-rows-2 gap-2">
-        <img
-          src={g0}
-          alt="Gallery 1"
-          className="w-full h-32 object-cover rounded-2xl"
-        />
-        <img
-          src={g1}
-          alt="Gallery 2"
-          className="w-full h-32 object-cover rounded-2xl"
-        />
-      </div>
-      <div className="col-span-2 md:col-span-1 grid grid-rows-2 gap-2">
-        <img
-          src={g0}
-          alt="Gallery 3"
-          className="w-full h-32 object-cover rounded-2xl"
-        />
-        <div className="relative">
-          <img
-            src={g1}
-            alt="Gallery 4"
-            className="w-full h-32 object-cover rounded-2xl"
-          />
-          <div className="absolute inset-0 bg-black/30 rounded-2xl flex items-center justify-center">
-            <button className="text-white font-medium text-sm px-3 py-1 rounded-full border border-white/50 backdrop-blur-md">
-              Thư viện ảnh
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -573,40 +665,148 @@ function Reviews({ tour }) {
 }
 
 function BookingSidebar({
-  quantity,
-  onIncrease,
-  onDecrease,
+  // ngày
+  openDeps = [],
+  selectedDate = "",
+  onSelectDate = () => {},
+  // số lượng
+  qtyAdult,
+  setQtyAdult,
+  qtyChild,
+  setQtyChild,
+  // giá + tổng
+  priceAdult,
+  priceChild,
   discountPercent,
-  onBooking,
-  currentPrice,
-  originalSubtotal,
   subtotal,
+  originalSubtotal,
+  // action
   onAdd,
 }) {
+  const hasDates = Array.isArray(openDeps) && openDeps.length > 0;
+  const canAddChild = qtyAdult > 0;
+
   return (
     <div className="rounded-2xl p-6 sticky top-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+      {/* Chọn ngày */}
+      <h3 className="font-semibold mb-3 text-gray-900">Chọn ngày khởi hành</h3>
+      {hasDates ? (
+        <div className="flex flex-wrap gap-2 mb-5">
+          {openDeps.map((d) => {
+            const active = d.date === selectedDate;
+            const soldOut = d.status === "soldout" || d.seatsLeft === 0;
+            return (
+              <button
+                key={d.date}
+                type="button"
+                disabled={soldOut}
+                onClick={() => onSelectDate(d.date)}
+                className={[
+                  "px-3 py-1.5 rounded-full text-sm border transition",
+                  active
+                    ? "bg-emerald-600 text-white border-emerald-600"
+                    : "bg-white/70 border-black/10 hover:bg-white",
+                  soldOut ? "opacity-50 cursor-not-allowed" : "",
+                ].join(" ")}
+                title={formatDateVN(d.date)}
+              >
+                {formatDateVN(d.date)}
+                {Number.isFinite(d.seatsLeft) && d.seatsLeft !== null
+                  ? ` • còn ${d.seatsLeft}`
+                  : ""}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mb-5 text-sm text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
+          Chưa có lịch khởi hành khả dụng
+        </div>
+      )}
+
+      {/* Số lượng */}
       <h3 className="font-semibold mb-4 text-gray-900">Số lượng</h3>
-      <div className="flex items-center justify-between mb-6">
-        <span className="text-gray-800">Người lớn</span>
+
+      {/* Người lớn */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col">
+          <span className="text-gray-800">Người lớn</span>
+          <span className="text-xs text-gray-500">
+            ₫ {formatCurrency(priceAdult)} / khách
+          </span>
+        </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={onDecrease}
-            className="w-9 h-9 border border-black/10 rounded-full hover:bg-black/5 transform hover:scale-110 transition-transform duration-500 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-300"
-            aria-label="Giảm số lượng"
+            onClick={() => setQtyAdult(Math.max(0, qtyAdult - 1))}
+            className="w-9 h-9 border border-black/10 rounded-full hover:bg-black/5 focus:outline-none"
+            aria-label="Giảm NL"
           >
             <Minus className="w-4 h-4 mx-auto" />
           </button>
-          <span className="w-8 text-center tabular-nums">{quantity}</span>
+          <span className="w-8 text-center tabular-nums">{qtyAdult}</span>
           <button
-            onClick={onIncrease}
-            className="w-9 h-9 border border-black/10 rounded-full hover:bg-black/5 hover:scale-110  focus:outline-none focus:ring-2 focus:ring-gray-300"
-            aria-label="Tăng số lượng"
+            onClick={() => {
+              const limit =
+                openDeps.find((d) => d.date === selectedDate)?.seatsLeft ??
+                Infinity;
+              if (qtyAdult + qtyChild >= limit) {
+                toast.error("Số lượng vé vượt quá số ghế còn lại");
+                return;
+              }
+              setQtyAdult(qtyAdult + 1);
+            }}
+            className="w-9 h-9 border border-black/10 rounded-full hover:bg-black/5 focus:outline-none"
+            aria-label="Tăng NL"
           >
             <Plus className="w-4 h-4 mx-auto" />
           </button>
         </div>
       </div>
 
+      {/* Trẻ em */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col">
+          <span className="text-gray-800">Trẻ em</span>
+          <span className="text-xs text-gray-500">
+            ₫ {formatCurrency(priceChild)} / khách
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setQtyChild(Math.max(0, qtyChild - 1))}
+            className="w-9 h-9 border border-black/10 rounded-full hover:bg-black/5 focus:outline-none"
+            aria-label="Giảm TE"
+          >
+            <Minus className="w-4 h-4 mx-auto" />
+          </button>
+          <span className="w-8 text-center tabular-nums">{qtyChild}</span>
+          <button
+            onClick={() => {
+              const limit =
+                openDeps.find((d) => d.date === selectedDate)?.seatsLeft ??
+                Infinity;
+              if (!canAddChild) {
+                toast.error(
+                  "Phải có ít nhất 1 người lớn trước khi chọn vé trẻ em"
+                );
+                return;
+              }
+              if (qtyAdult + qtyChild >= limit) {
+                toast.error("Số lượng vé vượt quá số ghế còn lại");
+                return;
+              }
+              setQtyChild(qtyChild + 1);
+            }}
+            className={`w-9 h-9 border border-black/10 rounded-full focus:outline-none ${
+              canAddChild ? "hover:bg-black/5" : "opacity-50"
+            }`}
+          >
+            <Plus className="w-4 h-4 mx-auto" />
+          </button>
+        </div>
+      </div>
+
+      {/* Tổng tiền */}
       <div className="border-t border-white/60 pt-4 mb-6">
         <div className="flex items-baseline gap-2 mb-2">
           <span className="text-2xl font-bold text-gray-900">
@@ -618,10 +818,8 @@ function BookingSidebar({
             </span>
           )}
         </div>
-
-        {/* Nếu vẫn muốn show đơn giá/ người */}
         <div className="text-xs text-gray-600">
-          (Đơn giá: ₫ {formatCurrency(currentPrice)} / người)
+          (Giá hiển thị theo ngày đã chọn; tổng tiền = NL + TE)
         </div>
 
         {discountPercent && (
@@ -634,21 +832,30 @@ function BookingSidebar({
             </span>
           </div>
         )}
-        <p className="text-xs text-gray-600 mt-2">
-          Vui lòng hoàn tất các mục yêu cầu để chuyển đến bước tiếp theo
-        </p>
       </div>
 
+      {/* Hành động */}
       <div className="space-y-3">
         <button
           onClick={onAdd}
-          className="w-full py-3 rounded-2xl font-semibold border border-black/10 bg-[#02A0AA] text-white transform hover:scale-105 transition-transform duration-300 ease-in-out"
+          disabled={!selectedDate || qtyAdult <= 0}
+          className={`w-full py-3 rounded-2xl font-semibold border border-black/10 text-white ${
+            selectedDate && qtyAdult > 0
+              ? "bg-[#02A0AA]"
+              : "bg-gray-300 cursor-not-allowed"
+          }`}
         >
           Thêm vào giỏ hàng
         </button>
+
         <button
           onClick={onAdd}
-          className="w-full py-3 rounded-2xl font-semibold border border-black/10 bg-[#029faacc] text-white transform hover:scale-105 transition-transform duration-300 ease-in-out"
+          disabled={!selectedDate || qtyAdult <= 0}
+          className={`w-full py-3 rounded-2xl font-semibold border border-black/10 text-white ${
+            selectedDate && qtyAdult > 0
+              ? "bg-[#029faacc]"
+              : "bg-gray-300 cursor-not-allowed"
+          }`}
         >
           Đặt ngay
         </button>
@@ -670,7 +877,7 @@ function FAQSection() {
   );
 }
 
-function RelatedTours({ tours, onFav, isFav }) {
+function RelatedTours({ tours }) {
   return (
     <div className="mt-8 rounded-2xl p-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
       <h2 className="text-xl font-bold text-gray-900 mb-6 pl-3 border-l-4 border-gray-800/80">
@@ -678,9 +885,9 @@ function RelatedTours({ tours, onFav, isFav }) {
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {tours.map((tour) => {
-          const id = getId(tour);
           return (
             <TourCard
+              key={tour._id}
               id={tour._id}
               to={`/tours/${tour._id}`}
               image={tour.imageItems?.[0]?.imageUrl}
@@ -690,9 +897,8 @@ function RelatedTours({ tours, onFav, isFav }) {
               bookedText={`${tour.usageCount} Đã được đặt`}
               rating={tour.isRating}
               reviews={tour.isReview}
-              priceFrom={tour.basePrice.toString()}
+              priceFrom={String(tour.basePrice ?? 0)}
               originalPrice={tour.basePrice}
-              onFav={() => handleFavoriteToggle(id)}
             />
           );
         })}
@@ -703,7 +909,6 @@ function RelatedTours({ tours, onFav, isFav }) {
 
 function ImageGalleryModal({ images, onClose }) {
   const [currentIndex, setCurrentIndex] = useState(0);
-
   if (!images?.length) return null;
 
   const prevImage = () =>
@@ -712,7 +917,6 @@ function ImageGalleryModal({ images, onClose }) {
     setCurrentIndex((i) => (i === images.length - 1 ? 0 : i + 1));
   const goToImage = (i) => setCurrentIndex(i);
 
-  // ⌨️ Thêm hỗ trợ phím (←, →, ESC)
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === "ArrowLeft") prevImage();
@@ -725,7 +929,6 @@ function ImageGalleryModal({ images, onClose }) {
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm">
-      {/* Close button */}
       <button
         onClick={onClose}
         className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white shadow-lg transition"
@@ -733,9 +936,7 @@ function ImageGalleryModal({ images, onClose }) {
         <X className="w-6 h-6" />
       </button>
 
-      {/* Main image */}
       <div className="flex-1 flex items-center justify-center w-full max-w-6xl">
-        {/* Prev */}
         <button
           onClick={prevImage}
           className="absolute left-4 md:left-10 p-3 rounded-full bg-black/40 hover:bg-black/60 text-white"
@@ -749,7 +950,6 @@ function ImageGalleryModal({ images, onClose }) {
           className="max-h-[80vh] max-w-[90vw] object-contain rounded-xl shadow-xl"
         />
 
-        {/* Next */}
         <button
           onClick={nextImage}
           className="absolute right-4 md:right-10 p-3 rounded-full bg-black/40 hover:bg-black/60 text-white"
@@ -757,13 +957,11 @@ function ImageGalleryModal({ images, onClose }) {
           <ChevronRight className="w-6 h-6" />
         </button>
 
-        {/* Counter */}
         <span className="absolute bottom-6 right-6 text-white text-sm bg-black/50 px-3 py-1 rounded-lg">
           {currentIndex + 1} / {images.length}
         </span>
       </div>
 
-      {/* Thumbnails */}
       <div className="flex gap-2 mt-4 mb-6 overflow-x-auto px-4">
         {images.map((img, i) => (
           <img
@@ -771,12 +969,11 @@ function ImageGalleryModal({ images, onClose }) {
             src={img.imageUrl || img}
             onClick={() => goToImage(i)}
             alt={`Thumbnail ${i + 1}`}
-            className={`h-20 w-28 object-cover rounded-lg cursor-pointer transition 
-              ${
-                i === currentIndex
-                  ? "ring-2 ring-white"
-                  : "opacity-70 hover:opacity-100"
-              }`}
+            className={`h-20 w-28 object-cover rounded-lg cursor-pointer transition ${
+              i === currentIndex
+                ? "ring-2 ring-white"
+                : "opacity-70 hover:opacity-100"
+            }`}
           />
         ))}
       </div>
@@ -785,6 +982,7 @@ function ImageGalleryModal({ images, onClose }) {
   );
 }
 
+/* ========== Helpers ========== */
 function getId(t) {
   return t?._id ?? t?.id ?? String(t?.slug ?? "");
 }
@@ -792,12 +990,11 @@ function getTitle(t) {
   return t?.title ?? t?.name ?? t?.description ?? "Tour";
 }
 function getLocation(t) {
-  if (t?.location?.address) return t.location.address; // blog
+  if (t?.location?.address) return t.location.address;
   if (Array.isArray(t?.locations) && t.locations[0]?.name)
-    return t.locations[0].name; // tour
+    return t.locations[0].name;
   return "Địa điểm";
 }
-
 function getMainImage(t) {
   return (
     t?.imageItems?.[0]?.imageUrl ??
@@ -816,4 +1013,13 @@ function toNumber(x) {
 }
 function formatCurrency(n) {
   return new Intl.NumberFormat("vi-VN").format(toNumber(n));
+}
+function formatDateVN(isoDateStr) {
+  try {
+    const [y, m, d] = String(isoDateStr).split("-");
+    if (y && m && d) return `${d}/${m}/${y}`;
+  } catch {
+    console.log("date formart error");
+  }
+  return isoDateStr || "";
 }
