@@ -9,6 +9,8 @@ import TrustedPartners from "../components/TrustedPartners";
 import QuickBooking from "../components/QuickBooking";
 import WhyChooseUs from "../components/WhyChooseUs";
 import TourDetailPage from "../pages/TourDetailPage";
+import RegionSection from "../components/RegionSection";
+
 
 export default function MainHome() {
   return (
@@ -25,6 +27,8 @@ export default function MainHome() {
 
       {/* Why Choose Us */}
       {/* <WhyChooseUs /> */}
+      {/* Region list */}
+      <RegionSection />
      
       {/* FAQ */}
       {/* <FAQ/> */}

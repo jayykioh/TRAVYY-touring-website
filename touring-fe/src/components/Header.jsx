@@ -57,7 +57,7 @@ export default function Header() {
     e.preventDefault();
     const query = q.trim();
     if (!query) return;
-    navigate(`/search-results?q=${encodeURIComponent(query)}`);
+    navigate(`/search-results?destination=${encodeURIComponent(query)}`);
     setIsMenuOpen(false);
   };
 
