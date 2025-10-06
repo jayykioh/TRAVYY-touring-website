@@ -5,8 +5,9 @@ import MainLayout from "./layout/MainLayout";
 import LandingPage from "./pages/LandingPage";
 import MainHome from "./pages/MainHome";
 import DestinationPage from "./pages/Blogs";
-import RegionTours from "./components/RegionTours";
-import SearchResults from "./pages/SearchFilterResults";
+import RegionTours from "./pages/RegionTours";
+import SearchResults from "./pages/SearchResults";
+import SearchFilterResults from "./pages/SearchFilterResults";
 import TourDetailPage from "./pages/TourDetailPage";
 import DiscountCodesPage from "./pages/DiscountCodesPage";
 import BlogDetailPage from "./pages/BlogDetailPage"; 
@@ -21,8 +22,8 @@ import Cart from "./pages/Cart";
 import WishlistPage from "./pages/WishlistPage";
 import LoadingScreen from "./components/LoadingScreen";
 import NotFoundPage from "./pages/NotFound";
-import RegionDetailPage from "./pages/RegionDetailPage";
-import RegionPage from "./pages/RegionPage"; 
+
+
 
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
@@ -46,11 +47,12 @@ export default function App() {
           <Route path="/home" element={<MainHome />} />
           <Route path="/destinations/:slug" element={<DestinationPage />} />
           <Route path="/search-results" element={<SearchResults />} />
+          <Route path="/search-filter-results" element={<SearchFilterResults />} />
           <Route path="/discount-codes" element={<DiscountCodesPage />} />
           <Route path="/tours/:id" element={<TourDetailPage />} />
           <Route path="/region/:slug" element={<RegionTours />} />
-          <Route path="/region/:slug/detail" element={<RegionDetailPage />} />
-          <Route path="/region/all" element={<RegionPage />} />
+          {/* <Route path="/region/:slug/detail" element={<RegionDetailPage />} /> */}
+          {/* <Route path="/region/all" element={<RegionPage />} /> */}
 
           <Route path="/blog/:id" element={<BlogDetailPage />} /> {/* ✅ THÊM ROUTE NÀY */}
             <Route path="/shoppingcarts" element={<Cart/> }/>

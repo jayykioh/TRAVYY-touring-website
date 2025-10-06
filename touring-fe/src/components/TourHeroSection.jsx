@@ -278,7 +278,7 @@ const TourHeroSection = () => {
               {/* Enhanced Action Buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4
                               transform transition-all duration-700 delay-400">
-                <button className="group w-full sm:w-auto bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 
+                <button className="group w-full sm:w-auto bg-gradient-to-r from-[#02A0AA] to-[#02838B] hover:from-[#0297A0] hover:to-[#026F77]
                                    text-white font-semibold rounded-full px-8 py-4 
                                    transition-all duration-300 hover:scale-105 active:scale-95
                                    shadow-lg hover:shadow-xl relative overflow-hidden">
@@ -305,28 +305,29 @@ const TourHeroSection = () => {
       </div>
 
       {/* Enhanced Slide Indicators */}
-      <div className="absolute z-30 left-1/2 -translate-x-1/2 bottom-6">
-        <div className="flex gap-3 bg-black/20 backdrop-blur-md rounded-full px-4 py-2 border border-white/20">
-          {heroSlides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => goToSlide(i)}
-              disabled={isTransitioning}
-              className={`relative rounded-full transition-all duration-500 overflow-hidden
-                         focus:outline-none disabled:opacity-50 ${
-                i === activeSlide
-                  ? "bg-sky-500 w-8 h-3 scale-110 shadow-lg"
-                  : "bg-white/50 hover:bg-white/80 w-3 h-3 hover:scale-110"
-              }`}
-              aria-label={`Đi đến slide ${i + 1}`}
-            >
-              {i === activeSlide && (
-                <div className="absolute inset-0 bg-gradient-to-r from-sky-400 to-blue-500" />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
+      <div className="absolute z-30 left-1/2 -translate-x-1/2 bottom-4">
+  <div className="flex gap-2 bg-black/20 backdrop-blur-md rounded-full px-3 py-1.5 border border-white/20">
+    {heroSlides.map((_, i) => (
+      <button
+        key={i}
+        onClick={() => goToSlide(i)}
+        disabled={isTransitioning}
+        className={`relative rounded-full transition-all duration-500 overflow-hidden
+                   focus:outline-none disabled:opacity-50 ${
+          i === activeSlide
+            ? "bg-[#02A0AA] w-5 h-2.5 scale-110 shadow-md"
+            : "bg-white/50 hover:bg-white/80 w-2.5 h-2.5 hover:scale-110"
+        }`}
+        aria-label={`Đi đến slide ${i + 1}`}
+      >
+        {i === activeSlide && (
+          <div className="absolute inset-0 bg-gradient-to-r from-[#02A0AA] to-[#02838B]" />
+        )}
+      </button>
+    ))}
+  </div>
+</div>
+
 
       {/* Enhanced Floating Stats */}
       <div className="absolute z-20 hidden lg:block bottom-8 right-8">
@@ -341,7 +342,7 @@ const TourHeroSection = () => {
       {/* Progress Bar */}
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/20 z-30">
         <div 
-          className="h-full bg-gradient-to-r from-sky-500 to-blue-600 transition-all duration-300"
+          className="h-full bg-gradient-to-r bg-gradient-to-r from-[#02A0AA] to-[#02838B] transition-all duration-300"
           style={{ 
             width: `${((activeSlide + 1) / heroSlides.length) * 100}%` 
           }}

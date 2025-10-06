@@ -48,10 +48,11 @@ const SearchBar = ({ onSearch, initialQuery = "", showSuggestions = true, bookin
     });
 
     navigate(`/search-results?${params.toString()}`);
+    setQuery("");
   };
 
   const handleSuggestionClick = (suggestion) => {
-    setQuery(suggestion);
+    setQuery("");
     setIsOpen(false);
 
     const newHistory = [suggestion, ...history.filter(item => item !== suggestion)].slice(0, 10);
