@@ -13,8 +13,6 @@ import {
 import { useAuth } from "../auth/context";
 import provinces from "@/mockdata/header_bestspot";
 import { useCart } from "../hooks/useCart"; // ✅ dùng 1 lần
-import SearchBar from "./SearchBar"; 
-
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -42,8 +40,9 @@ export default function Header() {
   const navigate = useNavigate();
 
   const { isAuth } = useAuth();
-  const { items, totals } = useCart();                 // ✅ lấy 1 lần
-const cartCount = totals?.cartCountSelected?? totals?.cartCountAll?? items?.length?? 0;
+  const { totals } = useCart();                 // ✅ lấy 1 lần
+  const cartCount = totals?.cartCountAll ?? 0;  // ✅ tránh undefined
+
   // scroll shadow / blur
   React.useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 10);
@@ -56,17 +55,9 @@ const cartCount = totals?.cartCountSelected?? totals?.cartCountAll?? items?.leng
     e.preventDefault();
     const query = q.trim();
     if (!query) return;
-    navigate(`/search-results?destination=${encodeURIComponent(query)}`);
+    navigate(`/search?q=${encodeURIComponent(query)}`);
     setIsMenuOpen(false);
   };
-
-  const [bookingData, setBookingData] = React.useState({
-  destination: "",
-  checkIn: "",
-  checkOut: "",
-  guests: 2
-});
-
 
   return (
     <header
@@ -177,25 +168,33 @@ const cartCount = totals?.cartCountSelected?? totals?.cartCountAll?? items?.leng
                     Khám phá ngay
                   </NavigationMenuTrigger>
                   <NavigationMenuContent className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-2xl">
-                    <ul className="grid gap-2 md:w-[420px] lg:w-[520px] lg:grid-cols-[.75fr_1fr]">
-                      <li className="row-span-3">
+                    <ul className="grid gap-2 md:w-[320px] lg:w-[400px]">
+                      <li>
                         <NavigationMenuLink asChild>
                           <Link
-                            to="/tours"
-                            className="from-muted/50 to-muted flex h-full w-full flex-col justify-end rounded-md bg-linear-to-b p-6 no-underline select-none focus:shadow-md"
+                            to="/available-tours"
+                            className="block rounded-md p-4 hover:bg-white/30 transition"
                           >
-                            <div className="mt-4 mb-2 text-lg font-medium">Khám phá tour</div>
-                            <p className="text-muted-foreground text-sm leading-tight">
-                              Hàng trăm tour chất lượng, từ city tour đến nghỉ dưỡng.
+                            <div className="text-base font-semibold mb-1">Tours có sẵn</div>
+                            <p className="text-muted-foreground text-sm leading-snug">
+                              Khám phá các tour du lịch đã được thiết kế sẵn, đa dạng điểm đến và lịch trình.
                             </p>
                           </Link>
                         </NavigationMenuLink>
                       </li>
-                      {tours.map((tour) => (
-                        <ListItem key={tour.title} href={tour.href} title={tour.title}>
-                          {tour.description}
-                        </ListItem>
-                      ))}
+                      <li>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            to="/ai-tour-creator"
+                            className="block rounded-md p-4 hover:bg-white/30 transition"
+                          >
+                            <div className="text-base font-semibold mb-1">Tự tạo tour</div>
+                            <p className="text-muted-foreground text-sm leading-snug">
+                              Tự lên kế hoạch và thiết kế tour du lịch theo ý thích của bạn.
+                            </p>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
                     </ul>
                   </NavigationMenuContent>
                 </NavigationMenuItem>
@@ -203,11 +202,21 @@ const cartCount = totals?.cartCountSelected?? totals?.cartCountAll?? items?.leng
             </NavigationMenu>
 
             {/* Search */}
-            
-                <div className="ml-4 flex-1 max-w-md lg:max-w-lg">
-  <SearchBar bookingData={bookingData} setBookingData={setBookingData} />
-</div>
-
+            <form onSubmit={onSubmitSearch} className="ml-4 flex-1 max-w-md lg:max-w-xs">
+              <div className="relative">
+                <input
+                  type="search"
+                  placeholder="Tìm tour, địa điểm..."
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  className="w-full rounded-full border border-white/30 bg-white/20 backdrop-blur-md px-4 py-2 pr-9 text-sm text-gray-900 placeholder:text-gray-500 outline-none transition focus:ring-2 focus:ring-blue-500/60 focus:border-white/40 shadow-[inset_0_1px_0_rgba(255,255,255,.3)]"
+                  aria-label="Search tours"
+                />
+                <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 p-1" aria-label="Submit search" title="Tìm kiếm">
+                  <Search className="h-4 w-4 text-gray-500" />
+                </button>
+              </div>
+            </form>
           </div>
 
           {/* Actions + Mobile toggle */}
