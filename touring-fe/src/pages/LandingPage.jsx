@@ -6,6 +6,7 @@ import AboutSection from "../components/AboutSection";
 import ExploreNow from "../components/ExploreNow";
 import TourRecommend from "../components/TourRecommend";
 import WhyChooseUs from "../components/WhyChooseUs"
+import RegionSection from "../components/RegionSection";
 
 export default function LandingPage() {
   return (
@@ -13,6 +14,7 @@ export default function LandingPage() {
       <HeroSection />
       <AboutSection />
       <TourRecommend/>
+       <RegionSection/>
 
 
       <ExploreNow />

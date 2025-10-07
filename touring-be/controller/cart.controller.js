@@ -1,15 +1,16 @@
+// controller/cart.controller.js
 const mongoose = require("mongoose");
 const { Cart, CartItem } = require("../models/Carts");
 const Tour = require("../models/Tours");
 
-// ---------------- utils ----------------
+/* ============ utils ============ */
 const normalizeDate = (d) => (d ? String(d).slice(0, 10) : "");
 const clamp0 = (n) => Math.max(0, Number(n) || 0);
 const sumQty = (a, c) => clamp0(a) + clamp0(c);
 
+/** seats còn lại của 1 departure (null => không giới hạn) */
 async function getSeatsLeft(tourId, date) {
   const tour = await Tour.findById(tourId, { departures: 1 }).lean();
-
   const dep = tour?.departures?.find((d) => {
     const dStr =
       d?.date instanceof Date
@@ -17,18 +18,18 @@ async function getSeatsLeft(tourId, date) {
         : String(d?.date || "").slice(0, 10);
     return dStr === date;
   });
-
-  // null/undefined => không giới hạn
   return typeof dep?.seatsLeft === "number" ? dep.seatsLeft : null;
 }
 
-// Lấy giá & snapshot meta từ Tour + departures theo date
+/** Lấy giá theo ngày + meta (kèm giá gốc nếu có) */
 async function getPricesAndMeta(tourId, date) {
   const tour = await Tour.findById(tourId).lean();
   if (!tour) {
     return {
       unitPriceAdult: 0,
       unitPriceChild: 0,
+      originalAdult: null,
+      originalChild: null,
       meta: {
         name: "",
         image: "",
@@ -39,19 +40,38 @@ async function getPricesAndMeta(tourId, date) {
       },
     };
   }
+
   const dep = (tour.departures || []).find(
     (d) => (d?.date || "").slice(0, 10) === date
   );
+
   const unitPriceAdult =
     typeof dep?.priceAdult === "number"
       ? dep.priceAdult
       : typeof tour.basePrice === "number"
       ? tour.basePrice
       : 0;
+
   const unitPriceChild =
     typeof dep?.priceChild === "number"
       ? dep.priceChild
       : Math.round((unitPriceAdult || 0) * 0.5);
+
+  const originalAdult =
+    typeof dep?.priceOriginalAdult === "number"
+      ? dep.priceOriginalAdult
+      : typeof dep?.priceOriginal === "number"
+      ? dep.priceOriginal
+      : typeof tour?.originalPrice === "number"
+      ? tour.originalPrice
+      : null;
+
+  const originalChild =
+    typeof dep?.priceOriginalChild === "number"
+      ? dep.priceOriginalChild
+      : originalAdult != null
+      ? Math.round(originalAdult * 0.5)
+      : null;
 
   const meta = {
     name: tour.title || "",
@@ -62,8 +82,9 @@ async function getPricesAndMeta(tourId, date) {
     found: !!dep,
   };
 
-  return { unitPriceAdult, unitPriceChild, meta };
+  return { unitPriceAdult, unitPriceChild, originalAdult, originalChild, meta };
 }
+
 function normalizeInc(x = {}) {
   return {
     tourId: x.tourId || x.id || null,
@@ -82,7 +103,8 @@ async function getOrCreateCart(userId) {
   if (!cart) cart = await Cart.create({ userId });
   return cart;
 }
-// Map CartItem -> FE format (kèm seats/total nếu có)
+
+/** Map CartItem -> FE format */
 function mapItem(ci, extra = {}) {
   return {
     itemId: String(ci._id),
@@ -93,6 +115,8 @@ function mapItem(ci, extra = {}) {
     children: ci.children,
     adultPrice: ci.unitPriceAdult,
     childPrice: ci.unitPriceChild,
+    adultOriginalPrice: ci.unitOriginalAdult ?? null,
+    childOriginalPrice: ci.unitOriginalChild ?? null,
     selected: !!ci.selected,
     available: !!ci.available,
     image: ci.image || "",
@@ -101,7 +125,8 @@ function mapItem(ci, extra = {}) {
   };
 }
 
-// ---------------- handlers ----------------
+/* ============ handlers ============ */
+
 /** GET /api/cart */
 async function getCart(req, res) {
   try {
@@ -125,7 +150,8 @@ async function getCart(req, res) {
     res.status(500).json({ error: "GET_CART_FAILED" });
   }
 }
-/** POST /api/cart/sync — FE gửi toàn bộ local cart để merge */
+
+/** POST /api/cart/sync — merge local cart */
 async function syncCart(req, res) {
   try {
     const userId = req.user.sub;
@@ -150,10 +176,13 @@ async function syncCart(req, res) {
         (i) => i.tourId.toString() === tourId.toString() && i.date === inc.date
       );
 
-      const { unitPriceAdult, unitPriceChild, meta } = await getPricesAndMeta(
-        tourId,
-        inc.date
-      );
+      const {
+        unitPriceAdult,
+        unitPriceChild,
+        originalAdult,
+        originalChild,
+        meta,
+      } = await getPricesAndMeta(tourId, inc.date);
 
       if (!line) {
         const created = await CartItem.create({
@@ -166,6 +195,8 @@ async function syncCart(req, res) {
           available: inc.available,
           unitPriceAdult,
           unitPriceChild,
+          unitOriginalAdult: originalAdult ?? null,
+          unitOriginalChild: originalChild ?? null,
           name: inc.name || meta.name,
           image: inc.image || meta.image,
         });
@@ -178,14 +209,18 @@ async function syncCart(req, res) {
         line.available = inc.available ?? line.available;
         line.unitPriceAdult = unitPriceAdult;
         line.unitPriceChild = unitPriceChild;
+        line.unitOriginalAdult = originalAdult ?? null;
+        line.unitOriginalChild = originalChild ?? null;
         if (meta?.name && !line.name) line.name = meta.name;
         if (meta?.image && !line.image) line.image = meta.image;
         await line.save();
       }
     }
+
     const rows = await CartItem.find({ cartId: cart._id }).sort({
       createdAt: -1,
     });
+
     const items = [];
     for (const ci of rows) {
       const { meta } = await getPricesAndMeta(ci.tourId, ci.date);
@@ -199,6 +234,7 @@ async function syncCart(req, res) {
     res.status(500).json({ error: "SYNC_CART_FAILED" });
   }
 }
+
 /** POST /api/cart — ADD with capacity guard */
 async function addToCart(req, res) {
   const session = await mongoose.startSession();
@@ -231,17 +267,17 @@ async function addToCart(req, res) {
           body: { error: "INVALID_QUANTITY" },
         });
 
-      // 1) lấy seatsLeft (source of truth)
+      // 1) seats
       const seatsLeft = await getSeatsLeft(tourId, date);
 
-      // 2) lấy dòng hiện tại (trong session)
+      // 2) dòng hiện có
       const existing = await CartItem.findOne(
         { cartId: cart._id, tourId, date },
         { adults: 1, children: 1 },
         { session }
       );
 
-      // 3) enforce
+      // 3) enforce capacity
       const current = existing ? sumQty(existing.adults, existing.children) : 0;
       if (seatsLeft != null && current + addQty > seatsLeft) {
         throw Object.assign(new Error("CAPACITY"), {
@@ -250,13 +286,16 @@ async function addToCart(req, res) {
         });
       }
 
-      // 4) snapshot giá/meta cho ngày
-      const { unitPriceAdult, unitPriceChild, meta } = await getPricesAndMeta(
-        tourId,
-        date
-      );
+      // 4) snapshot giá/meta
+      const {
+        unitPriceAdult,
+        unitPriceChild,
+        originalAdult,
+        originalChild,
+        meta,
+      } = await getPricesAndMeta(tourId, date);
 
-      // 5) upsert + $inc (atomic trong txn)
+      // 5) upsert + $inc
       await CartItem.findOneAndUpdate(
         { cartId: cart._id, tourId, date },
         {
@@ -271,6 +310,8 @@ async function addToCart(req, res) {
           $set: {
             unitPriceAdult,
             unitPriceChild,
+            unitOriginalAdult: originalAdult ?? null,
+            unitOriginalChild: originalChild ?? null,
           },
           $inc: {
             adults: clamp0(inc.adults),
@@ -280,10 +321,11 @@ async function addToCart(req, res) {
         { upsert: true, new: true, session }
       );
 
-      // 6) trả giỏ (kèm seats)
+      // 6) trả giỏ
       const rows = await CartItem.find({ cartId: cart._id }, null, {
         session,
       }).sort({ createdAt: -1 });
+
       const items = [];
       for (const ci of rows) {
         const { meta: m } = await getPricesAndMeta(ci.tourId, ci.date);
@@ -296,7 +338,7 @@ async function addToCart(req, res) {
   } catch (err) {
     if (err?.status) return res.status(err.status).json(err.body);
     if (err?.code === 11000) {
-      // unique (cartId,tourId,date) race: trả giỏ hiện tại
+      // race unique: trả giỏ hiện tại
       const userId = req.user.sub;
       const cart = await getOrCreateCart(userId);
       const rows = await CartItem.find({ cartId: cart._id }).sort({
@@ -347,23 +389,29 @@ async function updateCartItem(req, res) {
           .json({ error: "EXCEEDS_DEPARTURE_CAPACITY", limit: seatsLeft });
       }
 
-      const { unitPriceAdult, unitPriceChild } = await getPricesAndMeta(
-        line.tourId,
-        line.date
-      );
+      const {
+        unitPriceAdult,
+        unitPriceChild,
+        originalAdult,
+        originalChild,
+      } = await getPricesAndMeta(line.tourId, line.date);
 
       line.adults = nextAdults;
       line.children = nextChildren;
       if (req.body.selected != null) line.selected = !!req.body.selected;
       if (req.body.available != null) line.available = !!req.body.available;
+
       line.unitPriceAdult = unitPriceAdult;
       line.unitPriceChild = unitPriceChild;
+      line.unitOriginalAdult = originalAdult ?? null;
+      line.unitOriginalChild = originalChild ?? null;
 
       await line.save({ session });
 
       const rows = await CartItem.find({ cartId: cart._id }, null, {
         session,
       }).sort({ createdAt: -1 });
+
       const items = [];
       for (const ci of rows) {
         const { meta: m } = await getPricesAndMeta(ci.tourId, ci.date);
@@ -388,23 +436,15 @@ async function deleteCartItem(req, res) {
     const cart = await getOrCreateCart(userId);
     const { itemId } = req.params;
 
-    // xác minh quyền sở hữu trước
     const own = await CartItem.findOne({ _id: itemId, cartId: cart._id });
-    if (!own) {
-      console.warn("[DELETE] Not found or not owned:", {
-        userId,
-        cartId: cart._id.toString(),
-        itemId,
-      });
-      return res.status(404).json({ error: "ITEM_NOT_FOUND" });
-    }
+    if (!own) return res.status(404).json({ error: "ITEM_NOT_FOUND" });
 
-    const result = await CartItem.deleteOne({ _id: itemId });
-    console.log("[DELETE] result:", result); // { deletedCount: 1 } kỳ vọng
+    await CartItem.deleteOne({ _id: itemId });
 
     const rows = await CartItem.find({ cartId: cart._id }).sort({
       createdAt: -1,
     });
+
     const items = [];
     for (const ci of rows) {
       const { meta } = await getPricesAndMeta(ci.tourId, ci.date);

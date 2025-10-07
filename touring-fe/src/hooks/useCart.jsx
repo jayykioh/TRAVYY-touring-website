@@ -48,7 +48,6 @@ export function useCart() {
       name: tour.title || tour.name,
       image: tour.image || tour.imageUrl,
     };
-
     try {
       const res = await withAuth("/api/cart", {
         method: "POST",
@@ -127,6 +126,17 @@ export function useCart() {
     }
   }
 
+async function selectOnlyByKey(tourId, date) {
+  const res = await withAuth("/api/cart/select-only", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ itemKey: { tourId, date: String(date).slice(0,10) } }),
+  });
+  replace(res?.items || []); // <- QUAN TRỌNG: update CartContext
+  return res?.selectedItemId || null;
+}
+
+
   return useMemo(
     () => ({
       loading,
@@ -137,6 +147,7 @@ export function useCart() {
       qty,
       toggleSelect,
       clearAll,
+      selectOnlyByKey
     }),
     [loading, items, totals]
   );

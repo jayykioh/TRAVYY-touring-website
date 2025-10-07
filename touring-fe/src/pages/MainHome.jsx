@@ -10,7 +10,7 @@ import QuickBooking from "../components/QuickBooking";
 import WhyChooseUs from "../components/WhyChooseUs";
 import TourDetailPage from "../pages/TourDetailPage";
 import Explore from "../components/ExploreNow";
-
+import RegionSection from "../components/RegionSection";
 
 
 export default function MainHome() {
@@ -25,6 +25,7 @@ export default function MainHome() {
       {/* Tour promotions với điều hướng tới trang mã giảm giá */}
 
       <TourPromotions />
+       <RegionSection/>
 
      <Explore/>
 
