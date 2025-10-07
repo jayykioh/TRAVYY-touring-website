@@ -24,7 +24,6 @@ import LoadingScreen from "./components/LoadingScreen";
 import NotFoundPage from "./pages/NotFound";
 import BookingPage from "./pages/BookingPage";
 import BookingHistory from "./pages/BookingHistory";
-
 import AvailableToursPage from "./pages/AvailableToursPage";
 import AITourCreator from "./pages/AITourCreator";
 // Route guard
@@ -59,14 +58,19 @@ export default function App() {
           <Route path="/region/:slug" element={<RegionTours />} />
           {/* <Route path="/region/:slug/detail" element={<RegionDetailPage />} /> */}
           {/* <Route path="/region/all" element={<RegionPage />} /> */}
-          <Route path="/booking" element={<BookingPage />} />
+          <Route
+            path="/booking"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <BookingPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
           {/* ✅ THÊM ROUTE NÀY */}
           <Route path="/shoppingcarts" element={<Cart />} />
           {/* <Route path="/region/:slug" element={<RegionTours />} /> */}
-          <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
-          {/* ✅ THÊM ROUTE NÀY */}
-          <Route path="/shoppingcarts" element={<Cart />} />
           {/* ✅ BẢO VỆ 2 ROUTE NÀY */}
           <Route
             path="/available-tours"
@@ -107,7 +111,7 @@ export default function App() {
         <Route path="/oauth/callback" element={<OAuthCallback />} />
 
         {/* ----- 404 ----- */}
-        <Route path="*" element={<div className="p-6">404</div>} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
 
       {/* Popup chọn role sau khi login */}

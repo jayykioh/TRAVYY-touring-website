@@ -1,53 +1,74 @@
-// controllers/bookingController.js
-const Booking = require("../models/Bookings");
+const mongoose = require("mongoose");
 const Tour = require("../models/Tours");
-const QRCode = require("qrcode");
 
-exports.createBooking = async (req, res) => {
+// copy các helper từ cart.controller (normalizeDate, clamp0, getPricesAndMeta) hoặc require chúng
+const normalizeDate = d => (d ? String(d).slice(0,10) : "");
+const clamp0 = (n) => Math.max(0, Number(n) || 0);
+
+async function getPricesAndMeta(tourId, date) {
+  const tour = await Tour.findById(tourId).lean();
+  if (!tour) return { unitPriceAdult:0, unitPriceChild:0, meta:{ name:"", image:"", departureStatus:"open", seatsLeft:null, seatsTotal:null, found:false } };
+  const dep = (tour.departures || []).find(d => (d?.date || "").slice(0,10) === date);
+  const unitPriceAdult = typeof dep?.priceAdult === "number" ? dep.priceAdult :
+                         typeof tour.basePrice === "number" ? tour.basePrice : 0;
+  const unitPriceChild = typeof dep?.priceChild === "number" ? dep.priceChild :
+                         Math.round((unitPriceAdult || 0) * 0.5);
+  const meta = {
+    name: tour.title || "",
+    image: tour.imageItems?.[0]?.imageUrl || "",
+    departureStatus: dep?.status || "open",
+    seatsLeft: dep?.seatsLeft ?? null,
+    seatsTotal: dep?.seatsTotal ?? null,
+    found: !!dep,
+  };
+  return { unitPriceAdult, unitPriceChild, meta };
+}
+
+exports.quote = async (req, res) => {
   try {
-    const { tourId, quantity, paymentMethod } = req.body;
-    const userId = req.user.sub;
+    const incItems = Array.isArray(req.body.items) ? req.body.items : [];
+    const out = [];
 
-    const tour = await Tour.findById(tourId);
-    if (!tour) return res.status(404).json({ message: "Tour not found" });
+    for (const x of incItems) {
+      // validate
+      let tourId;
+      try {
+        tourId = new mongoose.Types.ObjectId(x.tourId);
+      } catch {
+        return res.status(400).json({ error: "INVALID_TOUR_ID" });
+      }
+      const date = normalizeDate(x.date);
+      const adults = clamp0(x.adults);
+      const children = clamp0(x.children);
+      if (!date || adults + children <= 0) {
+        return res.status(400).json({ error: "INVALID_INPUT" });
+      }
 
-    const bookingCode = "BK" + Date.now();
+      // pricing + seats snapshot (no DB write)
+      const { unitPriceAdult, unitPriceChild, meta } = await getPricesAndMeta(tourId, date);
 
-    const totalPrice = tour.basePrice * quantity;
+      // optional: enforce seatsLeft (nếu seatsLeft != null)
+      if (meta.seatsLeft != null && adults + children > meta.seatsLeft) {
+        return res.status(409).json({ error: "EXCEEDS_DEPARTURE_CAPACITY", limit: meta.seatsLeft });
+      }
 
-    const qrData = `BookingCode:${bookingCode}|User:${userId}|Tour:${tourId}`;
-    const qrCode = await QRCode.toDataURL(qrData);
+      out.push({
+        tourId: String(tourId),
+        date,
+        adults,
+        children,
+        unitPriceAdult,
+        unitPriceChild,
+        name: meta.name,
+        image: meta.image,
+        seatsLeft: meta.seatsLeft,
+        seatsTotal: meta.seatsTotal,
+      });
+    }
 
-    const booking = new Booking({
-      userId,
-      tourId,
-      bookingCode,
-      quantity,
-      totalPrice,
-      paymentMethod,
-      qrCode,
-      status: "paid", // giả sử demo thanh toán thành công
-    });
-
-    await booking.save();
-
-    // TODO: gửi email vé điện tử
-    return res.json({ success: true, booking });
-  } catch (err) {
-    console.error("createBooking error:", err);
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-exports.getMyBookings = async (req, res) => {
-  try {
-    const userId = req.user.sub;
-    const bookings = await Booking.find({ userId })
-      .populate("tourId", "title imageItems basePrice")
-      .sort({ createdAt: -1 });
-
-    res.json({ success: true, data: bookings });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.json({ items: out });
+  } catch (e) {
+    console.error("quote error", e);
+    res.status(500).json({ error: "QUOTE_FAILED" });
   }
 };

@@ -17,7 +17,7 @@ const vnAddrRoutes = require("./middlewares/vnAddress.routes");
 const cartRoutes = require("./routes/carts.routes");
 require("./middlewares/passport");
 const wishlistRoutes = require("./routes/wishlist.routes");
-
+const locationRoutes = require("./routes/location.routes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const app = express();
 const isProd = process.env.NODE_ENV === "production";
@@ -73,6 +73,8 @@ app.use("/api/tours", tourRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/location", locationRoutes);
+
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
