@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, MapPin, Calendar, Users } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner"; // ✅ dùng sonner cho đồng bộ
 
 const QuickBooking = () => {
   const navigate = useNavigate();
@@ -47,7 +47,7 @@ const QuickBooking = () => {
 
     // 🧩 Kiểm tra hợp lệ
     if (!bookingData.destination.trim()) {
-      toast.error("Vui lòng chọn điểm đến.");
+      toast.error("Vui lòng chọn điểm đến."); // ✅ toast của sonner
       return;
     }
 
@@ -60,10 +60,12 @@ const QuickBooking = () => {
       toast.error("Ngày khởi hành không được ở quá khứ.");
       return;
     }
+
     if (checkOutDate < today) {
       toast.error("Ngày kết thúc không được ở quá khứ.");
       return;
     }
+
     if (checkOutDate < checkInDate) {
       toast.error("Ngày kết thúc phải sau ngày khởi hành.");
       return;
@@ -98,9 +100,15 @@ const QuickBooking = () => {
       const kw = keyword.toLowerCase();
 
       const matchedTours = data.filter((tour) => {
+        const locationName =
+          Array.isArray(tour.locations) && tour.locations.length > 0
+            ? tour.locations[0].name?.toLowerCase()
+            : "";
+
         const matchPlace =
           tour.title?.toLowerCase().includes(kw) ||
-          tour.description?.toLowerCase().includes(kw);
+          tour.description?.toLowerCase().includes(kw) ||
+          locationName.includes(kw);
 
         if (!matchPlace || !Array.isArray(tour.departures)) return false;
 
@@ -116,14 +124,9 @@ const QuickBooking = () => {
           (d) => d.trim() === normalizedCheckIn.trim()
         );
 
-        // ❌ Bỏ phần duration kiểm tra (vì đang làm fail tour 1 ngày)
-        const isMatch = hasExactDeparture;
-
-        console.log("✅ Tour match:", isMatch);
-        return isMatch;
+        return hasExactDeparture;
       });
 
-      // ❗️Chỉ hiện toast nếu KHÔNG CÓ tour nào match
       if (matchedTours.length === 0) {
         toast.error(
           "⚠️ Ngày khởi hành bạn chọn không có trong lịch trình tour hiện có."
@@ -131,7 +134,7 @@ const QuickBooking = () => {
         return;
       }
 
-      // Nếu có match → chuyển trang
+      // ✅ Nếu có match → chuyển trang
       const params = new URLSearchParams({
         destination: bookingData.destination || "",
         checkIn: checkInStr,
