@@ -1,3 +1,4 @@
+const PORT = process.env.PORT || 4000;
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
@@ -21,8 +22,7 @@ const wishlistRoutes = require("./routes/wishlist.routes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const app = express();
 const isProd = process.env.NODE_ENV === "production";
-const PORT = process.env.PORT || 4000;
-
+const notifyRoutes = require("./routes/notifyRoutes");
 // --- Core middlewares ---
 app.use(helmet());
 app.use(compression());
@@ -73,6 +73,7 @@ app.use("/api/tours", tourRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/notify", notifyRoutes);
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
