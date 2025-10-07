@@ -1,13 +1,40 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin, Calendar } from "lucide-react";
-import { destinationList } from "../mockdata/destinationList";
 import TourCard from "../components/TourCard";
+import { useAuth } from "../auth/context";
+import { toast } from "react-hot-toast";
 
-const allTours = Object.values(destinationList).flat();
-
-const SearchfilterResults = () => {
+const SearchFilterResults = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [favorites, setFavorites] = useState(new Set());
+  const { user, withAuth } = useAuth();
+  // ✅ matchedTours truyền từ QuickBooking.jsx
+  const matchedToursFromState = location.state?.matchedTours || [];
+  const handleFavoriteToggle = async (tourId) => {
+    if (!user?.token) {
+      toast.error("Bạn cần đăng nhập để dùng wishlist");
+      return;
+    }
+
+    try {
+      const data = await withAuth("/api/wishlist/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tourId }),
+      });
+
+      setFavorites((prev) => {
+        const newSet = new Set(prev);
+        data.isFav ? newSet.add(tourId) : newSet.delete(tourId);
+        return newSet;
+      });
+    } catch (err) {
+      console.error("❌ Wishlist toggle error:", err);
+      toast.error("Không thể cập nhật danh sách yêu thích!");
+    }
+  };
 
   const [searchParams, setSearchParams] = useState({
     destination: "",
@@ -15,93 +42,112 @@ const SearchfilterResults = () => {
     checkOut: "",
     guests: 2,
   });
-  const [filteredTours, setFilteredTours] = useState([]);
+
+  const [filteredTours, setFilteredTours] = useState(matchedToursFromState);
   const [sortBy, setSortBy] = useState("popular");
   const [priceRange, setPriceRange] = useState("all");
+  const [suggestedTours, setSuggestedTours] = useState([]);
 
+  // ==========================
+  //  Lấy query từ URL (để reload không mất)
+  // ==========================
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
-    const destination = urlParams.get("destination") || "";
+    const newDestination = urlParams.get("destination") || "";
+    const newCheckIn = urlParams.get("checkIn") || "";
+    const newCheckOut = urlParams.get("checkOut") || "";
+    const newGuests = urlParams.get("guests") || "2";
 
-    setSearchParams({
-      destination,
-      checkIn: urlParams.get("checkIn") || "",
-      checkOut: urlParams.get("checkOut") || "",
-      guests: urlParams.get("guests") || "2",
+    // 🧩 Chỉ set lại khi giá trị thực sự thay đổi
+    setSearchParams((prev) => {
+      if (
+        prev.destination === newDestination.trim() &&
+        prev.checkIn === newCheckIn &&
+        prev.checkOut === newCheckOut &&
+        prev.guests === newGuests
+      ) {
+        return prev; // không đổi => không render lại
+      }
+      return {
+        destination: newDestination.trim(),
+        checkIn: newCheckIn,
+        checkOut: newCheckOut,
+        guests: newGuests,
+      };
     });
-
-    filterTours(destination);
   }, [location.search]);
 
+  // ==========================
+  //  Nếu reload trang mà không có state → fetch lại
+  // ==========================
   useEffect(() => {
-    filterTours(searchParams.destination);
-  }, [priceRange, sortBy, searchParams.destination]);
+    if (matchedToursFromState.length > 0) {
+      setFilteredTours(matchedToursFromState);
+      return; // không cần fetch nữa
+    }
 
-  const cityMap = {
-    danang: "danang",
-    đanang: "danang",
-    hoian: "hoian",
-    nhatrang: "nhatrang",
-    hanoi: "hanoi",
-    tphcm: "tphcm",
-    phuquoc: "phuquoc",
-  };
+    if (searchParams.destination.trim()) {
+      fetchTours(searchParams.destination);
+    }
+  }, [searchParams.destination]);
 
-  const filterTours = (destination) => {
-    let tours = [];
-
-    if (destination) {
-      const destKey = destination
-        .toLowerCase()
-        .replace(/\s+/g, "")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-      const mappedKey = cityMap[destKey];
-      if (mappedKey && destinationList[mappedKey]) {
-        tours = destinationList[mappedKey];
+  // ==========================
+  //  Hàm fetch từ backend (fallback)
+  // ==========================
+  const fetchTours = async (destination = "") => {
+    try {
+      let url = "http://localhost:4000/api/tours";
+      if (destination.trim()) {
+        url += `?search=${encodeURIComponent(destination)}`;
       }
-    } else {
-      tours = allTours;
-    }
 
-    tours = sortTours(tours, sortBy);
-    tours = filterByPrice(tours, priceRange);
+      const res = await fetch(url);
+      const data = await res.json();
+      setFilteredTours(data);
 
-    setFilteredTours(tours);
-  };
-
-  const sortTours = (tours, sortType) => {
-    const sorted = [...tours];
-    switch (sortType) {
-      case "popular":
-        return sorted.sort((a, b) => b.reviews - a.reviews);
-      case "price-low":
-        return sorted.sort((a, b) => a.currentPrice - b.currentPrice);
-      case "price-high":
-        return sorted.sort((a, b) => b.currentPrice - a.currentPrice);
-      case "rating":
-        return sorted.sort((a, b) => b.rating - a.rating);
-      default:
-        return sorted;
+      if (data.length === 0) {
+        const resAll = await fetch("http://localhost:4000/api/tours");
+        const all = await resAll.json();
+        setSuggestedTours(all.slice(0, 8));
+      }
+    } catch (err) {
+      console.error("❌ Lỗi khi fetch tour:", err);
     }
   };
 
-  const filterByPrice = (tours, range) => {
-    switch (range) {
-      case "budget":
-        return tours.filter((t) => t.currentPrice < 1000000);
-      case "medium":
-        return tours.filter(
-          (t) => t.currentPrice >= 1000000 && t.currentPrice < 3000000
-        );
-      case "luxury":
-        return tours.filter((t) => t.currentPrice >= 3000000);
-      default:
-        return tours;
-    }
-  };
+  // ==========================
+  //  Bộ lọc phụ (sort + price)
+  // ==========================
+  const sortedAndFilteredTours = React.useMemo(() => {
+    let tours = [...filteredTours];
 
-  const handleGoBack = () => window.history.back();
+    // sort
+    if (sortBy === "price-low") {
+      tours.sort((a, b) => (a.basePrice || 0) - (b.basePrice || 0));
+    } else if (sortBy === "price-high") {
+      tours.sort((a, b) => (b.basePrice || 0) - (a.basePrice || 0));
+    } else if (sortBy === "rating") {
+      tours.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    }
+
+    // filter price range
+    if (priceRange !== "all") {
+      tours = tours.filter((t) => {
+        const price = t.basePrice || 0;
+        if (priceRange === "budget") return price < 1000000;
+        if (priceRange === "medium") return price >= 1000000 && price < 3000000;
+        if (priceRange === "luxury") return price >= 3000000;
+        return true;
+      });
+    }
+
+    return tours;
+  }, [filteredTours, sortBy, priceRange]);
+
+  // ==========================
+  //  UI
+  // ==========================
+  const handleGoBack = () => navigate(-1);
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
@@ -113,45 +159,27 @@ const SearchfilterResults = () => {
       {/* Header */}
       <div className="bg-white shadow-md sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <button
               onClick={handleGoBack}
-              className="flex items-center gap-2 text-gray-600 transition-all"
-              style={{ color: "gray" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#02A0AA")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "gray")}
+              className="flex items-center gap-2 text-gray-600 hover:text-[#02A0AA]"
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="font-medium">Quay lại</span>
             </button>
           </div>
 
-          {/* Search Info */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-gray-600">
             {searchParams.destination && (
-              <div
-                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full"
-                style={{ backgroundColor: "#02A0AA20" }}
-              >
-                <MapPin
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                  style={{ color: "#02A0AA" }}
-                />
-                <span className="font-medium text-gray-700">
-                  {searchParams.destination}
-                </span>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#02A0AA20]">
+                <MapPin className="w-4 h-4 text-[#02A0AA]" />
+                <span className="font-medium">{searchParams.destination}</span>
               </div>
             )}
             {searchParams.checkIn && searchParams.checkOut && (
-              <div
-                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full"
-                style={{ backgroundColor: "#02A0AA20" }}
-              >
-                <Calendar
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                  style={{ color: "#02A0AA" }}
-                />
-                <span className="text-gray-700 text-xs sm:text-sm">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#02A0AA20]">
+                <Calendar className="w-4 h-4 text-[#02A0AA]" />
+                <span>
                   {formatDate(searchParams.checkIn)} -{" "}
                   {formatDate(searchParams.checkOut)}
                 </span>
@@ -161,71 +189,84 @@ const SearchfilterResults = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-12 py-4 sm:py-3">
-        <div className="bg-white rounded-lg shadow-sm p-2 sm:p-3 mb-3">
-  <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3">
-    <span className="pl-2 text-xs sm:text-sm text-gray-700 font-medium">
-      {filteredTours.length} tour tìm thấy
-    </span>
+      {/* Filter Bar */}
+      <div className="max-w-5xl mx-auto px-4 py-4">
+        <div className="bg-white rounded-lg shadow-sm p-3 mb-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span className="text-sm text-gray-700 font-medium">
+            {sortedAndFilteredTours.length} tour tìm thấy
+          </span>
 
-    <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
-      <select
-        value={sortBy}
-        onChange={(e) => setSortBy(e.target.value)}
-        className="w-full sm:w-auto px-3 py-1.5 text-xs sm:text-sm border border-gray-300 rounded-md focus:border-[#02A0AA] focus:ring-1 focus:ring-[#02A0AA20] transition-all"
-      >
-        <option value="popular">Phổ biến nhất</option>
-        <option value="price-low">Giá thấp đến cao</option>
-        <option value="price-high">Giá cao đến thấp</option>
-        <option value="rating">Đánh giá cao nhất</option>
-      </select>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-1.5 text-sm border rounded-md focus:ring-1 focus:ring-[#02A0AA]"
+            >
+              <option value="popular">Phổ biến nhất</option>
+              <option value="price-low">Giá thấp đến cao</option>
+              <option value="price-high">Giá cao đến thấp</option>
+              <option value="rating">Đánh giá cao nhất</option>
+            </select>
 
-      <select
-        value={priceRange}
-        onChange={(e) => setPriceRange(e.target.value)}
-        className="w-full sm:w-auto px-3 py-1.5 text-xs sm:text-sm border border-gray-300 rounded-md focus:border-[#02A0AA] focus:ring-1 focus:ring-[#02A0AA20] transition-all"
-      >
-        <option value="all">Tất cả mức giá</option>
-        <option value="budget">Dưới 1 triệu</option>
-        <option value="medium">1-3 triệu</option>
-        <option value="luxury">Trên 3 triệu</option>
-      </select>
-    </div>
-  </div>
-</div>
+            <select
+              value={priceRange}
+              onChange={(e) => setPriceRange(e.target.value)}
+              className="px-3 py-1.5 text-sm border rounded-md focus:ring-1 focus:ring-[#02A0AA]"
+            >
+              <option value="all">Tất cả mức giá</option>
+              <option value="budget">Dưới 1 triệu</option>
+              <option value="medium">1 - 3 triệu</option>
+              <option value="luxury">Trên 3 triệu</option>
+            </select>
+          </div>
+        </div>
 
-
-        {/* Tour Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {filteredTours.map((tour) => (
+        {/* Tour List */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {sortedAndFilteredTours.map((tour) => (
             <TourCard
-              key={tour.id}
-              id={tour.id}
-              to={`/tours/${tour.id}`}
-              image={tour.image}
-              title={tour.title}
-              location={tour.location}
+              id={tour._id}
+              to={`/tours/${tour._id}`}
+              image={tour.imageItems?.[0]?.imageUrl}
+              title={tour.description}
+              location={tour.locations?.[0]?.name || "Địa điểm"}
               tags={tour.tags}
-              rating={tour.rating}
-              reviews={tour.reviews}
-              bookedText={tour.booked}
-              priceFrom={tour.currentPrice}
-              onFav={(id) => console.log("Yêu thích:", id)}
-              isFav={false}
+              bookedText={`${tour.usageCount} Đã được đặt`}
+              rating={tour.isRating}
+              reviews={tour.isReview}
+              priceFrom={tour.basePrice.toString()}
+              originalPrice={tour.basePrice}
+              isFav={favorites.has(tour._id)}
+              onFav={() => handleFavoriteToggle(tour._id)}
             />
           ))}
         </div>
 
-        {/* Empty State */}
-        {filteredTours.length === 0 && (
-          <div className="text-center py-8 sm:py-12 px-4">
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
-              Không tìm thấy tour phù hợp
-            </h3>
-            <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 max-w-md mx-auto">
-              Vui lòng thử tìm kiếm với điểm đến khác hoặc thay đổi bộ lọc
-            </p>
+        {/* Suggested Tours */}
+        {sortedAndFilteredTours.length === 0 && suggestedTours.length > 0 && (
+          <div className="mt-10">
+            <h4 className="text-xl font-semibold mb-4 text-gray-800">
+              🌟 Tour gợi ý cho bạn
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {suggestedTours.map((tour) => (
+                <TourCard
+                  id={tour._id}
+                  to={`/tours/${tour._id}`}
+                  image={tour.imageItems?.[0]?.imageUrl}
+                  title={tour.description}
+                  location={tour.locations?.[0]?.name || "Địa điểm"}
+                  tags={tour.tags}
+                  bookedText={`${tour.usageCount} Đã được đặt`}
+                  rating={tour.isRating}
+                  reviews={tour.isReview}
+                  priceFrom={tour.basePrice.toString()}
+                  originalPrice={tour.basePrice}
+                  isFav={favorites.has(tour._id)}
+                  onFav={() => handleFavoriteToggle(tour._id)}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -233,4 +274,4 @@ const SearchfilterResults = () => {
   );
 };
 
-export default SearchfilterResults;
+export default SearchFilterResults;

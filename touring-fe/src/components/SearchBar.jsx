@@ -2,7 +2,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Clock, MapPin, TrendingUp, X } from "lucide-react";
 
-const SearchBar = ({ onSearch, initialQuery = "", showSuggestions = true, bookingData, setBookingData }) => {
+const SearchBar = ({
+  onSearch,
+  initialQuery = "",
+  showSuggestions = true,
+  bookingData,
+  setBookingData,
+}) => {
   const [query, setQuery] = useState(initialQuery);
   const [history, setHistory] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -11,7 +17,12 @@ const SearchBar = ({ onSearch, initialQuery = "", showSuggestions = true, bookin
   const navigate = useNavigate();
 
   const popularDestinations = [
-    "Hạ Long", "Đà Nẵng", "Sapa", "Phú Quốc", "Hội An", "Nha Trang"
+    "Hạ Long",
+    "Đà Nẵng",
+    "Sapa",
+    "Phú Quốc",
+    "Hội An",
+    "Nha Trang",
   ];
 
   const trendingSearches = [
@@ -19,11 +30,13 @@ const SearchBar = ({ onSearch, initialQuery = "", showSuggestions = true, bookin
     "Combo Đà Nẵng",
     "Du lịch Sapa mùa đông",
     "Resort Phú Quốc 5 sao",
-    "Tour miền Tây 2N1Đ"
+    "Tour miền Tây 2N1Đ",
   ];
 
   useEffect(() => {
-    const savedHistory = JSON.parse(localStorage.getItem("searchHistory") || "[]");
+    const savedHistory = JSON.parse(
+      localStorage.getItem("searchHistory") || "[]"
+    );
     setHistory(savedHistory);
   }, []);
 
@@ -35,7 +48,10 @@ const SearchBar = ({ onSearch, initialQuery = "", showSuggestions = true, bookin
     if (e) e.preventDefault();
     if (!query.trim()) return;
 
-    const newHistory = [query, ...history.filter(item => item !== query)].slice(0, 10);
+    const newHistory = [
+      query,
+      ...history.filter((item) => item !== query),
+    ].slice(0, 10);
     setHistory(newHistory);
     localStorage.setItem("searchHistory", JSON.stringify(newHistory));
     setIsOpen(false);
@@ -44,10 +60,10 @@ const SearchBar = ({ onSearch, initialQuery = "", showSuggestions = true, bookin
       destination: query,
       checkIn: bookingData?.checkIn || "",
       checkOut: bookingData?.checkOut || "",
-      guests: bookingData?.guests?.toString() || "1"
+      guests: bookingData?.guests?.toString() || "1",
     });
 
-    navigate(`/search-results?${params.toString()}`);
+    navigate(`/search-filter-results?${params.toString()}`);
     setQuery("");
   };
 
@@ -55,18 +71,23 @@ const SearchBar = ({ onSearch, initialQuery = "", showSuggestions = true, bookin
     setQuery("");
     setIsOpen(false);
 
-    const newHistory = [suggestion, ...history.filter(item => item !== suggestion)].slice(0, 10);
+    const newHistory = [
+      suggestion,
+      ...history.filter((item) => item !== suggestion),
+    ].slice(0, 10);
     setHistory(newHistory);
     localStorage.setItem("searchHistory", JSON.stringify(newHistory));
 
     if (setBookingData) {
-      setBookingData(prev => ({ ...prev, destination: suggestion }));
+      setBookingData((prev) => ({ ...prev, destination: suggestion }));
     }
 
     if (onSearch) {
       onSearch(suggestion);
     } else {
-      navigate(`/search-results?destination=${encodeURIComponent(suggestion)}`);
+      navigate(
+        `/search-filter-results?destination=${encodeURIComponent(suggestion)}`
+      );
     }
   };
 
@@ -122,7 +143,9 @@ const SearchBar = ({ onSearch, initialQuery = "", showSuggestions = true, bookin
           {history.length > 0 && (
             <div className="border-b border-[#03B3BE]/10 sticky top-0 bg-white z-10">
               <div className="flex items-center justify-between px-4 py-3 bg-[#03B3BE]/5">
-                <h4 className="text-sm font-semibold text-gray-600">Lịch sử tìm kiếm</h4>
+                <h4 className="text-sm font-semibold text-gray-600">
+                  Lịch sử tìm kiếm
+                </h4>
                 <button
                   onClick={clearHistory}
                   className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 hover:bg-red-50 rounded transition-colors"
@@ -144,7 +167,9 @@ const SearchBar = ({ onSearch, initialQuery = "", showSuggestions = true, bookin
                     className="flex items-center space-x-3 cursor-pointer hover:bg-[#03B3BE]/5 px-2 py-2 rounded transition-colors group"
                   >
                     <Clock className="w-4 h-4 text-[#03B3BE]/60 group-hover:text-[#03B3BE] flex-shrink-0" />
-                    <span className="text-gray-700 group-hover:text-[#03B3BE] flex-1 truncate text-sm">{item}</span>
+                    <span className="text-gray-700 group-hover:text-[#03B3BE] flex-1 truncate text-sm">
+                      {item}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -152,7 +177,9 @@ const SearchBar = ({ onSearch, initialQuery = "", showSuggestions = true, bookin
 
             {/* Popular destinations */}
             <div className="mb-4">
-              <h4 className="text-sm font-semibold text-gray-600 mb-3">Địa điểm nổi bật</h4>
+              <h4 className="text-sm font-semibold text-gray-600 mb-3">
+                Địa điểm nổi bật
+              </h4>
               <div className="grid grid-cols-3 gap-2">
                 {popularDestinations.map((place, i) => (
                   <button
@@ -169,17 +196,20 @@ const SearchBar = ({ onSearch, initialQuery = "", showSuggestions = true, bookin
 
             {/* Trending searches */}
             <div>
-              <h4 className="text-sm font-semibold text-gray-600 mb-3">Xu hướng tìm kiếm</h4>
+              <h4 className="text-sm font-semibold text-gray-600 mb-3">
+                Xu hướng tìm kiếm
+              </h4>
               <ul className="space-y-2">
                 {trendingSearches.map((item, i) => (
                   <li
                     key={i}
                     onClick={() => handleSuggestionClick(item)}
                     className="flex items-center space-x-3 cursor-pointer hover:bg-[#03B3BE]/10 px-3 py-2.5 rounded-lg transition-colors group border border-transparent hover:border-[#03B3BE]"
-
                   >
                     <TrendingUp className="w-4 h-4 text-orange-500 flex-shrink-0" />
-                    <span className="text-sm text-gray-700 group-hover:text-gray-900 flex-1">{item}</span>
+                    <span className="text-sm text-gray-700 group-hover:text-gray-900 flex-1">
+                      {item}
+                    </span>
                   </li>
                 ))}
               </ul>
