@@ -38,8 +38,8 @@ function ProtectedRoute({ children }) {
 export default function App() {
   const { booting, isAuth, user } = useAuth();
   console.log("Auth state:", { isAuth, user });
-  if (booting) return <p className="p-6">Loading app...</p>;
-  
+  if (booting) return <LoadingScreen />;
+
   return (
     <>
       <Routes>
@@ -49,7 +49,11 @@ export default function App() {
           <Route path="/" element={isAuth ? <MainHome /> : <LandingPage />} />
           <Route path="/home" element={<MainHome />} />
           <Route path="/destinations/:slug" element={<DestinationPage />} />
-          <Route path="/search-results" element={<SearchResults />} />
+          {/* <Route path="/search-results" element={<SearchResults />} /> */}
+          <Route
+            path="/search-filter-results"
+            element={<SearchFilterResults />}
+          />
           <Route path="/discount-codes" element={<DiscountCodesPage />} />
           <Route path="/tours/:id" element={<TourDetailPage />} />
           <Route path="/region/:slug" element={<RegionTours />} />
@@ -111,7 +115,9 @@ export default function App() {
       {isAuth && (!user?.role || user.role === "uninitialized") && (
         <RolePopup />
       )}
+
+      {/* Toast container */}
+      <Toaster position="bottom-right" reverseOrder={false} />
     </>
   );
-
 }

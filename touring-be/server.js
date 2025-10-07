@@ -14,6 +14,7 @@ const profileRoutes = require("./routes/profile.routes");
 const authRoutes = require("./routes/auth.routes");
 const blogRoutes = require("./routes/blogs");
 const vnAddrRoutes = require("./middlewares/vnAddress.routes");
+const cartRoutes = require("./routes/carts.routes");
 require("./middlewares/passport");
 const wishlistRoutes = require("./routes/wishlist.routes");
 const cartRoutes = require("./routes/carts.routes");
@@ -29,13 +30,14 @@ app.use(compression());
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan(isProd ? "combined" : "dev"));
 app.use(cookieParser());
-app.use("/api/wishlist", wishlistRoutes);
-app.use(cors({
-  origin: isProd ? process.env.CLIENT_ORIGIN : "http://localhost:5173",
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
+app.use(
+  cors({
+    origin: isProd ? process.env.CLIENT_ORIGIN : "http://localhost:5173",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 if (isProd) app.set("trust proxy", 1);
 
@@ -70,6 +72,7 @@ app.use("/api/profile/info", profileRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/tours", tourRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
