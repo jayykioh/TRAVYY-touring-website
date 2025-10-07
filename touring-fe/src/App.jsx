@@ -6,11 +6,10 @@ import LandingPage from "./pages/LandingPage";
 import MainHome from "./pages/MainHome";
 import DestinationPage from "./pages/Blogs";
 import RegionTours from "./pages/RegionTours";
-// import SearchResults from "./pages/SearchResults";
-import SearchFilterResults from "./pages/SearchFilterResults";
+import SearchResults from "./pages/SearchResults";
 import TourDetailPage from "./pages/TourDetailPage";
 import DiscountCodesPage from "./pages/DiscountCodesPage";
-import BlogDetailPage from "./pages/BlogDetailPage";
+import BlogDetailPage from "./pages/BlogDetailPage"; // ✅ THÊM IMPORT NÀY
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProfileLayout from "./pages/UserProfile";
@@ -18,15 +17,20 @@ import ProfileInfo from "./components/ProfileInfo";
 import ProfileReviews from "./components/ProfileReviews";
 import RolePopup from "./components/RolePopup";
 import OAuthCallback from "./pages/OAuthCallback";
+
 import Cart from "./pages/Cart";
 import WishlistPage from "./pages/WishlistPage";
 import LoadingScreen from "./components/LoadingScreen";
 import NotFoundPage from "./pages/NotFound";
-import { Toaster } from "react-hot-toast";
+import BookingPage from "./pages/BookingPage";
+import BookingHistory from "./pages/BookingHistory";
 
+import AvailableToursPage from "./pages/AvailableToursPage";
+import AITourCreator from "./pages/AITourCreator";
+// Route guard
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
-  if (booting) return <LoadingScreen />;
+  if (booting) return <p className="p-6">Loading...</p>;
   if (!isAuth) return <Navigate to="/login" replace />;
   return children;
 }
@@ -55,8 +59,33 @@ export default function App() {
           <Route path="/region/:slug" element={<RegionTours />} />
           {/* <Route path="/region/:slug/detail" element={<RegionDetailPage />} /> */}
           {/* <Route path="/region/all" element={<RegionPage />} /> */}
-          <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
+         <Route path="/booking" element={<BookingPage />} />
+          <Route path="/blog/:id" element={<BlogDetailPage />} /> {/* ✅ THÊM ROUTE NÀY */}
           <Route path="/shoppingcarts" element={<Cart />} />
+          {/* <Route path="/region/:slug" element={<RegionTours />} /> */}
+          <Route path="/blog/:id" element={<BlogDetailPage />} /> {/* ✅ THÊM ROUTE NÀY */}
+          
+            <Route path="/shoppingcarts" element={<Cart/> }/>
+            
+            {/* ✅ BẢO VỆ 2 ROUTE NÀY */}
+          <Route 
+            path="/available-tours" 
+            element={
+              <ProtectedRoute>
+                <AvailableToursPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/ai-tour-creator" 
+            element={
+              <ProtectedRoute>
+                <AITourCreator />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route path="/my-bookings" element={<BookingHistory />} />
           <Route
             path="/profile"
             element={
@@ -79,7 +108,7 @@ export default function App() {
         <Route path="/oauth/callback" element={<OAuthCallback />} />
 
         {/* ----- 404 ----- */}
-        <Route path="*" element={<NotFoundPage />} />
+        <Route path="*" element={<div className="p-6">404</div>} />
       </Routes>
 
       {/* Popup chọn role sau khi login */}

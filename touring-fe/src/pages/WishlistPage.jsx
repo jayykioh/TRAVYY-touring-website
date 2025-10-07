@@ -13,7 +13,7 @@ export default function WishlistPage() {
     setLoading(true);
 
     fetch(`/api/wishlist`, {
-      headers: { Authorization: `Bearer ${user.token}` },
+      headers: { Authorization: `Bearer ${user.token}` }
     })
       .then((res) => res.json())
       .then((res) => {
@@ -30,7 +30,7 @@ export default function WishlistPage() {
     try {
       const res = await fetch(`/api/wishlist/${tourId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${user.token}` },
+        headers: { Authorization: `Bearer ${user.token}` }
       });
 
       if (res.ok) {

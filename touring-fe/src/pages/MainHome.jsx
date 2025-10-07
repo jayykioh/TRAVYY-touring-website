@@ -9,7 +9,8 @@ import TrustedPartners from "../components/TrustedPartners";
 import QuickBooking from "../components/QuickBooking";
 import WhyChooseUs from "../components/WhyChooseUs";
 import TourDetailPage from "../pages/TourDetailPage";
-import RegionSection from "../components/RegionSection";
+import Explore from "../components/ExploreNow";
+
 
 
 export default function MainHome() {
@@ -25,19 +26,18 @@ export default function MainHome() {
 
       <TourPromotions />
 
+     <Explore/>
+
+
       {/* Why Choose Us */}
       {/* <WhyChooseUs /> */}
-      {/* Region list */}
-      <RegionSection />
      
       {/* FAQ */}
       {/* <FAQ/> */}
      
       {/* Travel Blog & Guides */}
       <TravelBlog />
-     
-
-      
+           
       {/* Vietnam Destinations */}
       {/* <VietnamDestinations /> */}
      
