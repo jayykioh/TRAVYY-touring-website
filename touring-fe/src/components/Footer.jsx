@@ -1,4 +1,4 @@
-import { Facebook, Youtube, Instagram, Twitter } from "react-bootstrap-icons";
+import { Facebook, Youtube, Instagram, Twitter } from "lucide-react";
 
 export default function Footer() {
   return (
