@@ -1,27 +1,27 @@
-// BlogDetailPage.jsx
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, ArrowLeft, Share2 } from 'lucide-react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { blogPostsData } from '../mockdata/blogData';
+import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, ArrowLeft, Share2, ThumbsUp, Clock, Eye } from 'lucide-react';
+import { blogPostsData, pageInfo } from '../mockdata/blogData';
 
 const BlogDetailPage = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const blogId = parseInt(id);
+  // Giả lập useParams và useNavigate từ react-router-dom
+  const getPostIdFromUrl = () => {
+    const path = window.location.hash || window.location.pathname;
+    const match = path.match(/\/blog\/(\d+)/);
+    return match ? parseInt(match[1]) : 1;
+  };
+
+  const blogId = getPostIdFromUrl();
   
   const [currentPost, setCurrentPost] = useState(null);
   const [relatedPosts, setRelatedPosts] = useState([]);
 
-  // ✅ Load bài viết hiện tại và các bài liên quan
   useEffect(() => {
-    // Scroll to top khi component mount hoặc blogId thay đổi
     window.scrollTo(0, 0);
     
     const post = blogPostsData.find(p => p.id === blogId);
     if (post) {
       setCurrentPost(post);
       
-      // Load 5 bài viết liên quan (không bao gồm bài hiện tại)
       const related = blogPostsData
         .filter(p => p.id !== blogId)
         .slice(0, 5);
@@ -29,7 +29,6 @@ const BlogDetailPage = () => {
     }
   }, [blogId]);
 
-  // ✅ Infinite scroll - load thêm bài viết khi scroll gần cuối
   useEffect(() => {
     const handleScroll = () => {
       if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1000) {
@@ -38,12 +37,10 @@ const BlogDetailPage = () => {
           const lastIndex = blogPostsData.findIndex(p => p.id === lastPost?.id);
           
           if (lastIndex !== -1) {
-            // Load thêm 3 bài tiếp theo
             const nextPosts = [];
             for (let i = 1; i <= 3; i++) {
               const index = (lastIndex + i) % blogPostsData.length;
               const nextPost = blogPostsData[index];
-              // Không thêm bài đã có và bài hiện tại
               if (!prev.find(p => p.id === nextPost.id) && nextPost.id !== blogId) {
                 nextPosts.push(nextPost);
               }
@@ -60,7 +57,7 @@ const BlogDetailPage = () => {
   }, [blogId]);
 
   const handleGoBack = () => {
-    navigate(-1);
+    window.history.back();
   };
 
   if (!currentPost) {
@@ -74,15 +71,27 @@ const BlogDetailPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <button 
             onClick={handleGoBack}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-lg font-semibold">Bài viết</h1>
+          <div className="flex items-center gap-2">
+            <img
+              src={pageInfo.avatar}
+              alt={pageInfo.name}
+              className="w-8 h-8 rounded-full object-cover"
+            />
+            <span className="font-semibold text-gray-900">{pageInfo.name}</span>
+            {pageInfo.verified && (
+              <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+              </svg>
+            )}
+          </div>
           <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <Share2 className="w-6 h-6" />
           </button>
@@ -90,15 +99,21 @@ const BlogDetailPage = () => {
       </div>
 
       {/* Scrollable Feed */}
-      <div className="max-w-2xl mx-auto">
-        {/* Bài viết chính */}
+      <div className="max-w-3xl mx-auto">
         <BlogPostCard 
           key={currentPost.id}
           post={currentPost}
           isFirst={true}
         />
         
-        {/* Các bài viết liên quan */}
+        {/* Related Posts Section */}
+        {relatedPosts.length > 0 && (
+          <div className="bg-white px-6 py-4 border-b border-gray-200">
+            <h3 className="font-bold text-lg text-gray-900 mb-1">Bài viết liên quan</h3>
+            <p className="text-sm text-gray-600">Từ {pageInfo.name}</p>
+          </div>
+        )}
+        
         {relatedPosts.map((post) => (
           <BlogPostCard 
             key={post.id}
@@ -111,17 +126,17 @@ const BlogDetailPage = () => {
   );
 };
 
-// ✅ Component riêng cho mỗi blog post
 const BlogPostCard = ({ post, isFirst }) => {
   const [liked, setLiked] = useState(false);
+  const [reacted, setReacted] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [showAllCaption, setShowAllCaption] = useState(false);
+  const [showAllCaption, setShowAllCaption] = useState(isFirst);
   const [showFullImage, setShowFullImage] = useState(false);
 
   const displayCaption = showAllCaption 
     ? post.caption 
-    : post.caption.slice(0, 150) + (post.caption.length > 150 ? '...' : '');
+    : post.caption.slice(0, 200) + (post.caption.length > 200 ? '...' : '');
 
   const handlePrevImage = () => {
     setCurrentImageIndex((prev) => 
@@ -136,7 +151,7 @@ const BlogPostCard = ({ post, isFirst }) => {
   };
 
   return (
-    <div className="bg-white mb-4">
+    <div className="bg-white mb-3 border-b border-gray-200">
       {/* Fullscreen Image Modal */}
       {showFullImage && (
         <div 
@@ -159,7 +174,6 @@ const BlogPostCard = ({ post, isFirst }) => {
             onClick={(e) => e.stopPropagation()}
           />
           
-          {/* Navigation trong fullscreen */}
           {post.images.length > 1 && (
             <>
               <button
@@ -187,47 +201,64 @@ const BlogPostCard = ({ post, isFirst }) => {
             </>
           )}
           
-          {/* Image counter */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm">
             {currentImageIndex + 1} / {post.images.length}
           </div>
         </div>
       )}
 
-      {/* Author Info */}
+      {/* Page Info Header */}
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">
           <img
-            src={post.author.avatar}
-            alt={post.author.username}
-            className="w-10 h-10 rounded-full object-cover"
+            src={pageInfo.avatar}
+            alt={pageInfo.name}
+            className="w-11 h-11 rounded-full object-cover"
           />
           <div>
-            <div className="flex items-center gap-1">
-              <span className="font-semibold text-sm">{post.author.username}</span>
-              {post.author.verified && (
-                <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-[15px] text-gray-900">{pageInfo.name}</span>
+              {pageInfo.verified && (
+                <svg className="w-[18px] h-[18px] text-blue-500" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
                 </svg>
               )}
             </div>
-            <span className="text-xs text-gray-500">{post.publishDate}</span>
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <span>{post.publishDate}</span>
+              <span>•</span>
+              <Clock className="w-3 h-3" />
+              <span>{post.readTime}</span>
+            </div>
           </div>
         </div>
-        <button className="p-2">
-          <MoreHorizontal className="w-6 h-6" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="px-4 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 font-semibold text-sm rounded-md transition-colors">
+            Theo dõi
+          </button>
+          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
-      {/* Images Carousel - Chiều cao vừa phải */}
+      {/* Title - Only on first post */}
+      {isFirst && (
+        <div className="px-4 pb-3">
+          <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+            {post.title}
+          </h1>
+        </div>
+      )}
+
+      {/* Images Carousel */}
       <div className="relative bg-black cursor-pointer" onClick={() => setShowFullImage(true)}>
         <img
           src={post.images[currentImageIndex]}
           alt={`Slide ${currentImageIndex + 1}`}
-          className="w-full h-96 object-cover"
+          className="w-full h-auto max-h-[600px] object-contain mx-auto"
         />
         
-        {/* Navigation Arrows */}
         {post.images.length > 1 && (
           <>
             <button
@@ -235,10 +266,10 @@ const BlogPostCard = ({ post, isFirst }) => {
                 e.stopPropagation();
                 handlePrevImage();
               }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center transition-all z-10"
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white rounded-full flex items-center justify-center transition-all z-10 shadow-lg"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
             <button
@@ -246,16 +277,15 @@ const BlogPostCard = ({ post, isFirst }) => {
                 e.stopPropagation();
                 handleNextImage();
               }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center transition-all z-10"
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 hover:bg-white rounded-full flex items-center justify-center transition-all z-10 shadow-lg"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
               </svg>
             </button>
           </>
         )}
 
-        {/* Dots Indicator */}
         {post.images.length > 1 && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
             {post.images.map((_, index) => (
@@ -265,10 +295,10 @@ const BlogPostCard = ({ post, isFirst }) => {
                   e.stopPropagation();
                   setCurrentImageIndex(index);
                 }}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${
+                className={`h-2 rounded-full transition-all ${
                   index === currentImageIndex 
-                    ? 'bg-white w-6' 
-                    : 'bg-white/50'
+                    ? 'w-8 bg-white' 
+                    : 'w-2 bg-white/60 hover:bg-white/80'
                 }`}
               />
             ))}
@@ -276,74 +306,81 @@ const BlogPostCard = ({ post, isFirst }) => {
         )}
       </div>
 
-      {/* Actions */}
-      <div className="px-4 py-3">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setLiked(!liked)}
-              className="hover:opacity-60 transition-opacity"
-            >
-              <Heart 
-                className={`w-7 h-7 ${liked ? 'fill-red-500 text-red-500' : ''}`}
-              />
-            </button>
-            <button className="hover:opacity-60 transition-opacity">
-              <MessageCircle className="w-7 h-7" />
-            </button>
-            <button className="hover:opacity-60 transition-opacity">
-              <Send className="w-7 h-7" />
-            </button>
-          </div>
-          <button 
-            onClick={() => setBookmarked(!bookmarked)}
-            className="hover:opacity-60 transition-opacity"
-          >
-            <Bookmark 
-              className={`w-7 h-7 ${bookmarked ? 'fill-black' : ''}`}
-            />
-          </button>
-        </div>
-
-        {/* Likes Count */}
-        <div className="font-semibold text-sm mb-2">
-          {liked ? post.likes + 1 : post.likes} lượt thích
-        </div>
-
+      {/* Content */}
+      <div className="p-4">
         {/* Caption */}
-        <div className="text-sm">
-          <span className="font-semibold mr-2">{post.author.username}</span>
-          <span className="whitespace-pre-line">{displayCaption}</span>
-          {!showAllCaption && post.caption.length > 150 && (
+        <div className="mb-3">
+          <p className="text-gray-900 text-[15px] leading-relaxed whitespace-pre-line">
+            {displayCaption}
+          </p>
+          {!showAllCaption && post.caption.length > 200 && (
             <button 
               onClick={() => setShowAllCaption(true)}
-              className="text-gray-500 ml-1"
+              className="text-gray-500 hover:text-gray-700 font-medium text-sm mt-1"
             >
-              xem thêm
+              Xem thêm
             </button>
           )}
         </div>
 
-        {/* Comments Preview */}
-        <button className="text-sm text-gray-500 mt-2">
-          Xem tất cả {post.comments} bình luận
-        </button>
+        {/* Stats */}
+        <div className="flex items-center justify-between text-sm text-gray-500 py-2 border-t border-gray-200">
+          <div className="flex items-center gap-1">
+            <ThumbsUp className="w-4 h-4 text-blue-500 fill-blue-500" />
+            <span>{post.likes.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span>{post.comments} bình luận</span>
+            <span>{post.shares} chia sẻ</span>
+          </div>
+        </div>
 
-        {/* Add Comment */}
-        <div className="mt-3 pt-3 border-t border-gray-200 flex items-center gap-3">
+        {/* Action Buttons */}
+        <div className="flex items-center justify-around py-2 border-t border-gray-200">
+          <button 
+            onClick={() => setLiked(!liked)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors ${
+              liked ? 'text-blue-600' : 'text-gray-600'
+            }`}
+          >
+            <ThumbsUp className={`w-5 h-5 ${liked ? 'fill-blue-600' : ''}`} />
+            <span className="font-medium">Thích</span>
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600">
+            <MessageCircle className="w-5 h-5" />
+            <span className="font-medium">Bình luận</span>
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600">
+            <Share2 className="w-5 h-5" />
+            <span className="font-medium">Chia sẻ</span>
+          </button>
+          <button 
+            onClick={() => setBookmarked(!bookmarked)}
+            className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+              bookmarked ? 'text-yellow-600' : 'text-gray-600'
+            }`}
+          >
+            <Bookmark className={`w-5 h-5 ${bookmarked ? 'fill-yellow-600' : ''}`} />
+          </button>
+        </div>
+
+        {/* Comment Input */}
+        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-200">
           <img
-            src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop"
-            alt="Your avatar"
+            src={pageInfo.avatar}
+            alt="User"
             className="w-8 h-8 rounded-full object-cover"
           />
-          <input
-            type="text"
-            placeholder="Thêm bình luận..."
-            className="flex-1 text-sm outline-none"
-          />
-          <button className="text-blue-500 font-semibold text-sm">
-            Đăng
-          </button>
+          <div className="flex-1 flex items-center gap-2 bg-gray-100 rounded-full px-4 py-2">
+            <input
+              type="text"
+              placeholder="Viết bình luận..."
+              className="flex-1 bg-transparent outline-none text-sm"
+            />
+            <button className="text-gray-400 hover:text-blue-600 transition-colors">
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
