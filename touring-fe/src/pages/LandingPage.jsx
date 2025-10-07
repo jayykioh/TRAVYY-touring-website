@@ -4,7 +4,9 @@ import { Link } from "react-router-dom";   // ⬅️ THÊM DÒNG NÀY
 import HeroSection from "../components/HeroSection";
 import AboutSection from "../components/AboutSection";
 import ExploreNow from "../components/ExploreNow";
-import TourRecommend from "../components/TourRecommend"
+import TourRecommend from "../components/TourRecommend";
+import WhyChooseUs from "../components/WhyChooseUs"
+
 export default function LandingPage() {
   return (
     <>
@@ -14,6 +16,7 @@ export default function LandingPage() {
 
 
       <ExploreNow />
+      <WhyChooseUs/>
     </>
   );
 }

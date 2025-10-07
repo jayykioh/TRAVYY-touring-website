@@ -565,6 +565,7 @@ export default function TourDetailPage() {
                 originalSubtotal={originalSubtotal}
                 // action
                 onAdd={handleAdd}
+                tour={tour} 
               />
             </div>
           </div>
@@ -682,7 +683,9 @@ function BookingSidebar({
   originalSubtotal,
   // action
   onAdd,
+  tour,
 }) {
+   const navigate = useNavigate();
   const hasDates = Array.isArray(openDeps) && openDeps.length > 0;
   const canAddChild = qtyAdult > 0;
 
@@ -847,18 +850,33 @@ function BookingSidebar({
         >
           Thêm vào giỏ hàng
         </button>
+<button
+  onClick={() => {
 
-        <button
-          onClick={onAdd}
-          disabled={!selectedDate || qtyAdult <= 0}
-          className={`w-full py-3 rounded-2xl font-semibold border border-black/10 text-white ${
-            selectedDate && qtyAdult > 0
-              ? "bg-[#029faacc]"
-              : "bg-gray-300 cursor-not-allowed"
-          }`}
-        >
-          Đặt ngay
-        </button>
+    navigate("/booking", {
+      state: {
+        tourId: tour?._id,
+        tourTitle: tour?.title,
+        images: tour?.imageItems || [],   
+        selectedDate,
+        adults: qtyAdult,
+        children: qtyChild,
+        priceAdult,
+        priceChild,
+        subtotal,
+      },
+    });
+  }}
+  disabled={!selectedDate || qtyAdult <= 0}
+  className={`w-full py-3 rounded-2xl font-semibold border text-white ${
+    selectedDate && qtyAdult > 0
+      ? "bg-[#029faacc]"
+      : "bg-gray-300 cursor-not-allowed"
+  }`}
+>
+  Đặt ngay
+</button>
+
       </div>
     </div>
   );

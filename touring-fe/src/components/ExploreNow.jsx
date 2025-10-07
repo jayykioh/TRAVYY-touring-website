@@ -11,7 +11,7 @@ const ExploreNow = () => {
           <h2 className="text-3xl font-bold mb-8">Sáng tạo theo lối riêng</h2>
           <div className="grid md:grid-cols-2 gap-6">
             <Link
-              to={"/experiences"}
+              to={"/available-tours"}
               className="relative rounded-lg overflow-hidden shadow-lg group cursor-pointer transform hover:scale-105 transition-all duration-500"
             >
               <img
@@ -33,7 +33,7 @@ const ExploreNow = () => {
             </Link>
 
             <Link
-              to={"/customTour"}
+              to={"/ai-tour-creator"}
               className="relative rounded-lg overflow-hidden shadow-lg group cursor-pointer transform hover:scale-105 transition-all duration-500"
             >
               <img
