@@ -20,6 +20,11 @@ import OAuthCallback from "./pages/OAuthCallback";
 
 import Cart from "./pages/Cart";
 import WishlistPage from "./pages/WishlistPage";
+import LoadingScreen from "./components/LoadingScreen";
+import NotFoundPage from "./pages/NotFound";
+import BookingPage from "./pages/BookingPage";
+import BookingHistory from "./pages/BookingHistory";
+
 import AvailableToursPage from "./pages/AvailableToursPage";
 import AITourCreator from "./pages/AITourCreator";
 // Route guard
@@ -47,6 +52,12 @@ export default function App() {
           <Route path="/search-results" element={<SearchResults />} />
           <Route path="/discount-codes" element={<DiscountCodesPage />} />
           <Route path="/tours/:id" element={<TourDetailPage />} />
+          <Route path="/region/:slug" element={<RegionTours />} />
+          {/* <Route path="/region/:slug/detail" element={<RegionDetailPage />} /> */}
+          {/* <Route path="/region/all" element={<RegionPage />} /> */}
+         <Route path="/booking" element={<BookingPage />} />
+          <Route path="/blog/:id" element={<BlogDetailPage />} /> {/* ✅ THÊM ROUTE NÀY */}
+          <Route path="/shoppingcarts" element={<Cart />} />
           {/* <Route path="/region/:slug" element={<RegionTours />} /> */}
           <Route path="/blog/:id" element={<BlogDetailPage />} /> {/* ✅ THÊM ROUTE NÀY */}
           
@@ -70,6 +81,7 @@ export default function App() {
             } 
           />
 
+          <Route path="/my-bookings" element={<BookingHistory />} />
           <Route
             path="/profile"
             element={

@@ -18,7 +18,7 @@ require("./middlewares/passport");
 const wishlistRoutes = require("./routes/wishlist.routes");
 const cartRoutes = require("./routes/carts.routes");
 
-
+const bookingRoutes = require("./routes/bookingRoutes");
 const app = express(); 
 const isProd = process.env.NODE_ENV === "production";
 const PORT = process.env.PORT || 4000;
@@ -70,7 +70,7 @@ app.use("/api/profile/info", profileRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/tours", tourRoutes);
 app.use("/api/cart", cartRoutes);
-
+app.use("/api/bookings", bookingRoutes);
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
