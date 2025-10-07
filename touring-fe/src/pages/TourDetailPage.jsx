@@ -1032,12 +1032,20 @@ function toNumber(x) {
 function formatCurrency(n) {
   return new Intl.NumberFormat("vi-VN").format(toNumber(n));
 }
-function formatDateVN(isoDateStr) {
+function formatDateVN(dateStr) {
+  if (!dateStr) return "";
   try {
-    const [y, m, d] = String(isoDateStr).split("-");
-    if (y && m && d) return `${d}/${m}/${y}`;
-  } catch {
-    console.log("date formart error");
+    const date = new Date(dateStr);
+    // Nếu không hợp lệ (Invalid Date)
+    if (isNaN(date)) return dateStr;
+
+    return date.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch (err) {
+    console.warn("⚠️ formatDateVN error:", err);
+    return dateStr;
   }
-  return isoDateStr || "";
 }

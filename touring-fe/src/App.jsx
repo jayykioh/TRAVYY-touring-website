@@ -6,7 +6,7 @@ import LandingPage from "./pages/LandingPage";
 import MainHome from "./pages/MainHome";
 import DestinationPage from "./pages/Blogs";
 import RegionTours from "./pages/RegionTours";
-import SearchResults from "./pages/SearchResults";
+import SearchFilterResults from "./pages/SearchFilterResults";
 import TourDetailPage from "./pages/TourDetailPage";
 import DiscountCodesPage from "./pages/DiscountCodesPage";
 import BlogDetailPage from "./pages/BlogDetailPage"; // ✅ THÊM IMPORT NÀY
@@ -59,32 +59,31 @@ export default function App() {
           <Route path="/region/:slug" element={<RegionTours />} />
           {/* <Route path="/region/:slug/detail" element={<RegionDetailPage />} /> */}
           {/* <Route path="/region/all" element={<RegionPage />} /> */}
-         <Route path="/booking" element={<BookingPage />} />
-          <Route path="/blog/:id" element={<BlogDetailPage />} /> {/* ✅ THÊM ROUTE NÀY */}
+          <Route path="/booking" element={<BookingPage />} />
+          <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
+          {/* ✅ THÊM ROUTE NÀY */}
           <Route path="/shoppingcarts" element={<Cart />} />
           {/* <Route path="/region/:slug" element={<RegionTours />} /> */}
-          <Route path="/blog/:id" element={<BlogDetailPage />} /> {/* ✅ THÊM ROUTE NÀY */}
-          
-            <Route path="/shoppingcarts" element={<Cart/> }/>
-            
-            {/* ✅ BẢO VỆ 2 ROUTE NÀY */}
-          <Route 
-            path="/available-tours" 
+          <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
+          {/* ✅ THÊM ROUTE NÀY */}
+          <Route path="/shoppingcarts" element={<Cart />} />
+          {/* ✅ BẢO VỆ 2 ROUTE NÀY */}
+          <Route
+            path="/available-tours"
             element={
               <ProtectedRoute>
                 <AvailableToursPage />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/ai-tour-creator" 
+          <Route
+            path="/ai-tour-creator"
             element={
               <ProtectedRoute>
                 <AITourCreator />
               </ProtectedRoute>
-            } 
+            }
           />
-
           <Route path="/my-bookings" element={<BookingHistory />} />
           <Route
             path="/profile"
@@ -115,9 +114,6 @@ export default function App() {
       {isAuth && (!user?.role || user.role === "uninitialized") && (
         <RolePopup />
       )}
-
-      {/* Toast container */}
-      <Toaster position="bottom-right" reverseOrder={false} />
     </>
   );
 }

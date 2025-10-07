@@ -17,10 +17,9 @@ const vnAddrRoutes = require("./middlewares/vnAddress.routes");
 const cartRoutes = require("./routes/carts.routes");
 require("./middlewares/passport");
 const wishlistRoutes = require("./routes/wishlist.routes");
-const cartRoutes = require("./routes/carts.routes");
 
 const bookingRoutes = require("./routes/bookingRoutes");
-const app = express(); 
+const app = express();
 const isProd = process.env.NODE_ENV === "production";
 const PORT = process.env.PORT || 4000;
 
