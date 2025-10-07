@@ -15,7 +15,7 @@ import Register from "./pages/Register";
 import ProfileLayout from "./pages/UserProfile";
 import ProfileInfo from "./components/ProfileInfo";
 import ProfileReviews from "./components/ProfileReviews";
-import RolePopup from "./components/RolePopup";
+import RolePopup from "./components/RolePopUp";
 import OAuthCallback from "./pages/OAuthCallback";
 
 import Cart from "./pages/Cart";
