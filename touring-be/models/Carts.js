@@ -21,6 +21,10 @@ const CartItemSchema = new mongoose.Schema({
   unitPriceAdult: { type: Number, required: true },
   unitPriceChild: { type: Number, required: true },
 
+  
+  unitOriginalAdult: { type: Number, default: null },
+  unitOriginalChild: { type: Number, default: null },
+
   // snapshot info (hiển thị nhanh, optional)
   name: String,
   image: String,

@@ -6,7 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton"; // ⬅️ shadcn
 
 export default function CartPage() {
-  const { items, totals, remove, qty, toggleSelect, clearAll, loading } = useCart();
+  const { items, totals, remove, qty, toggleSelect, clearAll, loading } =
+    useCart();
   const navigate = useNavigate();
 
   // (Nếu muốn tránh scroll giật, có thể bỏ dòng này)
@@ -68,7 +69,11 @@ export default function CartPage() {
               Giỏ hàng
             </h1>
             <p className="text-gray-500 mt-1">
-              Bạn có <span className="font-semibold text-gray-700">{items.length}</span> mục trong giỏ
+              Bạn có{" "}
+              <span className="font-semibold text-gray-700">
+                {items.length}
+              </span>{" "}
+              mục trong giỏ
             </p>
           </div>
 
@@ -86,7 +91,10 @@ export default function CartPage() {
                 fill="none"
                 stroke="currentColor"
               >
-                <path d="M3 6h18M8 6v14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6M10 6V4a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2" strokeWidth="1.6" />
+                <path
+                  d="M3 6h18M8 6v14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6M10 6V4a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2"
+                  strokeWidth="1.6"
+                />
                 <path d="M10 11v6M14 11v6" strokeWidth="1.6" />
               </svg>
               Xoá toàn bộ
@@ -104,9 +112,17 @@ export default function CartPage() {
                   key={item.itemId}
                   item={item}
                   onRemove={(idOrItemId, date) => remove(idOrItemId, date)}
-                  onUpdateQuantity={(id, date, field, delta) => qty(id, date, field, delta)}
+                  onUpdateQuantity={(id, date, field, delta) =>
+                    qty(id, date, field, delta)
+                  }
                   onToggleSelect={(id, date) => toggleSelect(id, date)}
-                  onOpen={(it) => navigate(`/tours/${it.id}?date=${encodeURIComponent(it.date || "")}`)}
+                  onOpen={(it) =>
+                    navigate(
+                      `/tours/${it.id}?date=${encodeURIComponent(
+                        it.date || ""
+                      )}`
+                    )
+                  }
                 />
               ))}
 
@@ -126,7 +142,11 @@ export default function CartPage() {
 
             {/* Summary */}
             <div className="relative">
-              <OrderSummary totals={totals} cartItems={items} />
+              <OrderSummary
+                totals={totals}
+                cartItems={items}
+                onCheckout={() => navigate("/booking")}
+              />
             </div>
           </div>
         ) : (
@@ -139,12 +159,17 @@ export default function CartPage() {
                 fill="none"
                 stroke="currentColor"
               >
-                <path d="M6 6h15l-1.5 9a2 2 0 0 1-2 1.7H8.5a2 2 0 0 1-2-1.7L5 4H3" strokeWidth="1.6" />
+                <path
+                  d="M6 6h15l-1.5 9a2 2 0 0 1-2 1.7H8.5a2 2 0 0 1-2-1.7L5 4H3"
+                  strokeWidth="1.6"
+                />
                 <circle cx="9" cy="20" r="1" />
                 <circle cx="18" cy="20" r="1" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">Giỏ hàng trống</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Giỏ hàng trống
+            </h3>
             <p className="text-gray-500 mt-1 max-w-md">
               Hãy khám phá các tour hấp dẫn và thêm vào giỏ nhé.
             </p>

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { AlertCircle, CheckCircle } from "lucide-react";
 
-export default function OrderSummary({ totals, cartItems }) {
+export default function OrderSummary({ totals, cartItems, onCheckout }) {
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState(null);
 
@@ -111,6 +111,7 @@ export default function OrderSummary({ totals, cartItems }) {
         className="w-full py-3 rounded-2xl font-semibold border border-black/10 bg-blue-600 text-white 
                    transform hover:scale-105 transition-transform duration-300 ease-in-out 
                    disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+        onClick={onCheckout}           
       >
         Thanh Toán
       </button>

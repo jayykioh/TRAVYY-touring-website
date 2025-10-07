@@ -167,7 +167,7 @@ export default function TourDetailPage() {
 
   /* ========== HÀNH ĐỘNG ========== */
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!tour) return;
     if (!user?.token) {
       toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng");
@@ -182,24 +182,51 @@ export default function TourDetailPage() {
       return;
     }
 
-    add(
+    await add(
       {
         id: getId(tour),
         name: getTitle(tour),
         image: getMainImage(tour),
-        price: priceAdult, // hiển thị; BE sẽ áp lại giá authoritative
+        selected: true, // không sao, BE vẫn kiểm soát cuối
         available: true,
-        selected: true,
       },
       qtyAdult,
       {
         date: selectedDate,
         adults: qtyAdult,
         children: qtyChild,
+        // các field giá FE gửi chỉ để hiển thị — BE sẽ snapshot lại
         priceAdult,
         priceChild,
       }
     );
+  };
+
+  const handleBuyNow = async () => {
+    if (!tour) return;
+    if (!user?.token) {
+      toast.error("Vui lòng đăng nhập để đặt ngay");
+      return;
+    }
+    if (!selectedDate || !openDates.includes(selectedDate)) {
+      toast("Vui lòng chọn ngày khởi hành hợp lệ");
+      return;
+    }
+    if (qtyAdult <= 0) {
+      toast.error("Phải có ít nhất 1 người lớn");
+      return;
+    }
+    navigate("/booking", {
+      state: {
+        mode: "buy-now",
+        item: {
+          tourId: getId(tour),
+          date: selectedDate,
+          adults: qtyAdult,
+          children: qtyChild,
+        },
+      },
+    });
   };
 
   const handleFavorite = async () => {
@@ -563,9 +590,10 @@ export default function TourDetailPage() {
                 discountPercent={discountPercent}
                 subtotal={subtotal}
                 originalSubtotal={originalSubtotal}
+                onBuyNow={handleBuyNow}
                 // action
                 onAdd={handleAdd}
-                tour={tour} 
+                tour={tour}
               />
             </div>
           </div>
@@ -683,9 +711,9 @@ function BookingSidebar({
   originalSubtotal,
   // action
   onAdd,
-  tour,
+  onBuyNow,
+
 }) {
-   const navigate = useNavigate();
   const hasDates = Array.isArray(openDeps) && openDeps.length > 0;
   const canAddChild = qtyAdult > 0;
 
@@ -850,33 +878,17 @@ function BookingSidebar({
         >
           Thêm vào giỏ hàng
         </button>
-<button
-  onClick={() => {
-
-    navigate("/booking", {
-      state: {
-        tourId: tour?._id,
-        tourTitle: tour?.title,
-        images: tour?.imageItems || [],   
-        selectedDate,
-        adults: qtyAdult,
-        children: qtyChild,
-        priceAdult,
-        priceChild,
-        subtotal,
-      },
-    });
-  }}
-  disabled={!selectedDate || qtyAdult <= 0}
-  className={`w-full py-3 rounded-2xl font-semibold border text-white ${
-    selectedDate && qtyAdult > 0
-      ? "bg-[#029faacc]"
-      : "bg-gray-300 cursor-not-allowed"
-  }`}
->
-  Đặt ngay
-</button>
-
+        <button
+          onClick={onBuyNow}
+          disabled={!selectedDate || qtyAdult <= 0}
+          className={`w-full py-3 rounded-2xl font-semibold border text-white ${
+            selectedDate && qtyAdult > 0
+              ? "bg-[#029faacc]"
+              : "bg-gray-300 cursor-not-allowed"
+          }`}
+        >
+          Đặt ngay
+        </button>
       </div>
     </div>
   );
@@ -1034,18 +1046,20 @@ function formatCurrency(n) {
 }
 function formatDateVN(dateStr) {
   if (!dateStr) return "";
-  try {
-    const date = new Date(dateStr);
-    // Nếu không hợp lệ (Invalid Date)
-    if (isNaN(date)) return dateStr;
-
-    return date.toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } catch (err) {
-    console.warn("⚠️ formatDateVN error:", err);
-    return dateStr;
+  const s = String(dateStr).slice(0, 10); // "YYYY-MM-DD" / "YYYY-MM-DDT..."
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
+  if (m) {
+    const y = m[1];
+    const mm = m[2].padStart(2, "0");
+    const dd = m[3].padStart(2, "0");
+    return `${dd}/${mm}/${y}`;
   }
+  // fallback: cố parse nếu không đúng định dạng
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }

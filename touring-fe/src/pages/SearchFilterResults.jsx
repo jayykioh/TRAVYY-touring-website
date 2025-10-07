@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin, Calendar } from "lucide-react";
 import TourCard from "../components/TourCard";
 import { useAuth } from "../auth/context";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 
 const SearchFilterResults = () => {
   const location = useLocation();
