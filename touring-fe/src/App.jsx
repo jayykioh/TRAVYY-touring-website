@@ -26,6 +26,7 @@ import BookingPage from "./pages/BookingPage";
 import BookingHistory from "./pages/BookingHistory";
 import AvailableToursPage from "./pages/AvailableToursPage";
 import AITourCreator from "./pages/AITourCreator";
+import MoMoSandbox from "./pages/MoMoSandbox";
 // Route guard
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
@@ -70,6 +71,7 @@ export default function App() {
           <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
           {/* ✅ THÊM ROUTE NÀY */}
           <Route path="/shoppingcarts" element={<Cart />} />
+          <Route path="/momo-sandbox" element={<MoMoSandbox />} />
           {/* <Route path="/region/:slug" element={<RegionTours />} /> */}
           {/* ✅ BẢO VỆ 2 ROUTE NÀY */}
           <Route

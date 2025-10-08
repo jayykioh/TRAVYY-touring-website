@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Lock, CreditCard, Wallet, MapPin, User, Phone, Mail } from "lucide-react";
+import momoLogo from "@/assets/momo.svg";
 import { useAuth } from "@/auth/context"; // đổi đường dẫn nếu bạn không dùng alias @
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import   useLocationOptions  from "../hooks/useLocation";
 
-export default function CheckoutForm() {
+export default function CheckoutForm({ totalAmount = 0, paymentItems = [] }) {
   const { user } = useAuth() || {};
   const accessToken = user?.token; // hoặc user?.accessToken
 
@@ -148,9 +149,55 @@ export default function CheckoutForm() {
     userInfo.name && userInfo.email && userInfo.phone &&
     userInfo.provinceId && userInfo.wardId && userInfo.addressLine;
 
-  const handlePayment = () => {
-    if (selectedPayment === "paypal") window.open("https://www.paypal.com/checkoutnow", "_blank");
-    else if (selectedPayment === "momo") window.open("https://momo.vn", "_blank");
+  const [paying, setPaying] = useState(false);
+
+  const handlePayment = async () => {
+    if (!selectedPayment) return;
+    if (!isFormValid) return;
+    if (selectedPayment === "paypal") {
+      window.open("https://www.paypal.com/checkoutnow", "_blank");
+      return;
+    }
+    if (selectedPayment === "momo") {
+      try {
+        if (totalAmount <= 0) {
+          alert("Số tiền không hợp lệ hoặc chưa tính được.");
+          return;
+        }
+        setPaying(true);
+        const res = await fetch("/api/payments/momo", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+            credentials: "include",
+          body: JSON.stringify({
+            amount: totalAmount,
+            orderInfo: "Thanh toán đơn tour Travyy",
+            redirectUrl: `${window.location.origin}/momo-sandbox`,
+            items: paymentItems.map(it => ({
+              name: it.name,
+              price: it.price,
+              originalPrice: it.originalPrice,
+              tourId: it.tourId,
+            }))
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data?.payUrl) {
+          console.warn("MoMo create failed", data);
+          alert("Không tạo được phiên thanh toán MoMo");
+          return;
+        }
+        window.location.href = data.payUrl; // redirect to MoMo sandbox
+      } catch (e) {
+        console.error("MoMo payment error", e);
+        alert("Lỗi khi tạo thanh toán MoMo");
+      } finally {
+        setPaying(false);
+      }
+    }
   };
 
   return (
@@ -326,12 +373,10 @@ export default function CheckoutForm() {
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPayment === "momo" ? "border-pink-500" : "border-gray-300"}`}>
                   {selectedPayment === "momo" && <div className="w-3 h-3 rounded-full bg-pink-500" />}
                 </div>
-                <Wallet className="w-6 h-6 text-gray-700" />
+                <img src={momoLogo} alt="MoMo" className="w-8 h-8 rounded-md shadow-sm" />
                 <span className="font-medium text-gray-900">Ví MoMo</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center text-white font-bold text-xs">M</div>
-              </div>
+              <div className="text-pink-600 text-xs font-semibold uppercase tracking-wide">QR</div>
             </div>
           </div>
         </div>
@@ -340,17 +385,26 @@ export default function CheckoutForm() {
       {/* pay button */}
       <button
         onClick={handlePayment}
-        disabled={!selectedPayment || !isFormValid}
+        disabled={!selectedPayment || !isFormValid || paying}
         className={`w-full py-4 rounded-xl font-semibold text-white transition-all ${
-          selectedPayment && isFormValid
+          selectedPayment && isFormValid && !paying
             ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-200"
             : "bg-gray-300 cursor-not-allowed"
         }`}
       >
-        {!isFormValid ? "Vui lòng nhập thông tin"
-          : !selectedPayment ? "Vui lòng chọn phương thức thanh toán"
+        {!isFormValid
+          ? "Vui lòng nhập thông tin"
+          : !selectedPayment
+          ? "Vui lòng chọn phương thức thanh toán"
+          : paying
+          ? "Đang chuyển đến MoMo..."
           : "Tiếp tục thanh toán"}
       </button>
+      {selectedPayment === "momo" && totalAmount > 0 && (
+        <p className="text-xs text-center text-gray-500 mt-3">
+         
+        </p>
+      )}
     </div>
   );
 }

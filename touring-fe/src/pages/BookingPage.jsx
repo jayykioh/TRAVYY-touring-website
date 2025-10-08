@@ -115,6 +115,8 @@ export default function BookingPage() {
             mode={buyNowItem ? "buy-now" : "cart"}
             buyNowItem={buyNowItem}
             quote={quote}
+            totalAmount={summaryItems.reduce((s,i)=>s+(i.price||0),0)}
+            paymentItems={summaryItems}
           />
           {summaryItems.length > 0 ? (
             <PaymentSummary items={summaryItems} />
