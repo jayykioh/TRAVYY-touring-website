@@ -33,12 +33,13 @@ export default function ProfileLayout() {
             <nav className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y">
               {[
                 ["Thông tin khách hàng", "info"],
-                ["Mã giảm giá", "vouchers"],
-                ["Lịch sử chuyến đi", "trips"],
+                ["Yêu thích", "favorites"],
+                ["Lịch sử chuyến đi", "booking-history"],
+                ["Mã giảm giá", "vouchers"],           
                 ["Đánh giá", "reviews"],
                 ["Phương thức thanh toán", "payments"],
                 ["Thông tin khách", "guests"],
-                ["Yêu thích", "favorites"],
+                
                 ["Bảo mật đăng nhập", "security"],
               ].map(([label, path]) => (
                 <NavLink

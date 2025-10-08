@@ -15,6 +15,7 @@ const authRoutes = require("./routes/auth.routes");
 const blogRoutes = require("./routes/blogs");
 const vnAddrRoutes = require("./middlewares/vnAddress.routes");
 const cartRoutes = require("./routes/carts.routes");
+const paypalRoutes = require("./routes/paypal.routes");
 require("./middlewares/passport");
 const wishlistRoutes = require("./routes/wishlist.routes");
 const locationRoutes = require("./routes/location.routes");
@@ -74,9 +75,9 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/location", locationRoutes);
-
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
+app.use("/api/paypal", paypalRoutes);
 
 // --- Global error handler ---
 app.use((err, _req, res, _next) => {

@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Tour = require("../models/Tours");
+const Booking = require("../models/Bookings");
 
 // copy các helper từ cart.controller (normalizeDate, clamp0, getPricesAndMeta) hoặc require chúng
 const normalizeDate = d => (d ? String(d).slice(0,10) : "");
@@ -70,5 +71,55 @@ exports.quote = async (req, res) => {
   } catch (e) {
     console.error("quote error", e);
     res.status(500).json({ error: "QUOTE_FAILED" });
+  }
+};
+
+exports.getUserBookings = async (req, res) => {
+  try {
+    const userId = req.user?.sub; // từ authJwt middleware (JWT payload có field "sub")
+
+    if (!userId) {
+      console.error("getUserBookings: Missing userId from token");
+      return res.status(401).json({ error: "UNAUTHORIZED" });
+    }
+
+    console.log("📚 Fetching bookings for userId:", userId);
+
+    // Tìm tất cả bookings của user, sắp xếp mới nhất trước
+    const bookings = await Booking.find({ userId })
+      .populate("items.tourId", "title imageItems")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    console.log(`✅ Found ${bookings.length} bookings for user ${userId}`);
+
+    // Enrich với thông tin tour nếu cần
+    const enrichedBookings = bookings.map(booking => {
+      const items = booking.items?.map(item => {
+        // Nếu tourId được populate
+        if (item.tourId && typeof item.tourId === 'object') {
+          return {
+            ...item,
+            name: item.name || item.tourId.title,
+            image: item.image || item.tourId.imageItems?.[0]?.imageUrl
+          };
+        }
+        return item;
+      });
+
+      return {
+        ...booking,
+        items
+      };
+    });
+
+    res.json({ 
+      success: true,
+      bookings: enrichedBookings,
+      count: enrichedBookings.length
+    });
+  } catch (e) {
+    console.error("getUserBookings error", e);
+    res.status(500).json({ error: "FETCH_BOOKINGS_FAILED" });
   }
 };
