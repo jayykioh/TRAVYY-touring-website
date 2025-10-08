@@ -6,6 +6,7 @@ const Bookings = require("../models/Bookings"); // nếu khác tên, đổi lạ
 
 const FX = Number(process.env.FX_VND_USD || 0.000039);
 const PAYPAL_BASE = process.env.PAYPAL_MODE === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
+const isProd = process.env.NODE_ENV === 'production';
 
 // ==== helpers ====
 const normDate = (s) => String(s || "").slice(0,10);
@@ -41,7 +42,13 @@ function toUSD(vnd) {
 
 async function getAccessToken() {
   const client = process.env.PAYPAL_CLIENT_ID;
-  const secret = process.env.PAYPAL_SECRET;
+  const secret = process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET; // hỗ trợ cả 2 tên biến
+
+  if (!client || !secret) {
+    const msg = "MISSING_PAYPAL_CREDENTIALS";
+    const detail = { hasClient: !!client, hasSecret: !!secret };
+    throw Object.assign(new Error(msg), { status: 500, code: msg, detail });
+  }
 
   const auth = Buffer.from(`${client}:${secret}`).toString("base64");
   const res = await fetch(`${PAYPAL_BASE}/v1/oauth2/token`, {
@@ -54,7 +61,10 @@ async function getAccessToken() {
   });
   if (!res.ok) {
     const t = await res.text();
-    throw new Error(`PayPal oauth failed: ${res.status} ${t}`);
+    const err = new Error(`PAYPAL_OAUTH_FAILED`);
+    err.status = res.status;
+    err.raw = t;
+    throw err;
   }
   const data = await res.json();
   return data.access_token;
@@ -122,6 +132,7 @@ async function buildChargeForUser(userId, body) {
 
 // ==== controllers ====
 exports.createOrder = async (req, res) => {
+  let stage = 'start';
   try {
     const userId = req.user.sub;
     const { mode } = req.body;
@@ -130,28 +141,47 @@ exports.createOrder = async (req, res) => {
     console.log("   userId:", userId);
     console.log("   body:", JSON.stringify(req.body, null, 2));
 
-    const { items, totalVND, currency, _buyNowMeta } = await buildChargeForUser(userId, req.body);
+  stage = 'buildCharge';
+  const { items, totalVND, currency, _buyNowMeta } = await buildChargeForUser(userId, req.body);
 
     if (!items.length || totalVND <= 0) {
       return res.status(400).json({ error: "EMPTY_OR_INVALID_AMOUNT" });
     }
 
-    const accessToken = await getAccessToken();
+  stage = 'oauth';
+  const accessToken = await getAccessToken();
 
-    // Xây purchase_units
-    const amountUSD = toUSD(totalVND);
-    const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
-    
-    // Tính tổng items để so sánh
-    const itemsTotal = items.reduce((sum, i) => {
-      return sum + (parseFloat(toUSD(i.unit_amount_vnd)) * (i.quantity || 1));
-    }, 0);
-    const itemsTotalFormatted = itemsTotal.toFixed(2);
-    
+    // Xây purchase_units với logic làm tròn nhất quán để tránh mismatch giá (CREATE_ORDER_FAILED)
+    // Quy tắc: Mỗi line item chuyển sang USD -> cents (integer), sum lại = item_totalCents.
+    // Sau đó amount.value = item_total (không lấy toUSD(totalVND) nếu lệch do làm tròn).
+  // Normalize client URL to avoid double slashes if env ends with '/'
+  const CLIENT_URL = (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/+$/,'');
+
+    const lineCents = items.map(i => {
+      const usd = Number(toUSD(i.unit_amount_vnd)); // string -> number (2 decimals)
+      return Math.round(usd * 100) * (i.quantity || 1);
+    });
+    const itemTotalCents = lineCents.reduce((a,b)=>a+b,0);
+    const amountTotalCentsFromVND = Math.round(Number(toUSD(totalVND)) * 100);
+
+    let amountCents = itemTotalCents; // ưu tiên khớp item_total
+    const mismatch = amountTotalCentsFromVND !== itemTotalCents;
+    if (mismatch) {
+      console.warn("[PayPal] Rounding mismatch total vs item_total — adjusting amount.value to match item_total", {
+        totalVND,
+        amountTotalCentsFromVND,
+        itemTotalCents,
+      });
+    }
+    const amountUSD = (amountCents/100).toFixed(2);
+    const itemsTotalFormatted = amountUSD; // đảm bảo bằng nhau tuyệt đối
+
     console.log("Payment details:", {
       totalVND,
       amountUSD,
-      itemsTotalFormatted,
+      itemTotalCents,
+      amountTotalCentsFromVND,
+      mismatch,
       items: items.map(i => ({
         name: i.name,
         qty: i.quantity,
@@ -180,8 +210,8 @@ exports.createOrder = async (req, res) => {
         })),
       }],
       application_context: {
-        return_url: `${CLIENT_URL}/payment/callback`,
-        cancel_url: `${CLIENT_URL}/cart`,
+  return_url: `${CLIENT_URL}/payment/callback`,
+  cancel_url: `${CLIENT_URL}/shoppingcarts`,
         brand_name: "Travyy Tour",
         shipping_preference: "NO_SHIPPING",
       },
@@ -189,6 +219,7 @@ exports.createOrder = async (req, res) => {
 
     console.log("PayPal orderBody:", JSON.stringify(orderBody, null, 2));
 
+    stage = 'createOrder';
     const resp = await fetch(`${PAYPAL_BASE}/v2/checkout/orders`, {
       method: "POST",
       headers: {
@@ -201,8 +232,11 @@ exports.createOrder = async (req, res) => {
     const data = await resp.json();
     
     if (!resp.ok) {
-      console.error("PayPal create order failed:", data);
-      return res.status(resp.status).json(data);
+      console.error("PayPal create order failed:", JSON.stringify(data, null, 2));
+      return res.status(resp.status).json({
+        error: 'PAYPAL_CREATE_FAILED',
+        ...(isProd ? {} : { debug: { stage, status: resp.status, data, hint: 'Check credentials, amount/item_total match, currency format' } })
+      });
     }
 
     // ⬇️ LƯU METADATA VÀO SESSION
@@ -231,7 +265,10 @@ exports.createOrder = async (req, res) => {
     res.json({ orderID: data.id });
   } catch (e) {
     console.error("createOrder error", e);
-    res.status(e.status || 500).json({ error: "CREATE_ORDER_FAILED" });
+    res.status(e.status || 500).json({
+      error: "CREATE_ORDER_FAILED",
+      ...(isProd ? {} : { debug: { message: e.message, code: e.code, stage, detail: e.detail, raw: e.raw } })
+    });
   }
 };
 

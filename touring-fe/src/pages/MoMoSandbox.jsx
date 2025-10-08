@@ -1,5 +1,5 @@
 import { useLocation, Link } from "react-router-dom";
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/auth/context";
 
 export default function MoMoSandbox() {
@@ -7,6 +7,8 @@ export default function MoMoSandbox() {
   const { user } = useAuth() || {};
   const token = user?.token;
   const [markStatus, setMarkStatus] = useState("");
+  const [attempts, setAttempts] = useState(0);
+  const [lastChecked, setLastChecked] = useState(null);
   const params = useMemo(() => Object.fromEntries(new URLSearchParams(location.search)), [location.search]);
   const resultCode = params.resultCode;
   const message = params.message;
@@ -16,39 +18,62 @@ export default function MoMoSandbox() {
   const success = resultCode === "0"; // MoMo sandbox success code
 
   // Poll session status until paid (IPN updates server)
+  const fetchStatus = useCallback(async () => {
+    if (!orderId || !token) return;
+    try {
+      setAttempts(a => a + 1);
+      const r = await fetch(`/api/payments/momo/session/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setLastChecked(Date.now());
+      if (!r.ok) throw new Error("status error");
+      const data = await r.json();
+      if (data.status === 'paid') {
+        setMarkStatus('paid');
+        return true;
+      }
+      if (data.status === 'failed') {
+        setMarkStatus('failed');
+        return true;
+      }
+      // still pending
+      if (!markStatus) setMarkStatus('pending');
+      return false;
+    } catch {
+      if (!markStatus) setMarkStatus('checking');
+      return false;
+    }
+  }, [orderId, token, markStatus]);
+
   useEffect(() => {
     if (!orderId || !token) return;
     let cancelled = false;
-    let attempts = 0;
-    const poll = async () => {
-      attempts++;
-      try {
-        const r = await fetch(`/api/payments/momo/session/${orderId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!r.ok) throw new Error("status error");
-        const data = await r.json();
-        if (cancelled) return;
-        if (data.status === "paid") {
-          setMarkStatus("paid");
-          return; // stop polling
-        }
-        if (data.status === "failed") {
-          setMarkStatus("failed");
-          return;
-        }
-      } catch {
-        if (!cancelled) setMarkStatus((m) => (m ? m : "đang kiểm tra..."));
-      }
-      if (!cancelled && attempts < 30) {
-        setTimeout(poll, 2000);
-      } else if (!cancelled && !markStatus) {
-        setMarkStatus("timeout");
-      }
+    let loopAttempts = 0;
+    const loop = async () => {
+      if (cancelled) return;
+      loopAttempts++;
+      const done = await fetchStatus();
+      if (done) return;
+      if (loopAttempts < 25) setTimeout(loop, 2000);
+      else if (!done && !cancelled && markStatus !== 'paid' && markStatus !== 'failed') setMarkStatus('timeout');
     };
-    poll();
+    loop();
     return () => { cancelled = true; };
-  }, [orderId, token, markStatus]);
+  }, [fetchStatus, orderId, token, markStatus]);
+
+  const codeMeaning = {
+    '0': 'Thành công',
+    '9000': 'Giao dịch đang xử lý',
+    '1006': 'Người dùng từ chối / hủy giao dịch',
+  };
+
+  const readableStatus = {
+    paid: 'ĐÃ GHI NHẬN (paid)',
+    failed: 'THẤT BẠI (failed)',
+    pending: 'ĐANG CHỜ IPN...',
+    checking: 'Đang kiểm tra...',
+    timeout: 'Hết thời gian chờ IPN',
+  }[markStatus] || markStatus;
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center px-4 py-10">
@@ -70,10 +95,18 @@ export default function MoMoSandbox() {
               <ul className="text-sm text-gray-700 space-y-1">
                 <li><strong>orderId:</strong> {orderId}</li>
                 <li><strong>amount:</strong> {Number(amount||0).toLocaleString("vi-VN")}đ</li>
-                <li><strong>resultCode:</strong> {resultCode}</li>
+                <li><strong>resultCode:</strong> {resultCode} {codeMeaning[resultCode] ? `– ${codeMeaning[resultCode]}` : ''}</li>
                 {message && <li><strong>message:</strong> {decodeURIComponent(message)}</li>}
-                {orderId && <li><strong>trạng thái:</strong> {markStatus || "đang kiểm tra..."}</li>}
+                {orderId && <li><strong>Trạng thái server:</strong> {readableStatus}</li>}
+                {orderId && <li><strong>Lần kiểm tra:</strong> {attempts}</li>}
+                {lastChecked && <li><strong>Cập nhật cuối:</strong> {new Date(lastChecked).toLocaleTimeString()}</li>}
               </ul>
+              {markStatus !== 'paid' && (
+                <div className="mt-4 flex gap-3">
+                  <button onClick={fetchStatus} className="px-4 py-2 bg-pink-600 text-white rounded-lg text-sm hover:bg-pink-700">Kiểm tra lại</button>
+                  <Link to="/booking" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300">Đặt lại</Link>
+                </div>
+              )}
             </div>
           </div>
         )}

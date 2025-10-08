@@ -1,5 +1,7 @@
+const path = require('path');
+// Load .env explicitly relative to this file to avoid CWD issues
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const PORT = process.env.PORT || 4000;
-require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const passport = require("passport");
@@ -25,6 +27,24 @@ const app = express();
 const isProd = process.env.NODE_ENV === "production";
 const notifyRoutes = require("./routes/notifyRoutes");
 const paymentRoutes = require("./routes/payment.routes");
+// Quick visibility of PayPal env presence (not actual secrets)
+console.log("[Boot] PayPal env present:", {
+  hasClient: !!process.env.PAYPAL_CLIENT_ID,
+  hasSecret: !!(process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET),
+  mode: process.env.PAYPAL_MODE,
+});
+// Deep diagnostics: list any env keys containing 'PAYPAL'
+try {
+  const paypalLike = Object.keys(process.env)
+    .filter(k => k.toUpperCase().includes('PAYPAL'))
+    .map(k => ({
+      key: k,
+      length: k.length,
+      codes: k.split('').map(c=>c.charCodeAt(0)),
+      valuePreview: (process.env[k]||'').slice(0,6)+ '...'
+    }));
+  console.log('[Boot] PayPal related raw keys:', paypalLike);
+} catch(e){ console.warn('Diag paypal keys failed', e); }
 
 
 
@@ -89,6 +109,16 @@ app.use("/api/notify", notifyRoutes);
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 app.use("/api/paypal", paypalRoutes);
+
+// Lightweight ping to verify credentials loaded (non-sensitive)
+app.get('/api/paypal/ping', (_req,res)=>{
+  res.json({
+    ok: true,
+    hasClient: !!process.env.PAYPAL_CLIENT_ID,
+    hasSecret: !!(process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET),
+    mode: process.env.PAYPAL_MODE || 'sandbox'
+  });
+});
 
 // --- Global error handler ---
 app.use((err, _req, res, _next) => {

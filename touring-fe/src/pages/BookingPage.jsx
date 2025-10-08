@@ -117,12 +117,16 @@ export default function BookingPage() {
       {/* Body */}
       <div className="max-w-7xl mx-auto ">
         <div className="flex flex-col lg:flex-row">
+          {/**
+           * Pass summaryItems + computed totalAmount down so CheckoutForm (MoMo / PayPal) can use the REAL figure.
+           * This fixes previous mismatch where MoMo used a hardcoded fallback 100000 VND.
+           */}
           <CheckoutForm
             mode={buyNowItem ? "buy-now" : "cart"}
             buyNowItem={buyNowItem}
             quote={quote}
-            totalAmount={summaryItems.reduce((s,i)=>s+(i.price||0),0)}
-            paymentItems={summaryItems}
+            summaryItems={summaryItems}
+            totalAmount={summaryItems.reduce((s,it)=> s + (it.price||0), 0)}
           />
           {summaryItems.length > 0 ? (
             <PaymentSummary items={summaryItems} />

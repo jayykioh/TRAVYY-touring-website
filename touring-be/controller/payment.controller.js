@@ -6,6 +6,12 @@
 const crypto = require("crypto");
 const PaymentSession = require("../models/PaymentSession");
 const mongoose = require("mongoose");
+const Booking = require("../models/Bookings");
+const Tour = require("../models/Tours");
+const { Cart, CartItem } = require("../models/Carts");
+
+// FX rate (fallback) for VND->USD conversion
+const FX_VND_USD = Number(process.env.FX_VND_USD || 0.000039);
 
 // Attempt to get a fetch implementation (Node 18+ has global fetch)
 async function getFetch() {
@@ -206,16 +212,84 @@ exports.handleMoMoIPN = async (req, res) => {
     session.transId = body.transId;
     session.payType = body.payType;
 
+    let justPaid = false;
     if (String(body.resultCode) === "0") {
       if (session.status !== "paid") {
         session.status = "paid";
         session.paidAt = new Date();
+        justPaid = true;
       }
     } else if (session.status === "pending") {
       session.status = "failed";
     }
 
     await session.save();
+
+    // If newly paid -> create Booking (idempotent check: does a booking already have this orderId?)
+    if (justPaid) {
+      const existing = await Booking.findOne({ 'payment.orderID': session.orderId });
+      if (!existing) {
+        try {
+          // Convert items snapshot (they may lack adults/children breakdown; treat price as total line VND)
+          // We'll store currency USD, totalUSD derived from session.amount
+          const amountVND = Number(session.amount) || 0;
+          const totalUSD = Math.round(amountVND * FX_VND_USD * 100) / 100;
+
+          // Attempt to fetch extra tour info for name/image if missing
+          const bookingItems = [];
+          for (const it of session.items || []) {
+            let tourMeta = null;
+            if (it.tourId && mongoose.isValidObjectId(it.tourId)) {
+              const t = await Tour.findById(it.tourId).lean();
+              if (t) {
+                tourMeta = {
+                  name: t.title || t.name || it.name,
+                  image: t.imageItems?.[0]?.imageUrl || t.image || it.image,
+                };
+              }
+            }
+            bookingItems.push({
+              tourId: it.tourId, // may be undefined
+              date: it.meta?.date || it.meta?.departureDate || '',
+              name: it.name || tourMeta?.name || 'Tour',
+              image: it.image || tourMeta?.image || '',
+              adults: it.meta?.adults || 0,
+              children: it.meta?.children || 0,
+              unitPriceAdult: it.meta?.unitPriceAdult || 0,
+              unitPriceChild: it.meta?.unitPriceChild || 0,
+            });
+          }
+
+          const bookingDoc = await Booking.create({
+            userId: session.userId,
+            items: bookingItems,
+            currency: 'USD',
+            totalUSD,
+            payment: {
+              provider: 'momo',
+              orderID: session.orderId,
+              status: 'completed',
+              raw: { ipn: body, sessionId: session._id }
+            },
+            status: 'paid'
+          });
+          console.log('[MoMo] Booking created from paid session', bookingDoc._id);
+
+          // Optional: clear selected cart items (session doesn't currently store mode; attempt heuristic)
+          try {
+            const cart = await Cart.findOne({ userId: session.userId });
+            if (cart) {
+              const delRes = await CartItem.deleteMany({ cartId: cart._id, selected: true });
+              console.log(`[MoMo] Cleared ${delRes.deletedCount} cart items after successful payment.`);
+            }
+          } catch (clrErr) {
+            console.warn('[MoMo] Failed to clear cart items post-payment', clrErr);
+          }
+        } catch (bkErr) {
+          console.error('[MoMo] Failed to create booking after payment', bkErr);
+        }
+      }
+    }
     // Important: MoMo expects 200/204 to stop retrying
     res.json({ message: "OK" });
   } catch (e) {

@@ -1,14 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Lock, CreditCard, MapPin, User, Phone, Mail } from "lucide-react";
-import momoLogo from "@/assets/momo.svg";
-import { useAuth } from "@/auth/context"; // đổi đường dẫn nếu bạn không dùng alias @
+import { Lock, CreditCard, Wallet, MapPin, User, Phone, Mail } from "lucide-react";
+import { useAuth } from "@/auth/context";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import useLocationOptions from "../hooks/useLocation";
 import { useLocation } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
-export default function CheckoutForm({ totalAmount = 0, paymentItems = [] }) {
+export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemProp, summaryItems = [], totalAmount }) {
   const { user } = useAuth() || {};
   const accessToken = user?.token; // hoặc user?.accessToken
 
@@ -20,12 +19,16 @@ export default function CheckoutForm({ totalAmount = 0, paymentItems = [] }) {
   const location = useLocation();
 
   // ⬇️ FIX: Default "cart" nếu không có state
-  const mode = location.state?.mode || "cart";
-  const buyNowItem = mode === "buy-now" ? location.state?.item : null;
+  // Prefer props (BookingPage passes them); fall back to location.state for backward compatibility.
+  const mode = modeProp || location.state?.mode || "cart";
+  const buyNowItem = mode === "buy-now" ? (buyNowItemProp || location.state?.item) : null;
 
   console.log("🔍 CheckoutForm loaded:");
   console.log("   location.state:", location.state);
   console.log("   mode:", mode);
+  console.log("   buyNowItem:", buyNowItem);
+
+
   const [userInfo, setUserInfo] = useState({
     name: "",
     email: "",
@@ -113,6 +116,7 @@ export default function CheckoutForm({ totalAmount = 0, paymentItems = [] }) {
     const selectedWard = wards.find((w) => w.id === selectedId);
     setUserInfo((prev) => ({ ...prev, wardId: selectedId, wardName: selectedWard?.name || "" }));
   };
+  // (Removed stray 'mode,' token that caused syntax error)
 
   const handleSaveInfo = async () => {
     if (!accessToken) { setIsDialogOpen(false); return; }
@@ -160,7 +164,7 @@ export default function CheckoutForm({ totalAmount = 0, paymentItems = [] }) {
   const isFormValid =
     userInfo.name && userInfo.email && userInfo.phone &&
     userInfo.provinceId && userInfo.wardId && userInfo.addressLine;
-  // Unified payment handler (PayPal + MoMo)
+
   const handlePayment = async () => {
     // ⬇️ NGĂN CHẶN MULTIPLE CLICKS
     if (isProcessingPayment) {
@@ -204,18 +208,23 @@ export default function CheckoutForm({ totalAmount = 0, paymentItems = [] }) {
           body: JSON.stringify(payload),
         });
 
+        let respJson = null;
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Tạo đơn hàng thất bại");
+          respJson = await response.json().catch(()=>({}));
+          console.error("🚫 PayPal create-order failed", respJson);
+          // Hiển thị chi tiết debug nếu backend gửi
+          const reason = respJson?.error || respJson?.name || 'Tạo đơn hàng thất bại';
+          throw new Error(reason);
         }
 
-        const { orderID } = await response.json();
+        respJson = await response.json();
+        const { orderID } = respJson || {};
 
         if (!orderID) {
           throw new Error("Không nhận được orderID từ server");
         }
 
-        console.log("✅ Order created, redirecting to PayPal:", orderID);
+        console.log("✅ Order created, redirecting to PayPal:", orderID, respJson);
 
         // Redirect đến PayPal (không reset isProcessingPayment vì sẽ redirect)
         const paypalUrl = `https://www.sandbox.paypal.com/checkoutnow?token=${orderID}`;
@@ -229,39 +238,61 @@ export default function CheckoutForm({ totalAmount = 0, paymentItems = [] }) {
       // ⬅️ KHÔNG CÓ finally ở đây vì sẽ redirect
     } else if (selectedPayment === "momo") {
       try {
-        if (totalAmount <= 0) {
-          alert("Số tiền không hợp lệ hoặc chưa tính được.");
+        setIsProcessingPayment(true);
+        // Use authoritative total from props; fallback to recompute from summaryItems; final fallback: location.state.totalAmount
+        let amount = Number(totalAmount);
+        if (!Number.isFinite(amount) || amount <= 0) {
+          amount = summaryItems.reduce((s,it)=> s + (Number(it.price)||0), 0);
+        }
+        if (!Number.isFinite(amount) || amount <= 0) {
+          amount = Number(location.state?.totalAmount);
+        }
+
+        if (!Number.isFinite(amount) || amount <= 0) {
+          alert("Không có số tiền hợp lệ để thanh toán MoMo");
+          setIsProcessingPayment(false);
           return;
         }
-        setIsProcessingPayment(true);
+
+        // Prepare item snapshot (trim to essentials for backend persistence / audit)
+        const itemsSnapshot = summaryItems.map(it => ({
+          name: it.name,
+            price: Number(it.price)||0,
+            originalPrice: Number(it.originalPrice)||undefined,
+        }));
+
+        console.log("🚀 Creating MoMo payment", { amount, itemsSnapshot });
         const res = await fetch(`${API_BASE}/api/payments/momo`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            amount: totalAmount,
-            orderInfo: "Thanh toán đơn tour Travyy",
-            redirectUrl: `${window.location.origin}/momo-sandbox`,
-            items: paymentItems.map(it => ({
-              name: it.name,
-              price: it.price,
-              originalPrice: it.originalPrice,
-              tourId: it.tourId,
-            }))
-          }),
+            headers: {
+              "Content-Type": "application/json",
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              amount,
+              orderInfo: "Thanh toán đơn tour Travyy",
+              // Unified callback page for both PayPal & MoMo
+              redirectUrl: `${window.location.origin}/payment/callback`,
+              // Persist mode so backend knows whether to clear selected cart items
+              mode,
+              // For buy-now, also send the single item detail (backend can choose to persist)
+              ...(mode === "buy-now" && buyNowItem ? { item: buyNowItem } : {}),
+              items: itemsSnapshot,
+            }),
         });
-        const data = await res.json().catch(()=>({}));
+        const data = await res.json().catch(() => ({}));
+        console.log("MoMo response:", data);
         if (!res.ok || !data?.payUrl) {
-          console.warn("MoMo create failed", data);
-            throw new Error(data?.error || data?.message || "Không tạo được phiên thanh toán MoMo");
+          alert("Tạo phiên thanh toán MoMo thất bại");
+          setIsProcessingPayment(false);
+          return;
         }
-        window.location.href = data.payUrl; // redirect to MoMo sandbox
-      } catch (e) {
-        console.error("MoMo payment error", e);
-        alert("Lỗi khi tạo thanh toán MoMo: " + e.message);
+        // Redirect sang MoMo
+        window.location.href = data.payUrl;
+      } catch (err) {
+        console.error("MoMo error", err);
+        alert("Lỗi MoMo: " + (err.message || "Unknown"));
         setIsProcessingPayment(false);
       }
     }
@@ -440,10 +471,12 @@ export default function CheckoutForm({ totalAmount = 0, paymentItems = [] }) {
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPayment === "momo" ? "border-pink-500" : "border-gray-300"}`}>
                   {selectedPayment === "momo" && <div className="w-3 h-3 rounded-full bg-pink-500" />}
                 </div>
-                <img src={momoLogo} alt="MoMo" className="w-8 h-8 rounded-md shadow-sm" />
+                <Wallet className="w-6 h-6 text-gray-700" />
                 <span className="font-medium text-gray-900">Ví MoMo</span>
               </div>
-              <div className="text-pink-600 text-xs font-semibold uppercase tracking-wide">QR</div>
+              <div className="w-6 h-6">
+                <img src="https://res.cloudinary.com/dzjm0cviz/image/upload/v1759928578/Logo-MoMo-Square_mti9wm.webp"/>
+              </div>
             </div>
           </div>
         </div>
@@ -463,11 +496,6 @@ export default function CheckoutForm({ totalAmount = 0, paymentItems = [] }) {
           : !selectedPayment ? "Vui lòng chọn phương thức thanh toán"
           : "Tiếp tục thanh toán"}
       </button>
-      {selectedPayment === "momo" && totalAmount > 0 && (
-        <p className="text-xs text-center text-gray-500 mt-3">
-          Số tiền: {totalAmount.toLocaleString("vi-VN")}đ
-        </p>
-      )}
     </div>
   );
 }
