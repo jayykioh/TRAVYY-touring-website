@@ -1,4 +1,5 @@
 import { useLocation, Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/auth/context";
 import { useEffect, useMemo, useState } from "react";
 import CheckoutForm from "../components/CheckOutForm";
@@ -101,15 +102,20 @@ export default function BookingPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-blue-600">Travyy</h1>
-          <Link to="/cart" className="text-purple-600 font-semibold hover:text-purple-700">Quay lại giỏ</Link>
+      <div className="bg-white border-2  border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center  justify-between">
+          <Link
+            to="/shoppingcarts"
+            className="inline-flex items-center gap-2 hover:scale-105 transition-all duration-200  px-3 py-2 rounded-lg text-white  bg-[#02A0AA] border border-gray-200 text-sm font-medium text-whiteshadow-sm"
+          >
+            <ArrowLeft className="w-4 h-4 text-white" />
+            <span>Quay lại giỏ</span>
+          </Link>
         </div>
       </div>
 
       {/* Body */}
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto ">
         <div className="flex flex-col lg:flex-row">
           <CheckoutForm
             mode={buyNowItem ? "buy-now" : "cart"}
@@ -124,7 +130,7 @@ export default function BookingPage() {
                 {buyNowItem ? (quoteErr || "Không có dữ liệu báo giá.") : "Chưa có tour nào được chọn để thanh toán."}
                 {!buyNowItem && (
                   <div className="mt-4">
-                    <Link to="/cart" className="inline-block px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold">
+                    <Link to="/shoppingcarts" className="inline-block px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold">
                       Về giỏ hàng
                     </Link>
                   </div>

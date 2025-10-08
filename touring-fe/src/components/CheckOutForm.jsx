@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Lock, CreditCard, Wallet, MapPin, User, Phone, Mail } from "lucide-react";
-import { useAuth } from "@/auth/context"; // đổi đường dẫn nếu bạn không dùng alias @
+import { useAuth } from "@/auth/context";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import   useLocationOptions  from "../hooks/useLocation";
+import useLocationOptions from "../hooks/useLocation";
+import { useLocation } from "react-router-dom";
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 export default function CheckoutForm() {
   const { user } = useAuth() || {};
@@ -11,7 +14,19 @@ export default function CheckoutForm() {
   const [selectedPayment, setSelectedPayment] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const didPrefetchRef = useRef(false);
+  const location = useLocation();
+
+  // ⬇️ FIX: Default "cart" nếu không có state
+  const mode = location.state?.mode || "cart";
+  const buyNowItem = mode === "buy-now" ? location.state?.item : null;
+
+  console.log("🔍 CheckoutForm loaded:");
+  console.log("   location.state:", location.state);
+  console.log("   mode:", mode);
+  console.log("   buyNowItem:", buyNowItem);
+
 
   const [userInfo, setUserInfo] = useState({
     name: "",
@@ -48,13 +63,13 @@ export default function CheckoutForm() {
       try {
         setIsLoadingProfile(true);
         let data = null;
-        const r = await fetch("/api/profile", {
+        const r = await fetch(`${API_BASE}/api/profile`, {
           headers: { Accept: "application/json", Authorization: `Bearer ${accessToken}` },
           credentials: "include",
         });
         if (r.ok) data = await r.json();
         else {
-          const r2 = await fetch("/api/auth/me", {
+          const r2 = await fetch(`${API_BASE}/api/auth/me`, {
             headers: { Accept: "application/json", Authorization: `Bearer ${accessToken}` },
             credentials: "include",
           });
@@ -114,7 +129,7 @@ export default function CheckoutForm() {
           addressLine: userInfo.addressLine || "",
         },
       };
-      const r = await fetch("/api/profile", {
+      const r = await fetch(`${API_BASE}/api/profile/info`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
         credentials: "include",
@@ -148,13 +163,79 @@ export default function CheckoutForm() {
     userInfo.name && userInfo.email && userInfo.phone &&
     userInfo.provinceId && userInfo.wardId && userInfo.addressLine;
 
-  const handlePayment = () => {
-    if (selectedPayment === "paypal") window.open("https://www.paypal.com/checkoutnow", "_blank");
-    else if (selectedPayment === "momo") window.open("https://momo.vn", "_blank");
+  const handlePayment = async () => {
+    // ⬇️ NGĂN CHẶN MULTIPLE CLICKS
+    if (isProcessingPayment) {
+      console.log("⚠️ Payment already in progress, ignoring click");
+      return;
+    }
+
+    if (!accessToken) {
+      alert("Vui lòng đăng nhập để tiếp tục");
+      return;
+    }
+
+    if (!isFormValid) {
+      alert("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    if (!selectedPayment) {
+      alert("Vui lòng chọn phương thức thanh toán");
+      return;
+    }
+
+    if (selectedPayment === "paypal") {
+      try {
+        setIsProcessingPayment(true);
+
+        const payload = {
+          mode,
+          ...(mode === "buy-now" && { item: buyNowItem })
+        };
+
+        console.log("📦 Sending payment request:", JSON.stringify(payload, null, 2));
+        
+        const response = await fetch(`${API_BASE}/api/paypal/create-order`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`,
+          },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Tạo đơn hàng thất bại");
+        }
+
+        const { orderID } = await response.json();
+
+        if (!orderID) {
+          throw new Error("Không nhận được orderID từ server");
+        }
+
+        console.log("✅ Order created, redirecting to PayPal:", orderID);
+
+        // Redirect đến PayPal (không reset isProcessingPayment vì sẽ redirect)
+        const paypalUrl = `https://www.sandbox.paypal.com/checkoutnow?token=${orderID}`;
+        window.location.href = paypalUrl;
+
+      } catch (error) {
+        console.error("❌ PayPal payment error:", error);
+        alert(`Lỗi thanh toán: ${error.message}`);
+        setIsProcessingPayment(false); // ⬅️ CHỈ RESET KHI CÓ LỖI
+      }
+      // ⬅️ KHÔNG CÓ finally ở đây vì sẽ redirect
+    } else if (selectedPayment === "momo") {
+      alert("Chức năng thanh toán MoMo đang phát triển");
+    }
   };
 
   return (
-    <div className="w-full lg:w-3/5 bg-white p-6 lg:p-8">
+    <div className="w-full lg:w-3/5 bg-white p-6 lg:p-8 rounded-2xl">
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Thanh toán</h1>
 
       {/* thông tin người đặt */}
@@ -210,7 +291,7 @@ export default function CheckoutForm() {
               {/* phone */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Phone className="w-4 h-4 inline mr-1" />Số điện thoại *
+                  <Phone className="w-4 h-4 inline mr-1" />Số điện thoại
                 </label>
                 <input
                   type="tel" name="phone" value={userInfo.phone} onChange={handleInputChange}
@@ -222,7 +303,7 @@ export default function CheckoutForm() {
               {/* province + ward */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tỉnh/Thành phố *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tỉnh/Thành phố</label>
                   <select
                     value={userInfo.provinceId} onChange={handleProvinceChange}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
@@ -233,7 +314,7 @@ export default function CheckoutForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Quận/Huyện *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Quận/Huyện</label>
                   <select
                     value={userInfo.wardId} onChange={handleWardChange}
                     disabled={!userInfo.provinceId || loadingWard}
@@ -248,7 +329,7 @@ export default function CheckoutForm() {
               {/* address */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <MapPin className="w-4 h-4 inline mr-1" />Địa chỉ cụ thể *
+                  <MapPin className="w-4 h-4 inline mr-1" />Địa chỉ cụ thể
                 </label>
                 <textarea
                   name="addressLine" value={userInfo.addressLine} onChange={handleInputChange}
@@ -308,7 +389,7 @@ export default function CheckoutForm() {
                 <span className="font-medium text-gray-900">PayPal</span>
               </div>
               <img
-                src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='24' viewBox='0 0 80 24'%3E%3Ctext x='0' y='18' font-family='Arial' font-size='18' font-weight='bold' fill='%23003087'%3EPayPal%3C/text%3E%3C/svg%3E"
+                src="https://res.cloudinary.com/dzjm0cviz/image/upload/v1759928562/PayPal.svg_mdi5au.png"
                 alt="PayPal" className="h-6"
               />
             </div>
@@ -329,25 +410,25 @@ export default function CheckoutForm() {
                 <Wallet className="w-6 h-6 text-gray-700" />
                 <span className="font-medium text-gray-900">Ví MoMo</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center text-white font-bold text-xs">M</div>
+              <div className="w-6 h-6">
+                <img src="https://res.cloudinary.com/dzjm0cviz/image/upload/v1759928578/Logo-MoMo-Square_mti9wm.webp"/>
               </div>
             </div>
           </div>
         </div>
       </div>
-
       {/* pay button */}
       <button
         onClick={handlePayment}
-        disabled={!selectedPayment || !isFormValid}
+        disabled={!selectedPayment || !isFormValid || isProcessingPayment}
         className={`w-full py-4 rounded-xl font-semibold text-white transition-all ${
-          selectedPayment && isFormValid
+          selectedPayment && isFormValid && !isProcessingPayment
             ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-200"
             : "bg-gray-300 cursor-not-allowed"
         }`}
       >
-        {!isFormValid ? "Vui lòng nhập thông tin"
+        {isProcessingPayment ? "Đang xử lý..."
+          : !isFormValid ? "Vui lòng nhập thông tin"
           : !selectedPayment ? "Vui lòng chọn phương thức thanh toán"
           : "Tiếp tục thanh toán"}
       </button>
