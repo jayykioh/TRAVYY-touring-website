@@ -39,7 +39,7 @@ router.get("/", async (req, res) => {
     }
 
     const tours = await Tour.find(filter)
-      .populate("locations", "name country coordinates")
+      .populate("locations", "name country region coordinates")
       .populate("agencyId", "name contact")
       .sort({ createdAt: -1 });
 
