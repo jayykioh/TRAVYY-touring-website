@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Heart,
@@ -216,6 +216,8 @@ export default function TourDetailPage() {
       toast.error("Phải có ít nhất 1 người lớn");
       return;
     }
+    // Gửi thêm snapshot giá để trang checkout có thể tạo phiên MoMo chính xác
+    const snapshotSubtotal = priceAdult * qtyAdult + priceChild * qtyChild;
     navigate("/booking", {
       state: {
         mode: "buy-now",
@@ -224,6 +226,12 @@ export default function TourDetailPage() {
           date: selectedDate,
           adults: qtyAdult,
           children: qtyChild,
+          priceAdult,          // giá người lớn tại thời điểm chọn
+          priceChild,          // giá trẻ em tại thời điểm chọn
+          originalAdult,       // giá gốc người lớn (nếu có) để hiển thị/giảm giá
+          subtotal: snapshotSubtotal,
+          originalSubtotal: originalSubtotal || null,
+          discountPercent: discountPercent || null,
         },
       },
     });
@@ -939,23 +947,35 @@ function RelatedTours({ tours }) {
 
 function ImageGalleryModal({ images, onClose }) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  if (!images?.length) return null;
+  const hasImages = Array.isArray(images) && images.length > 0;
 
-  const prevImage = () =>
+  const prevImage = useCallback(() => {
+    if (!hasImages) return;
     setCurrentIndex((i) => (i === 0 ? images.length - 1 : i - 1));
-  const nextImage = () =>
+  }, [hasImages, images]);
+
+  const nextImage = useCallback(() => {
+    if (!hasImages) return;
     setCurrentIndex((i) => (i === images.length - 1 ? 0 : i + 1));
-  const goToImage = (i) => setCurrentIndex(i);
+  }, [hasImages, images]);
+
+  const goToImage = useCallback((i) => {
+    if (!hasImages) return;
+    setCurrentIndex(i);
+  }, [hasImages]);
+
+  const handleKey = useCallback((e) => {
+    if (e.key === "ArrowLeft") prevImage();
+    if (e.key === "ArrowRight") nextImage();
+    if (e.key === "Escape") onClose();
+  }, [prevImage, nextImage, onClose]);
 
   useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === "ArrowLeft") prevImage();
-      if (e.key === "ArrowRight") nextImage();
-      if (e.key === "Escape") onClose();
-    };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, []);
+  }, [handleKey]);
+
+  if (!hasImages) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm">

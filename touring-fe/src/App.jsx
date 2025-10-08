@@ -27,6 +27,7 @@ import BookingHistory from "./pages/BookingHistory";
 import AvailableToursPage from "./pages/AvailableToursPage";
 import AITourCreator from "./pages/AITourCreator";
 import MoMoSandbox from "./pages/MoMoSandbox";
+import PaymentCallback from "./pages/PaymentCallback";
 // Route guard
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
@@ -63,11 +64,14 @@ export default function App() {
             path="/booking"
             element={
               <ProtectedRoute>
-                {" "}
                 <BookingPage />
               </ProtectedRoute>
             }
           />
+
+         
+
+
           <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
           {/* ✅ THÊM ROUTE NÀY */}
           <Route path="/shoppingcarts" element={<Cart />} />
@@ -104,6 +108,7 @@ export default function App() {
             <Route path="info" element={<ProfileInfo />} />
             <Route path="reviews" element={<ProfileReviews />} />
             <Route path="favorites" element={<WishlistPage />} />
+            <Route path="booking-history" element={<BookingHistory />} />
           </Route>
         </Route>
 
@@ -111,6 +116,16 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
+        
+        {/* ----- Payment callback ----- */}
+        <Route 
+          path="/payment/callback" 
+          element={
+            <ProtectedRoute>
+              <PaymentCallback />
+            </ProtectedRoute>
+          } 
+        />
 
         {/* ----- 404 ----- */}
         <Route path="*" element={<NotFoundPage />} />
