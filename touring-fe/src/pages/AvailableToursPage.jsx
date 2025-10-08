@@ -1,86 +1,152 @@
-import * as React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Calendar, Users, Star, Filter, Search } from "lucide-react";
-import tours, { categories } from "../mockdata/tours";
+import { Filter, Search } from "lucide-react";
 import TourCard from "../components/TourCard";
+import { useAuth } from "../auth/context";
 
 export default function ToursPage() {
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [selectedCategory, setSelectedCategory] = React.useState("Tất cả");
-  const [filteredTours, setFilteredTours] = React.useState(tours);
+  const [allTours, setAllTours] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("Tất cả");
+  const [filteredTours, setFilteredTours] = useState([]);
+  const [favorites, setFavorites] = useState(new Set());
+  const { user } = useAuth();
+
   const categories = [
-  "Tất cả",
-  "Miền Bắc",
-  "Miền Trung",
-  "Miền Nam",
-  "Nước ngoài",
-];
+    "Tất cả",
+    "Miền Bắc",
+    "Miền Trung",
+    "Miền Nam",
+    "Nước ngoài",
+  ];
 
+  // 👉 Toggle wishlist trên server
+  const handleFavoriteToggle = async (tourId) => {
+    if (!user?.token) {
+      toast.error("Bạn cần đăng nhập để dùng wishlist");
+      return;
+    }
+    try {
+      const res = await fetch("/api/wishlist/toggle", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ tourId }),
+      });
+      const data = await res.json();
+      setFavorites((prev) => {
+        const newSet = new Set(prev);
+        data.isFav ? newSet.add(tourId) : newSet.delete(tourId);
+        return newSet;
+      });
+    } catch (err) {
+      console.error("Error toggling wishlist:", err);
+    }
+  };
 
-  // Filter tours
-  React.useEffect(() => {
-    let result = tours;
+  useEffect(() => {
+    fetch("api/tours") // đổi nếu cần
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("Tours from API:", data);
+        setAllTours(data);
+        setFilteredTours(data);
+      })
+      .catch((err) => console.error("Error fetching tours:", err));
+  }, []);
 
-    // Filter by category
+  function normalizeVietnamese(str = "") {
+    return str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "D");
+  }
+
+  useEffect(() => {
+    let result = [...allTours];
+
+    // 🔹 Lọc theo vùng miền (region)
     if (selectedCategory !== "Tất cả") {
-      result = result.filter((tour) => tour.category === selectedCategory);
+      result = result.filter((tour) =>
+        tour?.locations?.some(
+          (loc) => loc?.region?.toLowerCase() === selectedCategory.toLowerCase()
+        )
+      );
     }
 
-    // Filter by search query
+    // 🔹 Lọc theo từ khóa (mô tả hoặc địa điểm)
     if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const normalizedQuery = normalizeVietnamese(query);
+
       result = result.filter((tour) =>
-        tour.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tour.highlights.some(h => h.toLowerCase().includes(searchQuery.toLowerCase()))
+        tour?.locations?.some((loc) =>
+          normalizeVietnamese(loc?.name?.toLowerCase()).includes(
+            normalizedQuery
+          )
+        )
       );
     }
 
     setFilteredTours(result);
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, allTours]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Hero Section */}
-      <div className="bg-[url('https://exmouthresort.net.au/wp-content/uploads/119079-56.jpg')] from-blue-600 to-purple-600 text-white py-16 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            🌏 Tour Có Sẵn
+    <div className="min-h-screen bg-gray-50 text-gray-800">
+      {/* 🌅 HERO */}
+      <div
+        className="relative bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage:
+            "url('https://res.cloudinary.com/dodkc8iuu/image/upload/v1759907602/pexels-qhung999-2965773_ktp4cg.jpg')",
+        }}
+      >
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="relative max-w-6xl mx-auto text-center py-20 px-4 text-white">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow">
+            Tour Có Sẵn
           </h1>
-          <p className="text-lg md:text-xl text-blue-100 mb-8">
-            Khám phá các tour du lịch chất lượng cao đã được thiết kế sẵn
+          <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto text-white/90">
+            Khám phá những hành trình du lịch độc đáo được chọn lọc dành riêng
+            cho bạn.
           </p>
 
-          {/* Search Bar */}
+          {/* 🔍 Search */}
           <div className="max-w-2xl mx-auto">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-black-500" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Tìm kiếm tour, địa điểm..."
-                className="w-full pl-12 pr-4 py-4 rounded-full text-gray-900 text-lg focus:ring-4 focus:ring-white/50 outline-none transition shadow-xl"
+                className="w-full pl-12 pr-4 py-3 rounded-full border border-gray-300 text-gray-800 focus:ring-2 focus:ring-[#02A0AA] focus:border-[#02A0AA] bg-white/95 shadow-md"
               />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Filter */}
-        <div className="mb-8">
+      {/* 🌿 MAIN */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="mb-10">
           <div className="flex items-center gap-3 mb-4">
-            <Filter className="w-5 h-5 text-gray-600" />
-            <h2 className="text-lg font-semibold text-gray-800">Lọc theo vùng</h2>
+            <Filter className="w-5 h-5 text-[#02A0AA]" />
+            <h2 className="text-lg font-semibold">Lọc theo vùng</h2>
           </div>
+
           <div className="flex flex-wrap gap-3">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-6 py-2 rounded-full font-medium transition-all ${
+                className={`px-6 py-2 rounded-full font-medium transition-all border ${
                   selectedCategory === cat
-                    ? "bg-[url('https://exmouthresort.net.au/wp-content/uploads/119079-56.jpg')] text-white shadow-lg scale-105"
-                    : "bg-white text-gray-700 border border-gray-300 hover:border-blue-500 hover:text-blue-600"
+                    ? "bg-[#02A0AA] text-white border-[#02A0AA]"
+                    : "bg-white text-gray-700 border-gray-300 hover:border-[#02A0AA] hover:text-[#02A0AA]"
                 }`}
               >
                 {cat}
@@ -89,58 +155,80 @@ export default function ToursPage() {
           </div>
         </div>
 
-        {/* Tours Grid */}
+        {/* Danh sách tour */}
         {filteredTours.length > 0 ? (
           <>
-            <div className="mb-6">
-              <p className="text-gray-600">
-                Tìm thấy <span className="font-semibold text-gray-900">{filteredTours.length}</span> tour
-              </p>
-            </div>
+            <p className="mb-6 text-gray-600">
+              Tìm thấy{" "}
+              <span className="font-semibold text-[#02A0AA]">
+                {filteredTours.length}
+              </span>{" "}
+              tour phù hợp
+            </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredTours.map((tour) => (
                 <TourCard
-                  key={tour.id}
-                  to={`/tours/${tour.id}`}
-                  id={tour.id}
-                  image={tour.image}
-                  title={tour.name}
-                  location={tour.destination || tour.departure}
-                  tags={tour.highlights?.slice(0, 3)}
-                  rating={tour.rating}
-                  reviews={tour.reviews}
-                  bookedText={`${Math.floor(Math.random() * 1000)} đã đặt`}
-                  priceFrom={tour.price}
-                  onFav={() => console.log('fav', tour.id)}
+                  key={tour._id || tour.id}
+                  id={tour._id}
+                  to={`/tours/${tour._id}`}
+                  image={tour.imageItems?.[0]?.imageUrl}
+                  title={tour.description}
+                  location={tour.locations?.[0]?.name || "Địa điểm"}
+                  tags={tour.tags}
+                  bookedText={`${tour.usageCount} Đã được đặt`}
+                  rating={tour.isRating}
+                  reviews={tour.isReview}
+                  priceFrom={tour.basePrice.toString()}
+                  originalPrice={tour.basePrice}
+                  isFav={favorites.has(tour._id)}
+                  onFav={() => handleFavoriteToggle(tour._id)}
                 />
               ))}
             </div>
           </>
         ) : (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-2xl font-semibold text-gray-800 mb-2">
+          <div className="text-center py-20">
+            <div className="text-6xl mb-4">😔</div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">
               Không tìm thấy tour nào
             </h3>
             <p className="text-gray-600">
-              Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc
+              Thử thay đổi từ khóa hoặc chọn vùng khác nhé!
             </p>
           </div>
         )}
+      </div>
 
-        {/* CTA */}
-        <div className="mt-16 bg-[url('https://exmouthresort.net.au/wp-content/uploads/119079-56.jpg')]  from-blue-600 to-purple-600 rounded-3xl p-8 text-center text-white">
-          <h2 className="text-3xl font-bold mb-3">Không tìm thấy tour phù hợp?</h2>
-          <p className="text-lg text-blue-100 mb-6">
-            Tự thiết kế hành trình độc đáo theo ý muốn của bạn
-          </p>
-          <Link
-            to="/"
-            className="inline-block bg-white text-blue-600 font-semibold px-8 py-4 rounded-full hover:bg-blue-50 transition-all hover:scale-105 shadow-xl"
-          >
-            🎨 Tạo tour ngay
-          </Link>
+      {/* 🌅 CTA SECTION */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div
+          className="relative mt-6 mb-14 bg-cover bg-center bg-no-repeat rounded-xl overflow-hidden shadow-md"
+          style={{
+            backgroundImage:
+              "url('https://res.cloudinary.com/dodkc8iuu/image/upload/v1759911917/pexels-efrem-efre-2786187-33820235_buyrxw.jpg')",
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-t from-[#02A0AA]/80 via-[#02A0AA]/40 to-transparent"></div>
+
+          <div className="relative flex flex-col items-center justify-center text-center text-white py-14 px-6 sm:px-8 md:px-10">
+            <h2 className="text-3xl md:text-4xl font-bold mb-3 leading-snug">
+              Hành trình của bạn bắt đầu từ đây
+            </h2>
+
+            <p className="text-base md:text-lg mb-6 max-w-xl text-white/95 leading-relaxed">
+              Không tìm thấy tour phù hợp? Hãy tự tạo tour theo phong cách riêng
+              của bạn – chọn điểm đến, thời gian và trải nghiệm mà bạn yêu
+              thích.
+            </p>
+
+            <Link
+              to="/"
+              className="inline-block bg-white text-[#000] font-semibold px-8 py-3 rounded-full shadow-lg hover:scale-105 hover:shadow-xl transition-all duration-300"
+            >
+              Tạo tour ngay
+            </Link>
+          </div>
         </div>
       </div>
     </div>

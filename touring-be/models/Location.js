@@ -4,6 +4,7 @@ const LocationSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     country: { type: String, default: "Vietnam" },
+    region: { type: String },
     coordinates: {
       lat: { type: Number, required: true },
       lng: { type: Number, required: true },
@@ -15,4 +16,3 @@ const LocationSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("Location", LocationSchema);
-
