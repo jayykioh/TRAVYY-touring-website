@@ -3,6 +3,8 @@ import { ChevronRight, ChevronLeft } from "lucide-react";
 import TourCard from "./TourCard";
 import { useAuth } from "../auth/context";
 import { toast, Toaster } from "sonner";
+import { optimizeImage } from "../utils/imageUrl";
+
 const TourPromotions = () => {
   const { user } = useAuth(); // 👈 lấy user.token
   const [currentTourSlide, setCurrentTourSlide] = useState(0);
@@ -25,19 +27,21 @@ const TourPromotions = () => {
     fetch("/api/wishlist", {
       headers: { Authorization: `Bearer ${user.token}` },
     })
-    .then((res) => res.json())
-    .then((res) => {
-  if (res.success) {
-    setFavorites(new Set(res.data.map((item) => String(item.tourId._id))));
-  }
-})
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.success) {
+          setFavorites(
+            new Set(res.data.map((item) => String(item.tourId._id)))
+          );
+        }
+      })
       .catch((err) => console.error("Error fetching wishlist:", err));
   }, [user]);
 
   // 👉 Toggle wishlist trên server
   const handleFavoriteToggle = async (tourId) => {
     if (!user?.token) {
-     toast.error("Bạn cần đăng nhập để dùng wishlist");
+      toast.error("Bạn cần đăng nhập để dùng wishlist");
       return;
     }
     try {
@@ -106,7 +110,7 @@ const TourPromotions = () => {
                   <TourCard
                     id={tour._id}
                     to={`/tours/${tour._id}`}
-                    image={tour.imageItems?.[0]?.imageUrl}
+                    image={optimizeImage(tour.imageItems?.[0]?.imageUrl, 800)}
                     title={tour.description}
                     location={tour.locations?.[0]?.name || "Địa điểm"}
                     tags={tour.tags}
@@ -124,7 +128,7 @@ const TourPromotions = () => {
           </div>
         </div>
       </div>
-       <Toaster richColors closeButton />
+      <Toaster richColors closeButton />
     </section>
   );
 };

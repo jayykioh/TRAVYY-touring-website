@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Filter, Search } from "lucide-react";
 import TourCard from "../components/TourCard";
 import { useAuth } from "../auth/context";
-
+import { optimizeImage } from "@/utils/imageUrl";
 export default function ToursPage() {
   const [allTours, setAllTours] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,7 +47,7 @@ export default function ToursPage() {
   };
 
   useEffect(() => {
-    fetch("api/tours") // đổi nếu cần
+    fetch("api/tours")
       .then((res) => res.json())
       .then((data) => {
         console.log("Tours from API:", data);
@@ -94,14 +94,17 @@ export default function ToursPage() {
     setFilteredTours(result);
   }, [searchQuery, selectedCategory, allTours]);
 
+  window.scrollTo({ top: 0, behavior: "smooth" });
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800">
       {/* 🌅 HERO */}
       <div
         className="relative bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage:
-            "url('https://res.cloudinary.com/dodkc8iuu/image/upload/v1759907602/pexels-qhung999-2965773_ktp4cg.jpg')",
+          backgroundImage: `url(${optimizeImage(
+            "https://res.cloudinary.com/dodkc8iuu/image/upload/v1759907602/pexels-qhung999-2965773_ktp4cg.jpg",
+            1920
+          )})`,
         }}
       >
         <div className="absolute inset-0 bg-black/20"></div>
@@ -172,7 +175,7 @@ export default function ToursPage() {
                   key={tour._id || tour.id}
                   id={tour._id}
                   to={`/tours/${tour._id}`}
-                  image={tour.imageItems?.[0]?.imageUrl}
+                  image={optimizeImage(tour.imageItems?.[0]?.imageUrl, 1400)}
                   title={tour.description}
                   location={tour.locations?.[0]?.name || "Địa điểm"}
                   tags={tour.tags}
@@ -205,11 +208,13 @@ export default function ToursPage() {
         <div
           className="relative mt-6 mb-14 bg-cover bg-center bg-no-repeat rounded-xl overflow-hidden shadow-md"
           style={{
-            backgroundImage:
-              "url('https://res.cloudinary.com/dodkc8iuu/image/upload/v1759911917/pexels-efrem-efre-2786187-33820235_buyrxw.jpg')",
+            backgroundImage: `url(${optimizeImage(
+              "https://res.cloudinary.com/dodkc8iuu/image/upload/v1759911917/pexels-efrem-efre-2786187-33820235_buyrxw.jpg",
+              1920
+            )})`,
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-t from-[#02A0AA]/80 via-[#02A0AA]/40 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t to-transparent"></div>
 
           <div className="relative flex flex-col items-center justify-center text-center text-white py-14 px-6 sm:px-8 md:px-10">
             <h2 className="text-3xl md:text-4xl font-bold mb-3 leading-snug">
