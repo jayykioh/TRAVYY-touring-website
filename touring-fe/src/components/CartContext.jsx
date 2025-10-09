@@ -30,42 +30,44 @@ export function CartProvider({ children }) {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isAuth, withAuth, replace]);
 
   // totals (tính trên FE từ snapshot giá)
-// ... giữ nguyên import & state
+  // ... giữ nguyên import & state
 
-// totals (tính trên FE từ snapshot giá)
-const totals = items.reduce(
-  (acc, it) => {
-    const line =
-      (Number(it.adultPrice) || 0) * (Number(it.adults) || 0) +
-      (Number(it.childPrice) || 0) * (Number(it.children) || 0);
+  // totals (tính trên FE từ snapshot giá)
+  const totals = items.reduce(
+    (acc, it) => {
+      const line =
+        (Number(it.adultPrice) || 0) * (Number(it.adults) || 0) +
+        (Number(it.childPrice) || 0) * (Number(it.children) || 0);
 
-    if (it.selected) {
-      acc.selected += line;
-      acc.cartCountSelected += 1;
-      acc.paxSelected += (Number(it.adults) || 0) + (Number(it.children) || 0);
+      if (it.selected) {
+        acc.selected += line;
+        acc.cartCountSelected += 1;
+        acc.paxSelected +=
+          (Number(it.adults) || 0) + (Number(it.children) || 0);
+      }
+
+      acc.all += line;
+      acc.cartCountAll += 1;
+      acc.paxAll += (Number(it.adults) || 0) + (Number(it.children) || 0);
+      return acc;
+    },
+    {
+      selected: 0,
+      all: 0,
+      cartCountAll: 0, // 👈 tổng số dòng trong giỏ
+      cartCountSelected: 0, // 👈 số dòng đã tick chọn
+      paxAll: 0, // tổng khách (người lớn + trẻ em) tất cả dòng
+      paxSelected: 0, // tổng khách của dòng đã chọn
     }
+  );
 
-    acc.all += line;
-    acc.cartCountAll += 1;
-    acc.paxAll += (Number(it.adults) || 0) + (Number(it.children) || 0);
-    return acc;
-  },
-  {
-    selected: 0,
-    all: 0,
-    cartCountAll: 0,        // 👈 tổng số dòng trong giỏ
-    cartCountSelected: 0,   // 👈 số dòng đã tick chọn
-    paxAll: 0,              // tổng khách (người lớn + trẻ em) tất cả dòng
-    paxSelected: 0,         // tổng khách của dòng đã chọn
-  }
-);
-
-// ... value = { loading, items, totals, replace }
-
+  // ... value = { loading, items, totals, replace }
 
   const value = {
     loading,

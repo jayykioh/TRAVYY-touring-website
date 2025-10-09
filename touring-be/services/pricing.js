@@ -1,31 +1,23 @@
 // services/pricing.js
-const Tour = require("../models/Tours"); // đường dẫn tới model Tour của bạn
+const Tour = require("../models/Tour");
 
-async function getPricesFor(tourId /* ObjectId */, date /* string */) {
-  const tour = await Tour.findById(tourId).select("basePrice currency title imageItems");
-  if (!tour) throw new Error("Tour not found");
+async function getPricesFor(tourId, date) {
+  if (!date) throw new Error("MISSING_DATE");
+  const tour = await Tour.findById(tourId).lean();
+  if (!tour) throw new Error("TOUR_NOT_FOUND");
 
-  const unitPriceAdult = tour.basePrice;
-  const unitPriceChild = Math.round((tour.basePrice || 0) * 0.5);
-  const currency = tour.currency || "VND";
-  return { unitPriceAdult, unitPriceChild, currency };
+  const dep = (tour.departures || []).find(d => d.date === String(date) && d.status === "open");
+  if (!dep) throw new Error("INVALID_DEPARTURE_DATE");
+
+  return { unitPriceAdult: dep.priceAdult, unitPriceChild: dep.priceChild };
 }
 
 async function getTourMeta(tourId) {
-  const tour = await Tour.findById(tourId).select("title imageItems");
-  if (!tour) return { name: "", image: "" };
+  const t = await Tour.findById(tourId).lean();
   return {
-    name: tour.title || "",
-    image: tour.imageItems?.[0]?.imageUrl || "",
+    name: t?.title || "",
+    image: t?.imageItems?.[0]?.imageUrl || "",
   };
 }
 
-async function calculateCartTotal(items /* Array<CartItem> */) {
-  let total = 0;
-  for (const it of items) {
-    total += (it.adults * (it.unitPriceAdult || 0)) + (it.children * (it.unitPriceChild || 0));
-  }
-  return total;
-}
-
-module.exports = { getPricesFor, getTourMeta, calculateCartTotal };
+module.exports = { getPricesFor, getTourMeta };

@@ -1,5 +1,4 @@
 import { AnimatePresence, motion } from "framer-motion";
-
 export default function CartBadge({ count }) {
   if (!count) return null;
   const display = count > 99 ? "99+" : count;

@@ -160,7 +160,10 @@ export default function ProfileInfo() {
 
       setSaving(true);
       try {
-        await withAuth("/api/profile/info", {
+        console.log("🔄 Updating profile...");
+        
+        // 1️⃣ Update profile
+        const updateResult = await withAuth("/api/profile/info", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -170,11 +173,30 @@ export default function ProfileInfo() {
             location: { provinceId, wardId, addressLine: addressLine.trim() },
           }),
         });
+        console.log("✅ Profile updated:", updateResult);
 
-        const freshUser = await withAuth("/api/profile/info");
-        setUser(freshUser);
+        // 2️⃣ Fetch fresh user from /api/auth/me để đồng bộ hoàn toàn
+        console.log("🔄 Fetching fresh user from /api/auth/me...");
+        const freshUser = await withAuth("/api/auth/me");
+        console.log("✅ Fresh user fetched:", freshUser);
+        
+        // ⚠️ QUAN TRỌNG: Phải gộp token vào user object
+        // Vì nhiều component khác (cart, wishlist, buy-now) cần user.token
+        setUser({ ...freshUser, token: user?.token });
+        
+        // 3️⃣ Reset form về baseline mới
+        setFormData({
+          name: freshUser?.name ?? "",
+          username: freshUser?.username ?? "",
+          phone: freshUser?.phone ?? "",
+          provinceId: String(freshUser?.location?.provinceId ?? ""),
+          wardId: String(freshUser?.location?.wardId ?? ""),
+          addressLine: freshUser?.location?.addressLine ?? "",
+        });
+        
         setPhoneError("");
         setUsernameError("");
+        console.log("✅ Profile save complete!");
         toast.success("Profile saved successfully!");
       } catch (err) {
         if (err?.status === 409 && err?.body?.error === "PHONE_TAKEN") {
@@ -197,7 +219,7 @@ export default function ProfileInfo() {
         setSaving(false);
       }
     },
-    [formData, phoneError, usernameError, withAuth, setUser]
+    [formData, phoneError, usernameError, withAuth, setUser, user?.token]
   );
 
   if (!user) return <div className="p-6">Loading...</div>;
