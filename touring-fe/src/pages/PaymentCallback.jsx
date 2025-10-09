@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/auth/context";
+import { useCart } from "@/hooks/useCart";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
@@ -9,6 +10,7 @@ export default function PaymentCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { refreshCart } = useCart(); // ✅ Add cart refresh
   const [status, setStatus] = useState("pending");
   const [message, setMessage] = useState("Đang xử lý thanh toán...");
   const [bookingId, setBookingId] = useState(null);
@@ -51,6 +53,8 @@ export default function PaymentCallback() {
             setStatus('success');
             setMessage('Thanh toán PayPal thành công!');
             setBookingId(data.bookingId);
+            // ✅ Refresh cart to remove purchased items
+            await refreshCart();
           } else {
             throw new Error('Không thể hoàn tất thanh toán');
           }
@@ -92,6 +96,8 @@ export default function PaymentCallback() {
                 setStatus('success');
                 setMessage('Thanh toán MoMo thành công!');
                 setBookingId(markData.bookingId);
+                // ✅ Refresh cart to remove purchased items
+                await refreshCart();
                 return;
               }
             } else {
@@ -123,6 +129,8 @@ export default function PaymentCallback() {
                   setStatus('success');
                   setMessage('Thanh toán MoMo thành công!');
                   setBookingId(d.booking._id);
+                  // ✅ Refresh cart to remove purchased items
+                  await refreshCart();
                   return;
                 }
               } else if (r.status === 202) {
@@ -154,7 +162,7 @@ export default function PaymentCallback() {
       setMessage('Thiếu tham số nhận kết quả thanh toán');
     };
     run();
-  }, [searchParams, user]);
+  }, [searchParams, user, refreshCart]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

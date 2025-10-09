@@ -57,7 +57,7 @@ const RegionSection = () => {
   };
 
   return (
-    <section className="py-12 bg-gray-50 relative">
+    <section className="py-12 relative">
       <div className="max-w-7xl mx-auto px-4">
         <div className="mb-12">
             <h2 className="text-3xl font-bold text-[#007980] mb-2">

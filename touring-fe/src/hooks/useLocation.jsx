@@ -11,7 +11,7 @@ export default function useLocationOptions(provinceId) {
     (async () => {
       try {
         setLoadingProvince(true);
-        const res = await fetch("/api/location/provinces", {
+        const res = await fetch("/api/vn/provinces", {
           headers: { Accept: "application/json" },
         });
         if (res.ok) setProvinces(await res.json());
@@ -33,7 +33,7 @@ export default function useLocationOptions(provinceId) {
       try {
         setLoadingWard(true);
         const res = await fetch(
-          `/api/location/wards?province_id=${provinceId}`,
+          `/api/vn/wards?province_id=${provinceId}`,
           { headers: { Accept: "application/json" } }
         );
         if (res.ok) setWards(await res.json());

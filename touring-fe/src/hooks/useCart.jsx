@@ -126,6 +126,22 @@ export function useCart() {
     }
   }
 
+  // ✅ Refresh cart from server (after payment, etc.)
+  async function refreshCart() {
+    if (!token) {
+      replace([]);
+      return;
+    }
+    try {
+      const res = await withAuth("/api/cart", { method: "GET" });
+      replace(res?.items || []);
+      console.log('[Cart] Refreshed cart:', res?.items?.length || 0, 'items');
+    } catch (e) {
+      console.error('[Cart] Failed to refresh cart:', e);
+      replace([]);
+    }
+  }
+
 async function selectOnlyByKey(tourId, date) {
   const res = await withAuth("/api/cart/select-only", {
     method: "POST",
@@ -147,8 +163,10 @@ async function selectOnlyByKey(tourId, date) {
       qty,
       toggleSelect,
       clearAll,
+      refreshCart,
       selectOnlyByKey
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [loading, items, totals]
   );
 }
