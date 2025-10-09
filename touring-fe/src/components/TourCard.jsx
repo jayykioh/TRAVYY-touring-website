@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Heart, Star } from "lucide-react";
+import { optimizeImage } from "../utils/imageUrl";
 
 export default function TourCard({
   id,
@@ -24,7 +25,7 @@ export default function TourCard({
       {/* Media */}
       <div className="relative aspect-[4/3] overflow-hidden">
         <img
-          src={image}
+          src={optimizeImage(image)}
           alt={title}
           loading="lazy"
           onError={(e) => {

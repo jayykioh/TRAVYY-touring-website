@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/context";
 import { Calendar, Users, Ticket, CreditCard, Loader2, Receipt } from "lucide-react";
+import { formatVND, formatCurrency } from "@/lib/utils";
 
 export default function BookingHistory() {
   const { user } = useAuth();
@@ -40,8 +41,6 @@ export default function BookingHistory() {
       hour: "2-digit",
       minute: "2-digit",
     });
-
-  const formatUSD = (n) => (typeof n === "number" ? `$${n.toFixed(2)}` : "$0.00");
 
   const statusUI = (status) => {
     switch (status) {
@@ -180,11 +179,8 @@ export default function BookingHistory() {
                                 </div>
                               </div>
                               <div className="mt-1 text-[12px] text-neutral-500">
-                                Giá {typeof item.unitPriceAdult === "number" ? `$${item.unitPriceAdult.toFixed(2)}` : "$0.00"}/người lớn
-                                {item.children > 0 &&
-                                  ` · ${
-                                    typeof item.unitPriceChild === "number" ? `$${item.unitPriceChild.toFixed(2)}` : "$0.00"
-                                  }/trẻ em`}
+                                Giá {formatVND(item.unitPriceAdult || 0)}/người lớn
+                                {item.children > 0 && ` · ${formatVND(item.unitPriceChild || 0)}/trẻ em`}
                               </div>
                             </div>
                           </div>
@@ -207,7 +203,10 @@ export default function BookingHistory() {
 
                         <div className="text-right">
                           <p className="text-base font-semibold tracking-tight" style={{ color: "#02A0AA" }}>
-                            {typeof booking.totalUSD === "number" ? `$${booking.totalUSD.toFixed(2)}` : "$0.00"}
+                            {formatCurrency(
+                              booking.totalVND || booking.totalUSD || 0, 
+                              booking.currency || 'VND'
+                            )}
                           </p>
                         </div>
                       </div>

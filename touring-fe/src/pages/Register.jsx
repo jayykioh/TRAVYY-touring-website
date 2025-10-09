@@ -144,58 +144,69 @@ export default function Register() {
   }
 
   async function onSubmit(e) {
-    e.preventDefault();
-    const errs = validate;
-    setErrors(errs);
-    if (Object.keys(errs).length) {
-      toast.error("Vui lòng sửa các lỗi trước khi đăng ký");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const payload = {
-        name: form.name.trim(),
-        username: form.username.trim(),
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-        phone: form.phone.trim(),
-        role: form.role,
-        provinceId: form.provinceId,
-        wardId: form.wardId,
-        addressLine: form.addressLine.trim(),
-      };
-
-      await axios.post(`/api/auth/register`, payload, {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      });
-
-      toast.success("Đăng ký thành công!");
-      navigate("/login", { replace: true });
-    } catch (error) {
-      const data = error.response?.data;
-      if (data?.error === "EMAIL_TAKEN") {
-        setErrors((e) => ({ ...e, email: "Email đã được sử dụng" }));
-        toast.error("Email đã được sử dụng");
-      } else if (data?.error === "PHONE_TAKEN") {
-        setErrors((e) => ({ ...e, phone: "Số điện thoại đã được sử dụng" }));
-        toast.error("Số điện thoại đã được sử dụng");
-      } else if (data?.error === "USERNAME_TAKEN") {
-        setErrors((e) => ({ ...e, username: "Username đã được sử dụng" }));
-        toast.error("Username đã được sử dụng");
-      } else if (data?.error === "VALIDATION_ERROR") {
-        toast.error(data.message || "Dữ liệu không hợp lệ");
-      } else {
-        toast.error(data?.message || "Đăng ký thất bại");
-      }
-    } finally {
-      setLoading(false);
-    }
+  e.preventDefault();
+  const errs = validate;
+  setErrors(errs);
+  if (Object.keys(errs).length) {
+    toast.error("Vui lòng sửa các lỗi trước khi đăng ký");
+    return;
   }
+
+  setLoading(true);
+  try {
+    const payload = {
+      name: form.name.trim(),
+      username: form.username.trim(),
+      email: form.email.trim().toLowerCase(),
+      password: form.password,
+      phone: form.phone.trim(),
+      role: form.role,
+      provinceId: form.provinceId,
+      wardId: form.wardId,
+      addressLine: form.addressLine.trim(),
+    };
+
+    // 1. Đăng ký user
+    await axios.post(`/api/auth/register`, payload, {
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+
+    // 2. Gọi notify để gửi email chào mừng
+    try {
+      await axios.post(`/api/notify/register`, {
+        email: payload.email,
+        fullName: payload.name,
+      });
+    } catch (notifyErr) {
+      console.error("Không gửi được email chào mừng:", notifyErr);
+    }
+
+    toast.success("Đăng ký thành công!");
+    navigate("/login", { replace: true });
+  } catch (error) {
+    const data = error.response?.data;
+    if (data?.error === "EMAIL_TAKEN") {
+      setErrors((e) => ({ ...e, email: "Email đã được sử dụng" }));
+      toast.error("Email đã được sử dụng");
+    } else if (data?.error === "PHONE_TAKEN") {
+      setErrors((e) => ({ ...e, phone: "Số điện thoại đã được sử dụng" }));
+      toast.error("Số điện thoại đã được sử dụng");
+    } else if (data?.error === "USERNAME_TAKEN") {
+      setErrors((e) => ({ ...e, username: "Username đã được sử dụng" }));
+      toast.error("Username đã được sử dụng");
+    } else if (data?.error === "VALIDATION_ERROR") {
+      toast.error(data.message || "Dữ liệu không hợp lệ");
+    } else {
+      toast.error(data?.message || "Đăng ký thất bại");
+    }
+  } finally {
+    setLoading(false);
+  }
+}
 
   return (
     <div className="min-h-screen w-full relative flex items-center justify-center p-4 overflow-hidden">

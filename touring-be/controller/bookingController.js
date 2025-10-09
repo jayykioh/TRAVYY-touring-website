@@ -123,3 +123,6 @@ exports.getUserBookings = async (req, res) => {
     res.status(500).json({ error: "FETCH_BOOKINGS_FAILED" });
   }
 };
+
+// NOTE: getBookingByPayment has been moved to payment.controller.js
+// for unified handling of both MoMo and PayPal payment callbacks
