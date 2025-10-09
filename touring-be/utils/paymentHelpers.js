@@ -11,17 +11,25 @@ const FX_VND_USD = Number(process.env.FX_VND_USD || 0.000039);
 
 // ===== UNIFIED HELPER: Clear cart after payment =====
 async function clearCartAfterPayment(userId, mode) {
+  console.log(`[Payment] clearCartAfterPayment called - userId: ${userId}, mode: ${mode}`);
+  
   if (mode === 'cart') {
     try {
       const cart = await Cart.findOne({ userId });
+      console.log(`[Payment] Cart found:`, cart ? `ID=${cart._id}` : 'null');
+      
       if (cart) {
         const delRes = await CartItem.deleteMany({ cartId: cart._id, selected: true });
-        console.log(`[Payment] Cleared ${delRes.deletedCount} cart items after successful payment.`);
+        console.log(`[Payment] ✅ Cleared ${delRes.deletedCount} selected cart items after successful payment.`);
         return delRes.deletedCount;
+      } else {
+        console.log(`[Payment] No cart found for userId: ${userId}`);
       }
     } catch (clrErr) {
-      console.warn('[Payment] Failed to clear cart items post-payment', clrErr);
+      console.error('[Payment] ❌ Failed to clear cart items post-payment', clrErr);
     }
+  } else {
+    console.log(`[Payment] Skip clearing cart - mode is '${mode}' (not 'cart')`);
   }
   return 0;
 }
