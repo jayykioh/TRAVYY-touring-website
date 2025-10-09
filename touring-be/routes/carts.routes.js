@@ -19,6 +19,7 @@ router.post("/", authJwt, addToCart);
 router.put("/:itemId", authJwt, updateCartItem);
 router.delete("/:itemId", authJwt, deleteCartItem);
 router.delete("/", authJwt, clearCart);
-
+// router.post("/coupon", authJwt, applyCartCoupon);
+// router.delete("/coupon", authJwt, clearCartCoupon);
 
 module.exports = router;
