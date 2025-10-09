@@ -7,7 +7,7 @@ import { useLocation } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
-export default function CheckoutForm() {
+export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemProp, summaryItems = [], totalAmount }) {
   const { user } = useAuth() || {};
   const accessToken = user?.token; // hoặc user?.accessToken
 
@@ -19,8 +19,9 @@ export default function CheckoutForm() {
   const location = useLocation();
 
   // ⬇️ FIX: Default "cart" nếu không có state
-  const mode = location.state?.mode || "cart";
-  const buyNowItem = mode === "buy-now" ? location.state?.item : null;
+  // Prefer props (BookingPage passes them); fall back to location.state for backward compatibility.
+  const mode = modeProp || location.state?.mode || "cart";
+  const buyNowItem = mode === "buy-now" ? (buyNowItemProp || location.state?.item) : null;
 
   console.log("🔍 CheckoutForm loaded:");
   console.log("   location.state:", location.state);
@@ -115,6 +116,7 @@ export default function CheckoutForm() {
     const selectedWard = wards.find((w) => w.id === selectedId);
     setUserInfo((prev) => ({ ...prev, wardId: selectedId, wardName: selectedWard?.name || "" }));
   };
+  // (Removed stray 'mode,' token that caused syntax error)
 
   const handleSaveInfo = async () => {
     if (!accessToken) { setIsDialogOpen(false); return; }
@@ -206,18 +208,23 @@ export default function CheckoutForm() {
           body: JSON.stringify(payload),
         });
 
+        let respJson = null;
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Tạo đơn hàng thất bại");
+          respJson = await response.json().catch(()=>({}));
+          console.error("🚫 PayPal create-order failed", respJson);
+          // Hiển thị chi tiết debug nếu backend gửi
+          const reason = respJson?.error || respJson?.name || 'Tạo đơn hàng thất bại';
+          throw new Error(reason);
         }
 
-        const { orderID } = await response.json();
+        respJson = await response.json();
+        const { orderID } = respJson || {};
 
         if (!orderID) {
           throw new Error("Không nhận được orderID từ server");
         }
 
-        console.log("✅ Order created, redirecting to PayPal:", orderID);
+        console.log("✅ Order created, redirecting to PayPal:", orderID, respJson);
 
         // Redirect đến PayPal (không reset isProcessingPayment vì sẽ redirect)
         const paypalUrl = `https://www.sandbox.paypal.com/checkoutnow?token=${orderID}`;
@@ -230,7 +237,64 @@ export default function CheckoutForm() {
       }
       // ⬅️ KHÔNG CÓ finally ở đây vì sẽ redirect
     } else if (selectedPayment === "momo") {
-      alert("Chức năng thanh toán MoMo đang phát triển");
+      try {
+        setIsProcessingPayment(true);
+        // Use authoritative total from props; fallback to recompute from summaryItems; final fallback: location.state.totalAmount
+        let amount = Number(totalAmount);
+        if (!Number.isFinite(amount) || amount <= 0) {
+          amount = summaryItems.reduce((s,it)=> s + (Number(it.price)||0), 0);
+        }
+        if (!Number.isFinite(amount) || amount <= 0) {
+          amount = Number(location.state?.totalAmount);
+        }
+
+        if (!Number.isFinite(amount) || amount <= 0) {
+          alert("Không có số tiền hợp lệ để thanh toán MoMo");
+          setIsProcessingPayment(false);
+          return;
+        }
+
+        // Prepare item snapshot (trim to essentials for backend persistence / audit)
+        const itemsSnapshot = summaryItems.map(it => ({
+          name: it.name,
+            price: Number(it.price)||0,
+            originalPrice: Number(it.originalPrice)||undefined,
+        }));
+
+        console.log("🚀 Creating MoMo payment", { amount, itemsSnapshot });
+        const res = await fetch(`${API_BASE}/api/payments/momo`, {
+          method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              amount,
+              orderInfo: "Thanh toán đơn tour Travyy",
+              // Unified callback page for both PayPal & MoMo
+              redirectUrl: `${window.location.origin}/payment/callback`,
+              // Persist mode so backend knows whether to clear selected cart items
+              mode,
+              // For buy-now, also send the single item detail (backend can choose to persist)
+              ...(mode === "buy-now" && buyNowItem ? { item: buyNowItem } : {}),
+              items: itemsSnapshot,
+            }),
+        });
+        const data = await res.json().catch(() => ({}));
+        console.log("MoMo response:", data);
+        if (!res.ok || !data?.payUrl) {
+          alert("Tạo phiên thanh toán MoMo thất bại");
+          setIsProcessingPayment(false);
+          return;
+        }
+        // Redirect sang MoMo
+        window.location.href = data.payUrl;
+      } catch (err) {
+        console.error("MoMo error", err);
+        alert("Lỗi MoMo: " + (err.message || "Unknown"));
+        setIsProcessingPayment(false);
+      }
     }
   };
 

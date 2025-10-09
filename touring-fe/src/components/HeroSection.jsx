@@ -7,7 +7,7 @@ import {
   Clock,
   PlayCircle,
 } from "lucide-react";
-
+import { optimizeImage } from "../utils/imageUrl";
 const TourHeroSection = () => {
   const [activeSlide, setActiveSlide] = useState(0);
   const [imageLoaded, setImageLoaded] = useState({});
@@ -22,7 +22,7 @@ const TourHeroSection = () => {
           "https://banahills.sunworld.vn/wp-content/uploads/2024/04/DJI_0004-1-scaled.jpg",
         desktop:
           "https://banahills.sunworld.vn/wp-content/uploads/2024/04/DJI_0004-1-scaled.jpg",
-        webp: "https://banahills.sunworld.vn/wp-content/uploads/2024/04/DJI_0004-1-scaled.jpg", 
+        webp: "https://banahills.sunworld.vn/wp-content/uploads/2024/04/DJI_0004-1-scaled.jpg",
       },
       location: "Đà Nẵng, Việt Nam",
       title: "Ba Na Hills & Cầu Vàng",
@@ -41,8 +41,8 @@ const TourHeroSection = () => {
         tablet:
           "https://static.vinwonders.com/production/wkxKquWj-nha-co-hoi-an.jpg",
         desktop:
-            "https://static.vinwonders.com/production/wkxKquWj-nha-co-hoi-an.jpg",
-          webp: "https://static.vinwonders.com/production/wkxKquWj-nha-co-hoi-an.jpg",
+          "https://static.vinwonders.com/production/wkxKquWj-nha-co-hoi-an.jpg",
+        webp: "https://static.vinwonders.com/production/wkxKquWj-nha-co-hoi-an.jpg",
       },
       location: "Hội An, Quảng Nam, Việt Nam",
       title: "Phố cổ Hội An & Đêm đèn lồng",
@@ -114,7 +114,7 @@ const TourHeroSection = () => {
         type="image/jpeg"
       />
       <img
-        src={slide.images.desktop}
+        src={optimizeImage(slide.images.desktop)}
         alt={slide.location}
         className={`w-full h-full object-cover transition-all duration-700 ease-out ${
           imageLoaded[slide.id] ? "opacity-100" : "opacity-0"

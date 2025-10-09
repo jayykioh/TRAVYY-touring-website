@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Heart,
@@ -18,6 +18,7 @@ import { createPortal } from "react-dom";
 import { toast, Toaster } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import LocationCard from "../components/LocationCard";
+import { optimizeImage } from "@/utils/imageUrl";
 
 export default function TourDetailPage() {
   const { id: routeId } = useParams();
@@ -216,6 +217,8 @@ export default function TourDetailPage() {
       toast.error("Phải có ít nhất 1 người lớn");
       return;
     }
+    // Gửi thêm snapshot giá để trang checkout có thể tạo phiên MoMo chính xác
+    const snapshotSubtotal = priceAdult * qtyAdult + priceChild * qtyChild;
     navigate("/booking", {
       state: {
         mode: "buy-now",
@@ -224,6 +227,12 @@ export default function TourDetailPage() {
           date: selectedDate,
           adults: qtyAdult,
           children: qtyChild,
+          priceAdult, // giá người lớn tại thời điểm chọn
+          priceChild, // giá trẻ em tại thời điểm chọn
+          originalAdult, // giá gốc người lớn (nếu có) để hiển thị/giảm giá
+          subtotal: snapshotSubtotal,
+          originalSubtotal: originalSubtotal || null,
+          discountPercent: discountPercent || null,
         },
       },
     });
@@ -417,27 +426,28 @@ export default function TourDetailPage() {
           <div className="grid grid-cols-4 gap-2 mb-6">
             <div className="col-span-4 md:col-span-2 relative">
               <img
-                src={tour.imageItems?.[0]?.imageUrl}
-                alt={tour.title}
+                src={optimizeImage(tour.imageItems?.[0]?.imageUrl, 1920)}
                 className="w-full h-64 md:h-80 object-cover rounded-2xl"
                 onClick={() => setOpenGallery(true)}
               />
             </div>
             <div className="col-span-2 md:col-span-1 grid grid-rows-2 gap-2">
               <img
-                src={
+                src={optimizeImage(
                   tour.imageItems?.[1]?.imageUrl ||
-                  tour.imageItems?.[0]?.imageUrl
-                }
+                    tour.imageItems?.[0]?.imageUrl,
+                  1920
+                )}
                 alt="Gallery 1"
                 className="w-full h-32 md:h-39 object-cover rounded-2xl"
                 onClick={() => setOpenGallery(true)}
               />
               <img
-                src={
+                src={optimizeImage(
                   tour.imageItems?.[2]?.imageUrl ||
-                  tour.imageItems?.[0]?.imageUrl
-                }
+                    tour.imageItems?.[0]?.imageUrl,
+                  1920
+                )}
                 alt="Gallery 2"
                 className="w-full h-32 md:h-39 object-cover rounded-2xl"
                 onClick={() => setOpenGallery(true)}
@@ -445,20 +455,22 @@ export default function TourDetailPage() {
             </div>
             <div className="col-span-2 md:col-span-1 grid grid-rows-2 gap-2">
               <img
-                src={
+                src={optimizeImage(
                   tour.imageItems?.[3]?.imageUrl ||
-                  tour.imageItems?.[0]?.imageUrl
-                }
+                    tour.imageItems?.[0]?.imageUrl,
+                  1920
+                )}
                 alt="Gallery 3"
                 className="w-full h-32 md:h-39 object-cover rounded-2xl"
                 onClick={() => setOpenGallery(true)}
               />
               <div className="relative">
                 <img
-                  src={
+                  src={optimizeImage(
                     tour.imageItems?.[4]?.imageUrl ||
-                    tour.imageItems?.[0]?.imageUrl
-                  }
+                      tour.imageItems?.[0]?.imageUrl,
+                    1920
+                  )}
                   alt="Gallery 4"
                   className="w-full h-32 md:h-39 object-cover rounded-2xl"
                   onClick={() => setOpenGallery(true)}
@@ -712,7 +724,6 @@ function BookingSidebar({
   // action
   onAdd,
   onBuyNow,
-
 }) {
   const hasDates = Array.isArray(openDeps) && openDeps.length > 0;
   const canAddChild = qtyAdult > 0;
@@ -939,23 +950,41 @@ function RelatedTours({ tours }) {
 
 function ImageGalleryModal({ images, onClose }) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  if (!images?.length) return null;
+  const hasImages = Array.isArray(images) && images.length > 0;
 
-  const prevImage = () =>
+  const prevImage = useCallback(() => {
+    if (!hasImages) return;
     setCurrentIndex((i) => (i === 0 ? images.length - 1 : i - 1));
-  const nextImage = () =>
-    setCurrentIndex((i) => (i === images.length - 1 ? 0 : i + 1));
-  const goToImage = (i) => setCurrentIndex(i);
+  }, [hasImages, images]);
 
-  useEffect(() => {
-    const handleKey = (e) => {
+  const nextImage = useCallback(() => {
+    if (!hasImages) return;
+    setCurrentIndex((i) => (i === images.length - 1 ? 0 : i + 1));
+  }, [hasImages, images]);
+
+  const goToImage = useCallback(
+    (i) => {
+      if (!hasImages) return;
+      setCurrentIndex(i);
+    },
+    [hasImages]
+  );
+
+  const handleKey = useCallback(
+    (e) => {
       if (e.key === "ArrowLeft") prevImage();
       if (e.key === "ArrowRight") nextImage();
       if (e.key === "Escape") onClose();
-    };
+    },
+    [prevImage, nextImage, onClose]
+  );
+
+  useEffect(() => {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, []);
+  }, [handleKey]);
+
+  if (!hasImages) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm">

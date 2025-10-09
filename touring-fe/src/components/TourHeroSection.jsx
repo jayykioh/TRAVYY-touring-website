@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ChevronLeft, ChevronRight, MapPin, Star, Clock, PlayCircle } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  Star,
+  Clock,
+  PlayCircle,
+} from "lucide-react";
 import { heroSlides } from "../mockdata/heroData";
 import VideoModal from "./VideoModal";
+import { optimizeImage } from "../utils/imageUrl";
 
 export default function TourHeroSection() {
   const [activeSlide, setActiveSlide] = useState(0);
@@ -39,14 +47,27 @@ export default function TourHeroSection() {
     },
     [activeSlide, isTransitioning]
   );
-  const nextSlide = useCallback(() => changeSlide((activeSlide + 1) % heroSlides.length), [activeSlide, changeSlide]);
-  const prevSlide = useCallback(() => changeSlide((activeSlide - 1 + heroSlides.length) % heroSlides.length), [activeSlide, changeSlide]);
-  const goToSlide  = useCallback((i) => i !== activeSlide && changeSlide(i), [activeSlide, changeSlide]);
+  const nextSlide = useCallback(
+    () => changeSlide((activeSlide + 1) % heroSlides.length),
+    [activeSlide, changeSlide]
+  );
+  const prevSlide = useCallback(
+    () =>
+      changeSlide((activeSlide - 1 + heroSlides.length) % heroSlides.length),
+    [activeSlide, changeSlide]
+  );
+  const goToSlide = useCallback(
+    (i) => i !== activeSlide && changeSlide(i),
+    [activeSlide, changeSlide]
+  );
 
   /* ========== SWIPE ========== */
-  const onTouchStart = (e) => { setTouchEnd(null); setTouchStart(e.targetTouches[0].clientX); };
-  const onTouchMove  = (e) => setTouchEnd(e.targetTouches[0].clientX);
-  const onTouchEnd   = () => {
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+  const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+  const onTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
     const d = touchStart - touchEnd;
     if (d > 50) nextSlide();
@@ -58,7 +79,10 @@ export default function TourHeroSection() {
     const onKey = (e) => {
       if (e.key === "ArrowLeft") prevSlide();
       if (e.key === "ArrowRight") nextSlide();
-      if (e.key === " ") { e.preventDefault(); setIsAutoPlay((v) => !v); }
+      if (e.key === " ") {
+        e.preventDefault();
+        setIsAutoPlay((v) => !v);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -68,29 +92,38 @@ export default function TourHeroSection() {
 
   const current = heroSlides[activeSlide];
   const totalReviews = heroSlides.reduce((s, x) => s + x.reviews, 0);
-  const avgRating = (heroSlides.reduce((s, x) => s + x.rating, 0) / heroSlides.length).toFixed(1);
+  const avgRating = (
+    heroSlides.reduce((s, x) => s + x.rating, 0) / heroSlides.length
+  ).toFixed(1);
 
   return (
     <section
       // h-[30rem] ≈ "120" trên thang 4px; tăng ở md/lg nếu muốn
       className="relative h-[30rem] md:h-[34rem] lg:h-[36rem] overflow-hidden"
-      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
-      onMouseEnter={() => setIsAutoPlay(false)} onMouseLeave={() => setIsAutoPlay(true)}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onMouseEnter={() => setIsAutoPlay(false)}
+      onMouseLeave={() => setIsAutoPlay(true)}
     >
       {/* Slides */}
       <div className="absolute inset-0">
         {heroSlides.map((slide, index) => (
           <div
             key={slide.id}
-            className={`absolute inset-0 transition-opacity duration-500 ${index === activeSlide ? "opacity-100 z-10" : "opacity-0 z-0"}`}
+            className={`absolute inset-0 transition-opacity duration-500 ${
+              index === activeSlide ? "opacity-100 z-10" : "opacity-0 z-0"
+            }`}
             aria-hidden={index !== activeSlide}
           >
             <img
-              src={slide.images.desktop}
+              src={optimizeImage(slide.images.desktop)}
               alt={slide.title}
               className={`w-full h-full object-cover transition-transform duration-[3000ms] ease-out
                           ${index === activeSlide ? "scale-110" : "scale-105"}
-                          ${imageLoaded[slide.id] ? "opacity-100" : "opacity-0"} transition-opacity`}
+                          ${
+                            imageLoaded[slide.id] ? "opacity-100" : "opacity-0"
+                          } transition-opacity`}
               onLoad={() => handleImageLoad(slide.id)}
               loading={index <= 1 ? "eager" : "lazy"}
               decoding="async"
@@ -107,7 +140,8 @@ export default function TourHeroSection() {
         className="group absolute top-1/2 -translate-y-1/2 left-4 z-30 rounded-full p-2.5
                    bg-white/10 border border-white/20 backdrop-blur-md text-white shadow-md
                    hover:bg-white/15 hover:border-white/30 active:scale-95 transition-all disabled:opacity-50"
-        aria-label="Slide trước">
+        aria-label="Slide trước"
+      >
         <ChevronLeft className="w-5 h-5" />
       </button>
       <button
@@ -116,7 +150,8 @@ export default function TourHeroSection() {
         className="group absolute top-1/2 -translate-y-1/2 right-4 z-30 rounded-full p-2.5
                    bg-white/10 border border-white/20 backdrop-blur-md text-white shadow-md
                    hover:bg-white/15 hover:border-white/30 active:scale-95 transition-all disabled:opacity-50"
-        aria-label="Slide tiếp">
+        aria-label="Slide tiếp"
+      >
         <ChevronRight className="w-5 h-5" />
       </button>
 
@@ -124,15 +159,21 @@ export default function TourHeroSection() {
       <div className="absolute inset-0 z-20 flex items-center justify-center p-4">
         <div className="w-full max-w-4xl text-center text-white">
           {/* location chip */}
-          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5
-                          bg-white/10 border border-white/20 backdrop-blur-md">
+          <div
+            className="inline-flex items-center gap-2 rounded-full px-4 py-1.5
+                          bg-white/10 border border-white/20 backdrop-blur-md"
+          >
             <MapPin className="w-4 h-4" />
-            <span className="text-xs md:text-sm font-medium tracking-wide">{current.location}</span>
+            <span className="text-xs md:text-sm font-medium tracking-wide">
+              {current.location}
+            </span>
           </div>
 
           {/* title */}
-          <h1 className="mt-4 font-extrabold leading-[1.1] tracking-tight
-                         text-3xl md:text-5xl lg:text-6xl drop-shadow">
+          <h1
+            className="mt-4 font-extrabold leading-[1.1] tracking-tight
+                         text-3xl md:text-5xl lg:text-6xl drop-shadow"
+          >
             {current.title}
           </h1>
 
@@ -144,9 +185,11 @@ export default function TourHeroSection() {
           {/* Chips độc đáo: rating/duration/category — khác CTA */}
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
             {/* rating */}
-            <div className="group flex items-center gap-2 rounded-full px-4 py-2
+            <div
+              className="group flex items-center gap-2 rounded-full px-4 py-2
                             bg-gradient-to-r from-amber-500/25 to-pink-500/25
-                            border border-white/20 backdrop-blur-md shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+                            border border-white/20 backdrop-blur-md shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+            >
               <div className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-400/90 text-black font-bold text-xs">
                 {current.rating}
               </div>
@@ -156,18 +199,24 @@ export default function TourHeroSection() {
             </div>
 
             {/* duration */}
-            <div className="flex items-center gap-2 rounded-full px-4 py-2
+            <div
+              className="flex items-center gap-2 rounded-full px-4 py-2
                             bg-gradient-to-r from-indigo-500/20 to-cyan-500/20
-                            border border-white/20 backdrop-blur-md">
+                            border border-white/20 backdrop-blur-md"
+            >
               <Clock className="w-4 h-4" />
               <span className="text-xs md:text-sm">{current.duration}</span>
             </div>
 
             {/* category */}
-            <div className="flex items-center gap-2 rounded-full px-4 py-2
+            <div
+              className="flex items-center gap-2 rounded-full px-4 py-2
                             bg-gradient-to-r from-emerald-500/20 to-teal-500/20
-                            border border-white/20 backdrop-blur-md">
-              <span className="text-xs md:text-sm font-medium">{current.category}</span>
+                            border border-white/20 backdrop-blur-md"
+            >
+              <span className="text-xs md:text-sm font-medium">
+                {current.category}
+              </span>
             </div>
           </div>
 
@@ -178,17 +227,22 @@ export default function TourHeroSection() {
               className="inline-flex items-center justify-center rounded-full
                          bg-white/90 text-gray-900 hover:bg-white
                          px-6 py-2.5 text-sm md:text-base font-semibold
-                         shadow-lg hover:shadow-xl active:scale-95 transition">
+                         shadow-lg hover:shadow-xl active:scale-95 transition"
+            >
               Đặt tour {current.price}
             </a>
 
             <button
-              onClick={() => { setVideoUrl(current.videoUrl); setShowVideo(true); }}
+              onClick={() => {
+                setVideoUrl(current.videoUrl);
+                setShowVideo(true);
+              }}
               className="inline-flex items-center justify-center gap-2 rounded-full
                          bg-transparent text-white
                          border border-white/30 hover:border-white/50
                          px-6 py-2.5 text-sm md:text-base font-medium
-                         backdrop-blur-md hover:bg-white/10 active:scale-95 transition">
+                         backdrop-blur-md hover:bg-white/10 active:scale-95 transition"
+            >
               <PlayCircle className="w-5 h-5" />
               <span>Xem video</span>
             </button>
@@ -206,14 +260,21 @@ export default function TourHeroSection() {
               disabled={isTransitioning}
               aria-label={`Đi đến slide ${i + 1}`}
               className={`h-2 rounded-full transition-all duration-300 focus:outline-none
-                ${i === activeSlide ? "bg-white w-5" : "bg-white/70 hover:bg-white w-2.5"}`}
+                ${
+                  i === activeSlide
+                    ? "bg-white w-5"
+                    : "bg-white/70 hover:bg-white w-2.5"
+                }`}
             />
           ))}
         </div>
       </div>
 
       {/* Modal */}
-      <VideoModal videoUrl={showVideo ? videoUrl : null} onClose={() => setShowVideo(false)} />
+      <VideoModal
+        videoUrl={showVideo ? videoUrl : null}
+        onClose={() => setShowVideo(false)}
+      />
     </section>
   );
 }
