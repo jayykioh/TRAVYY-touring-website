@@ -1,5 +1,5 @@
 // controller/payment.controller.js
-// Simple MoMo Sandbox integration (Capture Wallet)
+// Unified payment controller for MoMo and PayPal
 // NOTE (prod): Verify amount server-side (recompute from cart/quote), persist order BEFORE redirect,
 // verify signature on redirect & IPN, reconcile idempotently, update booking status.
 
@@ -10,8 +10,12 @@ const Booking = require("../models/Bookings");
 const Tour = require("../models/Tours");
 const { Cart, CartItem } = require("../models/Carts");
 
-// FX rate (fallback) for VND->USD conversion
-const FX_VND_USD = Number(process.env.FX_VND_USD || 0.000039);
+// Import unified helpers
+const { clearCartAfterPayment, createBookingFromSession, FX_VND_USD } = require("../utils/paymentHelpers");
+
+// Export helpers for use in other controllers
+module.exports.clearCartAfterPayment = clearCartAfterPayment;
+module.exports.createBookingFromSession = createBookingFromSession;
 
 // Attempt to get a fetch implementation (Node 18+ has global fetch)
 async function getFetch() {
@@ -41,21 +45,90 @@ function buildRawSignature(payload) {
   ].join("&");
 }
 
+// ===== Helpers similar to PayPal buildCharge =====
+const normDate = (s) => String(s || "").slice(0,10);
+const clamp0 = (n) => Math.max(0, Number(n)||0);
+
+async function getPricesAndMeta(tourId, date) {
+  const t = await Tour.findById(tourId).lean();
+  if (!t) throw Object.assign(new Error("TOUR_NOT_FOUND"), { status: 404 });
+  const dep = (t.departures || []).find(d => normDate(d?.date) === date);
+  const unitPriceAdult = typeof dep?.priceAdult === 'number' ? dep.priceAdult : (typeof t.basePrice === 'number' ? t.basePrice : 0);
+  const unitPriceChild = typeof dep?.priceChild === 'number' ? dep.priceChild : Math.round((unitPriceAdult||0)*0.5);
+  return {
+    name: t.title || t.name || '',
+    image: t.imageItems?.[0]?.imageUrl || t.image || '',
+    unitPriceAdult,
+    unitPriceChild,
+  };
+}
+
+async function buildMoMoCharge(userId, body) {
+  const mode = body?.mode;
+  if (mode === 'cart') {
+    const cart = await Cart.findOne({ userId });
+    if (!cart) return { items: [], totalVND: 0, mode };
+    const lines = await CartItem.find({ cartId: cart._id, selected: true });
+    const items = [];
+    let totalVND = 0;
+    for (const line of lines) {
+      const { name, image, unitPriceAdult, unitPriceChild } = await getPricesAndMeta(line.tourId, normDate(line.date));
+      const a = clamp0(line.adults);
+      const c = clamp0(line.children);
+      const amt = unitPriceAdult*a + unitPriceChild*c;
+      totalVND += amt;
+      items.push({
+        name,
+        price: amt,
+        originalPrice: undefined,
+        tourId: line.tourId,
+        meta: { date: normDate(line.date), adults: a, children: c, unitPriceAdult, unitPriceChild, image },
+      });
+    }
+    return { items, totalVND, mode };
+  }
+  if (mode === 'buy-now') {
+    const inc = body?.item || {};
+    const tourId = inc.tourId || inc.id;
+    const date = normDate(inc.date);
+    if (!tourId || !date) throw Object.assign(new Error('INVALID_BUY_NOW'), { status: 400 });
+    const { name, image, unitPriceAdult, unitPriceChild } = await getPricesAndMeta(tourId, date);
+    const a = clamp0(inc.adults);
+    const c = clamp0(inc.children);
+    const amt = unitPriceAdult*a + unitPriceChild*c;
+    return {
+      items: [{
+        name,
+        price: amt,
+        originalPrice: undefined,
+        tourId,
+        meta: { date, adults: a, children: c, unitPriceAdult, unitPriceChild, image },
+      }],
+      totalVND: amt,
+      mode,
+    };
+  }
+  // fallback: empty
+  return { items: [], totalVND: Number(body?.amount)||0, mode: mode || 'cart' };
+}
+
 exports.createMoMoPayment = async (req, res) => {
   try {
     const {
-      amount,
       orderInfo = "Thanh toan don tour",
       redirectUrl,
       ipnUrl,
       extraData = "",
       items = [], // snapshot optional
+      mode, // 'cart' | 'buy-now'
+      item: buyNowItem,
     } = req.body || {};
 
-    const amt = Number(amount);
-    if (!Number.isFinite(amt) || amt <= 0) {
-      return res.status(400).json({ error: "INVALID_AMOUNT" });
-    }
+    // Authoritatively recompute amount from server-side state
+    const userId = req.user?.sub || req.user?._id;
+    const { items: serverItems, totalVND } = await buildMoMoCharge(userId, { mode, item: buyNowItem });
+    const amt = Number(totalVND);
+    if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'INVALID_AMOUNT' });
 
     // ENV configuration (provide defaults for sandbox testing)
     const partnerCode = process.env.MOMO_PARTNER_CODE || "MOMO"; // sample: MOMO
@@ -143,7 +216,8 @@ exports.createMoMoPayment = async (req, res) => {
         requestId,
         amount: amt,
         status: "pending",
-        items: (Array.isArray(items) ? items : []).map((it) => ({
+        mode: mode || (buyNowItem ? 'buy-now' : 'cart'),
+        items: (Array.isArray(serverItems) ? serverItems : []).map((it) => ({
           name: it.name,
           price: Number(it.price) || 0,
           originalPrice: Number(it.originalPrice) || undefined,
@@ -225,71 +299,11 @@ exports.handleMoMoIPN = async (req, res) => {
 
     await session.save();
 
-    // If newly paid -> create Booking (idempotent check: does a booking already have this orderId?)
+    // If newly paid -> create Booking (unified helper with idempotent check)
     if (justPaid) {
-      const existing = await Booking.findOne({ 'payment.orderID': session.orderId });
-      if (!existing) {
-        try {
-          // Convert items snapshot (they may lack adults/children breakdown; treat price as total line VND)
-          // We'll store currency USD, totalUSD derived from session.amount
-          const amountVND = Number(session.amount) || 0;
-          const totalUSD = Math.round(amountVND * FX_VND_USD * 100) / 100;
-
-          // Attempt to fetch extra tour info for name/image if missing
-          const bookingItems = [];
-          for (const it of session.items || []) {
-            let tourMeta = null;
-            if (it.tourId && mongoose.isValidObjectId(it.tourId)) {
-              const t = await Tour.findById(it.tourId).lean();
-              if (t) {
-                tourMeta = {
-                  name: t.title || t.name || it.name,
-                  image: t.imageItems?.[0]?.imageUrl || t.image || it.image,
-                };
-              }
-            }
-            bookingItems.push({
-              tourId: it.tourId, // may be undefined
-              date: it.meta?.date || it.meta?.departureDate || '',
-              name: it.name || tourMeta?.name || 'Tour',
-              image: it.image || tourMeta?.image || '',
-              adults: it.meta?.adults || 0,
-              children: it.meta?.children || 0,
-              unitPriceAdult: it.meta?.unitPriceAdult || 0,
-              unitPriceChild: it.meta?.unitPriceChild || 0,
-            });
-          }
-
-          const bookingDoc = await Booking.create({
-            userId: session.userId,
-            items: bookingItems,
-            currency: 'USD',
-            totalUSD,
-            payment: {
-              provider: 'momo',
-              orderID: session.orderId,
-              status: 'completed',
-              raw: { ipn: body, sessionId: session._id }
-            },
-            status: 'paid'
-          });
-          console.log('[MoMo] Booking created from paid session', bookingDoc._id);
-
-          // Optional: clear selected cart items (session doesn't currently store mode; attempt heuristic)
-          try {
-            const cart = await Cart.findOne({ userId: session.userId });
-            if (cart) {
-              const delRes = await CartItem.deleteMany({ cartId: cart._id, selected: true });
-              console.log(`[MoMo] Cleared ${delRes.deletedCount} cart items after successful payment.`);
-            }
-          } catch (clrErr) {
-            console.warn('[MoMo] Failed to clear cart items post-payment', clrErr);
-          }
-        } catch (bkErr) {
-          console.error('[MoMo] Failed to create booking after payment', bkErr);
-        }
-      }
+      await createBookingFromSession(session, { ipn: body, sessionId: session._id });
     }
+    
     // Important: MoMo expects 200/204 to stop retrying
     res.json({ message: "OK" });
   } catch (e) {
@@ -318,25 +332,106 @@ exports.getMoMoSessionStatus = async (req, res) => {
 };
 
 // Simplified mark-paid endpoint (called by FE after redirect) — demo only.
+// This is a UNIFIED handler for both MoMo and PayPal callback
 exports.markMoMoPaid = async (req, res) => {
   try {
     const { orderId, resultCode } = req.body || {};
     if (!orderId) return res.status(400).json({ error: "MISSING_ORDER_ID" });
+    
     const sess = await PaymentSession.findOne({ orderId });
     if (!sess) return res.status(404).json({ error: "SESSION_NOT_FOUND" });
-    if (sess.status === "paid") return res.json({ status: "already_paid" });
-    if (String(resultCode) !== "0") {
-      sess.status = "failed";
+    
+    if (sess.status !== "paid") {
+      if (String(resultCode) !== "0") {
+        sess.status = "failed";
+        await sess.save();
+        return res.status(400).json({ error: "RESULT_NOT_SUCCESS" });
+      }
+      sess.status = "paid";
+      sess.paidAt = new Date();
       await sess.save();
-      return res.status(400).json({ error: "RESULT_NOT_SUCCESS" });
     }
-    sess.status = "paid";
-    sess.paidAt = new Date();
-    await sess.save();
-    // TODO: create Booking documents from sess.items (mapping tourId, qty) if needed.
-    res.json({ status: "paid", paidAt: sess.paidAt });
+
+    // Idempotent: create booking if not exists (using unified helper)
+    const booking = await createBookingFromSession(sess, { markPaid: true, sessionId: sess._id });
+    
+    res.json({ status: sess.status, paidAt: sess.paidAt, bookingId: booking?._id });
   } catch (e) {
     console.error("markMoMoPaid error", e);
     res.status(500).json({ error: "INTERNAL_ERROR" });
+  }
+};
+
+// ===== UNIFIED: Get booking by payment provider and orderId =====
+// This replaces the separate endpoint in bookingController
+exports.getBookingByPayment = async (req, res) => {
+  try {
+    console.log(`Auth header at GET /api/bookings/by-payment/${req.params.provider}/${req.params.orderId} =>`, req.headers.authorization);
+    
+    const { provider, orderId } = req.params;
+    const userId = req.user?.sub;
+    
+    if (!provider || !orderId) {
+      return res.status(400).json({ error: 'MISSING_PARAMS' });
+    }
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'UNAUTHORIZED' });
+    }
+    
+    console.log(`[Payment] Looking for booking with provider=${provider}, orderId=${orderId}, userId=${userId}`);
+    
+    // First check if booking exists
+    const booking = await Booking.findOne({ 
+      'payment.provider': provider, 
+      'payment.orderID': orderId, 
+      userId 
+    })
+    .populate('items.tourId', 'title imageItems')
+    .lean();
+    
+    if (booking) {
+      console.log(`[Payment] ✅ Found booking:`, booking._id);
+      return res.json({ success: true, booking });
+    }
+    
+    // If no booking yet, check payment session status
+    console.log(`[Payment] ⏳ Booking not found yet, checking payment session...`);
+    const session = await PaymentSession.findOne({ orderId, provider });
+    
+    if (!session) {
+      console.log(`[Payment] ❌ No payment session found`);
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'No payment session or booking found' });
+    }
+    
+    console.log(`[Payment] Payment session status: ${session.status}`);
+    
+    // If session is paid but no booking, try to create it now
+    if (session.status === 'paid') {
+      console.log(`[Payment] 🔄 Session is paid, attempting to create booking...`);
+      try {
+        const newBooking = await createBookingFromSession(session, { lateCreation: true });
+        return res.json({ success: true, booking: newBooking });
+      } catch (createErr) {
+        console.error('[Payment] Failed to create booking from paid session:', createErr);
+        return res.status(500).json({ 
+          error: 'BOOKING_CREATION_FAILED',
+          sessionStatus: session.status,
+          message: 'Payment completed but booking creation failed'
+        });
+      }
+    }
+    
+    // Session exists but not paid yet
+    return res.status(202).json({ 
+      success: false,
+      pending: true,
+      sessionStatus: session.status,
+      message: 'Payment session found but not completed yet'
+    });
+    
+  } catch (e) {
+    console.error('getBookingByPayment error', e);
+    res.status(500).json({ error: 'FETCH_BOOKING_FAILED' });
   }
 };
