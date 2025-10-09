@@ -124,17 +124,5 @@ exports.getUserBookings = async (req, res) => {
   }
 };
 
-// GET /api/bookings/by-payment/:provider/:orderId
-// Return single booking matched by payment.provider + payment.orderID (auth required)
-exports.getBookingByPayment = async (req, res) => {
-  try {
-    const { provider, orderId } = req.params;
-    if (!provider || !orderId) return res.status(400).json({ error: 'MISSING_PARAMS' });
-    const booking = await Booking.findOne({ 'payment.provider': provider, 'payment.orderID': orderId, userId: req.user.sub }).lean();
-    if (!booking) return res.status(404).json({ error: 'NOT_FOUND' });
-    res.json({ success: true, booking });
-  } catch (e) {
-    console.error('getBookingByPayment error', e);
-    res.status(500).json({ error: 'FETCH_BOOKING_FAILED' });
-  }
-};
+// NOTE: getBookingByPayment has been moved to payment.controller.js
+// for unified handling of both MoMo and PayPal payment callbacks

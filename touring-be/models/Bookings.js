@@ -15,8 +15,9 @@ const bookingItemSchema = new mongoose.Schema({
 const bookingSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   items: [bookingItemSchema], // Hỗ trợ nhiều tour trong 1 booking
-  currency: { type: String, default: "USD" },
-  totalUSD: { type: Number, required: true },
+  currency: { type: String, default: "VND" },
+  totalVND: { type: Number, required: true },
+  totalUSD: { type: Number }, // Giữ lại để backward compatible
   payment: {
     provider: { type: String, enum: ["paypal", "momo"], required: true },
     orderID: { type: String },

@@ -71,25 +71,70 @@ export default function PaymentCallback() {
         if (success) {
           setStatus('processing');
           setMessage('Đang xác nhận thanh toán MoMo...');
-          // poll booking creation via by-payment endpoint
+          
+          // STEP 1: Call mark-paid to ensure session is marked as paid
+          try {
+            console.log('[MoMo Callback] Calling mark-paid for orderId:', momoOrderId);
+            const markPaidResp = await fetch(`${API_BASE}/api/payments/momo/mark-paid`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${user?.token}`
+              },
+              credentials: 'include',
+              body: JSON.stringify({ orderId: momoOrderId, resultCode: momoResultCode })
+            });
+            
+            if (markPaidResp.ok) {
+              const markData = await markPaidResp.json();
+              console.log('[MoMo Callback] Mark-paid response:', markData);
+              if (markData.bookingId) {
+                setStatus('success');
+                setMessage('Thanh toán MoMo thành công!');
+                setBookingId(markData.bookingId);
+                return;
+              }
+            } else {
+              console.warn('[MoMo Callback] Mark-paid failed:', markPaidResp.status);
+            }
+          } catch (e) {
+            console.error('[MoMo Callback] Mark-paid error:', e);
+          }
+          
+          // STEP 2: Poll booking creation via by-payment endpoint
           let attempts = 0;
           const poll = async () => {
             attempts++;
             try {
-              const r = await fetch(`/api/bookings/by-payment/momo/${momoOrderId}`, {
-                headers: { 'Authorization': `Bearer ${user?.token}` },
+              console.log(`[MoMo Callback] Polling attempt ${attempts} for orderId: ${momoOrderId}`);
+              const r = await fetch(`${API_BASE}/api/bookings/by-payment/momo/${momoOrderId}`, {
+                headers: { 
+                  'Authorization': `Bearer ${user?.token}`,
+                  'Content-Type': 'application/json'
+                },
                 credentials: 'include'
               });
+              console.log(`[MoMo Callback] Response status: ${r.status}`);
+              
               if (r.ok) {
                 const d = await r.json();
+                console.log('[MoMo Callback] Response data:', d);
                 if (d?.booking?._id) {
                   setStatus('success');
                   setMessage('Thanh toán MoMo thành công!');
                   setBookingId(d.booking._id);
                   return;
                 }
+              } else if (r.status === 202) {
+                // Still processing
+                console.log('[MoMo Callback] Payment still processing...');
+              } else {
+                const errData = await r.json().catch(() => ({}));
+                console.warn('[MoMo Callback] Error response:', errData);
               }
-            } catch { /* silent retry */ }
+            } catch (e) { 
+              console.error('[MoMo Callback] Poll error:', e);
+            }
             if (attempts < 15) setTimeout(poll, 2000);
             else {
               setStatus('success'); // Payment success but booking not found yet

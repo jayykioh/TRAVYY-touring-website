@@ -92,7 +92,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use("/api/auth", authRoutes);
-app.use("/api/profile/info", profileRoutes);
+app.use("/api/profile", profileRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/tours", tourRoutes);
 app.use("/api/cart", cartRoutes);

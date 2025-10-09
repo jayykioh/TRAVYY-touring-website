@@ -14,11 +14,12 @@ const paymentItemSchema = new mongoose.Schema(
 const paymentSessionSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    provider: { type: String, default: "momo" },
+    provider: { type: String, default: "momo", enum: ["momo", "paypal"] },
     orderId: { type: String, unique: true, required: true },
     requestId: { type: String, required: true },
     amount: { type: Number, required: true },
     status: { type: String, enum: ["pending", "paid", "failed"], default: "pending" },
+    mode: { type: String, enum: ["cart", "buy-now"], default: "cart" },
     items: [paymentItemSchema],
     rawCreateResponse: Object,
     paidAt: Date,

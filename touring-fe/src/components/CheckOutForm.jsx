@@ -63,20 +63,18 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
     (async () => {
       try {
         setIsLoadingProfile(true);
-        let data = null;
+        
+        // Gọi endpoint /api/profile để lấy thông tin user
         const r = await fetch(`${API_BASE}/api/profile`, {
-          headers: { Accept: "application/json", Authorization: `Bearer ${accessToken}` },
+          headers: { 
+            Accept: "application/json", 
+            Authorization: `Bearer ${accessToken}` 
+          },
           credentials: "include",
         });
-        if (r.ok) data = await r.json();
-        else {
-          const r2 = await fetch(`${API_BASE}/api/auth/me`, {
-            headers: { Accept: "application/json", Authorization: `Bearer ${accessToken}` },
-            credentials: "include",
-          });
-          if (r2.ok) data = await r2.json();
-        }
-        if (data) {
+        
+        if (r.ok) {
+          const data = await r.json();
           setUserInfo((prev) => ({
             ...prev,
             name: data?.name || "",
@@ -87,10 +85,17 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
             addressLine: data?.location?.addressLine || "",
           }));
           didPrefetchRef.current = true;
+        } else {
+          console.error("Failed to fetch profile:", r.status, r.statusText);
+          if (r.status === 401) {
+            console.warn("Token expired or invalid. Please login again.");
+          }
         }
       } catch (e) {
         console.error("Prefill profile failed:", e);
-      } finally { setIsLoadingProfile(false); }
+      } finally { 
+        setIsLoadingProfile(false); 
+      }
     })();
   }, [isDialogOpen, accessToken]);
 

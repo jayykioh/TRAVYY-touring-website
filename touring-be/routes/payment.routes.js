@@ -1,7 +1,13 @@
 // routes/payment.routes.js
 const express = require("express");
 const authJwt = require("../middlewares/authJwt");
-const { createMoMoPayment, handleMoMoIPN, markMoMoPaid, getMoMoSessionStatus } = require("../controller/payment.controller");
+const { 
+  createMoMoPayment, 
+  handleMoMoIPN, 
+  markMoMoPaid, 
+  getMoMoSessionStatus,
+  getBookingByPayment 
+} = require("../controller/payment.controller");
 
 const router = express.Router();
 
@@ -16,5 +22,9 @@ router.post("/momo/mark-paid", authJwt, markMoMoPaid);
 
 // Poll status
 router.get("/momo/session/:orderId", authJwt, getMoMoSessionStatus);
+
+// UNIFIED: Get booking by payment provider and orderId
+// This handles both MoMo and PayPal
+router.get("/booking/:provider/:orderId", authJwt, getBookingByPayment);
 
 module.exports = router;
