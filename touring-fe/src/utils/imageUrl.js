@@ -11,3 +11,4 @@ export const optimizeImage = (url, width = 1920) => {
     ""
   )}?quality=80&width=${width}`;
 };
+// Thêm các tham số tối ưu hóa ảnh cho các dịch vụ phổ biến
