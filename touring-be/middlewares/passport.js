@@ -4,7 +4,7 @@ const FacebookStrategy = require("passport-facebook").Strategy;
 const LocalStrategy = require("passport-local").Strategy;
 const User = require("../models/Users"); // mongoose model
 const bcrypt = require("bcryptjs");
-const { notifyRegister } = require("../controller/notifyController");
+const axios = require("axios");
 // =========================
 // Local Strategy (email + password)
 // =========================
@@ -39,10 +39,16 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        let user = await User.findOne({ googleId: profile.id });
+        let user = await User.findOne({ 
+          $or: [
+            { googleId: profile.id },
+            { email: profile.emails?.[0]?.value }
+          ]
+        });
         let isNewUser = false;
 
         if (!user) {
+          // Tạo user mới
           user = new User({
             googleId: profile.id,
             name: profile.displayName,
@@ -51,21 +57,34 @@ passport.use(
           });
           await user.save();
           isNewUser = true;
+          console.log(`🆕 New Google user created: ${user.email}`);
+        } else if (!user.googleId) {
+          // User đã tồn tại với email nhưng chưa có googleId
+          user.googleId = profile.id;
+          await user.save();
+          console.log(`� Linked existing user with Google: ${user.email}`);
+        } else {
+          console.log(`🔄 Existing Google user login: ${user.email}`);
         }
 
-        // 📨 Nếu là user mới → gửi mail chào mừng qua controller có sẵn
+        // 📨 Chỉ gửi email chào mừng khi user thực sự mới (chưa từng tồn tại trong hệ thống)
         if (isNewUser && user.email) {
           try {
-            const fakeReq = { body: { email: user.email, fullName: user.name } };
-            const fakeRes = { json: () => {}, status: () => ({ json: () => {} }) };
-            await notifyRegister(fakeReq, fakeRes);
+            // Gọi API internal để gửi email chào mừng
+            await axios.post(`http://localhost:${process.env.PORT || 4000}/api/notify/register`, {
+              email: user.email,
+              fullName: user.name || 'Bạn'
+            });
+            console.log(`✅ Sent welcome email to new Google user: ${user.email}`);
           } catch (mailErr) {
-            console.error("Không gửi được email chào mừng Google:", mailErr);
+            console.error("❌ Failed to send welcome email for Google signup:", mailErr.message);
+            // Không block OAuth flow nếu email fail
           }
         }
 
         return done(null, user);
       } catch (err) {
+        console.error("Google OAuth error:", err);
         return done(err, false);
       }
     }
