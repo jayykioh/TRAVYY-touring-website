@@ -5,6 +5,8 @@ const mongoose = require("mongoose");
 const Booking = require("../models/Bookings");
 const Tour = require("../models/Tours");
 const { Cart, CartItem } = require("../models/Carts");
+const User = require("../models/Users");
+const axios = require('axios');
 
 // FX rate (fallback) for VND->USD conversion
 const FX_VND_USD = Number(process.env.FX_VND_USD || 0.000039);
@@ -96,8 +98,35 @@ async function createBookingFromSession(session, additionalData = {}) {
       },
       status: 'paid'
     });
+
+    // Tạo booking code nhất quán với frontend
+    const bookingCode = bookingDoc._id.toString().substring(0, 8).toUpperCase();
+    bookingDoc.bookingCode = bookingCode;
+    await bookingDoc.save();
     
     console.log(`[Payment] Booking created from ${session.provider} payment:`, bookingDoc._id);
+
+    // Gửi thông báo thanh toán thành công
+    try {
+      const user = await User.findById(session.userId).lean();
+      if (user && user.email) {
+        const tourNames = bookingItems.map(item => item.name).join(', ');
+        // Sử dụng chính xác booking code như frontend hiển thị
+        const bookingCode = bookingDoc.bookingCode || bookingDoc._id.toString().substring(0, 8).toUpperCase();
+        
+        await axios.post(`http://localhost:${process.env.PORT || 4000}/api/notify/payment`, {
+          email: user.email,
+          amount: amountVND.toLocaleString('vi-VN'),
+          bookingCode: bookingCode,
+          tourTitle: tourNames,
+          bookingId: bookingDoc._id
+        });
+        console.log(`[Payment] ✅ Sent payment success notification to ${user.email} with booking code: ${bookingCode}`);
+      }
+    } catch (notifyErr) {
+      console.error('[Payment] ❌ Failed to send payment notification:', notifyErr);
+      // Không throw error để không ảnh hưởng đến quá trình chính
+    }
 
     // Clear cart if needed
     await clearCartAfterPayment(session.userId, session.mode);

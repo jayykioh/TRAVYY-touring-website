@@ -4,7 +4,7 @@ const FacebookStrategy = require("passport-facebook").Strategy;
 const LocalStrategy = require("passport-local").Strategy;
 const User = require("../models/Users"); // mongoose model
 const bcrypt = require("bcryptjs");
-
+const { notifyRegister } = require("../controller/notifyController");
 // =========================
 // Local Strategy (email + password)
 // =========================
@@ -40,15 +40,28 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         let user = await User.findOne({ googleId: profile.id });
+        let isNewUser = false;
 
         if (!user) {
           user = new User({
             googleId: profile.id,
             name: profile.displayName,
-            email: profile.emails[0].value,
-            role: null, // Mặc định không có vai trò  
+            email: profile.emails?.[0]?.value || "",
+            role: "Traveler",
           });
           await user.save();
+          isNewUser = true;
+        }
+
+        // 📨 Nếu là user mới → gửi mail chào mừng qua controller có sẵn
+        if (isNewUser && user.email) {
+          try {
+            const fakeReq = { body: { email: user.email, fullName: user.name } };
+            const fakeRes = { json: () => {}, status: () => ({ json: () => {} }) };
+            await notifyRegister(fakeReq, fakeRes);
+          } catch (mailErr) {
+            console.error("Không gửi được email chào mừng Google:", mailErr);
+          }
         }
 
         return done(null, user);
@@ -60,7 +73,7 @@ passport.use(
 );
 
 // =========================
-// Facebook Strategy
+// Facebook Strategy (đang tắt, giữ nguyên)
 // =========================
 // passport.use(
 //   new FacebookStrategy(
@@ -95,12 +108,9 @@ passport.use(
 // Serialize & Deserialize
 // =========================
 passport.serializeUser((user, done) => {
-  done(null, user.id); // chỉ lưu id vào session, để session phân biệt
+  done(null, user.id); // chỉ lưu id vào session
 });
 
-// Khi có request, passport sẽ lấy id từ session và tìm user trong DB
-// rồi gắn vào req.user
-// (nếu không tìm thấy user, req.user = null) 
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await User.findById(id);
