@@ -4,7 +4,7 @@ const FacebookStrategy = require("passport-facebook").Strategy;
 const LocalStrategy = require("passport-local").Strategy;
 const User = require("../models/Users"); // mongoose model
 const bcrypt = require("bcryptjs");
-
+const axios = require("axios");
 // =========================
 // Local Strategy (email + password)
 // =========================
@@ -39,20 +39,52 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        let user = await User.findOne({ googleId: profile.id });
+        let user = await User.findOne({ 
+          $or: [
+            { googleId: profile.id },
+            { email: profile.emails?.[0]?.value }
+          ]
+        });
+        let isNewUser = false;
 
         if (!user) {
+          // Tạo user mới
           user = new User({
             googleId: profile.id,
             name: profile.displayName,
-            email: profile.emails[0].value,
-            role: null, // Mặc định không có vai trò  
+            email: profile.emails?.[0]?.value || "",
+            role: "Traveler",
           });
           await user.save();
+          isNewUser = true;
+          console.log(`🆕 New Google user created: ${user.email}`);
+        } else if (!user.googleId) {
+          // User đã tồn tại với email nhưng chưa có googleId
+          user.googleId = profile.id;
+          await user.save();
+          console.log(`� Linked existing user with Google: ${user.email}`);
+        } else {
+          console.log(`🔄 Existing Google user login: ${user.email}`);
+        }
+
+        // 📨 Chỉ gửi email chào mừng khi user thực sự mới (chưa từng tồn tại trong hệ thống)
+        if (isNewUser && user.email) {
+          try {
+            // Gọi API internal để gửi email chào mừng
+            await axios.post(`http://localhost:${process.env.PORT || 4000}/api/notify/register`, {
+              email: user.email,
+              fullName: user.name || 'Bạn'
+            });
+            console.log(`✅ Sent welcome email to new Google user: ${user.email}`);
+          } catch (mailErr) {
+            console.error("❌ Failed to send welcome email for Google signup:", mailErr.message);
+            // Không block OAuth flow nếu email fail
+          }
         }
 
         return done(null, user);
       } catch (err) {
+        console.error("Google OAuth error:", err);
         return done(err, false);
       }
     }
@@ -60,7 +92,7 @@ passport.use(
 );
 
 // =========================
-// Facebook Strategy
+// Facebook Strategy (đang tắt, giữ nguyên)
 // =========================
 // passport.use(
 //   new FacebookStrategy(
@@ -95,12 +127,9 @@ passport.use(
 // Serialize & Deserialize
 // =========================
 passport.serializeUser((user, done) => {
-  done(null, user.id); // chỉ lưu id vào session, để session phân biệt
+  done(null, user.id); // chỉ lưu id vào session
 });
 
-// Khi có request, passport sẽ lấy id từ session và tìm user trong DB
-// rồi gắn vào req.user
-// (nếu không tìm thấy user, req.user = null) 
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await User.findById(id);
