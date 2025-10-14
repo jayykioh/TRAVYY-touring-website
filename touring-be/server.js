@@ -27,6 +27,7 @@ const app = express();
 const isProd = process.env.NODE_ENV === "production";
 const notifyRoutes = require("./routes/notifyRoutes");
 const paymentRoutes = require("./routes/payment.routes");
+const reviewRoutes = require("./routes/reviewRoutes");
 // Quick visibility of PayPal env presence (not actual secrets)
 console.log("[Boot] PayPal env present:", {
   hasClient: !!process.env.PAYPAL_CLIENT_ID,
@@ -103,6 +104,7 @@ app.use("/api/payments", paymentRoutes);
 
 app.use("/api/locations", locationRoutes);
 app.use("/api/notify", notifyRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 
 

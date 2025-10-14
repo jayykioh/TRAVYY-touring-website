@@ -144,7 +144,7 @@ const notifyRegister = async (req, res) => {
       <div style="text-align: center;">
         <img src="https://res.cloudinary.com/dzyq1kp4u/image/upload/v1759849958/logo_wvrds5.png" 
              alt="Travyy Banner" 
-             style="max-width: 100%; border-radius: 12px; margin-bottom: 20px;" />
+             style="max-width: 50%; border-radius: 12px; margin-bottom: 20px;" />
       </div>
 
       <h2 style="color: #2563eb;">👋 Xin chào ${fullName},</h2>
