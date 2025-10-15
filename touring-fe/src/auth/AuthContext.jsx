@@ -2,6 +2,24 @@ import { useEffect, useState, useCallback } from "react";
 import { AuthCtx } from "./context";
 const API_BASE = "http://localhost:4000";
 // helper fetch: luôn gửi cookie (để BE đọc refresh_token)
+
+export { useAuth } from "./context";
+
+
+const MOCK_ADMINS = [
+  {
+    id: 1,
+    email: 'admin@travyy.com',
+    password: 'Admin@123',
+    name: 'Melissa Peters',
+    role: 'admin',  // ⬅️ Đánh dấu đây là admin
+    adminRole: 'Super Admin',
+    avatar: 'https://ui-avatars.com/api/?name=Melissa+Peters&background=3B82F6&color=fff',
+    permissions: ['all']
+  }
+  // ... 2 admin khác
+];
+
 async function api(input, init = {}) {
   const r = await fetch(input, {
     credentials: "include",
@@ -44,6 +62,51 @@ export default function AuthProvider({ children }) {
 }, []);
 
 
+
+  const adminLogin = useCallback(async (email, password) => {
+    
+    const admin = MOCK_ADMINS.find(
+      a => a.email === email && a.password === password
+    );
+
+    if (!admin) {
+      const error = new Error('Email hoặc mật khẩu không chính xác');
+      error.status = 401;
+      error.body = { message: 'Email hoặc mật khẩu không chính xác' };
+      throw error;
+    }
+
+    const token = `mock_admin_token_${admin.id}_${Date.now()}`;
+    const adminData = {
+      id: admin.id,
+      email: admin.email,
+      name: admin.name,
+      role: admin.role, // 'admin'
+      adminRole: admin.adminRole, // 'Super Admin', 'Manager', 'Staff'
+      avatar: admin.avatar,
+      permissions: admin.permissions,
+      token: token
+    };
+    
+    setAccessToken(token);
+    setUser(adminData);
+    
+    return adminData;
+
+    // Khi có API, thay bằng:
+    // const res = await api(`${API_BASE}/api/admin/login`, {
+    //   method: "POST",
+    //   headers: { "Content-Type": "application/json" },
+    //   body: JSON.stringify({ email, password }),
+    // });
+    // if (res?.accessToken) {
+    //   setAccessToken(res.accessToken);
+    // }
+    // if (res?.admin) {
+    //   setUser({ ...res.admin, token: res.accessToken, role: 'admin' });
+    // }
+    // return res?.admin;
+  }, []);
 
 
   // gọi API có kèm Bearer; nếu 401 thì refresh rồi retry
@@ -112,10 +175,12 @@ const withAuth = useCallback(async (input, init = {}) => {
   const value = {
     user,
     isAuth: !!user,
+    isAdmin: !!user && user.role === 'admin',
     booting,
     needsRole,
     setUser,
     login,
+    adminLogin, 
     logout,
     accessToken,
     withAuth, // dùng cái này để call API bảo vệ
