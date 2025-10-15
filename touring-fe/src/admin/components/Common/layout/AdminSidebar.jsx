@@ -16,11 +16,11 @@ import {
   LogOut
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAdminAuth } from "../../../context/AdminAuthContext";
+import { useAuth } from "../../../../auth/AuthContext";
 
 export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
   const navigate = useNavigate();
-  const { admin, logout } = useAdminAuth();
+  const { user, logout } = useAuth();
   const [expandedMenu, setExpandedMenu] = useState(null);
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -79,10 +79,10 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
     }
   ];
 
-  const adminData = admin || {
+  const adminData = user || {
     name: 'Melissa Peters',
     email: 'admin@travyy.com',
-    role: 'Super Admin',
+    adminRole: 'Super Admin',
     avatar: 'https://ui-avatars.com/api/?name=Melissa+Peters&background=3B82F6&color=fff'
   };
 
@@ -221,7 +221,7 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
                 <>
                   <div className="ml-3 flex-1 text-left min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{adminData.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{adminData.role}</p>
+                    <p className="text-xs text-gray-500 truncate">{adminData.adminRole || adminData.role}</p>
                   </div>
                   <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 </>
