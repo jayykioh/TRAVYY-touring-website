@@ -27,6 +27,12 @@ import BookingHistory from "./pages/BookingHistory";
 import AvailableToursPage from "./pages/AvailableToursPage";
 import AITourCreator from "./pages/AITourCreator";
 import PaymentCallback from "./pages/PaymentCallback";
+
+// ✅ THÊM: Import Admin components
+// import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
+import AdminRoutes from "./admin/routes/AdminRoutes";
+
+
 // Route guard
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
@@ -43,6 +49,10 @@ export default function App() {
   return (
     <>
       <Routes>
+
+{/* ✅ CẬP NHẬT 2: Admin routes - AdminAuthProvider đã wrap BÊN TRONG AdminRoutes */}
+        <Route path="/admin/*" element={<AdminRoutes />} />
+
         {/* ----- Public + Main layout ----- */}
         <Route element={<MainLayout />}>
           {/* Nếu muốn / tự động là Home khi chưa login, MainHome khi đã login */}
