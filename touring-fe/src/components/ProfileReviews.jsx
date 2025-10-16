@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Star, MessageCircle, ThumbsUp, Calendar, User, ChevronDown, ChevronUp, Camera, Trash2 } from "lucide-react";
+import { X, Star, MessageCircle, ThumbsUp, Calendar, User, ChevronDown, ChevronUp, Camera, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../auth/context";
 import { useNavigate } from "react-router-dom";
@@ -197,26 +197,37 @@ function ReviewModal({
               )}
             </div>
 
-            {/* Comment */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Chia sẻ trải nghiệm của bạn *
-              </label>
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Hãy chia sẻ cảm nhận của bạn về tour này..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                rows={4}
-                disabled={isSubmitting}
-                required
-                minLength={10}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Tối thiểu 10 ký tự ({comment.length}/10)
-              </p>
-            </div>
-
+                          {/* Comment */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Chia sẻ trải nghiệm của bạn *
+                  </label>
+                  <textarea
+                    value={comment}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value.length > 200) {
+                        toast.error("Đã vượt quá 700 ký tự cho phép");
+                        return; 
+                      }
+                      setComment(value);
+                    }}
+                    placeholder="Hãy chia sẻ cảm nhận của bạn về tour này..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    rows={4}
+                    disabled={isSubmitting}
+                    required
+                    minLength={10}
+                  />
+                  <div className="flex justify-between text-xs mt-1">
+                    <p className={`${comment.length < 10 ? "text-red-500" : "text-gray-500"}`}>
+                      
+                    </p>
+                    <p className={`${comment.length > 200 ? "text-red-500" : "text-gray-500"}`}>
+                      Tối đa 200 ký tự
+                    </p>
+                  </div>
+                </div>
             {/* Image Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -588,26 +599,73 @@ export default function ProfileReviews() {
   const { user, withAuth } = useAuth();
   const navigate = useNavigate();
   const [userReviews, setUserReviews] = useState([]);
+  const [pendingBookings, setPendingBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reviewModal, setReviewModal] = useState(null);
+  const [activeTab, setActiveTab] = useState('reviewed'); // 'reviewed' or 'pending'
 
-  // Fetch user's reviews
+  // Fetch user's reviews and pending bookings
   useEffect(() => {
-    const fetchUserReviews = async () => {
+    const fetchData = async () => {
       if (!user?.token) return;
       
       try {
         setLoading(true);
-        const data = await withAuth('/api/reviews/my');
-        setUserReviews(data.reviews || []);
+        
+        // Fetch reviews
+        const reviewsData = await withAuth('/api/reviews/my');
+        const reviews = reviewsData.reviews || [];
+        setUserReviews(reviews);
+        
+        // Fetch bookings to find pending reviews
+        const bookingsResponse = await withAuth('/api/bookings/my');
+        const bookings = bookingsResponse.bookings || bookingsResponse.data || [];
+        
+        // Create a Set of reviewed tourIds (not bookingIds)
+        const reviewedTourIds = new Set(
+          reviews.map(r => {
+            const bid = typeof r.bookingId === 'object' 
+              ? (r.bookingId._id || r.bookingId.toString())
+              : r.bookingId?.toString();
+            return bid;
+          }).filter(Boolean)
+        );
+        
+        // Filter bookings and their items - only keep tours that haven't been reviewed
+        const pendingItems = [];
+        bookings.forEach(booking => {
+          const isCompleted = booking.status === 'completed' || booking.status === 'confirmed' || booking.status === 'paid';
+          
+          if (isCompleted && booking.items?.length > 0) {
+            // For each tour in this booking, check if it's been reviewed
+            booking.items.forEach(item => {
+              const tourId = typeof item.tourId === 'object' 
+                ? (item.tourId._id || item.tourId) 
+                : item.tourId;
+              const tourIdStr = tourId?.toString();
+              
+              // Only add if this specific tour hasn't been reviewed
+              if (tourIdStr && !reviewedTourIds.has(booking._id.toString())) {
+                pendingItems.push({
+                  ...item,
+                  bookingId: booking._id,
+                  bookingDate: booking.createdAt,
+                  bookingStatus: booking.status
+                });
+              }
+            });
+          }
+        });
+        
+        setPendingBookings(pendingItems);
       } catch (error) {
-        console.error('Error fetching user reviews:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserReviews();
+    fetchData();
   }, [user?.token, withAuth]);
 
   if (!user) {
@@ -634,19 +692,62 @@ export default function ProfileReviews() {
     );
   }
 
+  const formatDateVN = (d) =>
+    new Date(d).toLocaleString("vi-VN", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
   return (
     <div>
       <h1 className="text-xl font-bold mb-4">Đánh giá của bạn</h1>
       
-      {userReviews.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-          <p>Bạn chưa có đánh giá nào</p>
-          <p className="text-sm">Hãy đặt tour và chia sẻ trải nghiệm của bạn!</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {userReviews.map((review) => (
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('reviewed')}
+          className={`px-4 py-2 font-medium transition-colors relative ${
+            activeTab === 'reviewed'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Đã đánh giá
+          {userReviews.length > 0 && (
+            <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded-full">
+              {userReviews.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`px-4 py-2 font-medium transition-colors relative ${
+            activeTab === 'pending'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Chờ đánh giá
+          {pendingBookings.length > 0 && (
+            <span className="ml-2 px-2 py-0.5 bg-orange-100 text-orange-600 text-xs rounded-full">
+              {pendingBookings.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'reviewed' ? (
+        // Reviewed tab content
+        userReviews.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <p>Bạn chưa có đánh giá nào</p>
+            <p className="text-sm">Hãy đặt tour và chia sẻ trải nghiệm của bạn!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">{userReviews.map((review) => (
             <div key={review._id} className="border rounded-lg p-4 bg-white">
               <div className="flex items-start justify-between mb-3">
                 <div>
@@ -757,6 +858,96 @@ export default function ProfileReviews() {
             </div>
           ))}
         </div>
+        )
+      ) : (
+        // Pending reviews tab content - show individual tours that haven't been reviewed
+        pendingBookings.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <Star className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <p>Không có tour nào cần đánh giá</p>
+            <p className="text-sm">Hoàn thành tour để đánh giá nhé!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {pendingBookings.map((item, idx) => {
+              const tourId = typeof item.tourId === 'object' 
+                ? (item.tourId._id || item.tourId) 
+                : item.tourId;
+              
+              return (
+                <div key={`${item.bookingId}-${idx}`} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                  {/* Header */}
+                  <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">
+                          Đặt ngày: {formatDateVN(item.bookingDate)}
+                        </span>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                        Chưa đánh giá
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Tour content */}
+                  <div className="p-4">
+                    <div className="flex gap-3">
+                      {/* Tour image */}
+                      {item.image && (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-20 h-20 object-cover rounded-lg border border-gray-200 flex-shrink-0"
+                        />
+                      )}
+                      
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 mb-2">
+                          {item.name || 'Tour'}
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                          {item.date && (
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <Calendar className="w-4 h-4" />
+                              <span>Khởi hành: {formatDateVN(item.date)}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Users className="w-4 h-4" />
+                            <span>
+                              {item.adults > 0 && `${item.adults} người lớn`}
+                              {item.adults > 0 && item.children > 0 && ", "}
+                              {item.children > 0 && `${item.children} trẻ em`}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Review button */}
+                        <button
+                          onClick={() => {
+                            setReviewModal({
+                              isOpen: true,
+                              tourId: tourId,
+                              tourTitle: item.name || 'Tour',
+                              bookingId: item.bookingId
+                            });
+                          }}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+                        >
+                          <Star className="w-4 h-4" />
+                          Đánh giá tour này
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
       )}
 
       {/* Review Modal */}
@@ -767,10 +958,49 @@ export default function ProfileReviews() {
           tourId={reviewModal.tourId}
           tourTitle={reviewModal.tourTitle}
           bookingId={reviewModal.bookingId}
-          onReviewSubmitted={() => {
+          onReviewSubmitted={async () => {
             setReviewModal(null);
-            // Refresh user reviews
-            window.location.reload();
+            
+            // Refresh data without full page reload
+            try {
+              // Fetch updated reviews
+              const reviewsData = await withAuth('/api/reviews/my');
+              const reviews = reviewsData.reviews || [];
+              setUserReviews(reviews);
+              
+              // Fetch updated bookings to refresh pending list
+              const bookingsResponse = await withAuth('/api/bookings/my');
+              const bookings = bookingsResponse.bookings || bookingsResponse.data || [];
+              
+              // Update reviewed booking IDs
+              const reviewedBookingIds = new Set(
+                reviews.map(r => {
+                  const bid = typeof r.bookingId === 'object' 
+                    ? (r.bookingId._id || r.bookingId.toString())
+                    : r.bookingId?.toString();
+                  return bid;
+                }).filter(Boolean)
+              );
+              
+              // Update pending bookings
+              const pending = bookings.filter(booking => {
+                const bookingId = booking._id?.toString();
+                const isCompleted = booking.status === 'completed' || booking.status === 'confirmed';
+                const notReviewed = !reviewedBookingIds.has(bookingId);
+                return isCompleted && notReviewed && booking.items?.length > 0;
+              });
+              
+              setPendingBookings(pending);
+              
+              // Switch to reviewed tab to show the new review
+              setActiveTab('reviewed');
+              
+              toast.success("Đánh giá đã được thêm vào danh sách!");
+            } catch (error) {
+              console.error('Error refreshing data:', error);
+              // Fallback to page reload if refresh fails
+              window.location.reload();
+            }
           }}
         />
       )}

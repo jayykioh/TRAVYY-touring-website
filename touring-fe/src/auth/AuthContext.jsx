@@ -3,9 +3,15 @@ import { AuthCtx } from "./context";
 const API_BASE = "http://localhost:4000";
 // helper fetch: luôn gửi cookie (để BE đọc refresh_token)
 async function api(input, init = {}) {
+  // Don't set Accept header if body is FormData (for file uploads)
+  const isFormData = init.body instanceof FormData;
+  const headers = isFormData 
+    ? { ...(init.headers || {}) }
+    : { Accept: "application/json", ...(init.headers || {}) };
+
   const r = await fetch(input, {
     credentials: "include",
-    headers: { Accept: "application/json", ...(init.headers || {}) },
+    headers,
     ...init,
   });
   const ct = r.headers.get("content-type") || "";
@@ -48,7 +54,13 @@ export default function AuthProvider({ children }) {
 
   // gọi API có kèm Bearer; nếu 401 thì refresh rồi retry
 const withAuth = useCallback(async (input, init = {}) => {
-  const url = typeof input === "string" && !/^https?:\/\//.test(input)
+  // Ensure input is a string
+  if (typeof input !== "string") {
+    console.error("withAuth: first parameter must be a string URL, got:", typeof input, input);
+    throw new Error("withAuth: first parameter must be a string URL");
+  }
+
+  const url = !/^https?:\/\//.test(input)
     ? `${API_BASE}${input}` // << tự prefix
     : input;
 

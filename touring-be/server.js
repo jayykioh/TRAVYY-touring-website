@@ -106,7 +106,7 @@ app.use("/api/locations", locationRoutes);
 app.use("/api/notify", notifyRoutes);
 app.use("/api/reviews", reviewRoutes);
 
-
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));

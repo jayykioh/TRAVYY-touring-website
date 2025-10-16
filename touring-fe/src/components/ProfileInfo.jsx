@@ -51,6 +51,7 @@ export default function ProfileInfo() {
 
   const phoneInputRef = useRef(null);
   const usernameInputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -66,6 +67,8 @@ export default function ProfileInfo() {
   const [provinces, setProvinces] = useState([]);
   const [wards, setWards] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState(null);
 
   // Baseline from user (for dirty check)
   const baseline = useMemo(
@@ -160,10 +163,7 @@ export default function ProfileInfo() {
 
       setSaving(true);
       try {
-        console.log("🔄 Updating profile...");
-        
-        // 1️⃣ Update profile
-        const updateResult = await withAuth("/api/profile/info", {
+        await withAuth("/api/profile/info", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -173,30 +173,11 @@ export default function ProfileInfo() {
             location: { provinceId, wardId, addressLine: addressLine.trim() },
           }),
         });
-        console.log("✅ Profile updated:", updateResult);
 
-        // 2️⃣ Fetch fresh user from /api/auth/me để đồng bộ hoàn toàn
-        console.log("🔄 Fetching fresh user from /api/auth/me...");
-        const freshUser = await withAuth("/api/auth/me");
-        console.log("✅ Fresh user fetched:", freshUser);
-        
-        // ⚠️ QUAN TRỌNG: Phải gộp token vào user object
-        // Vì nhiều component khác (cart, wishlist, buy-now) cần user.token
-        setUser({ ...freshUser, token: user?.token });
-        
-        // 3️⃣ Reset form về baseline mới
-        setFormData({
-          name: freshUser?.name ?? "",
-          username: freshUser?.username ?? "",
-          phone: freshUser?.phone ?? "",
-          provinceId: String(freshUser?.location?.provinceId ?? ""),
-          wardId: String(freshUser?.location?.wardId ?? ""),
-          addressLine: freshUser?.location?.addressLine ?? "",
-        });
-        
+        const freshUser = await withAuth("/api/profile/info");
+        setUser(freshUser);
         setPhoneError("");
         setUsernameError("");
-        console.log("✅ Profile save complete!");
         toast.success("Profile saved successfully!");
       } catch (err) {
         if (err?.status === 409 && err?.body?.error === "PHONE_TAKEN") {
@@ -219,8 +200,116 @@ export default function ProfileInfo() {
         setSaving(false);
       }
     },
-    [formData, phoneError, usernameError, withAuth, setUser, user?.token]
+    [formData, phoneError, usernameError, withAuth, setUser]
   );
+
+  // Handle avatar file selection
+  const handleAvatarChange = useCallback(
+    async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      // Kiểm tra kích thước file (5MB)
+      const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+      if (file.size > MAX_SIZE) {
+        toast.error("Ảnh phải nhỏ hơn 5MB");
+        e.target.value = ""; // Reset input
+        return;
+      }
+
+      // Kiểm tra định dạng file
+      const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error("Chỉ chấp nhận file ảnh (JPEG, PNG, GIF, WEBP)");
+        e.target.value = "";
+        return;
+      }
+
+      // Preview ảnh
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+
+      // Upload lên server
+      setUploadingAvatar(true);
+      try {
+        const formData = new FormData();
+        formData.append("avatar", file);
+
+        // ✅ Use withAuth to include Bearer token
+        await withAuth("/api/profile/upload-avatar", {
+          method: "POST",
+          body: formData,
+          // Don't set Content-Type - browser will set it with boundary for FormData
+        });
+        
+        // ✅ Cập nhật user với avatar mới ngay lập tức
+        const freshUser = await withAuth("/api/profile/info");
+        setUser(freshUser);
+        
+        // ✅ Clear preview để hiển thị avatar mới từ server
+        setAvatarPreview(null);
+        
+        toast.success("Avatar đã được cập nhật!");
+      } catch (err) {
+        console.error("Upload avatar error:", err);
+        toast.error(err.message || "Không thể upload avatar");
+        setAvatarPreview(null);
+      } finally {
+        setUploadingAvatar(false);
+        e.target.value = ""; // Reset input
+      }
+    },
+    [withAuth, setUser]
+  );
+
+  // Handle remove avatar
+  const handleRemoveAvatar = useCallback(async () => {
+    if (!user?.avatar) return;
+
+    setUploadingAvatar(true);
+    try {
+      // ✅ Use withAuth to include Bearer token
+      await withAuth("/api/profile/avatar", {
+        method: "DELETE",
+      });
+
+      // ✅ Cập nhật user ngay lập tức
+      const freshUser = await withAuth("/api/profile/info");
+      setUser(freshUser);
+      
+      // ✅ Clear preview
+      setAvatarPreview(null);
+      
+      toast.success("Avatar đã được xóa");
+    } catch (err) {
+      console.error("Remove avatar error:", err);
+      toast.error(err.message || "Không thể xóa avatar");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }, [user?.avatar, withAuth, setUser]);
+
+  // 🔥 Tính avatar URL - phải đặt trước early return
+  const avatarUrl = useMemo(() => {
+    if (!user) return "https://i.pravatar.cc/150";
+    if (user.avatar) {
+      // ✅ Dùng updatedAt hoặc _id để tạo cache key stable
+      const cacheKey = user.updatedAt || user._id;
+      return `/api/profile/avatar/${user._id}?v=${cacheKey}`;
+    }
+    
+    // Avatar Discord-style: chữ cái đầu + màu ngẫu nhiên
+    const initial = (user.name || user.email || "?").charAt(0).toUpperCase();
+    const colors = ["5865F2", "43B581", "FAA61A", "F04747", "7289DA"];
+    const color = colors[initial.charCodeAt(0) % colors.length];
+    return `https://ui-avatars.com/api/?name=${initial}&background=${color}&color=fff&bold=true`;
+  }, [user]);
+
+  // ✅ Ưu tiên: preview (khi đang chọn ảnh) → avatar từ DB → avatar mặc định
+  const currentAvatar = avatarPreview || avatarUrl;
 
   if (!user) return <div className="p-6">Loading...</div>;
 
@@ -235,6 +324,52 @@ export default function ProfileInfo() {
         </div>
 
         <form onSubmit={saveProfile} className="p-6 space-y-6">
+          {/* Avatar Section */}
+          <div className="flex flex-col items-center gap-4 p-5 border rounded-xl bg-gray-50">
+            <div className="relative">
+              <img
+                src={currentAvatar}
+                alt="Avatar"
+                className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
+              />
+              {uploadingAvatar && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-medium transition-colors"
+              >
+                {uploadingAvatar ? "Đang tải..." : "Đổi avatar"}
+              </button>
+              {user?.avatar && (
+                <button
+                  type="button"
+                  onClick={handleRemoveAvatar}
+                  disabled={uploadingAvatar}
+                  className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white text-sm font-medium transition-colors"
+                >
+                  Xóa avatar
+                </button>
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
+            <p className="text-xs text-gray-500 text-center">
+              Chấp nhận file ảnh (JPEG, PNG, GIF, WEBP). Tối đa 5MB.
+            </p>
+          </div>
+
           {/* Name */}
           <FormSection title="Name">
             <input

@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/context";
-import { Calendar, Users, Ticket, CreditCard, Loader2, Receipt, Star } from "lucide-react";
+import { Calendar, Users, Ticket, CreditCard, Loader2, Receipt } from "lucide-react";
 import { formatVND, formatCurrency } from "@/lib/utils";
-import { ReviewModal } from "../components/ProfileReviews";
 
 export default function BookingHistory() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [reviewModal, setReviewModal] = useState(null); // { isOpen, tourId, tourTitle, bookingId }
-  const [reviewedBookings, setReviewedBookings] = useState(new Set()); // Track reviewed bookings
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -25,64 +22,13 @@ export default function BookingHistory() {
 
         if (!response.ok) throw new Error("Không thể tải lịch sử đặt tour");
         const data = await response.json();
-        console.log("=== BOOKING DATA LOADED ===");
-        console.log("Raw booking data:", data);
         const bookings = data.bookings || data.data || [];
-        console.log("Processed bookings:", bookings);
-        bookings.forEach((booking, index) => {
-          console.log(`Booking ${index}:`, {
-            _id: booking._id,
-            status: booking.status,
-            items: booking.items?.map(item => ({
-              tourId: item.tourId,
-              name: item.name,
-              date: item.date
-            }))
-          });
-        });
         setBookings(bookings);
-        
-        // Check which bookings have been reviewed
-        await checkReviewedBookings(bookings);
       } catch (err) {
         console.error("Error fetching bookings:", err);
         setError(err.message);
       } finally {
         setLoading(false);
-      }
-    };
-
-    const checkReviewedBookings = async (bookings) => {
-      try {
-        const reviewedSet = new Set();
-        
-        // Get user's reviews to check which bookings have been reviewed
-        const response = await fetch('/api/reviews/my', {
-          headers: {
-            Authorization: `Bearer ${user?.token}`,
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          const userReviews = data.reviews || [];
-          
-          // Add reviewed booking IDs to set (normalize to string _id)
-          userReviews.forEach(review => {
-            if (review.bookingId) {
-              const bid = typeof review.bookingId === 'object'
-                ? (review.bookingId._id ? review.bookingId._id.toString() : review.bookingId.toString())
-                : review.bookingId.toString();
-              reviewedSet.add(bid);
-            }
-          });
-          
-          setReviewedBookings(reviewedSet);
-        }
-      } catch (error) {
-        console.error("Error checking reviewed bookings:", error);
       }
     };
 
@@ -272,79 +218,15 @@ export default function BookingHistory() {
                           <img src={booking.qrCode} alt="QR Code" className="w-24 h-24 mx-auto rounded border border-neutral-200" />
                         </div>
                       )}
-
-                      {/* Review section for paid tours */}
-                      {booking.status === 'paid' && booking.items && booking.items.length > 0 && (
-                        <div className="mt-4 pt-3 border-t border-neutral-200">
-                          {reviewedBookings.has(booking._id) ? (
-                            /* Already reviewed */
-                            <div className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-green-700 bg-green-50 rounded-lg">
-                              <Star className="w-4 h-4 fill-current" />
-                              Đã đánh giá
-                            </div>
-                          ) : (
-                            /* Can review */
-                            <div className="flex flex-wrap gap-2">
-                              {booking.items.map((item, idx) => (
-                                <button
-                                  key={idx}
-                                  onClick={() => {
-                                    console.log("Review button clicked - item:", item);
-                                    // normalize tourId: sometimes item.tourId may be populated object
-                                    const normalizedTourId = item?.tourId && typeof item.tourId === 'object'
-                                      ? (item.tourId._id || item.tourId.toString())
-                                      : item.tourId;
-
-                                    setReviewModal({
-                                      isOpen: true,
-                                      tourId: normalizedTourId,
-                                      tourTitle: item.name || 'Tour',
-                                      bookingId: booking._id
-                                    });
-                                  }}
-                                  className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-opacity"
-                                  style={{ backgroundColor: "#02A0AA" }}
-                                >
-                                  <Star className="w-4 h-4" />
-                                  Đánh giá tour
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
-                
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
-
-    {/* Review Modal */}
-    {reviewModal?.isOpen && (
-      <ReviewModal
-        isOpen={reviewModal.isOpen}
-        onClose={() => setReviewModal(null)}
-        tourId={reviewModal.tourId}
-        tourTitle={reviewModal.tourTitle}
-        bookingId={reviewModal.bookingId}
-        onReviewSubmitted={(createdReview) => {
-            setReviewModal(null);
-            // If server returned the created review, use its bookingId to mark reviewed
-            const rawBookingId = createdReview?.bookingId || reviewModal?.bookingId;
-            const reviewedBookingId = typeof rawBookingId === 'object'
-              ? (rawBookingId._id ? rawBookingId._id.toString() : rawBookingId.toString())
-              : String(rawBookingId);
-            if (reviewedBookingId) {
-              setReviewedBookings(prev => new Set([...prev, reviewedBookingId]));
-            }
-          }}
-      />
-    )}
   </div>
   );
 }

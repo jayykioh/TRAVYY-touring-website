@@ -6,7 +6,7 @@ const notificationSchema = new mongoose.Schema({
   userId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: "User",
-    required: true,
+    required: false,  // ✅ Không bắt buộc vì có thể gửi email mà chưa có user
     index: true 
   },
   recipientEmail: { 
@@ -21,7 +21,16 @@ const notificationSchema = new mongoose.Schema({
   // Loại thông báo
   type: {
     type: String,
-    enum: ["register", "payment_success", "booking_success", "new_tour", "general"],
+    enum: [
+      "register", 
+      "payment_success", 
+      "booking_success", 
+      "new_tour", 
+      "general",
+      "password_reset",       // 🔑 Quên mật khẩu
+      "password_changed",     // 🔒 Đổi mật khẩu
+      "security_alert"        // ⚠️ Cảnh báo bảo mật
+    ],
     required: true,
     index: true
   },
