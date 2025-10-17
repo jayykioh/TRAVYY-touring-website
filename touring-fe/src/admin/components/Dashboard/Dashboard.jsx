@@ -2,21 +2,27 @@
 
 import React from 'react';
 import StatCard from '../Dashboard/StatsCard';
+import DetailedMetrics from '../Dashboard/DetailedMetrics';
 import ChartCard from '../Common/ChartCard';
 import RevenueChart from './RevenueChart';
 import CategoryPieChart from './CategoryPieChart';
 import BookingTrendsChart from './BookingTrendsChart';
 import GuidesByRegionChart from './GuidesByRegionChart';
 import RecentToursTable from './RecentToursTable';
-import TopGuidesTable from './TopGuidesTable';
+import AvailableGuides from './AvailableGuidesTable.jsx';
+import AgeDistributionChart from './AgeDistributionChart';
+import TopTravelersComponent from './TopTravelersComponent.jsx';
+
+
 import {
   summaryStats,
+  detailedMetrics,
   revenueData,
   tourCategoryData,
   bookingTrendsData,
   guidesByRegion,
   recentTours,
-  topGuides
+  availableGuides
 } from '../../data/mockData';
 
 const Dashboard = () => {
@@ -26,7 +32,7 @@ const Dashboard = () => {
       <div className="bg-white border-b border-gray-200 px-6 py-5 sticky top-0 z-10 shadow-sm">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <h1 className="text-2xl font-extrabold text-slate-700">Dashboard</h1>
             <p className="text-sm text-gray-600 mt-1">Tổng quan hoạt động hệ thống</p>
           </div>
           <div className="flex items-center gap-4">
@@ -49,11 +55,13 @@ const Dashboard = () => {
           ))}
         </div>
 
+
         {/* Section Title */}
         <div className="pt-4">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Phân tích chi tiết</h2>
+          <h2 className="text-xl font-bold text-slate-700 mb-1">Phân tích chi tiết</h2>
           <p className="text-sm text-gray-600">Biểu đồ và thống kê chuyên sâu</p>
         </div>
+
 
         {/* Charts Row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -66,6 +74,11 @@ const Dashboard = () => {
           </ChartCard>
         </div>
 
+        
+        {/* Detailed Metrics */}
+        <DetailedMetrics metrics={detailedMetrics} />
+        
+
         {/* Charts Row 2 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ChartCard title="Lượt đặt tour theo tuần">
@@ -77,6 +90,13 @@ const Dashboard = () => {
           </ChartCard>
         </div>
 
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          <AgeDistributionChart/>
+        <TopTravelersComponent/>
+        </div>
+
+
         {/* Section Title */}
         <div className="pt-4">
           <h2 className="text-xl font-bold text-gray-900 mb-1">Hoạt động gần đây</h2>
@@ -86,7 +106,7 @@ const Dashboard = () => {
         {/* Tables */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <RecentToursTable data={recentTours} />
-          <TopGuidesTable data={topGuides} />
+          <AvailableGuides data={availableGuides} />
         </div>
 
         {/* Footer Info */}
