@@ -1,8 +1,8 @@
 // controllers/wishlistController.js
 const mongoose = require("mongoose");
 const Wishlist = require("../models/Wishlist");
-const Tour = require("../models/Tours");
-const Location = require("../models/Location");
+const Tour = require("../models/agency/Tours");
+const Location = require("../models/agency/Location");
 // Helper ép ObjectId an toàn
 const toObjectId = (id) => new mongoose.Types.ObjectId(id);
 

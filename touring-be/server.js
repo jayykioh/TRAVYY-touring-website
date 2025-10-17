@@ -2,6 +2,9 @@ const path = require("path");
 // Load .env explicitly relative to this file to avoid CWD issues
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 const PORT = process.env.PORT || 4000;
+
+require("./config/db");
+
 const express = require("express");
 const mongoose = require("mongoose");
 const passport = require("passport");

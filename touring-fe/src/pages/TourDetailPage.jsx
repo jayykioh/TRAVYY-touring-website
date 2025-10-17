@@ -385,6 +385,22 @@ export default function TourDetailPage() {
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 leading-tight">
                 {getTitle(tour)}
               </h1>
+              {/* Hiển thị thông tin đại lý */}
+              {tour?.agencyId && (
+                <div className="flex items-center gap-2 mt-1">
+                  <img
+                    src={tour.agencyId.image}
+                    alt={tour.agencyId.name}
+                    className="w-7 h-7 rounded-full object-cover border-2 border-gray-300 shadow-sm"
+                  />
+                  <div className="text-sm text-gray-700">
+                    <span className="font-medium">{tour.agencyId.name}</span>
+                    <div className="text-xs text-gray-500">
+                      {tour.agencyId.contact}
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 text-amber-400 fill-current" />

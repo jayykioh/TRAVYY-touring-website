@@ -1,19 +1,39 @@
 const mongoose = require("mongoose");
-const Tour = require("../models/Tours");
+const Tour = require("../models/agency/Tours");
 const Booking = require("../models/Bookings");
 
 // copy các helper từ cart.controller (normalizeDate, clamp0, getPricesAndMeta) hoặc require chúng
-const normalizeDate = d => (d ? String(d).slice(0,10) : "");
+const normalizeDate = (d) => (d ? String(d).slice(0, 10) : "");
 const clamp0 = (n) => Math.max(0, Number(n) || 0);
 
 async function getPricesAndMeta(tourId, date) {
   const tour = await Tour.findById(tourId).lean();
-  if (!tour) return { unitPriceAdult:0, unitPriceChild:0, meta:{ name:"", image:"", departureStatus:"open", seatsLeft:null, seatsTotal:null, found:false } };
-  const dep = (tour.departures || []).find(d => (d?.date || "").slice(0,10) === date);
-  const unitPriceAdult = typeof dep?.priceAdult === "number" ? dep.priceAdult :
-                         typeof tour.basePrice === "number" ? tour.basePrice : 0;
-  const unitPriceChild = typeof dep?.priceChild === "number" ? dep.priceChild :
-                         Math.round((unitPriceAdult || 0) * 0.5);
+  if (!tour)
+    return {
+      unitPriceAdult: 0,
+      unitPriceChild: 0,
+      meta: {
+        name: "",
+        image: "",
+        departureStatus: "open",
+        seatsLeft: null,
+        seatsTotal: null,
+        found: false,
+      },
+    };
+  const dep = (tour.departures || []).find(
+    (d) => (d?.date || "").slice(0, 10) === date
+  );
+  const unitPriceAdult =
+    typeof dep?.priceAdult === "number"
+      ? dep.priceAdult
+      : typeof tour.basePrice === "number"
+      ? tour.basePrice
+      : 0;
+  const unitPriceChild =
+    typeof dep?.priceChild === "number"
+      ? dep.priceChild
+      : Math.round((unitPriceAdult || 0) * 0.5);
   const meta = {
     name: tour.title || "",
     image: tour.imageItems?.[0]?.imageUrl || "",
@@ -46,11 +66,16 @@ exports.quote = async (req, res) => {
       }
 
       // pricing + seats snapshot (no DB write)
-      const { unitPriceAdult, unitPriceChild, meta } = await getPricesAndMeta(tourId, date);
+      const { unitPriceAdult, unitPriceChild, meta } = await getPricesAndMeta(
+        tourId,
+        date
+      );
 
       // optional: enforce seatsLeft (nếu seatsLeft != null)
       if (meta.seatsLeft != null && adults + children > meta.seatsLeft) {
-        return res.status(409).json({ error: "EXCEEDS_DEPARTURE_CAPACITY", limit: meta.seatsLeft });
+        return res
+          .status(409)
+          .json({ error: "EXCEEDS_DEPARTURE_CAPACITY", limit: meta.seatsLeft });
       }
 
       out.push({
@@ -76,47 +101,45 @@ exports.quote = async (req, res) => {
 
 exports.getUserBookings = async (req, res) => {
   try {
-    const userId = req.user?.sub; // từ authJwt middleware (JWT payload có field "sub")
-
-    if (!userId) {
-      console.error("getUserBookings: Missing userId from token");
-      return res.status(401).json({ error: "UNAUTHORIZED" });
-    }
+    const userId = req.user?.sub;
+    if (!userId) return res.status(401).json({ error: "UNAUTHORIZED" });
 
     console.log("📚 Fetching bookings for userId:", userId);
 
-    // Tìm tất cả bookings của user, sắp xếp mới nhất trước
+    // 1️⃣ Lấy danh sách booking từ travelApp
     const bookings = await Booking.find({ userId })
-      .populate("items.tourId", "title imageItems")
       .sort({ createdAt: -1 })
       .lean();
 
-    console.log(`✅ Found ${bookings.length} bookings for user ${userId}`);
+    // 2️⃣ Gom tất cả tourId
+    const tourIds = bookings
+      .flatMap((b) => b.items?.map((i) => i.tourId?.toString()))
+      .filter(Boolean);
 
-    // Enrich với thông tin tour nếu cần
-    const enrichedBookings = bookings.map(booking => {
-      const items = booking.items?.map(item => {
-        // Nếu tourId được populate
-        if (item.tourId && typeof item.tourId === 'object') {
-          return {
-            ...item,
-            name: item.name || item.tourId.title,
-            image: item.image || item.tourId.imageItems?.[0]?.imageUrl
-          };
-        }
-        return item;
+    // 3️⃣ Lấy tour tương ứng từ TravelAgency DB
+    const tours = await Tour.find({ _id: { $in: tourIds } })
+      .select("title imageItems")
+      .lean();
+
+    // 4️⃣ Merge kết quả thủ công
+    const enrichedBookings = bookings.map((booking) => {
+      const items = booking.items?.map((item) => {
+        const t = tours.find(
+          (x) => x._id.toString() === item.tourId.toString()
+        );
+        return {
+          ...item,
+          name: item.name || t?.title || "",
+          image: item.image || t?.imageItems?.[0]?.imageUrl || "",
+        };
       });
-
-      return {
-        ...booking,
-        items
-      };
+      return { ...booking, items };
     });
 
-    res.json({ 
+    res.json({
       success: true,
       bookings: enrichedBookings,
-      count: enrichedBookings.length
+      count: enrichedBookings.length,
     });
   } catch (e) {
     console.error("getUserBookings error", e);
