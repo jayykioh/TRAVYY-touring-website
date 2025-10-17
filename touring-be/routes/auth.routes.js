@@ -4,7 +4,13 @@ const passport = require("passport");
 const { signAccess, signRefresh, verifyRefresh, newId } = require("../utils/jwt");
 const authJwt = require("../middlewares/authJwt");
 const User = require("../models/Users");
-const { register, login } = require("../controller/auth.controller");
+const { 
+  register, 
+  login, 
+  changePassword, 
+  forgotPassword, 
+  resetPassword 
+} = require("../controller/auth.controller");
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -13,6 +19,13 @@ const isProd = process.env.NODE_ENV === "production";
    ========================= */
 router.post("/register", register);
 router.post("/login", login);
+
+/* =========================
+   Password Management
+   ========================= */
+router.post("/change-password", authJwt, changePassword);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 /* =========================
    Google Login (Hybrid JWT)
@@ -47,6 +60,40 @@ router.get(
       return res.redirect("http://localhost:5173/oauth/callback");
     } catch (e) {
       console.error("google/callback error:", e);
+      return res.status(500).json({ message: "OAuth callback error" });
+    }
+  }
+);
+
+/* =========================
+   Facebook Login (Mở lại)
+   ========================= */
+router.get(
+  "/facebook",
+  passport.authenticate("facebook", { scope: ["email"], session: false })
+);
+
+router.get(
+  "/facebook/callback",
+  passport.authenticate("facebook", { session: false, failureRedirect: "http://localhost:5173/login" }),
+  async (req, res) => {
+    try {
+      const user = req.user;
+      const jti = newId();
+
+      const refreshToken = signRefresh({ jti, userId: user.id });
+
+      res.cookie("refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? "none" : "lax",
+        path: "/api/auth",
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      });
+
+      return res.redirect("http://localhost:5173/oauth/callback");
+    } catch (e) {
+      console.error("facebook/callback error:", e);
       return res.status(500).json({ message: "OAuth callback error" });
     }
   }

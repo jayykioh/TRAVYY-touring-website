@@ -22,7 +22,8 @@ export default function BookingHistory() {
 
         if (!response.ok) throw new Error("Không thể tải lịch sử đặt tour");
         const data = await response.json();
-        setBookings(data.bookings || data.data || []);
+        const bookings = data.bookings || data.data || [];
+        setBookings(bookings);
       } catch (err) {
         console.error("Error fetching bookings:", err);
         setError(err.message);
@@ -30,6 +31,7 @@ export default function BookingHistory() {
         setLoading(false);
       }
     };
+
     if (user?.token) fetchBookings();
   }, [user]);
 
@@ -218,11 +220,10 @@ export default function BookingHistory() {
                       )}
                     </div>
                   </div>
-                
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

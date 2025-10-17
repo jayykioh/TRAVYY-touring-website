@@ -183,13 +183,13 @@ function Login() {
                 {/* Forgot Password and Register Link*/}
                 <div className="flex flex-row justify-between items-center">
                   <a
-                    href="#"
+                    href="/forgot-password"
                     className="text-sm text-white/90 hover:text-white transition-colors font-medium"
                   >
                     Forgot Password?
                   </a>
                    <a
-                    href="register"
+                    href="/register"
                     className="text-sm text-white/90 hover:text-white transition-colors font-medium"
                   >
                     Register 

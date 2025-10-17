@@ -12,6 +12,9 @@ import DiscountCodesPage from "./pages/DiscountCodesPage";
 import BlogDetailPage from "./pages/BlogDetailPage"; // ✅ THÊM IMPORT NÀY
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import ChangePassword from "./pages/ChangePassword";
 import ProfileLayout from "./pages/UserProfile";
 import ProfileInfo from "./components/ProfileInfo";
 import ProfileReviews from "./components/ProfileReviews";
@@ -116,12 +119,15 @@ export default function App() {
             <Route path="reviews" element={<ProfileReviews />} />
             <Route path="favorites" element={<WishlistPage />} />
             <Route path="booking-history" element={<BookingHistory />} />
+            <Route path="change-password" element={<ChangePassword />} />
           </Route>
         </Route>
 
         {/* ----- Auth routes (public) ----- */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
         
         {/* ----- Payment callback ----- */}

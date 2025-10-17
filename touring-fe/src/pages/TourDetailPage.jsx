@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import TourCard from "../components/TourCard";
+import { TourReviews } from "../components/ProfileReviews";
 import { useCart } from "../hooks/useCart";
 import { useAuth } from "../auth/context";
 import BreadcrumbNav from "@/components/BreadcrumbNav";
@@ -580,7 +581,7 @@ export default function TourDetailPage() {
               <div className="mt-6">
                 <LocationCard lat={lat} lng={lng} title={title} />
               </div>
-              <Reviews tour={tour} />
+           
               <FAQSection />
             </div>
 
@@ -610,6 +611,9 @@ export default function TourDetailPage() {
             </div>
           </div>
 
+          {/* Tour Reviews */}
+          <TourReviews tourId={getId(tour)} />
+
           {/* Related Tours */}
           <RelatedTours
             tours={suggestedTours}
@@ -635,75 +639,7 @@ function Section({ title, children }) {
   );
 }
 
-function Reviews({ tour }) {
-  return (
-    <div className="rounded-2xl p-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
-      <h2 className="text-xl font-bold text-gray-900 mb-4 pl-3 border-l-4 border-gray-800/80">
-        Đánh giá
-      </h2>
-      <div className="flex items-center gap-4 mb-6">
-        <div className="flex items-center gap-2">
-          <div className="text-3xl">😊</div>
-          <div>
-            <div className="text-2xl font-bold text-gray-900">
-              {tour?.rating ?? "—"}
-            </div>
-            <div className="text-sm text-gray-600">Hài lòng</div>
-          </div>
-        </div>
-        <div className="text-sm text-gray-700">
-          / 5 | {formatNumber(tour?.reviews)} Đánh giá
-        </div>
-      </div>
 
-      <div className="flex gap-2 mb-4 flex-wrap">
-        <button className="px-3 py-1 text-sm rounded-full border border-black/10 bg-black/5 hover:bg-black/10">
-          Đánh giá phù hợp nhất
-        </button>
-        <button className="px-3 py-1 text-sm rounded-full border border-black/10 bg-white/50 hover:bg-white/70">
-          Tất cả
-        </button>
-        <button className="px-3 py-1 text-sm rounded-full border border-black/10 bg-white/50 hover:bg-white/70">
-          Có hình ảnh
-        </button>
-        <button className="px-3 py-1 text-sm rounded-full border border-black/10 bg-white/50 hover:bg-white/70">
-          Chỉ tiếng Việt
-        </button>
-      </div>
-
-      <div className="border-t border-white/60 pt-4">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 bg-amber-200 rounded-full flex items-center justify-center text-sm font-semibold">
-            J
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-semibold text-sm text-gray-900">
-                Joselle ********
-              </span>
-              <span className="text-xs text-gray-500">2025/07/29</span>
-              <div className="flex items-center gap-1 ml-auto">
-                <span className="text-xs text-emerald-700 bg-emerald-100 px-2 py-1 rounded">
-                  Hài lòng
-                </span>
-                <span className="text-amber-500 text-sm">5.0</span>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600 mb-2">
-              Đánh giá cho: Chuyến Bay Đêm • Chuyến bay quốc tế • Ưu tiên
-            </p>
-            <p className="text-sm text-gray-800">
-              Dịch vụ rất cần thiết khi phải nối chuyến. Rất đáng giá.
-            </p>
-            <button className="text-sm text-gray-900 underline mt-2 hover:opacity-80">
-              Hiển thị đánh giá gốc
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function BookingSidebar({
   // ngày

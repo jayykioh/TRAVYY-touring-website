@@ -8,6 +8,9 @@ const {
   getUserNotifications,
   markNotificationsAsRead,
   getNotificationStats,
+  notifyPasswordChanged,
+  notifyPasswordReset,
+  notifyPasswordResetSuccess,
 } = require("../controller/notifyController");
 const authJwt = require("../middlewares/authJwt");
 
@@ -18,6 +21,11 @@ router.post("/booking", notifyBookingSuccess);
 router.post("/payment", notifyPaymentSuccess);
 router.post("/new-tour", notifyNewTour);
 router.post("/register", notifyRegister);
+
+// 🔒 Security notification endpoints
+router.post("/password-changed", notifyPasswordChanged);
+router.post("/password-reset", notifyPasswordReset);
+router.post("/password-reset-success", notifyPasswordResetSuccess);
 
 // User notification management (protected)
 router.get("/my", authJwt, getUserNotifications);
