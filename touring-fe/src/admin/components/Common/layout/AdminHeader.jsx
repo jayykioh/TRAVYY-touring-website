@@ -8,11 +8,11 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAdminAuth } from "../../../context/AdminAuthContext";
+import { useAuth } from "../../../../auth/AuthContext";
 
 export default function AdminHeader() {
   const navigate = useNavigate();
-  const { admin, logout } = useAdminAuth();
+  const { user, logout } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -56,7 +56,7 @@ export default function AdminHeader() {
   const handleLogout = () => {
     if (window.confirm('Bạn có chắc chắn muốn đăng xuất?')) {
       logout();
-      navigate('/admin/login');
+      navigate('/login');
     }
   };
 
@@ -169,14 +169,14 @@ export default function AdminHeader() {
           >
             <div className="text-right">
               <p className="text-sm font-medium text-gray-900">
-                {admin?.name || 'Melissa Peters'}
+                {user?.name || 'Melissa Peters'}
               </p>
               <p className="text-xs text-gray-600">
-                {admin?.role || 'admin'}
+                {user?.adminRole || user?.role || 'admin'}
               </p>
             </div>
             <img
-              src={admin?.avatar || 'https://ui-avatars.com/api/?name=Melissa+Peters&background=3B82F6&color=fff'}
+              src={user?.avatar || 'https://ui-avatars.com/api/?name=Melissa+Peters&background=3B82F6&color=fff'}
               alt="Admin"
               className="w-10 h-10 rounded-full border-2 border-white shadow-sm"
             />
@@ -193,10 +193,10 @@ export default function AdminHeader() {
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
                 <div className="p-4 border-b border-gray-200">
                   <p className="text-sm font-medium text-gray-900">
-                    {admin?.email || 'admin@travyy.com'}
+                    {user?.email || 'admin@travyy.com'}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
-                    ID: {admin?.id || '1'}
+                    ID: {user?.id || '1'}
                   </p>
                 </div>
                 <div className="py-2">
