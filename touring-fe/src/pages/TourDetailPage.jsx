@@ -19,6 +19,7 @@ import { toast, Toaster } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import LocationCard from "../components/LocationCard";
 import { optimizeImage } from "@/utils/imageUrl";
+import ItinerarySection from "@/components/ItinerarySection";
 
 export default function TourDetailPage() {
   const { id: routeId } = useParams();
@@ -585,10 +586,9 @@ export default function TourDetailPage() {
                     </li>
                     <li>Not available from 00:00–05:00 h hằng ngày.</li>
                     <li>Hotline: +84866624188</li>
-                    <li>
-                      {tour?.itinerary?.[0]?.description ||
-                        "Chưa có lịch trình"}
-                    </li>
+                  </Section>
+                  <Section title="Lịch trình chi tiết">
+                    <ItinerarySection itinerary={tour.itinerary} />
                   </Section>
                 </div>
               </div>
@@ -944,17 +944,16 @@ function RelatedTours({ tours }) {
         {tours.map((tour) => {
           return (
             <TourCard
-              key={tour._id}
               id={tour._id}
               to={`/tours/${tour._id}`}
-              image={tour.imageItems?.[0]?.imageUrl}
+              image={optimizeImage(tour.imageItems?.[0]?.imageUrl, 800)}
               title={tour.description}
               location={tour.locations?.[0]?.name || "Địa điểm"}
               tags={tour.tags}
               bookedText={`${tour.usageCount} Đã được đặt`}
               rating={tour.isRating}
               reviews={tour.isReview}
-              priceFrom={String(tour.basePrice ?? 0)}
+              priceFrom={tour.departures?.[0]?.priceAdult?.toString() || "N/A"}
               originalPrice={tour.basePrice}
             />
           );
