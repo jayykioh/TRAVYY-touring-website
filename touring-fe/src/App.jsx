@@ -29,23 +29,8 @@ import AITourCreator from "./pages/AITourCreator";
 import PaymentCallback from "./pages/PaymentCallback";
 
 // ✅ THÊM: Import Admin components
-import AdminLayout from "./admin/components/Common/layout/AdminLayout";
-import Dashboard from "./admin/components/Dashboard/Dashboard";
-import TourManagement from "./admin/pages/TourManagement";
-import GuideManagement from "./admin/pages/GuideManagement";
-import AgencyAPIData from "./admin/pages/AgencyAPIData";
-import Settings from "./admin/pages/Settings";
-import AdminLogin from "./admin/pages/AdminLogin";
-import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
-
-// Placeholder components cho admin
-const CustomerRequests = () => (
-  <div className="p-6">Customer Requests Page - Coming soon</div>
-);
-const Certification = () => (
-  <div className="p-6">Certification Page - Coming soon</div>
-);
-const Reports = () => <div className="p-6">Reports Page - Coming soon</div>;
+// import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
+import AdminRoutes from "./admin/routes/AdminRoutes";
 
 // Route guard
 function ProtectedRoute({ children }) {
@@ -55,146 +40,16 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-// Route guard cho admin
-function AdminProtectedRoute({ children }) {
-  const { isAuth, isAdmin, booting } = useAuth();
-
-  if (booting) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Đang tải...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuth) return <Navigate to="/admin/login" replace />;
-  if (!isAdmin) return <Navigate to="/home" replace />;
-
-  return children;
-}
-
 export default function App() {
-  const { booting, isAuth, isAdmin, user } = useAuth();
+  const { booting, isAuth, user } = useAuth();
   console.log("Auth state:", { isAuth, user });
   if (booting) return <LoadingScreen />;
 
   return (
     <>
       <Routes>
-        {/* ✅ Admin routes - sử dụng auth context chung */}
-        <Route
-          path="/admin/login"
-          element={
-            <AdminAuthProvider>
-              <AdminLogin />
-            </AdminAuthProvider>
-          }
-        />
-
-        <Route
-          path="/admin/dashboard"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="dashboard">
-                <Dashboard />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/tours"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="tours">
-                <TourManagement />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/guides"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="guides">
-                <GuideManagement />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/guides/compatibility"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="guides">
-                <div className="p-6">Check Compatibility - Coming soon</div>
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/customers"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="customers">
-                <CustomerRequests />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/certification"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="certification">
-                <Certification />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/api"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="api">
-                <AgencyAPIData />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/reports"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="reports">
-                <Reports />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/settings"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="settings">
-                <Settings />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        {/* Admin default redirect */}
-        <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
+        {/* ✅ CẬP NHẬT 2: Admin routes - AdminAuthProvider đã wrap BÊN TRONG AdminRoutes */}
+        <Route path="/admin/*" element={<AdminRoutes />} />
 
         {/* ----- Public + Main layout ----- */}
         <Route element={<MainLayout />}>
@@ -277,8 +132,8 @@ export default function App() {
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
 
-      {/* Popup chọn role sau khi login (chỉ cho user, không cho admin) */}
-      {isAuth && !isAdmin && (!user?.role || user.role === "uninitialized") && (
+      {/* Popup chọn role sau khi login */}
+      {isAuth && (!user?.role || user.role === "uninitialized") && (
         <RolePopup />
       )}
     </>
