@@ -2,9 +2,6 @@ const path = require("path");
 // Load .env explicitly relative to this file to avoid CWD issues
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 const PORT = process.env.PORT || 4000;
-
-require("./config/db");
-
 const express = require("express");
 const mongoose = require("mongoose");
 const passport = require("passport");
@@ -18,8 +15,8 @@ const cookieParser = require("cookie-parser");
 const tourRoutes = require("./routes/tour.routes");
 const profileRoutes = require("./routes/profile.routes");
 const authRoutes = require("./routes/auth.routes");
-// Admin
-const adminAuthRoutes = require("./routes/admin.routes");
+// Admin Routes (modular structure)
+const adminRoutes = require("./routes/admin");
 const blogRoutes = require("./routes/blogs");
 const vnAddrRoutes = require("./middlewares/vnAddress.routes");
 const cartRoutes = require("./routes/carts.routes");
@@ -106,7 +103,7 @@ app.use("/api/tours", tourRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
-app.use("/api/admin", adminAuthRoutes);
+app.use("/api/admin", adminRoutes); // Updated to use modular admin routes
 app.use("/api/payments", paymentRoutes);
 
 app.use("/api/locations", locationRoutes);

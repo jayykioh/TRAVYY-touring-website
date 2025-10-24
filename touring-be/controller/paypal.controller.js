@@ -176,18 +176,7 @@ exports.createOrder = async (req, res) => {
       req.body
     );
 
-    // Apply discount from voucher/promotion
-    const discountAmount = Number(req.body.discountAmount) || 0;
-    const finalTotalVND = Math.max(0, totalVND - discountAmount);
-
-    console.log("💰 Price calculation:", {
-      originalTotal: totalVND,
-      discountAmount,
-      finalTotal: finalTotalVND,
-      voucherCode: req.body.promotionCode || req.body.voucherCode
-    });
-
-    if (!items.length || finalTotalVND <= 0) {
+    if (!items.length || totalVND <= 0) {
       return res.status(400).json({ error: "EMPTY_OR_INVALID_AMOUNT" });
     }
 
@@ -206,18 +195,31 @@ exports.createOrder = async (req, res) => {
       const usd = Number(toUSD(i.unit_amount_vnd)); // string -> number (2 decimals)
       return Math.round(usd * 100) * (i.quantity || 1);
     });
-    const itemTotalCents = lineCents.reduce((a,b)=>a+b,0);
-    const discountCents = Math.round(Number(toUSD(discountAmount)) * 100);
-    const finalAmountCents = Math.max(0, itemTotalCents - discountCents);
+    const itemTotalCents = lineCents.reduce((a, b) => a + b, 0);
+    const amountTotalCentsFromVND = Math.round(Number(toUSD(totalVND)) * 100);
 
-    console.log("Payment calculation:", {
+    let amountCents = itemTotalCents; // ưu tiên khớp item_total
+    const mismatch = amountTotalCentsFromVND !== itemTotalCents;
+    if (mismatch) {
+      console.warn(
+        "[PayPal] Rounding mismatch total vs item_total — adjusting amount.value to match item_total",
+        {
+          totalVND,
+          amountTotalCentsFromVND,
+          itemTotalCents,
+        }
+      );
+    }
+    const amountUSD = (amountCents / 100).toFixed(2);
+    const itemsTotalFormatted = amountUSD; // đảm bảo bằng nhau tuyệt đối
+
+    console.log("Payment details:", {
       totalVND,
-      discountAmount,
-      finalTotalVND,
+      amountUSD,
       itemTotalCents,
-      discountCents,
-      finalAmountCents,
-      items: items.map(i => ({
+      amountTotalCentsFromVND,
+      mismatch,
+      items: items.map((i) => ({
         name: i.name,
         qty: i.quantity,
         unitVND: i.unit_amount_vnd,
@@ -225,32 +227,28 @@ exports.createOrder = async (req, res) => {
       })),
     });
 
-    const itemsTotalUSD = (itemTotalCents/100).toFixed(2);
-    const discountUSD = (discountCents/100).toFixed(2);
-    const finalAmountUSD = (finalAmountCents/100).toFixed(2);
-
-    // Build breakdown - include discount if applicable
-    const breakdown = {
-      item_total: {
-        currency_code: currency,
-        value: itemsTotalUSD
-      }
-    };
-    
-    if (discountCents > 0) {
-      breakdown.discount = {
-        currency_code: currency,
-        value: discountUSD
-      };
-    }
-
     const orderBody = {
       intent: "CAPTURE",
-      purchase_units: [{
-        amount: {
-          currency_code: currency,
-          value: finalAmountUSD,
-          breakdown: breakdown
+      purchase_units: [
+        {
+          amount: {
+            currency_code: currency,
+            value: amountUSD,
+            breakdown: {
+              item_total: {
+                currency_code: currency,
+                value: itemsTotalFormatted,
+              },
+            },
+          },
+          items: items.map((i) => ({
+            name: i.name.substring(0, 127), // PayPal limit 127 chars
+            quantity: String(i.quantity || 1),
+            unit_amount: {
+              currency_code: currency,
+              value: toUSD(i.unit_amount_vnd),
+            },
+          })),
         },
       ],
       application_context: {
@@ -302,7 +300,7 @@ exports.createOrder = async (req, res) => {
         provider: "paypal",
         orderId: data.id,
         requestId: `order-${userId}-${Date.now()}`,
-        amount: finalTotalVND,
+        amount: totalVND,
         status: "pending",
         mode: mode || "cart",
         items: items.map((i) => {
@@ -325,8 +323,6 @@ exports.createOrder = async (req, res) => {
             },
           };
         }),
-        voucherCode: req.body.promotionCode || req.body.voucherCode || undefined,
-        discountAmount: discountAmount,
         rawCreateResponse: data,
       });
       console.log(`[PayPal] Payment session created for orderId: ${data.id}`);
@@ -355,8 +351,11 @@ exports.createOrder = async (req, res) => {
 };
 
 exports.captureOrder = async (req, res) => {
-  const mongoSession = await mongoose.startSession();
-  
+  // Note: We need TWO sessions because Tour uses agencyConn, Booking uses mainConn
+  const { mainConn, agencyConn } = require("../config/db");
+  const mainSession = await mainConn.startSession();
+  const agencySession = await agencyConn.startSession();
+
   try {
     const userId = req.user.sub;
     const { orderID } = req.body;
@@ -391,7 +390,7 @@ exports.captureOrder = async (req, res) => {
 
     console.log("Payment session:", paymentSession);
 
-    await mongoSession.withTransaction(async () => {
+    await mainSession.withTransaction(async () => {
       // 1) Capture PayPal payment
       const accessToken = await getAccessToken();
       const captureUrl = `${PAYPAL_BASE}/v2/checkout/orders/${orderID}/capture`;
@@ -423,50 +422,6 @@ exports.captureOrder = async (req, res) => {
         capture: captureData,
       };
       await paymentSession.save();
-      
-      // 2.5) Mark voucher as used if stored in session
-      if (paymentSession.voucherCode && paymentSession.userId) {
-        try {
-          const User = require("../models/Users");
-          const Promotion = require("../models/Promotion");
-          
-          console.log(`🎫 Marking voucher ${paymentSession.voucherCode} as used for user ${paymentSession.userId}`);
-          
-          const promotion = await Promotion.findOne({ code: paymentSession.voucherCode.toUpperCase() });
-          if (promotion) {
-            console.log(`   Found promotion: ${promotion._id}`);
-            
-            // ✅ Tăng usageCount của promotion
-            await Promotion.findByIdAndUpdate(
-              promotion._id,
-              { $inc: { usageCount: 1 } },
-              { session: mongoSession }
-            );
-            console.log(`   ✅ Incremented usageCount`);
-            
-            // ✅ Đánh dấu user đã sử dụng voucher
-            await User.findByIdAndUpdate(
-              paymentSession.userId,
-              {
-                $addToSet: {
-                  usedPromotions: {
-                    promotionId: promotion._id,
-                    code: promotion.code,
-                    usedAt: new Date()
-                  }
-                }
-              },
-              { session: mongoSession }
-            );
-            console.log(`✅ [PayPal] Marked promotion ${paymentSession.voucherCode} as used for user ${paymentSession.userId} and incremented usageCount`);
-          } else {
-            console.warn(`   ⚠️ Promotion not found: ${paymentSession.voucherCode}`);
-          }
-        } catch (voucherError) {
-          console.error("[PayPal] Error marking voucher as used:", voucherError);
-          // Don't fail the payment if voucher marking fails
-        }
-      }
 
       // 3) Get booked items from payment session
       const bookedItems = paymentSession.items.map((it) => ({
@@ -493,7 +448,7 @@ exports.captureOrder = async (req, res) => {
         console.log(`   date: ${bk.date}`);
         console.log(`   adults: ${bk.adults}, children: ${bk.children}`);
 
-        const tour = await Tour.findById(bk.tourId).session(mongoSession);
+        const tour = await Tour.findById(bk.tourId).session(agencySession);
         if (!tour) {
           console.log(`   ⚠️ Tour not found, skipping`);
           continue;
@@ -533,7 +488,7 @@ exports.captureOrder = async (req, res) => {
         const updateResult = await Tour.updateOne(
           { _id: tour._id, "departures.date": bk.date },
           { $inc: { "departures.$.seatsLeft": -needed } },
-          { session: mongoSession }
+          { session: agencySession }
         );
 
         console.log(`   ✅ Update result:`, updateResult);
@@ -559,7 +514,8 @@ exports.captureOrder = async (req, res) => {
     console.error("Stack:", e.stack);
     res.status(e.status || 500).json({ error: e.message || "CAPTURE_FAILED" });
   } finally {
-    mongoSession.endSession();
+    mainSession.endSession();
+    agencySession.endSession();
   }
 };
 
