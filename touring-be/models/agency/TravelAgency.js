@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { agencyConn } = require("../../config/db");
 
 const TravelAgencySchema = new mongoose.Schema(
   {
@@ -25,6 +26,11 @@ const TravelAgencySchema = new mongoose.Schema(
       type: Number,
       default: null, // có thể lưu tổng số tour/doanh thu/đơn hàng...
     },
+    image: {
+      type: String,
+      trim: true, // link ảnh Cloudinary
+      default: null,
+    },
     employees: [
       {
         userId: {
@@ -37,6 +43,4 @@ const TravelAgencySchema = new mongoose.Schema(
   { timestamps: true, collection: "travel_agency" } // chỉ rõ collection trong MongoDB
 );
 
-
-module.exports = mongoose.model("TravelAgency", TravelAgencySchema);
-
+module.exports = agencyConn.model("TravelAgency", TravelAgencySchema);

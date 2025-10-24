@@ -23,6 +23,7 @@ import { toast, Toaster } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import LocationCard from "../components/LocationCard";
 import { optimizeImage } from "@/utils/imageUrl";
+import ItinerarySection from "@/components/ItinerarySection";
 
 export default function TourDetailPage() {
   const { id: routeId } = useParams();
@@ -417,6 +418,22 @@ export default function TourDetailPage() {
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 leading-tight">
                 {getTitle(tour)}
               </h1>
+              {/* Hiển thị thông tin đại lý */}
+              {tour?.agencyId && (
+                <div className="flex items-center gap-2 mt-1">
+                  <img
+                    src={tour.agencyId.image}
+                    alt={tour.agencyId.name}
+                    className="w-7 h-7 rounded-full object-cover border-2 border-gray-300 shadow-sm"
+                  />
+                  <div className="text-sm text-gray-700">
+                    <span className="font-medium">{tour.agencyId.name}</span>
+                    <div className="text-xs text-gray-500">
+                      {tour.agencyId.contact}
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 text-amber-400 fill-current" />
@@ -593,10 +610,9 @@ export default function TourDetailPage() {
                     </li>
                     <li>Not available from 00:00–05:00 h hằng ngày.</li>
                     <li>Hotline: +84866624188</li>
-                    <li>
-                      {tour?.itinerary?.[0]?.description ||
-                        "Chưa có lịch trình"}
-                    </li>
+                  </Section>
+                  <Section title="Lịch trình chi tiết">
+                    <ItinerarySection itinerary={tour.itinerary} />
                   </Section>
                 </div>
               </div>
@@ -887,17 +903,16 @@ function RelatedTours({ tours }) {
         {tours.map((tour) => {
           return (
             <TourCard
-              key={tour._id}
               id={tour._id}
               to={`/tours/${tour._id}`}
-              image={tour.imageItems?.[0]?.imageUrl}
+              image={optimizeImage(tour.imageItems?.[0]?.imageUrl, 800)}
               title={tour.description}
               location={tour.locations?.[0]?.name || "Địa điểm"}
               tags={tour.tags}
               bookedText={`${tour.usageCount} Đã được đặt`}
               rating={tour.isRating}
               reviews={tour.isReview}
-              priceFrom={String(tour.basePrice ?? 0)}
+              priceFrom={tour.departures?.[0]?.priceAdult?.toString() || "N/A"}
               originalPrice={tour.basePrice}
             />
           );

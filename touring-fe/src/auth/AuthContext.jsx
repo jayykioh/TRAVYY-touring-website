@@ -3,6 +3,24 @@ import { AuthCtx } from "./context";
 const API_BASE = "http://localhost:4000";
 
 // helper fetch: luôn gửi cookie (để BE đọc refresh_token)
+
+export { useAuth } from "./context";
+
+
+const MOCK_ADMINS = [
+  {
+    id: 1,
+    email: 'admin@travyy.com',
+    password: 'Admin@123',
+    name: 'Melissa Peters',
+    role: 'admin',  // ⬅️ Đánh dấu đây là admin
+    adminRole: 'Super Admin',
+    avatar: 'https://ui-avatars.com/api/?name=Melissa+Peters&background=3B82F6&color=fff',
+    permissions: ['all']
+  }
+  // ... 2 admin khác
+];
+
 async function api(input, init = {}) {
   const isFormData = init.body instanceof FormData;
   const headers = isFormData 
@@ -142,10 +160,12 @@ export default function AuthProvider({ children }) {
   const value = {
     user,
     isAuth: !!user,
+    isAdmin: !!user && user.role === 'admin',
     booting,
     needsRole,
     setUser,
     login,
+    adminLogin, 
     logout,
     accessToken,
     withAuth, // dùng cái này để call API bảo vệ

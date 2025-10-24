@@ -7,11 +7,15 @@ const crypto = require("crypto");
 const PaymentSession = require("../models/PaymentSession");
 const mongoose = require("mongoose");
 const Booking = require("../models/Bookings");
-const Tour = require("../models/Tours");
+const Tour = require("../models/agency/Tours");
 const { Cart, CartItem } = require("../models/Carts");
 
 // Import unified helpers
-const { clearCartAfterPayment, createBookingFromSession, FX_VND_USD } = require("../utils/paymentHelpers");
+const {
+  clearCartAfterPayment,
+  createBookingFromSession,
+  FX_VND_USD,
+} = require("../utils/paymentHelpers");
 
 // Export helpers for use in other controllers
 module.exports.clearCartAfterPayment = clearCartAfterPayment;
@@ -46,18 +50,26 @@ function buildRawSignature(payload) {
 }
 
 // ===== Helpers similar to PayPal buildCharge =====
-const normDate = (s) => String(s || "").slice(0,10);
-const clamp0 = (n) => Math.max(0, Number(n)||0);
+const normDate = (s) => String(s || "").slice(0, 10);
+const clamp0 = (n) => Math.max(0, Number(n) || 0);
 
 async function getPricesAndMeta(tourId, date) {
   const t = await Tour.findById(tourId).lean();
   if (!t) throw Object.assign(new Error("TOUR_NOT_FOUND"), { status: 404 });
-  const dep = (t.departures || []).find(d => normDate(d?.date) === date);
-  const unitPriceAdult = typeof dep?.priceAdult === 'number' ? dep.priceAdult : (typeof t.basePrice === 'number' ? t.basePrice : 0);
-  const unitPriceChild = typeof dep?.priceChild === 'number' ? dep.priceChild : Math.round((unitPriceAdult||0)*0.5);
+  const dep = (t.departures || []).find((d) => normDate(d?.date) === date);
+  const unitPriceAdult =
+    typeof dep?.priceAdult === "number"
+      ? dep.priceAdult
+      : typeof t.basePrice === "number"
+      ? t.basePrice
+      : 0;
+  const unitPriceChild =
+    typeof dep?.priceChild === "number"
+      ? dep.priceChild
+      : Math.round((unitPriceAdult || 0) * 0.5);
   return {
-    name: t.title || t.name || '',
-    image: t.imageItems?.[0]?.imageUrl || t.image || '',
+    name: t.title || t.name || "",
+    image: t.imageItems?.[0]?.imageUrl || t.image || "",
     unitPriceAdult,
     unitPriceChild,
   };
@@ -65,51 +77,74 @@ async function getPricesAndMeta(tourId, date) {
 
 async function buildMoMoCharge(userId, body) {
   const mode = body?.mode;
-  if (mode === 'cart') {
+  if (mode === "cart") {
     const cart = await Cart.findOne({ userId });
     if (!cart) return { items: [], totalVND: 0, mode };
     const lines = await CartItem.find({ cartId: cart._id, selected: true });
     const items = [];
     let totalVND = 0;
     for (const line of lines) {
-      const { name, image, unitPriceAdult, unitPriceChild } = await getPricesAndMeta(line.tourId, normDate(line.date));
+      const { name, image, unitPriceAdult, unitPriceChild } =
+        await getPricesAndMeta(line.tourId, normDate(line.date));
       const a = clamp0(line.adults);
       const c = clamp0(line.children);
-      const amt = unitPriceAdult*a + unitPriceChild*c;
+      const amt = unitPriceAdult * a + unitPriceChild * c;
       totalVND += amt;
       items.push({
         name,
         price: amt,
         originalPrice: undefined,
         tourId: line.tourId,
-        meta: { date: normDate(line.date), adults: a, children: c, unitPriceAdult, unitPriceChild, image },
+        meta: {
+          date: normDate(line.date),
+          adults: a,
+          children: c,
+          unitPriceAdult,
+          unitPriceChild,
+          image,
+        },
       });
     }
     return { items, totalVND, mode };
   }
-  if (mode === 'buy-now') {
+  if (mode === "buy-now") {
     const inc = body?.item || {};
     const tourId = inc.tourId || inc.id;
     const date = normDate(inc.date);
-    if (!tourId || !date) throw Object.assign(new Error('INVALID_BUY_NOW'), { status: 400 });
-    const { name, image, unitPriceAdult, unitPriceChild } = await getPricesAndMeta(tourId, date);
+    if (!tourId || !date)
+      throw Object.assign(new Error("INVALID_BUY_NOW"), { status: 400 });
+    const { name, image, unitPriceAdult, unitPriceChild } =
+      await getPricesAndMeta(tourId, date);
     const a = clamp0(inc.adults);
     const c = clamp0(inc.children);
-    const amt = unitPriceAdult*a + unitPriceChild*c;
+    const amt = unitPriceAdult * a + unitPriceChild * c;
     return {
-      items: [{
-        name,
-        price: amt,
-        originalPrice: undefined,
-        tourId,
-        meta: { date, adults: a, children: c, unitPriceAdult, unitPriceChild, image },
-      }],
+      items: [
+        {
+          name,
+          price: amt,
+          originalPrice: undefined,
+          tourId,
+          meta: {
+            date,
+            adults: a,
+            children: c,
+            unitPriceAdult,
+            unitPriceChild,
+            image,
+          },
+        },
+      ],
       totalVND: amt,
       mode,
     };
   }
   // fallback: empty
-  return { items: [], totalVND: Number(body?.amount)||0, mode: mode || 'cart' };
+  return {
+    items: [],
+    totalVND: Number(body?.amount) || 0,
+    mode: mode || "cart",
+  };
 }
 
 exports.createMoMoPayment = async (req, res) => {
@@ -161,12 +196,15 @@ exports.createMoMoPayment = async (req, res) => {
     // ENV configuration (provide defaults for sandbox testing)
     const partnerCode = process.env.MOMO_PARTNER_CODE || "MOMO"; // sample: MOMO
     const accessKey = process.env.MOMO_ACCESS_KEY || "F8BBA842ECF85"; // sample sandbox
-    const secretKey = process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz"; // sample sandbox
-    const endpoint = process.env.MOMO_CREATE_ENDPOINT || "https://test-payment.momo.vn/v2/gateway/api/create";
+    const secretKey =
+      process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz"; // sample sandbox
+    const endpoint =
+      process.env.MOMO_CREATE_ENDPOINT ||
+      "https://test-payment.momo.vn/v2/gateway/api/create";
 
-  const now = Date.now();
-  const requestId = partnerCode + now;
-  const orderId = partnerCode + now;
+    const now = Date.now();
+    const requestId = partnerCode + now;
+    const orderId = partnerCode + now;
     const envRedirect = process.env.MOMO_REDIRECT_URL;
     const envIpn = process.env.MOMO_IPN_URL;
     const payload = {
@@ -178,9 +216,13 @@ exports.createMoMoPayment = async (req, res) => {
       orderId,
       orderInfo,
       redirectUrl:
-        redirectUrl || envRedirect || `${req.protocol}://${req.get("host")}/momo-sandbox`,
+        redirectUrl ||
+        envRedirect ||
+        `${req.protocol}://${req.get("host")}/momo-sandbox`,
       ipnUrl:
-        ipnUrl || envIpn || `${req.protocol}://${req.get("host")}/api/payments/momo/ipn`,
+        ipnUrl ||
+        envIpn ||
+        `${req.protocol}://${req.get("host")}/api/payments/momo/ipn`,
       lang: "vi",
       extraData,
       requestType: "captureWallet",
@@ -217,7 +259,7 @@ exports.createMoMoPayment = async (req, res) => {
     });
 
     const data = await momoRes.json().catch(() => ({}));
-  const isOk = momoRes.ok && data?.payUrl && data?.resultCode === 0;
+    const isOk = momoRes.ok && data?.payUrl && data?.resultCode === 0;
 
     if (!isOk) {
       console.warn("[MoMo] create failed", {
@@ -244,12 +286,15 @@ exports.createMoMoPayment = async (req, res) => {
         requestId,
         amount: amt,
         status: "pending",
-        mode: mode || (buyNowItem ? 'buy-now' : 'cart'),
+        mode: mode || (buyNowItem ? "buy-now" : "cart"),
         items: (Array.isArray(serverItems) ? serverItems : []).map((it) => ({
           name: it.name,
           price: Number(it.price) || 0,
           originalPrice: Number(it.originalPrice) || undefined,
-          tourId: it.tourId && mongoose.isValidObjectId(it.tourId) ? it.tourId : undefined,
+          tourId:
+            it.tourId && mongoose.isValidObjectId(it.tourId)
+              ? it.tourId
+              : undefined,
           meta: it.meta || {},
         })),
         voucherCode: req.body.promotionCode || req.body.voucherCode || undefined,
@@ -297,11 +342,19 @@ function buildIpnRawSignature(p) {
 exports.handleMoMoIPN = async (req, res) => {
   try {
     const body = req.body || {};
-    const secretKey = process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz"; // sandbox fallback
+    const secretKey =
+      process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz"; // sandbox fallback
     const raw = buildIpnRawSignature(body);
-    const expectedSig = crypto.createHmac("sha256", secretKey).update(raw).digest("hex");
+    const expectedSig = crypto
+      .createHmac("sha256", secretKey)
+      .update(raw)
+      .digest("hex");
     if (expectedSig !== body.signature) {
-      console.warn("[MoMo] IPN signature mismatch", { raw, expectedSig, got: body.signature });
+      console.warn("[MoMo] IPN signature mismatch", {
+        raw,
+        expectedSig,
+        got: body.signature,
+      });
       return res.status(400).json({ error: "BAD_SIGNATURE" });
     }
 
@@ -368,7 +421,7 @@ exports.handleMoMoIPN = async (req, res) => {
       // Create booking (unified helper with idempotent check)
       await createBookingFromSession(session, { ipn: body, sessionId: session._id });
     }
-    
+
     // Important: MoMo expects 200/204 to stop retrying
     res.json({ message: "OK" });
   } catch (e) {
@@ -402,10 +455,10 @@ exports.markMoMoPaid = async (req, res) => {
   try {
     const { orderId, resultCode } = req.body || {};
     if (!orderId) return res.status(400).json({ error: "MISSING_ORDER_ID" });
-    
+
     const sess = await PaymentSession.findOne({ orderId });
     if (!sess) return res.status(404).json({ error: "SESSION_NOT_FOUND" });
-    
+
     if (sess.status !== "paid") {
       if (String(resultCode) !== "0") {
         sess.status = "failed";
@@ -453,9 +506,16 @@ exports.markMoMoPaid = async (req, res) => {
     }
 
     // Idempotent: create booking if not exists (using unified helper)
-    const booking = await createBookingFromSession(sess, { markPaid: true, sessionId: sess._id });
-    
-    res.json({ status: sess.status, paidAt: sess.paidAt, bookingId: booking?._id });
+    const booking = await createBookingFromSession(sess, {
+      markPaid: true,
+      sessionId: sess._id,
+    });
+
+    res.json({
+      status: sess.status,
+      paidAt: sess.paidAt,
+      bookingId: booking?._id,
+    });
   } catch (e) {
     console.error("markMoMoPaid error", e);
     res.status(500).json({ error: "INTERNAL_ERROR" });
@@ -466,72 +526,90 @@ exports.markMoMoPaid = async (req, res) => {
 // This replaces the separate endpoint in bookingController
 exports.getBookingByPayment = async (req, res) => {
   try {
-    console.log(`Auth header at GET /api/bookings/by-payment/${req.params.provider}/${req.params.orderId} =>`, req.headers.authorization);
-    
+    console.log(
+      `Auth header at GET /api/bookings/by-payment/${req.params.provider}/${req.params.orderId} =>`,
+      req.headers.authorization
+    );
+
     const { provider, orderId } = req.params;
     const userId = req.user?.sub;
-    
+
     if (!provider || !orderId) {
-      return res.status(400).json({ error: 'MISSING_PARAMS' });
+      return res.status(400).json({ error: "MISSING_PARAMS" });
     }
-    
+
     if (!userId) {
-      return res.status(401).json({ error: 'UNAUTHORIZED' });
+      return res.status(401).json({ error: "UNAUTHORIZED" });
     }
-    
-    console.log(`[Payment] Looking for booking with provider=${provider}, orderId=${orderId}, userId=${userId}`);
-    
+
+    console.log(
+      `[Payment] Looking for booking with provider=${provider}, orderId=${orderId}, userId=${userId}`
+    );
+
     // First check if booking exists
-    const booking = await Booking.findOne({ 
-      'payment.provider': provider, 
-      'payment.orderID': orderId, 
-      userId 
+    const booking = await Booking.findOne({
+      "payment.provider": provider,
+      "payment.orderID": orderId,
+      userId,
     })
-    .populate('items.tourId', 'title imageItems')
-    .lean();
-    
+      .populate("items.tourId", "title imageItems")
+      .lean();
+
     if (booking) {
       console.log(`[Payment] ✅ Found booking:`, booking._id);
       return res.json({ success: true, booking });
     }
-    
+
     // If no booking yet, check payment session status
-    console.log(`[Payment] ⏳ Booking not found yet, checking payment session...`);
+    console.log(
+      `[Payment] ⏳ Booking not found yet, checking payment session...`
+    );
     const session = await PaymentSession.findOne({ orderId, provider });
-    
+
     if (!session) {
       console.log(`[Payment] ❌ No payment session found`);
-      return res.status(404).json({ error: 'NOT_FOUND', message: 'No payment session or booking found' });
+      return res
+        .status(404)
+        .json({
+          error: "NOT_FOUND",
+          message: "No payment session or booking found",
+        });
     }
-    
+
     console.log(`[Payment] Payment session status: ${session.status}`);
-    
+
     // If session is paid but no booking, try to create it now
-    if (session.status === 'paid') {
-      console.log(`[Payment] 🔄 Session is paid, attempting to create booking...`);
+    if (session.status === "paid") {
+      console.log(
+        `[Payment] 🔄 Session is paid, attempting to create booking...`
+      );
       try {
-        const newBooking = await createBookingFromSession(session, { lateCreation: true });
+        const newBooking = await createBookingFromSession(session, {
+          lateCreation: true,
+        });
         return res.json({ success: true, booking: newBooking });
       } catch (createErr) {
-        console.error('[Payment] Failed to create booking from paid session:', createErr);
-        return res.status(500).json({ 
-          error: 'BOOKING_CREATION_FAILED',
+        console.error(
+          "[Payment] Failed to create booking from paid session:",
+          createErr
+        );
+        return res.status(500).json({
+          error: "BOOKING_CREATION_FAILED",
           sessionStatus: session.status,
-          message: 'Payment completed but booking creation failed'
+          message: "Payment completed but booking creation failed",
         });
       }
     }
-    
+
     // Session exists but not paid yet
-    return res.status(202).json({ 
+    return res.status(202).json({
       success: false,
       pending: true,
       sessionStatus: session.status,
-      message: 'Payment session found but not completed yet'
+      message: "Payment session found but not completed yet",
     });
-    
   } catch (e) {
-    console.error('getBookingByPayment error', e);
-    res.status(500).json({ error: 'FETCH_BOOKING_FAILED' });
+    console.error("getBookingByPayment error", e);
+    res.status(500).json({ error: "FETCH_BOOKING_FAILED" });
   }
 };

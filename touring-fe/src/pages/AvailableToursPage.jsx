@@ -229,17 +229,18 @@ export default function ToursPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredTours.map((tour) => (
                 <TourCard
-                  key={tour._id || tour.id}
                   id={tour._id}
                   to={`/tours/${tour._id}`}
-                  image={optimizeImage(tour.imageItems?.[0]?.imageUrl, 1400)}
+                  image={optimizeImage(tour.imageItems?.[0]?.imageUrl, 800)}
                   title={tour.description}
                   location={tour.locations?.[0]?.name || "Địa điểm"}
                   tags={tour.tags}
                   bookedText={`${tour.usageCount} Đã được đặt`}
                   rating={tour.isRating}
                   reviews={tour.isReview}
-                  priceFrom={tour.basePrice.toString()}
+                  priceFrom={
+                    tour.departures?.[0]?.priceAdult?.toString() || "N/A"
+                  }
                   originalPrice={tour.basePrice}
                   isFav={favorites.has(tour._id)}
                   onFav={() => handleFavoriteToggle(tour._id)}

@@ -1,37 +1,37 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, Shield, AlertCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useAdminAuth } from '../context/AdminAuthContext';
+import React, { useState } from "react";
+import { Eye, EyeOff, Lock, Mail, Shield, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAdminAuth } from "../context/AdminAuthContext";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
   const { login } = useAdminAuth();
-  
+
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
-    setError('');
+    setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     // Validation
     if (!formData.email || !formData.password) {
-      setError('Vui lòng nhập đầy đủ thông tin');
+      setError("Vui lòng nhập đầy đủ thông tin");
       setLoading(false);
       return;
     }
@@ -39,33 +39,33 @@ export default function AdminLogin() {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      setError('Email không hợp lệ');
+      setError("Email không hợp lệ");
       setLoading(false);
       return;
     }
 
     try {
-      console.log('Starting login...');
+      console.log("Starting login...");
       const result = await login(formData.email, formData.password);
-      console.log('Login result:', result);
-      
+      console.log("Login result:", result);
+
       if (result.success) {
         if (rememberMe) {
-          localStorage.setItem('adminRemember', formData.email);
+          localStorage.setItem("adminRemember", formData.email);
         }
-        
-        console.log('Login successful, navigating to dashboard...');
+
+        console.log("Login successful, navigating to dashboard...");
         // Show success message
-        alert('Đăng nhập thành công! Chuyển đến Dashboard...');
-        
+        alert("Đăng nhập thành công! Chuyển đến Dashboard...");
+
         // Navigate to dashboard
-        navigate('/admin/dashboard', { replace: true });
+        navigate("/admin/dashboard", { replace: true });
       } else {
-        setError(result.message || 'Email hoặc mật khẩu không chính xác');
+        setError(result.message || "Email hoặc mật khẩu không chính xác");
       }
     } catch (err) {
-      console.error('Login error:', err);
-      setError('Đã có lỗi xảy ra. Vui lòng thử lại sau.');
+      console.error("Login error:", err);
+      setError("Đã có lỗi xảy ra. Vui lòng thử lại sau.");
     } finally {
       setLoading(false);
     }
@@ -84,15 +84,13 @@ export default function AdminLogin() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Travyy Admin
             </h1>
-            <p className="text-gray-600">
-              Đăng nhập vào hệ thống quản trị
-            </p>
+            <p className="text-gray-600">Đăng nhập vào hệ thống quản trị</p>
           </div>
 
           {/* Demo Info Alert */}
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
-              <strong>Demo:</strong> admin@travyy.com / Admin@123
+              <strong>Demo:</strong> admin123@travyy.com / Admin@123
             </p>
           </div>
 
@@ -108,7 +106,10 @@ export default function AdminLogin() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Input */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Email
               </label>
               <div className="relative">
@@ -128,13 +129,16 @@ export default function AdminLogin() {
 
             {/* Password Input */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Mật khẩu
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   id="password"
                   name="password"
                   value={formData.password}
@@ -149,7 +153,11 @@ export default function AdminLogin() {
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   disabled={loading}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -164,7 +172,9 @@ export default function AdminLogin() {
                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   disabled={loading}
                 />
-                <span className="ml-2 text-sm text-gray-700">Ghi nhớ đăng nhập</span>
+                <span className="ml-2 text-sm text-gray-700">
+                  Ghi nhớ đăng nhập
+                </span>
               </label>
               <button
                 type="button"
@@ -183,14 +193,30 @@ export default function AdminLogin() {
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   Đang đăng nhập...
                 </>
               ) : (
-                'Đăng nhập'
+                "Đăng nhập"
               )}
             </button>
           </form>
@@ -205,8 +231,11 @@ export default function AdminLogin() {
           {/* Footer Links */}
           <div className="mt-6 text-center text-sm text-gray-600">
             <p>
-              Bạn là khách hàng?{' '}
-              <a href="/traveler/login" className="text-blue-600 hover:text-blue-700 font-medium">
+              Bạn là khách hàng?{" "}
+              <a
+                href="/traveler/login"
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
                 Đăng nhập tại đây
               </a>
             </p>
@@ -223,20 +252,19 @@ export default function AdminLogin() {
         </div>
 
         <div className="relative z-10 text-white max-w-lg">
-          <h2 className="text-5xl font-bold mb-6">
-            Quản lý toàn diện
-          </h2>
+          <h2 className="text-5xl font-bold mb-6">Quản lý toàn diện</h2>
           <p className="text-xl text-blue-100 mb-8">
-            Hệ thống quản trị mạnh mẽ cho Travyy - Nền tảng kết nối du lịch hàng đầu Việt Nam
+            Hệ thống quản trị mạnh mẽ cho Travyy - Nền tảng kết nối du lịch hàng
+            đầu Việt Nam
           </p>
 
           {/* Features */}
           <div className="space-y-4">
             {[
-              'Dashboard thống kê chi tiết',
-              'Quản lý tour & hướng dẫn viên',
-              'Xử lý yêu cầu khách hàng',
-              'Báo cáo & phân tích hiệu suất'
+              "Dashboard thống kê chi tiết",
+              "Quản lý tour & hướng dẫn viên",
+              "Xử lý yêu cầu khách hàng",
+              "Báo cáo & phân tích hiệu suất",
             ].map((feature, index) => (
               <div key={index} className="flex items-center">
                 <div className="w-2 h-2 bg-blue-300 rounded-full mr-3"></div>
@@ -248,12 +276,14 @@ export default function AdminLogin() {
           {/* Stats */}
           <div className="mt-12 grid grid-cols-3 gap-6">
             {[
-              { value: '10K+', label: 'Users' },
-              { value: '5K+', label: 'Tours' },
-              { value: '99%', label: 'Uptime' }
+              { value: "10K+", label: "Users" },
+              { value: "5K+", label: "Tours" },
+              { value: "99%", label: "Uptime" },
             ].map((stat, index) => (
               <div key={index} className="text-center">
-                <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
+                <div className="text-3xl font-bold text-white mb-1">
+                  {stat.value}
+                </div>
                 <div className="text-sm text-blue-200">{stat.label}</div>
               </div>
             ))}

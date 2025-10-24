@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { agencyConn } = require("../../config/db");
 
 const DepartureSchema = new mongoose.Schema(
   {
@@ -8,7 +9,11 @@ const DepartureSchema = new mongoose.Schema(
     seatsTotal: { type: Number, default: null }, // optional
 
     seatsLeft: { type: Number, default: null }, // optional
-    status: { type: String, enum: ["open", "closed", "soldout"], default: "open" },
+    status: {
+      type: String,
+      enum: ["open", "closed", "soldout"],
+      default: "open",
+    },
     startTime: { type: String }, // optional: nếu mỗi ngày còn có giờ khởi hành
     endTime: { type: String }, // optional
     external: {
@@ -29,7 +34,10 @@ const TourSchema = new mongoose.Schema(
 
     locations: [{ type: mongoose.Schema.Types.ObjectId, ref: "Location" }],
 
-    duration: { days: { type: Number, required: true }, nights: { type: Number, required: true } },
+    duration: {
+      days: { type: Number, required: true },
+      nights: { type: Number, required: true },
+    },
 
     schedule: { startTime: String, endTime: String },
 
@@ -37,7 +45,11 @@ const TourSchema = new mongoose.Schema(
       { part: String, day: Number, title: String, description: [String] },
     ],
 
-    agencyId: { type: mongoose.Schema.Types.ObjectId, ref: "TravelAgency", required: true },
+    agencyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TravelAgency",
+      required: true,
+    },
 
     createdAt: { type: Date, default: Date.now },
 
@@ -59,4 +71,4 @@ const TourSchema = new mongoose.Schema(
 TourSchema.index({ "departures.date": 1 });
 TourSchema.index({ agencyId: 1 });
 
-module.exports = mongoose.model("Tour", TourSchema);
+module.exports = agencyConn.model("Tour", TourSchema);
