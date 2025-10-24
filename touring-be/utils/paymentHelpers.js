@@ -81,15 +81,30 @@ async function createBookingFromSession(session, additionalData = {}) {
       });
     }
 
-    const amountVND = vndFromItems > 0 ? vndFromItems : (Number(session.amount) || 0);
-    const totalUSD = Math.round(amountVND * FX_VND_USD * 100) / 100;
+    // Calculate amounts
+    // session.amount already contains the final amount AFTER discount
+    const finalAmountVND = Number(session.amount) || 0;
+    const discountAmount = Number(session.discountAmount) || 0;
+    const originalAmount = finalAmountVND + discountAmount; // Original = Final + Discount
+    
+    const totalUSD = Math.round(finalAmountVND * FX_VND_USD * 100) / 100;
+
+    console.log(`[Payment] 💰 Booking amounts:`, {
+      originalAmount,
+      discountAmount,
+      finalAmount: finalAmountVND,
+      voucherCode: session.voucherCode
+    });
 
     const bookingDoc = await Booking.create({
       userId: session.userId,
       items: bookingItems,
       currency: 'VND',
-      totalVND: amountVND,
-      totalUSD: totalUSD, // Giữ lại để backward compatible
+      totalVND: finalAmountVND, // Số tiền sau giảm giá (đã trừ discount)
+      totalUSD: totalUSD,
+      originalAmount: originalAmount, // Số tiền gốc trước giảm
+      discountAmount: discountAmount, // Số tiền được giảm
+      voucherCode: session.voucherCode || undefined, // Mã voucher
       payment: {
         provider: session.provider,
         orderID: session.orderId,
@@ -116,7 +131,7 @@ async function createBookingFromSession(session, additionalData = {}) {
         
         await axios.post(`http://localhost:${process.env.PORT || 4000}/api/notify/payment`, {
           email: user.email,
-          amount: amountVND.toLocaleString('vi-VN'),
+          amount: finalAmountVND.toLocaleString('vi-VN'),
           bookingCode: bookingCode,
           tourTitle: tourNames,
           bookingId: bookingDoc._id

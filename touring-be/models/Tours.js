@@ -58,10 +58,5 @@ const TourSchema = new mongoose.Schema(
 // Index phục vụ tra cứu nhanh theo ngày & agency
 TourSchema.index({ "departures.date": 1 });
 TourSchema.index({ agencyId: 1 });
-TourSchema.index({ locations: 1 });
-TourSchema.index({ createdAt: -1 });
-TourSchema.index({ title: "text", description: "text" });
-TourSchema.index({ agencyId: 1, createdAt: -1 });
-TourSchema.index({ locations: 1, "departures.date": 1 });
 
 module.exports = mongoose.model("Tour", TourSchema);

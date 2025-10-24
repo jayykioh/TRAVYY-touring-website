@@ -161,16 +161,19 @@ router.post("/set-role", authJwt, async (req, res) => {
 
 router.post("/logout", async (req, res) => {
   try {
+    // 🧹 Xoá cookie refresh_token triệt để
     res.clearCookie("refresh_token", {
       httpOnly: true,
-      secure: isProd,                    // prod: true (HTTPS)
-      sameSite: isProd ? "none" : "lax", // trùng với lúc set
-      path: "/api/auth",
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
+      path: "/", // 👈 QUAN TRỌNG: phải để "/" để xoá toàn bộ scope cookie
     });
+
+    // 🧠 Có thể trả thêm header cho FE confirm
     return res.status(200).json({ ok: true, message: "Logged out" });
   } catch (e) {
     console.error("logout error:", e);
-    return res.status(200).json({ ok: true }); 
+    return res.status(200).json({ ok: false, message: "Logout error" });
   }
 });
 

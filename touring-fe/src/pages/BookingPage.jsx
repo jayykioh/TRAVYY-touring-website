@@ -12,6 +12,20 @@ export default function BookingPage() {
   const { withAuth } = useAuth();
   const { items, loading } = useCart();
 
+  // Voucher state - lifted to BookingPage to share between CheckoutForm and PaymentSummary
+  const [voucherDiscount, setVoucherDiscount] = useState(0);
+  const [voucherCode, setVoucherCode] = useState(null);
+
+  const handleVoucherChange = (voucher, discount) => {
+    if (voucher) {
+      setVoucherCode(voucher.code);
+      setVoucherDiscount(discount);
+    } else {
+      setVoucherCode(null);
+      setVoucherDiscount(0);
+    }
+  };
+
   // Nếu buy-now: lấy quote từ BE (không đụng cart)
   const [quote, setQuote] = useState(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
@@ -127,9 +141,14 @@ export default function BookingPage() {
             quote={quote}
             summaryItems={summaryItems}
             totalAmount={summaryItems.reduce((s,it)=> s + (it.price||0), 0)}
+            onVoucherChange={handleVoucherChange}
           />
           {summaryItems.length > 0 ? (
-            <PaymentSummary items={summaryItems} />
+            <PaymentSummary 
+              items={summaryItems} 
+              voucherDiscount={voucherDiscount}
+              voucherCode={voucherCode}
+            />
           ) : (
             <div className="w-full lg:w-2/5 p-6 lg:p-8">
               <div className="bg-white rounded-xl p-6 border text-gray-700">

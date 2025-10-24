@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { AuthCtx } from "./context";
 const API_BASE = "http://localhost:4000";
+
 // helper fetch: luôn gửi cookie (để BE đọc refresh_token)
 async function api(input, init = {}) {
-  // Don't set Accept header if body is FormData (for file uploads)
   const isFormData = init.body instanceof FormData;
   const headers = isFormData 
     ? { ...(init.headers || {}) }
@@ -31,63 +31,65 @@ export default function AuthProvider({ children }) {
   const [booting, setBooting] = useState(true);
 
   const login = useCallback(async (username, password) => {
-  const res = await api(`${API_BASE}/api/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
-  });
+    const res = await api(`${API_BASE}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
 
-  if (res?.accessToken) {
-    setAccessToken(res.accessToken);
-  }
+    if (res?.accessToken) {
+      setAccessToken(res.accessToken);
+    }
 
-  if (res?.user) {
-    // 👇 gộp token vào user luôn
-    setUser({ ...res.user, token: res.accessToken });
-  }
+    if (res?.user) {
+      // 👇 gộp token vào user luôn
+      setUser({ ...res.user, token: res.accessToken });
+    }
 
-  return res?.user;
-}, []);
-
-
-
+    return res?.user;
+  }, []);
 
   // gọi API có kèm Bearer; nếu 401 thì refresh rồi retry
-const withAuth = useCallback(async (input, init = {}) => {
-  // Ensure input is a string
-  if (typeof input !== "string") {
-    console.error("withAuth: first parameter must be a string URL, got:", typeof input, input);
-    throw new Error("withAuth: first parameter must be a string URL");
-  }
-
-  const url = !/^https?:\/\//.test(input)
-    ? `${API_BASE}${input}` // << tự prefix
-    : input;
-
-  const headers = { ...(init.headers || {}) };
-  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-
-  try {
-    return await api(url, { ...init, headers });
-  } catch (e) {
-    if (e.status === 401) {
-      const r = await api(`${API_BASE}/api/auth/refresh`, { method: "POST" }).catch(() => null);
-      if (!r?.accessToken) throw e;
-      setAccessToken(r.accessToken);
-      return await api(url, { ...init, headers: { ...headers, Authorization: `Bearer ${r.accessToken}` } });
+  const withAuth = useCallback(async (input, init = {}) => {
+    if (typeof input !== "string") {
+      console.error("withAuth: first parameter must be a string URL, got:", typeof input, input);
+      throw new Error("withAuth: first parameter must be a string URL");
     }
-    throw e;
-  }
-}, [accessToken]);
+
+    const url = !/^https?:\/\//.test(input)
+      ? `${API_BASE}${input}`
+      : input;
+
+    const headers = { ...(init.headers || {}) };
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+    try {
+      return await api(url, { ...init, headers });
+    } catch (e) {
+      if (e.status === 401) {
+        const r = await api(`${API_BASE}/api/auth/refresh`, { method: "POST" }).catch(() => null);
+        if (!r?.accessToken) throw e;
+        setAccessToken(r.accessToken);
+        return await api(url, { ...init, headers: { ...headers, Authorization: `Bearer ${r.accessToken}` } });
+      }
+      throw e;
+    }
+  }, [accessToken]);
+
+  // ✅ thêm flag để tránh refresh sau khi logout
+  const [isLoggedOut, setIsLoggedOut] = useState(false);
 
   // App mount: sau khi Google redirect về, gọi refresh để lấy access, rồi gọi /me (Bearer)
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
-        const r = await api("http://localhost:4000/api/auth/refresh", { method: "POST" });
+        if (isLoggedOut || cancelled) return; // 👈 tránh auto refresh sau logout
+
+        const r = await api(`${API_BASE}/api/auth/refresh`, { method: "POST" });
         if (r?.accessToken) {
           setAccessToken(r.accessToken);
-          const me = await api("http://localhost:4000/api/auth/me", {
+          const me = await api(`${API_BASE}/api/auth/me`, {
             headers: { Authorization: `Bearer ${r.accessToken}` },
           }).catch(() => null);
           if (me) {
@@ -105,16 +107,32 @@ const withAuth = useCallback(async (input, init = {}) => {
         setBooting(false);
       }
     })();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedOut]); // 👈 thêm dependency để khi logout => dừng refresh
 
   async function logout() {
     try {
-      await api("http://localhost:4000/api/auth/logout", { method: "POST" });
+      await api(`${API_BASE}/api/auth/logout`, { method: "POST" });
     } catch (err) {
       console.error("Logout error:", err);
     } finally {
+      // 🧹 Dọn sạch session phía client
       setAccessToken(null);
       setUser(null);
+      setIsLoggedOut(true);
+
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // 🧠 Xóa cookie (nếu không phải HttpOnly)
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c
+          .replace(/^ +/, "")
+          .replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
+      });
     }
   }
 

@@ -1,4 +1,5 @@
 // App.jsx
+import { Fragment } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./auth/context";
 import MainLayout from "./layout/MainLayout";
@@ -8,7 +9,6 @@ import DestinationPage from "./pages/Blogs";
 import RegionTours from "./pages/RegionTours";
 import SearchFilterResults from "./pages/SearchFilterResults";
 import TourDetailPage from "./pages/TourDetailPage";
-import DiscountCodesPage from "./pages/DiscountCodesPage";
 import BlogDetailPage from "./pages/BlogDetailPage"; // ✅ THÊM IMPORT NÀY
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -18,8 +18,12 @@ import ChangePassword from "./pages/ChangePassword";
 import ProfileLayout from "./pages/UserProfile";
 import ProfileInfo from "./components/ProfileInfo";
 import ProfileReviews from "./components/ProfileReviews";
+import ProfilePromotions from "./components/ProfilePromotions";
 import RolePopup from "./components/RolePopUp";
 import OAuthCallback from "./pages/OAuthCallback";
+import HelpCenter from "./components/HelpCenter";
+import HelpCategoryView from "./components/HelpCategoryView";
+import HelpArticleView from "./components/HelpArticleView";
 
 import Cart from "./pages/Cart";
 import WishlistPage from "./pages/WishlistPage";
@@ -50,11 +54,11 @@ export default function App() {
   if (booting) return <LoadingScreen />;
 
   return (
-    <>
+    <Fragment>
       <Routes>
 
 {/* ✅ CẬP NHẬT 2: Admin routes - AdminAuthProvider đã wrap BÊN TRONG AdminRoutes */}
-        <Route path="/admin/*" element={<AdminRoutes />} />
+      <Route path="/admin/*" element={<AdminRoutes />} />
 
         {/* ----- Public + Main layout ----- */}
         <Route element={<MainLayout />}>
@@ -67,7 +71,6 @@ export default function App() {
             path="/search-filter-results"
             element={<SearchFilterResults />}
           />
-          <Route path="/discount-codes" element={<DiscountCodesPage />} />
           <Route path="/tours/:id" element={<TourDetailPage />} />
           <Route path="/region/:slug" element={<RegionTours />} />
           {/* <Route path="/region/:slug/detail" element={<RegionDetailPage />} /> */}
@@ -87,6 +90,11 @@ export default function App() {
           <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
           {/* ✅ THÊM ROUTE NÀY */}
           <Route path="/shoppingcarts" element={<Cart />} />
+          
+          {/* Help Center routes */}
+          <Route path="/help" element={<HelpCenter />} />
+          <Route path="/help/category/:category" element={<HelpCategoryView />} />
+          <Route path="/help/article/:slug" element={<HelpArticleView />} />
           {/* <Route path="/region/:slug" element={<RegionTours />} /> */}
           {/* ✅ BẢO VỆ 2 ROUTE NÀY */}
           <Route
@@ -117,6 +125,7 @@ export default function App() {
             <Route index element={<Navigate to="info" replace />} />
             <Route path="info" element={<ProfileInfo />} />
             <Route path="reviews" element={<ProfileReviews />} />
+            <Route path="vouchers" element={<ProfilePromotions />} />
             <Route path="favorites" element={<WishlistPage />} />
             <Route path="booking-history" element={<BookingHistory />} />
             <Route path="change-password" element={<ChangePassword />} />
@@ -148,6 +157,6 @@ export default function App() {
       {isAuth && (!user?.role || user.role === "uninitialized") && (
         <RolePopup />
       )}
-    </>
+    </Fragment>
   );
 }

@@ -28,6 +28,8 @@ const isProd = process.env.NODE_ENV === "production";
 const notifyRoutes = require("./routes/notifyRoutes");
 const paymentRoutes = require("./routes/payment.routes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const promotionRoutes = require("./routes/promotion.routes");
+const helpRoutes = require("./routes/help.routes");
 // Quick visibility of PayPal env presence (not actual secrets)
 console.log("[Boot] PayPal env present:", {
   hasClient: !!process.env.PAYPAL_CLIENT_ID,
@@ -105,6 +107,15 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api/notify", notifyRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/promotions", promotionRoutes);
+app.use("/api/help", helpRoutes);
+
+// Debug routes (remove in production)
+if (process.env.NODE_ENV !== 'production') {
+  const debugRoutes = require("./routes/debug.routes");
+  app.use("/api/debug", debugRoutes);
+  console.log("🐛 Debug routes enabled at /api/debug");
+}
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 

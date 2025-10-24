@@ -11,6 +11,7 @@ import TourManagement from '../pages/TourManagement';
 import GuideManagement from '../pages/GuideManagement';
 import AgencyAPIData from '../pages/AgencyAPIData'; 
 import Settings from '../pages/Settings';
+import PromotionManagement from '../pages/PromotionManagement';
 
 // Placeholder components
 const CustomerRequests = () => <div className="p-6">Customer Requests Page - Coming soon</div>;
@@ -94,6 +95,14 @@ const AdminRoutes = () => {
           <AdminProtectedRoute>
             <AdminLayout activePage="settings">
               <Settings />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        } />
+        
+        <Route path="/promotions" element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="promotions">
+              <PromotionManagement />
             </AdminLayout>
           </AdminProtectedRoute>
         } />

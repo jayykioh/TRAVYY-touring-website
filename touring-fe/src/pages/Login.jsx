@@ -31,7 +31,7 @@ function Login() {
     setIsLoading(true);
     try {
       await login(form.username, form.password);
-      toast.success("Đăng nhập thành công");
+      toast.success(`Chào mừng ${form.username} đã trở lại. Khám phá những chuyến đi tuyệt vời!`);
       navigate("/home", { replace: true });
     } catch (err) {
       toast.error(err?.body?.message || "Login failed");

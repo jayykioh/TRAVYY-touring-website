@@ -32,6 +32,18 @@ const userSchema = new mongoose.Schema({
   // 🔒 Reset password fields
   resetPasswordToken: String,
   resetPasswordExpires: Date,
+  // 🎁 Track used promotions
+  usedPromotions: [{
+    promotionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Promotion'
+    },
+    code: String,
+    usedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
 }, { timestamps: true });
 
 // helper: hash password

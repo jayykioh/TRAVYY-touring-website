@@ -13,7 +13,8 @@ import {
   ChevronDown,
   ChevronRight,
   Users,
-  LogOut
+  LogOut,
+  Tag
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from "../../../context/AdminAuthContext";
@@ -64,6 +65,12 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
       label: 'Agency API Data', 
       icon: Database, 
       path: '/admin/api' 
+    },
+    { 
+      id: 'promotions', 
+      label: 'Promotions', 
+      icon: Tag, 
+      path: '/admin/promotions' 
     },
     { 
       id: 'reports', 

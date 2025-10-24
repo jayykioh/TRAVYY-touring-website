@@ -1,13 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Lock, CreditCard, Wallet, MapPin, User, Phone, Mail } from "lucide-react";
+import { Lock, CreditCard, Wallet, MapPin, User, Phone, Mail, Tag } from "lucide-react";
 import { useAuth } from "@/auth/context";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import useLocationOptions from "../hooks/useLocation";
 import { useLocation } from "react-router-dom";
+import VoucherSelector from "./VoucherSelector";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
-export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemProp, summaryItems = [], totalAmount }) {
+export default function CheckoutForm({ 
+  mode: modeProp, 
+  buyNowItem: buyNowItemProp, 
+  summaryItems = [], 
+  totalAmount,
+  onVoucherChange 
+}) {
   const { user } = useAuth() || {};
   const accessToken = user?.token; // hoặc user?.accessToken
 
@@ -39,6 +46,11 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
     wardName: "",
     addressLine: "",
   });
+
+  // Voucher state
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [finalTotal, setFinalTotal] = useState(totalAmount);
 
   const { provinces, wards, loadingProvince, loadingWard } = useLocationOptions(userInfo.provinceId);
 
@@ -170,6 +182,21 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
     userInfo.name && userInfo.email && userInfo.phone &&
     userInfo.provinceId && userInfo.wardId && userInfo.addressLine;
 
+  // Update finalTotal when voucher or totalAmount changes
+  useEffect(() => {
+    setFinalTotal(totalAmount - discountAmount);
+  }, [totalAmount, discountAmount]);
+
+  // Handle voucher apply
+  const handleVoucherApply = (voucher, discount) => {
+    setAppliedVoucher(voucher);
+    setDiscountAmount(discount);
+    // Notify parent component if callback provided
+    if (onVoucherChange) {
+      onVoucherChange(voucher, discount);
+    }
+  };
+
   const handlePayment = async () => {
     // ⬇️ NGĂN CHẶN MULTIPLE CLICKS
     if (isProcessingPayment) {
@@ -198,7 +225,13 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
 
         const payload = {
           mode,
-          ...(mode === "buy-now" && { item: buyNowItem })
+          ...(mode === "buy-now" && { item: buyNowItem }),
+          // Include voucher information
+          ...(appliedVoucher && {
+            promotionCode: appliedVoucher.code,
+            discountAmount: discountAmount,
+            finalAmount: finalTotal,
+          }),
         };
 
         console.log("📦 Sending payment request:", JSON.stringify(payload, null, 2));
@@ -244,13 +277,13 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
     } else if (selectedPayment === "momo") {
       try {
         setIsProcessingPayment(true);
-        // Use authoritative total from props; fallback to recompute from summaryItems; final fallback: location.state.totalAmount
-        let amount = Number(totalAmount);
+        // Use finalTotal (after voucher discount) instead of totalAmount
+        let amount = Number(finalTotal);
         if (!Number.isFinite(amount) || amount <= 0) {
-          amount = summaryItems.reduce((s,it)=> s + (Number(it.price)||0), 0);
+          amount = summaryItems.reduce((s,it)=> s + (Number(it.price)||0), 0) - discountAmount;
         }
         if (!Number.isFinite(amount) || amount <= 0) {
-          amount = Number(location.state?.totalAmount);
+          amount = Number(location.state?.totalAmount) - discountAmount;
         }
 
         if (!Number.isFinite(amount) || amount <= 0) {
@@ -266,7 +299,12 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
             originalPrice: Number(it.originalPrice)||undefined,
         }));
 
-        console.log("🚀 Creating MoMo payment", { amount, itemsSnapshot });
+        console.log("🚀 Creating MoMo payment", { 
+          amount, 
+          itemsSnapshot, 
+          voucherCode: appliedVoucher?.code,
+          discountAmount 
+        });
         const res = await fetch(`${API_BASE}/api/payments/momo`, {
           method: "POST",
             headers: {
@@ -284,6 +322,11 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
               // For buy-now, also send the single item detail (backend can choose to persist)
               ...(mode === "buy-now" && buyNowItem ? { item: buyNowItem } : {}),
               items: itemsSnapshot,
+              // Include voucher information
+              ...(appliedVoucher && {
+                promotionCode: appliedVoucher.code,
+                discountAmount: discountAmount,
+              }),
             }),
         });
         const data = await res.json().catch(() => ({}));
@@ -432,6 +475,46 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
         )}
       </div>
 
+      {/* Voucher Section - Shopee Style */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <Tag className="w-5 h-5 text-orange-500" />
+            Ưu đãi của bạn
+          </h2>
+        </div>
+
+        <VoucherSelector
+          totalAmount={totalAmount}
+          tourId={buyNowItem?.tourId || summaryItems[0]?.tourId}
+          onVoucherApply={handleVoucherApply}
+        />
+
+        {/* Applied voucher display */}
+        {appliedVoucher && (
+          <div className="mt-4 p-4 bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-orange-800">
+                  Mã: {appliedVoucher.code}
+                </p>
+                <p className="text-xs text-orange-600 mt-1">
+                  Giảm {appliedVoucher.type === 'percentage' 
+                    ? `${appliedVoucher.value}%` 
+                    : `${discountAmount.toLocaleString('vi-VN')}₫`}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Tiết kiệm</p>
+                <p className="text-lg font-bold text-green-600">
+                  -{discountAmount.toLocaleString('vi-VN')}₫
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* payment methods */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -483,6 +566,22 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
                 <img src="https://res.cloudinary.com/dzjm0cviz/image/upload/v1759928578/Logo-MoMo-Square_mti9wm.webp"/>
               </div>
             </div>
+            
+            {/* ⚠️ Test Environment Warning */}
+            {selectedPayment === "momo" && import.meta.env.DEV && totalAmount > 10000000 && (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex gap-2 text-sm text-yellow-800">
+                  <span>⚠️</span>
+                  <div>
+                    <strong>Lưu ý môi trường test:</strong>
+                    <p className="mt-1">
+                      MoMo test chỉ hỗ trợ tối đa <strong>10,000,000 VNĐ</strong>/giao dịch.
+                      Đơn hàng của bạn ({(totalAmount).toLocaleString('vi-VN')} VNĐ) sẽ được tự động điều chỉnh về 10 triệu để test.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
