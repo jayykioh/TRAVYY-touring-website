@@ -6,24 +6,24 @@ const API_BASE = "http://localhost:4000";
 
 export { useAuth } from "./context";
 
-
 const MOCK_ADMINS = [
   {
     id: 1,
-    email: 'admin@travyy.com',
-    password: 'Admin@123',
-    name: 'Melissa Peters',
-    role: 'admin',  // ⬅️ Đánh dấu đây là admin
-    adminRole: 'Super Admin',
-    avatar: 'https://ui-avatars.com/api/?name=Melissa+Peters&background=3B82F6&color=fff',
-    permissions: ['all']
-  }
+    email: "admin@travyy.com",
+    password: "Admin@123",
+    name: "Melissa Peters",
+    role: "admin", // ⬅️ Đánh dấu đây là admin
+    adminRole: "Super Admin",
+    avatar:
+      "https://ui-avatars.com/api/?name=Melissa+Peters&background=3B82F6&color=fff",
+    permissions: ["all"],
+  },
   // ... 2 admin khác
 ];
 
 async function api(input, init = {}) {
   const isFormData = init.body instanceof FormData;
-  const headers = isFormData 
+  const headers = isFormData
     ? { ...(init.headers || {}) }
     : { Accept: "application/json", ...(init.headers || {}) };
 
@@ -33,7 +33,9 @@ async function api(input, init = {}) {
     ...init,
   });
   const ct = r.headers.get("content-type") || "";
-  const body = ct.includes("application/json") ? await r.json().catch(() => null) : null;
+  const body = ct.includes("application/json")
+    ? await r.json().catch(() => null)
+    : null;
   if (!r.ok) {
     const err = new Error(String(r.status));
     err.status = r.status;
@@ -67,32 +69,60 @@ export default function AuthProvider({ children }) {
     return res?.user;
   }, []);
 
+  const adminLogin = useCallback(async (username, password) => {
+    const res = await api(`${API_BASE}/api/admin/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (res?.accessToken) {
+      setAccessToken(res.accessToken);
+    }
+
+    if (res?.user) {
+      setUser({ ...res.user, token: res.accessToken, role: "admin" });
+    }
+
+    return res?.user;
+  }, []);
+
   // gọi API có kèm Bearer; nếu 401 thì refresh rồi retry
-  const withAuth = useCallback(async (input, init = {}) => {
-    if (typeof input !== "string") {
-      console.error("withAuth: first parameter must be a string URL, got:", typeof input, input);
-      throw new Error("withAuth: first parameter must be a string URL");
-    }
-
-    const url = !/^https?:\/\//.test(input)
-      ? `${API_BASE}${input}`
-      : input;
-
-    const headers = { ...(init.headers || {}) };
-    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-
-    try {
-      return await api(url, { ...init, headers });
-    } catch (e) {
-      if (e.status === 401) {
-        const r = await api(`${API_BASE}/api/auth/refresh`, { method: "POST" }).catch(() => null);
-        if (!r?.accessToken) throw e;
-        setAccessToken(r.accessToken);
-        return await api(url, { ...init, headers: { ...headers, Authorization: `Bearer ${r.accessToken}` } });
+  const withAuth = useCallback(
+    async (input, init = {}) => {
+      if (typeof input !== "string") {
+        console.error(
+          "withAuth: first parameter must be a string URL, got:",
+          typeof input,
+          input
+        );
+        throw new Error("withAuth: first parameter must be a string URL");
       }
-      throw e;
-    }
-  }, [accessToken]);
+
+      const url = !/^https?:\/\//.test(input) ? `${API_BASE}${input}` : input;
+
+      const headers = { ...(init.headers || {}) };
+      if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+      try {
+        return await api(url, { ...init, headers });
+      } catch (e) {
+        if (e.status === 401) {
+          const r = await api(`${API_BASE}/api/auth/refresh`, {
+            method: "POST",
+          }).catch(() => null);
+          if (!r?.accessToken) throw e;
+          setAccessToken(r.accessToken);
+          return await api(url, {
+            ...init,
+            headers: { ...headers, Authorization: `Bearer ${r.accessToken}` },
+          });
+        }
+        throw e;
+      }
+    },
+    [accessToken]
+  );
 
   // ✅ thêm flag để tránh refresh sau khi logout
   const [isLoggedOut, setIsLoggedOut] = useState(false);
@@ -112,7 +142,7 @@ export default function AuthProvider({ children }) {
           }).catch(() => null);
           if (me) {
             if (!me.role) me.role = null; // giữ logic role null như bạn cũ
-            setUser({ ...me, token: r.accessToken }); 
+            setUser({ ...me, token: r.accessToken });
           } else {
             setUser(null);
           }
@@ -160,12 +190,12 @@ export default function AuthProvider({ children }) {
   const value = {
     user,
     isAuth: !!user,
-    isAdmin: !!user && user.role === 'admin',
+    isAdmin: !!user && user.role === "admin",
     booting,
     needsRole,
     setUser,
     login,
-    adminLogin, 
+    adminLogin,
     logout,
     accessToken,
     withAuth, // dùng cái này để call API bảo vệ

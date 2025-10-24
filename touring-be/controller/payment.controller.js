@@ -34,7 +34,6 @@ async function getFetch() {
 }
 
 // Build raw signature according to MoMo docs (v2)
-// IMPORTANT: The order of parameters MUST match MoMo's specification exactly
 function buildRawSignature(payload) {
   return [
     `accessKey=${payload.accessKey}`,
@@ -151,7 +150,7 @@ async function buildMoMoCharge(userId, body) {
 exports.createMoMoPayment = async (req, res) => {
   try {
     const {
-      orderInfo = "Thanh toan don tour Travyy", // Use ASCII-safe characters only
+      orderInfo = "Thanh toan don tour",
       redirectUrl,
       ipnUrl,
       extraData = "",
@@ -162,44 +161,52 @@ exports.createMoMoPayment = async (req, res) => {
 
     // Authoritatively recompute amount from server-side state
     const userId = req.user?.sub || req.user?._id;
-    const { items: serverItems, totalVND } = await buildMoMoCharge(userId, { mode, item: buyNowItem });
-    
+    const { items: serverItems, totalVND } = await buildMoMoCharge(userId, {
+      mode,
+      item: buyNowItem,
+    });
+
     // Apply discount from voucher/promotion
     const discountAmount = Number(req.body.discountAmount) || 0;
     const finalTotalVND = Math.max(0, totalVND - discountAmount);
-    
-    // ⚠️ MOMO SANDBOX LIMIT: 
+
+    // ⚠️ MOMO SANDBOX LIMIT:
     // - Test wallet: Max 10,000,000 VNĐ per transaction
     // - For development, can cap lower (e.g. 50,000) for quick testing
-    const MOMO_TEST_LIMIT = process.env.MOMO_SANDBOX_MODE === 'true' 
-      ? (Number(process.env.MOMO_MAX_AMOUNT) || 10000000)  // Default 10 triệu
-      : Infinity;
-    
+    const MOMO_TEST_LIMIT =
+      process.env.MOMO_SANDBOX_MODE === "true"
+        ? Number(process.env.MOMO_MAX_AMOUNT) || 10000000 // Default 10 triệu
+        : Infinity;
+
     const cappedAmount = Math.min(finalTotalVND, MOMO_TEST_LIMIT);
-    
+
     if (cappedAmount !== finalTotalVND) {
-      console.log(`⚠️ MoMo Test Limit: Amount capped from ${finalTotalVND.toLocaleString()} to ${cappedAmount.toLocaleString()} VNĐ`);
-      console.log(`   Reason: MoMo test wallet limit is ${MOMO_TEST_LIMIT.toLocaleString()} VNĐ`);
+      console.log(
+        `⚠️ MoMo Test Limit: Amount capped from ${finalTotalVND.toLocaleString()} to ${cappedAmount.toLocaleString()} VNĐ`
+      );
+      console.log(
+        `   Reason: MoMo test wallet limit is ${MOMO_TEST_LIMIT.toLocaleString()} VNĐ`
+      );
     }
-    
+
     console.log("💰 MoMo Price calculation:", {
       originalTotal: totalVND,
       discountAmount,
       finalTotal: finalTotalVND,
       cappedForTest: cappedAmount,
       testLimit: MOMO_TEST_LIMIT,
-      voucherCode: req.body.promotionCode || req.body.voucherCode
+      voucherCode: req.body.promotionCode || req.body.voucherCode,
     });
 
     const amt = Number(cappedAmount);
-    if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'INVALID_AMOUNT' });
+    if (!Number.isFinite(amt) || amt <= 0)
+      return res.status(400).json({ error: "INVALID_AMOUNT" });
 
     // ENV configuration (provide defaults for sandbox testing)
-    const partnerCode =
-      process.env.MOMO_PARTNER_CODE || "MOMOHHIY20251009_TEST";
-    const accessKey = process.env.MOMO_ACCESS_KEY || "XXmpwtA8seF2ejOn";
+    const partnerCode = process.env.MOMO_PARTNER_CODE || "MOMO"; // sample: MOMO
+    const accessKey = process.env.MOMO_ACCESS_KEY || "F8BBA842ECF85"; // sample sandbox
     const secretKey =
-      process.env.MOMO_SECRET_KEY || "TcX7IEdUrlBRhuZF6ryVJ839QWXrnzlB";
+      process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz"; // sample sandbox
     const endpoint =
       process.env.MOMO_CREATE_ENDPOINT ||
       "https://test-payment.momo.vn/v2/gateway/api/create";
@@ -299,7 +306,8 @@ exports.createMoMoPayment = async (req, res) => {
               : undefined,
           meta: it.meta || {},
         })),
-        voucherCode: req.body.promotionCode || req.body.voucherCode || undefined,
+        voucherCode:
+          req.body.promotionCode || req.body.voucherCode || undefined,
         discountAmount: discountAmount,
         rawCreateResponse: data,
       });
@@ -345,7 +353,7 @@ exports.handleMoMoIPN = async (req, res) => {
   try {
     const body = req.body || {};
     const secretKey =
-      process.env.MOMO_SECRET_KEY || "TcX7IEdUrlBRhuZF6ryVJ839QWXrnzlB";
+      process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz"; // sandbox fallback
     const raw = buildIpnRawSignature(body);
     const expectedSig = crypto
       .createHmac("sha256", secretKey)
@@ -391,37 +399,43 @@ exports.handleMoMoIPN = async (req, res) => {
         try {
           const User = require("../models/Users");
           const Promotion = require("../models/Promotion");
-          
-          const promotion = await Promotion.findOne({ code: session.voucherCode.toUpperCase() });
+
+          const promotion = await Promotion.findOne({
+            code: session.voucherCode.toUpperCase(),
+          });
           if (promotion) {
             // ✅ Tăng usageCount
-            await Promotion.findByIdAndUpdate(
-              promotion._id,
-              { $inc: { usageCount: 1 } }
-            );
-            
+            await Promotion.findByIdAndUpdate(promotion._id, {
+              $inc: { usageCount: 1 },
+            });
+
             // ✅ Đánh dấu user đã sử dụng
-            await User.findByIdAndUpdate(
-              session.userId,
-              {
-                $addToSet: {
-                  usedPromotions: {
-                    promotionId: promotion._id,
-                    code: promotion.code,
-                    usedAt: new Date()
-                  }
-                }
-              }
+            await User.findByIdAndUpdate(session.userId, {
+              $addToSet: {
+                usedPromotions: {
+                  promotionId: promotion._id,
+                  code: promotion.code,
+                  usedAt: new Date(),
+                },
+              },
+            });
+            console.log(
+              `✅ [MoMo IPN] Marked promotion ${session.voucherCode} as used for user ${session.userId} and incremented usageCount`
             );
-            console.log(`✅ [MoMo IPN] Marked promotion ${session.voucherCode} as used for user ${session.userId} and incremented usageCount`);
           }
         } catch (voucherError) {
-          console.error("[MoMo IPN] Error marking voucher as used:", voucherError);
+          console.error(
+            "[MoMo IPN] Error marking voucher as used:",
+            voucherError
+          );
         }
       }
-      
+
       // Create booking (unified helper with idempotent check)
-      await createBookingFromSession(session, { ipn: body, sessionId: session._id });
+      await createBookingFromSession(session, {
+        ipn: body,
+        sessionId: session._id,
+      });
     }
 
     // Important: MoMo expects 200/204 to stop retrying
@@ -470,35 +484,35 @@ exports.markMoMoPaid = async (req, res) => {
       sess.status = "paid";
       sess.paidAt = new Date();
       await sess.save();
-      
+
       // Mark voucher as used if stored in session
       if (sess.voucherCode && sess.userId) {
         try {
           const User = require("../models/Users");
           const Promotion = require("../models/Promotion");
-          
-          const promotion = await Promotion.findOne({ code: sess.voucherCode.toUpperCase() });
+
+          const promotion = await Promotion.findOne({
+            code: sess.voucherCode.toUpperCase(),
+          });
           if (promotion) {
             // ✅ Tăng usageCount
-            await Promotion.findByIdAndUpdate(
-              promotion._id,
-              { $inc: { usageCount: 1 } }
-            );
-            
+            await Promotion.findByIdAndUpdate(promotion._id, {
+              $inc: { usageCount: 1 },
+            });
+
             // ✅ Đánh dấu user đã sử dụng
-            await User.findByIdAndUpdate(
-              sess.userId,
-              {
-                $addToSet: {
-                  usedPromotions: {
-                    promotionId: promotion._id,
-                    code: promotion.code,
-                    usedAt: new Date()
-                  }
-                }
-              }
+            await User.findByIdAndUpdate(sess.userId, {
+              $addToSet: {
+                usedPromotions: {
+                  promotionId: promotion._id,
+                  code: promotion.code,
+                  usedAt: new Date(),
+                },
+              },
+            });
+            console.log(
+              `✅ [MoMo] Marked promotion ${sess.voucherCode} as used for user ${sess.userId} and incremented usageCount`
             );
-            console.log(`✅ [MoMo] Marked promotion ${sess.voucherCode} as used for user ${sess.userId} and incremented usageCount`);
           }
         } catch (voucherError) {
           console.error("[MoMo] Error marking voucher as used:", voucherError);
@@ -570,10 +584,12 @@ exports.getBookingByPayment = async (req, res) => {
 
     if (!session) {
       console.log(`[Payment] ❌ No payment session found`);
-      return res.status(404).json({
-        error: "NOT_FOUND",
-        message: "No payment session or booking found",
-      });
+      return res
+        .status(404)
+        .json({
+          error: "NOT_FOUND",
+          message: "No payment session or booking found",
+        });
     }
 
     console.log(`[Payment] Payment session status: ${session.status}`);

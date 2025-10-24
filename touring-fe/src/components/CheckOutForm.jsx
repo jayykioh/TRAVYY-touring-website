@@ -1,32 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  Lock,
-  CreditCard,
-  Wallet,
-  MapPin,
-  User,
-  Phone,
-  Mail,
-} from "lucide-react";
+import { Lock, CreditCard, Wallet, MapPin, User, Phone, Mail, Tag } from "lucide-react";
 import { useAuth } from "@/auth/context";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import useLocationOptions from "../hooks/useLocation";
 import { useLocation } from "react-router-dom";
+import VoucherSelector from "./VoucherSelector";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
-export default function CheckoutForm({
-  mode: modeProp,
-  buyNowItem: buyNowItemProp,
-  summaryItems = [],
+export default function CheckoutForm({ 
+  mode: modeProp, 
+  buyNowItem: buyNowItemProp, 
+  summaryItems = [], 
   totalAmount,
+  onVoucherChange 
 }) {
   const { user } = useAuth() || {};
   const accessToken = user?.token; // hoặc user?.accessToken
@@ -41,13 +28,13 @@ export default function CheckoutForm({
   // ⬇️ FIX: Default "cart" nếu không có state
   // Prefer props (BookingPage passes them); fall back to location.state for backward compatibility.
   const mode = modeProp || location.state?.mode || "cart";
-  const buyNowItem =
-    mode === "buy-now" ? buyNowItemProp || location.state?.item : null;
+  const buyNowItem = mode === "buy-now" ? (buyNowItemProp || location.state?.item) : null;
 
   console.log("🔍 CheckoutForm loaded:");
   console.log("   location.state:", location.state);
   console.log("   mode:", mode);
   console.log("   buyNowItem:", buyNowItem);
+
 
   const [userInfo, setUserInfo] = useState({
     name: "",
@@ -60,24 +47,25 @@ export default function CheckoutForm({
     addressLine: "",
   });
 
-  const { provinces, wards, loadingProvince, loadingWard } = useLocationOptions(
-    userInfo.provinceId
-  );
+  // Voucher state
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [finalTotal, setFinalTotal] = useState(totalAmount);
+
+  const { provinces, wards, loadingProvince, loadingWard } = useLocationOptions(userInfo.provinceId);
 
   // map tên khi options sẵn sàng
   useEffect(() => {
     if (userInfo.provinceId && provinces.length) {
       const p = provinces.find((x) => x.id === userInfo.provinceId);
-      if (p && p.name !== userInfo.provinceName)
-        setUserInfo((s) => ({ ...s, provinceName: p.name }));
+      if (p && p.name !== userInfo.provinceName) setUserInfo((s) => ({ ...s, provinceName: p.name }));
     }
   }, [provinces, userInfo.provinceId]); // eslint-disable-line
 
   useEffect(() => {
     if (userInfo.wardId && wards.length) {
       const w = wards.find((x) => x.id === userInfo.wardId);
-      if (w && w.name !== userInfo.wardName)
-        setUserInfo((s) => ({ ...s, wardName: w.name }));
+      if (w && w.name !== userInfo.wardName) setUserInfo((s) => ({ ...s, wardName: w.name }));
     }
   }, [wards, userInfo.wardId]); // eslint-disable-line
 
@@ -87,16 +75,16 @@ export default function CheckoutForm({
     (async () => {
       try {
         setIsLoadingProfile(true);
-
+        
         // Gọi endpoint /api/profile để lấy thông tin user
         const r = await fetch(`${API_BASE}/api/profile`, {
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${accessToken}`,
+          headers: { 
+            Accept: "application/json", 
+            Authorization: `Bearer ${accessToken}` 
           },
           credentials: "include",
         });
-
+        
         if (r.ok) {
           const data = await r.json();
           setUserInfo((prev) => ({
@@ -117,8 +105,8 @@ export default function CheckoutForm({
         }
       } catch (e) {
         console.error("Prefill profile failed:", e);
-      } finally {
-        setIsLoadingProfile(false);
+      } finally { 
+        setIsLoadingProfile(false); 
       }
     })();
   }, [isDialogOpen, accessToken]);
@@ -143,19 +131,12 @@ export default function CheckoutForm({
   const handleWardChange = (e) => {
     const selectedId = e.target.value;
     const selectedWard = wards.find((w) => w.id === selectedId);
-    setUserInfo((prev) => ({
-      ...prev,
-      wardId: selectedId,
-      wardName: selectedWard?.name || "",
-    }));
+    setUserInfo((prev) => ({ ...prev, wardId: selectedId, wardName: selectedWard?.name || "" }));
   };
   // (Removed stray 'mode,' token that caused syntax error)
 
   const handleSaveInfo = async () => {
-    if (!accessToken) {
-      setIsDialogOpen(false);
-      return;
-    }
+    if (!accessToken) { setIsDialogOpen(false); return; }
     try {
       setIsLoadingProfile(true);
       const payload = {
@@ -169,10 +150,7 @@ export default function CheckoutForm({
       };
       const r = await fetch(`${API_BASE}/api/profile/info`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
         credentials: "include",
         body: JSON.stringify(payload),
       });
@@ -188,9 +166,7 @@ export default function CheckoutForm({
           name: updated?.name ?? prev.name,
           phone: updated?.phone ?? prev.phone,
           provinceId,
-          provinceName:
-            provinces.find((p) => p.id === provinceId)?.name ||
-            prev.provinceName,
+          provinceName: provinces.find((p) => p.id === provinceId)?.name || prev.provinceName,
           wardId,
           wardName: wards.find((w) => w.id === wardId)?.name || prev.wardName,
           addressLine: updated?.location?.addressLine ?? prev.addressLine,
@@ -199,18 +175,27 @@ export default function CheckoutForm({
       setIsDialogOpen(false);
     } catch (e) {
       console.error("Update profile error:", e);
-    } finally {
-      setIsLoadingProfile(false);
-    }
+    } finally { setIsLoadingProfile(false); }
   };
 
   const isFormValid =
-    userInfo.name &&
-    userInfo.email &&
-    userInfo.phone &&
-    userInfo.provinceId &&
-    userInfo.wardId &&
-    userInfo.addressLine;
+    userInfo.name && userInfo.email && userInfo.phone &&
+    userInfo.provinceId && userInfo.wardId && userInfo.addressLine;
+
+  // Update finalTotal when voucher or totalAmount changes
+  useEffect(() => {
+    setFinalTotal(totalAmount - discountAmount);
+  }, [totalAmount, discountAmount]);
+
+  // Handle voucher apply
+  const handleVoucherApply = (voucher, discount) => {
+    setAppliedVoucher(voucher);
+    setDiscountAmount(discount);
+    // Notify parent component if callback provided
+    if (onVoucherChange) {
+      onVoucherChange(voucher, discount);
+    }
+  };
 
   const handlePayment = async () => {
     // ⬇️ NGĂN CHẶN MULTIPLE CLICKS
@@ -241,18 +226,21 @@ export default function CheckoutForm({
         const payload = {
           mode,
           ...(mode === "buy-now" && { item: buyNowItem }),
+          // Include voucher information
+          ...(appliedVoucher && {
+            promotionCode: appliedVoucher.code,
+            discountAmount: discountAmount,
+            finalAmount: finalTotal,
+          }),
         };
 
-        console.log(
-          "📦 Sending payment request:",
-          JSON.stringify(payload, null, 2)
-        );
-
+        console.log("📦 Sending payment request:", JSON.stringify(payload, null, 2));
+        
         const response = await fetch(`${API_BASE}/api/paypal/create-order`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
+            "Authorization": `Bearer ${accessToken}`,
           },
           credentials: "include",
           body: JSON.stringify(payload),
@@ -260,11 +248,10 @@ export default function CheckoutForm({
 
         let respJson = null;
         if (!response.ok) {
-          respJson = await response.json().catch(() => ({}));
+          respJson = await response.json().catch(()=>({}));
           console.error("🚫 PayPal create-order failed", respJson);
           // Hiển thị chi tiết debug nếu backend gửi
-          const reason =
-            respJson?.error || respJson?.name || "Tạo đơn hàng thất bại";
+          const reason = respJson?.error || respJson?.name || 'Tạo đơn hàng thất bại';
           throw new Error(reason);
         }
 
@@ -275,15 +262,12 @@ export default function CheckoutForm({
           throw new Error("Không nhận được orderID từ server");
         }
 
-        console.log(
-          "✅ Order created, redirecting to PayPal:",
-          orderID,
-          respJson
-        );
+        console.log("✅ Order created, redirecting to PayPal:", orderID, respJson);
 
         // Redirect đến PayPal (không reset isProcessingPayment vì sẽ redirect)
         const paypalUrl = `https://www.sandbox.paypal.com/checkoutnow?token=${orderID}`;
         window.location.href = paypalUrl;
+
       } catch (error) {
         console.error("❌ PayPal payment error:", error);
         alert(`Lỗi thanh toán: ${error.message}`);
@@ -293,16 +277,13 @@ export default function CheckoutForm({
     } else if (selectedPayment === "momo") {
       try {
         setIsProcessingPayment(true);
-        // Use authoritative total from props; fallback to recompute from summaryItems; final fallback: location.state.totalAmount
-        let amount = Number(totalAmount);
+        // Use finalTotal (after voucher discount) instead of totalAmount
+        let amount = Number(finalTotal);
         if (!Number.isFinite(amount) || amount <= 0) {
-          amount = summaryItems.reduce(
-            (s, it) => s + (Number(it.price) || 0),
-            0
-          );
+          amount = summaryItems.reduce((s,it)=> s + (Number(it.price)||0), 0) - discountAmount;
         }
         if (!Number.isFinite(amount) || amount <= 0) {
-          amount = Number(location.state?.totalAmount);
+          amount = Number(location.state?.totalAmount) - discountAmount;
         }
 
         if (!Number.isFinite(amount) || amount <= 0) {
@@ -312,31 +293,41 @@ export default function CheckoutForm({
         }
 
         // Prepare item snapshot (trim to essentials for backend persistence / audit)
-        const itemsSnapshot = summaryItems.map((it) => ({
+        const itemsSnapshot = summaryItems.map(it => ({
           name: it.name,
-          price: Number(it.price) || 0,
-          originalPrice: Number(it.originalPrice) || undefined,
+            price: Number(it.price)||0,
+            originalPrice: Number(it.originalPrice)||undefined,
         }));
 
-        console.log("🚀 Creating MoMo payment", { amount, itemsSnapshot });
+        console.log("🚀 Creating MoMo payment", { 
+          amount, 
+          itemsSnapshot, 
+          voucherCode: appliedVoucher?.code,
+          discountAmount 
+        });
         const res = await fetch(`${API_BASE}/api/payments/momo`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            amount,
-            orderInfo: "Thanh toan don tour Travyy",
-            // Unified callback page for both PayPal & MoMo
-            redirectUrl: `${window.location.origin}/payment/callback`,
-            // Persist mode so backend knows whether to clear selected cart items
-            mode,
-            // For buy-now, also send the single item detail (backend can choose to persist)
-            ...(mode === "buy-now" && buyNowItem ? { item: buyNowItem } : {}),
-            items: itemsSnapshot,
-          }),
+            headers: {
+              "Content-Type": "application/json",
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              amount,
+              orderInfo: "Thanh toán đơn tour Travyy",
+              // Unified callback page for both PayPal & MoMo
+              redirectUrl: `${window.location.origin}/payment/callback`,
+              // Persist mode so backend knows whether to clear selected cart items
+              mode,
+              // For buy-now, also send the single item detail (backend can choose to persist)
+              ...(mode === "buy-now" && buyNowItem ? { item: buyNowItem } : {}),
+              items: itemsSnapshot,
+              // Include voucher information
+              ...(appliedVoucher && {
+                promotionCode: appliedVoucher.code,
+                discountAmount: discountAmount,
+              }),
+            }),
         });
         const data = await res.json().catch(() => ({}));
         console.log("MoMo response:", data);
@@ -361,9 +352,7 @@ export default function CheckoutForm({
 
       {/* thông tin người đặt */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Thông tin người đặt
-        </h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Thông tin người đặt</h2>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -374,44 +363,26 @@ export default function CheckoutForm({
                   {isFormValid ? userInfo.name : "Nhập thông tin của bạn"}
                 </span>
               </div>
-              <svg
-                className="w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
           </DialogTrigger>
 
           <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-2xl">
-                Thông tin người đặt tour
-              </DialogTitle>
-              <DialogDescription>
-                Vui lòng điền đầy đủ thông tin để hoàn tất đặt tour
-              </DialogDescription>
+              <DialogTitle className="text-2xl">Thông tin người đặt tour</DialogTitle>
+              <DialogDescription>Vui lòng điền đầy đủ thông tin để hoàn tất đặt tour</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-4">
               {/* name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <User className="w-4 h-4 inline mr-1" />
-                  Họ và tên *
+                  <User className="w-4 h-4 inline mr-1" />Họ và tên *
                 </label>
                 <input
-                  type="text"
-                  name="name"
-                  value={userInfo.name}
-                  onChange={handleInputChange}
+                  type="text" name="name" value={userInfo.name} onChange={handleInputChange}
                   placeholder="Nguyễn Văn A"
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
                 />
@@ -420,14 +391,10 @@ export default function CheckoutForm({
               {/* email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Mail className="w-4 h-4 inline mr-1" />
-                  Email *
+                  <Mail className="w-4 h-4 inline mr-1" />Email *
                 </label>
                 <input
-                  type="email"
-                  name="email"
-                  value={userInfo.email}
-                  onChange={handleInputChange}
+                  type="email" name="email" value={userInfo.email} onChange={handleInputChange}
                   placeholder="example@email.com"
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
                 />
@@ -436,14 +403,10 @@ export default function CheckoutForm({
               {/* phone */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Phone className="w-4 h-4 inline mr-1" />
-                  Số điện thoại
+                  <Phone className="w-4 h-4 inline mr-1" />Số điện thoại
                 </label>
                 <input
-                  type="tel"
-                  name="phone"
-                  value={userInfo.phone}
-                  onChange={handleInputChange}
+                  type="tel" name="phone" value={userInfo.phone} onChange={handleInputChange}
                   placeholder="0912345678"
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
                 />
@@ -452,43 +415,25 @@ export default function CheckoutForm({
               {/* province + ward */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tỉnh/Thành phố
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tỉnh/Thành phố</label>
                   <select
-                    value={userInfo.provinceId}
-                    onChange={handleProvinceChange}
+                    value={userInfo.provinceId} onChange={handleProvinceChange}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
                   >
-                    <option value="">
-                      {loadingProvince ? "Đang tải..." : "Chọn tỉnh/thành"}
-                    </option>
-                    {provinces.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
+                    <option value="">{loadingProvince ? "Đang tải..." : "Chọn tỉnh/thành"}</option>
+                    {provinces.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Quận/Huyện
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Quận/Huyện</label>
                   <select
-                    value={userInfo.wardId}
-                    onChange={handleWardChange}
+                    value={userInfo.wardId} onChange={handleWardChange}
                     disabled={!userInfo.provinceId || loadingWard}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
-                    <option value="">
-                      {loadingWard ? "Đang tải..." : "Chọn quận/huyện"}
-                    </option>
-                    {wards.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name}
-                      </option>
-                    ))}
+                    <option value="">{loadingWard ? "Đang tải..." : "Chọn quận/huyện"}</option>
+                    {wards.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
                   </select>
                 </div>
               </div>
@@ -496,15 +441,11 @@ export default function CheckoutForm({
               {/* address */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <MapPin className="w-4 h-4 inline mr-1" />
-                  Địa chỉ cụ thể
+                  <MapPin className="w-4 h-4 inline mr-1" />Địa chỉ cụ thể
                 </label>
                 <textarea
-                  name="addressLine"
-                  value={userInfo.addressLine}
-                  onChange={handleInputChange}
-                  placeholder="Số nhà, tên đường..."
-                  rows={3}
+                  name="addressLine" value={userInfo.addressLine} onChange={handleInputChange}
+                  placeholder="Số nhà, tên đường..." rows={3}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none transition-colors resize-none"
                 />
               </div>
@@ -513,9 +454,8 @@ export default function CheckoutForm({
                 onClick={handleSaveInfo}
                 disabled={!isFormValid || isLoadingProfile}
                 className={`w-full py-3 rounded-lg font-semibold transition-all ${
-                  isFormValid && !isLoadingProfile
-                    ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  isFormValid && !isLoadingProfile ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
               >
                 {isLoadingProfile ? "Đang lưu..." : "Lưu thông tin"}
@@ -528,11 +468,49 @@ export default function CheckoutForm({
         {isFormValid && (
           <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
             <p className="text-sm text-green-800">
-              <strong>{userInfo.name}</strong> • {userInfo.phone}
-              <br />
-              {userInfo.addressLine}, {userInfo.wardName},{" "}
-              {userInfo.provinceName}
+              <strong>{userInfo.name}</strong> • {userInfo.phone}<br />
+              {userInfo.addressLine}, {userInfo.wardName}, {userInfo.provinceName}
             </p>
+          </div>
+        )}
+      </div>
+
+      {/* Voucher Section - Shopee Style */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <Tag className="w-5 h-5 text-orange-500" />
+            Ưu đãi của bạn
+          </h2>
+        </div>
+
+        <VoucherSelector
+          totalAmount={totalAmount}
+          tourId={buyNowItem?.tourId || summaryItems[0]?.tourId}
+          onVoucherApply={handleVoucherApply}
+        />
+
+        {/* Applied voucher display */}
+        {appliedVoucher && (
+          <div className="mt-4 p-4 bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-orange-800">
+                  Mã: {appliedVoucher.code}
+                </p>
+                <p className="text-xs text-orange-600 mt-1">
+                  Giảm {appliedVoucher.type === 'percentage' 
+                    ? `${appliedVoucher.value}%` 
+                    : `${discountAmount.toLocaleString('vi-VN')}₫`}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Tiết kiệm</p>
+                <p className="text-lg font-bold text-green-600">
+                  -{discountAmount.toLocaleString('vi-VN')}₫
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -540,12 +518,9 @@ export default function CheckoutForm({
       {/* payment methods */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Phương thức thanh toán
-          </h2>
+          <h2 className="text-xl font-semibold text-gray-900">Phương thức thanh toán</h2>
           <div className="flex items-center gap-1 text-sm text-gray-600">
-            <Lock className="w-4 h-4" />
-            <span>Bảo mật</span>
+            <Lock className="w-4 h-4" /><span>Bảo mật</span>
           </div>
         </div>
 
@@ -554,31 +529,20 @@ export default function CheckoutForm({
           <div
             onClick={() => setSelectedPayment("paypal")}
             className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
-              selectedPayment === "paypal"
-                ? "border-blue-500 bg-blue-50"
-                : "border-gray-200 hover:border-gray-300"
+              selectedPayment === "paypal" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"
             }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    selectedPayment === "paypal"
-                      ? "border-blue-500"
-                      : "border-gray-300"
-                  }`}
-                >
-                  {selectedPayment === "paypal" && (
-                    <div className="w-3 h-3 rounded-full bg-blue-500" />
-                  )}
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPayment === "paypal" ? "border-blue-500" : "border-gray-300"}`}>
+                  {selectedPayment === "paypal" && <div className="w-3 h-3 rounded-full bg-blue-500" />}
                 </div>
                 <CreditCard className="w-6 h-6 text-gray-700" />
                 <span className="font-medium text-gray-900">PayPal</span>
               </div>
               <img
                 src="https://res.cloudinary.com/dzjm0cviz/image/upload/v1759928562/PayPal.svg_mdi5au.png"
-                alt="PayPal"
-                className="h-6"
+                alt="PayPal" className="h-6"
               />
             </div>
           </div>
@@ -587,31 +551,37 @@ export default function CheckoutForm({
           <div
             onClick={() => setSelectedPayment("momo")}
             className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
-              selectedPayment === "momo"
-                ? "border-pink-500 bg-pink-50"
-                : "border-gray-200 hover:border-gray-300"
+              selectedPayment === "momo" ? "border-pink-500 bg-pink-50" : "border-gray-200 hover:border-gray-300"
             }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    selectedPayment === "momo"
-                      ? "border-pink-500"
-                      : "border-gray-300"
-                  }`}
-                >
-                  {selectedPayment === "momo" && (
-                    <div className="w-3 h-3 rounded-full bg-pink-500" />
-                  )}
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPayment === "momo" ? "border-pink-500" : "border-gray-300"}`}>
+                  {selectedPayment === "momo" && <div className="w-3 h-3 rounded-full bg-pink-500" />}
                 </div>
                 <Wallet className="w-6 h-6 text-gray-700" />
                 <span className="font-medium text-gray-900">Ví MoMo</span>
               </div>
               <div className="w-6 h-6">
-                <img src="https://res.cloudinary.com/dzjm0cviz/image/upload/v1759928578/Logo-MoMo-Square_mti9wm.webp" />
+                <img src="https://res.cloudinary.com/dzjm0cviz/image/upload/v1759928578/Logo-MoMo-Square_mti9wm.webp"/>
               </div>
             </div>
+            
+            {/* ⚠️ Test Environment Warning */}
+            {selectedPayment === "momo" && import.meta.env.DEV && totalAmount > 10000000 && (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex gap-2 text-sm text-yellow-800">
+                  <span>⚠️</span>
+                  <div>
+                    <strong>Lưu ý môi trường test:</strong>
+                    <p className="mt-1">
+                      MoMo test chỉ hỗ trợ tối đa <strong>10,000,000 VNĐ</strong>/giao dịch.
+                      Đơn hàng của bạn ({(totalAmount).toLocaleString('vi-VN')} VNĐ) sẽ được tự động điều chỉnh về 10 triệu để test.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -625,12 +595,9 @@ export default function CheckoutForm({
             : "bg-gray-300 cursor-not-allowed"
         }`}
       >
-        {isProcessingPayment
-          ? "Đang xử lý..."
-          : !isFormValid
-          ? "Vui lòng nhập thông tin"
-          : !selectedPayment
-          ? "Vui lòng chọn phương thức thanh toán"
+        {isProcessingPayment ? "Đang xử lý..."
+          : !isFormValid ? "Vui lòng nhập thông tin"
+          : !selectedPayment ? "Vui lòng chọn phương thức thanh toán"
           : "Tiếp tục thanh toán"}
       </button>
     </div>

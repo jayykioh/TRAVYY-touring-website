@@ -100,57 +100,20 @@ async function createBookingFromSession(session, additionalData = {}) {
     const finalAmountVND = Number(session.amount) || 0;
     const discountAmount = Number(session.discountAmount) || 0;
     const originalAmount = finalAmountVND + discountAmount; // Original = Final + Discount
-    
+
     const totalUSD = Math.round(finalAmountVND * FX_VND_USD * 100) / 100;
 
     console.log(`[Payment] 💰 Booking amounts:`, {
       originalAmount,
       discountAmount,
       finalAmount: finalAmountVND,
-      voucherCode: session.voucherCode
+      voucherCode: session.voucherCode,
     });
 
-    // ==========================================================
-    // 🚀 THÊM MỚI: GIẢM GHẾ + TĂNG usageCount
-    // ==========================================================
-    for (const item of bookingItems) {
-      const totalSeats = (item.adults || 0) + (item.children || 0);
-      if (!mongoose.isValidObjectId(item.tourId) || totalSeats <= 0) continue;
-
-      const dateStr = String(item.date).slice(0, 10); // "YYYY-MM-DD"
-
-      // 🔻 Giảm seatsLeft theo ngày khởi hành
-      const updateSeats = await Tour.updateOne(
-        { _id: item.tourId, "departures.date": dateStr },
-        { $inc: { "departures.$.seatsLeft": -totalSeats } }
-      );
-
-      // Nếu không tìm thấy (do date kiểu Date) → thử lại với new Date
-      if (updateSeats.modifiedCount === 0) {
-        const dateAsDate = new Date(dateStr + "T00:00:00.000Z");
-        await Tour.updateOne(
-          { _id: item.tourId, "departures.date": dateAsDate },
-          { $inc: { "departures.$.seatsLeft": -totalSeats } }
-        );
-      }
-
-      // 🔺 Tăng usageCount (tăng 1 mỗi booking, hoặc tổng người nếu bạn thích)
-      await Tour.updateOne(
-        { _id: item.tourId },
-        { $inc: { usageCount: 1 } } // Hoặc: { $inc: { usageCount: totalSeats } }
-      );
-
-      console.log(
-        `[Booking] 🪑 Reduced ${totalSeats} seats & incremented usageCount for tourId=${item.tourId}, date=${dateStr}`
-      );
-    }
-    // ==========================================================
-
-    // Sau khi giảm ghế + tăng usageCount → tạo Booking
     const bookingDoc = await Booking.create({
       userId: session.userId,
       items: bookingItems,
-      currency: 'VND',
+      currency: "VND",
       totalVND: finalAmountVND, // Số tiền sau giảm giá (đã trừ discount)
       totalUSD: totalUSD,
       originalAmount: originalAmount, // Số tiền gốc trước giảm
@@ -179,24 +142,32 @@ async function createBookingFromSession(session, additionalData = {}) {
     try {
       const user = await User.findById(session.userId).lean();
       if (user && user.email) {
-        const tourNames = bookingItems.map(item => item.name).join(', ');
+        const tourNames = bookingItems.map((item) => item.name).join(", ");
         // Sử dụng chính xác booking code như frontend hiển thị
-        const bookingCode = bookingDoc.bookingCode || bookingDoc._id.toString().substring(0, 8).toUpperCase();
-        
-        await axios.post(`http://localhost:${process.env.PORT || 4000}/api/notify/payment`, {
-          email: user.email,
-          amount: finalAmountVND.toLocaleString('vi-VN'),
-          bookingCode: bookingCode,
-          tourTitle: tourNames,
-          bookingId: bookingDoc._id
-        });
-        console.log(`[Payment] ✅ Sent payment success notification to ${user.email} with booking code: ${bookingCode}`);
+        const bookingCode =
+          bookingDoc.bookingCode ||
+          bookingDoc._id.toString().substring(0, 8).toUpperCase();
+
+        await axios.post(
+          `http://localhost:${process.env.PORT || 4000}/api/notify/payment`,
+          {
+            email: user.email,
+            amount: finalAmountVND.toLocaleString("vi-VN"),
+            bookingCode: bookingCode,
+            tourTitle: tourNames,
+            bookingId: bookingDoc._id,
+          }
+        );
+        console.log(
+          `[Payment] ✅ Sent payment success notification to ${user.email} with booking code: ${bookingCode}`
+        );
       }
     } catch (notifyErr) {
       console.error(
         "[Payment] ❌ Failed to send payment notification:",
         notifyErr
       );
+      // Không throw error để không ảnh hưởng đến quá trình chính
     }
 
     // Clear cart if needed
