@@ -48,14 +48,17 @@
     { region: 'Central', guides: 18 },
   ];
   
-  export const recentTours= [
-    { id: 1, name: 'Du lịch Hà Nội - Hạ Long', date: '15/10/2025', bookings: '25', status: 'Hoạt động' },
-    { id: 2, name: 'Tour Sài Gòn - Phú Quốc', date: '18/10/2025', bookings: '18', status: 'Hoạt động' },
-    { id: 3, name: 'Khám phá Đà Nẵng - Hội An', date: '20/10/2025', bookings: '32', status: 'Hoạt động' },
-    { id: 4, name: 'Nha Trang - Đảo Điệp Sơn', date: '22/10/2025', bookings: '15', status: 'Chờ xác nhận' },
-    { id: 5, name: 'Tây Nguyên - Pleiku - Kon Tum', date: '25/10/2025', bookings: '12', status: 'Hoạt động' },
-    { id: 6, name: 'Mù Cang Chải - Sapa', date: '28/10/2025', bookings: '20', status: 'Hoạt động' },
-      ];
+
+// Sample data for recentTours
+export const recentTours = [
+  { id: 1, name: 'Du lịch Hà Nội - Hạ Long', date: '15/10/2025', bookings: '25', status: 'Hoạt động' },
+  { id: 2, name: 'Tour Sài Gòn - Phú Quốc', date: '22/10/2025', bookings: '18', status: 'Sắp khởi hành' },
+  { id: 3, name: 'Khám phá Đà Nẵng - Hội An', date: '20/10/2025', bookings: '32', status: 'Hoạt động' },
+  { id: 4, name: 'Nha Trang - Đảo Điệp Sơn', date: '10/10/2025', bookings: '15', status: 'Đã kết thúc' },
+  { id: 5, name: 'Tây Nguyên - Pleiku - Kon Tum', date: '25/10/2025', bookings: '12', status: 'Hoạt động' },
+  { id: 6, name: 'Mù Cang Chải - Sapa', date: '15/10/2025', bookings: '20', status: 'Đã hủy' },
+];
+
   
   
   export const topGuides = [
@@ -172,32 +175,8 @@ export const summaryStats = [
       { value: 2.4 }
     ]
   },
-  { 
-    id: 6,
-    variant: 'gray',
-    label: 'Tỷ lệ hủy tour (%)', 
-    subtitle: 'Tổng tour bị hủy so với tổng booking',
-    value: '8.5%', 
-    change: '-1.2%', 
-    trend: 'down', 
-    icon: TrendingDown, 
-    iconColor: 'text-amber-600',
-    breakdown: [
-      { label: 'API', value: '6.2%', color: '#3b82f6' },
-      { label: 'Custom', value: '12.8%', color: '#f97316' }
-    ],
-    chartData: [
-      { value: 10.5 },
-      { value: 10.2 },
-      { value: 9.8 },
-      { value: 9.3 },
-      { value: 8.9 },
-      { value: 8.7 },
-      { value: 8.5 }
-    ]
-  },
     { 
-    id: 7,
+    id: 6,
     variant: 'yellow',
     label: 'Yêu cầu refund / khiếu nại', 
     subtitle: 'Cần xử lý',

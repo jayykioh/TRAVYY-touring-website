@@ -7,21 +7,26 @@ export default function AdminLayout({ children, activePage = 'dashboard' }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-gray-50">
+      {/* Header - Fixed at top */}
+      <AdminHeader />
+
+      {/* Sidebar - Fixed position với offset từ header */}
       <AdminSidebar 
         isOpen={sidebarOpen} 
         setIsOpen={setSidebarOpen}
         activePage={activePage}
       />
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen">
-        {/* Header */}
-        <AdminHeader />
-
+      {/* Main Content - Với margin để tránh sidebar */}
+      <div 
+        className={`transition-all duration-300 ${
+          sidebarOpen ? 'lg:ml-[285px]' : 'lg:ml-[45px]'
+        }`}
+        style={{ marginTop: '64px' }} // Offset cho header
+      >
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="min-h-[calc(100vh-64px-60px)] p-6">
           {children}
         </main>
 

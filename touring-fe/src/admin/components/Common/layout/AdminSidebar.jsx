@@ -3,13 +3,9 @@ import {
   LayoutDashboard, 
   MapPin, 
   UserCheck, 
-  MessageSquare, 
-  FileCheck, 
   Database, 
   FileText, 
-  Settings, 
-  Menu, 
-  X,
+  Settings,
   ChevronDown,
   ChevronRight,
   Users,
@@ -43,21 +39,21 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
       icon: UserCheck, 
       path: '/admin/guides',
       subItems: [
-        { id: 'all-guides', label: 'All guide', path: '/admin/guides' },
-        { id: 'check-compatibility', label: 'Check Compatibility', path: '/admin/guides/compatibility' }
+        { id: 'all-guides', label: 'All Guides', path: '/admin/guides' },
+        { id: 'hidden-guides', label: 'Hidden Guides', path: '/admin/guides/hidden' },
+        { id: 'sync-agency', label: 'Sync from Agency', path: '/admin/guides/sync' },
+        { id: 'guide-accounts', label: 'Guide Accounts', path: '/admin/guides/accounts' }
       ]
     },
     { 
       id: 'customers', 
-      label: 'Customer Requests', 
-      icon: MessageSquare, 
-      path: '/admin/customers' 
-    },
-    { 
-      id: 'certification', 
-      label: 'Certification', 
-      icon: FileCheck, 
-      path: '/admin/certification' 
+      label: 'Customer Management', 
+      icon: Users, 
+      path: '/admin/customers',
+      subItems: [
+        { id: 'customer-accounts', label: 'Customer Accounts', path: '/admin/customers/accounts' },
+        { id: 'customer-requests', label: 'Customer Requests', path: '/admin/customer-requests' }
+      ]
     },
     { 
       id: 'api', 
@@ -92,117 +88,102 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
 
   const handleNavigate = (path) => {
     navigate(path);
-    // Close sidebar on mobile after navigation
     if (window.innerWidth < 1024) {
       setIsOpen(false);
     }
   };
 
   const handleLogout = () => {
-    if (window.confirm('Bạn có chắc chắn muốn đăng xuất?')) {
-      logout();
-      navigate('/admin/login');
-    }
+    setProfileOpen(false);
+    logout();
+    navigate('/');
   };
 
   return (
     <>
-      {/* Mobile Overlay */}
+      {/* Overlay for Mobile */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={() => setIsOpen(false)}
-        ></div>
+        />
       )}
 
       {/* Sidebar */}
-      <aside className={`
-        fixed lg:sticky top-0 left-0 h-screen
-        bg-white border-r border-gray-200
-        transition-all duration-300 z-50
-        ${isOpen ? 'w-64' : 'w-0 lg:w-20'}
-        flex flex-col
-      `}>
-        {/* Logo & Toggle */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
-          {isOpen && (
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">T</span>
-              </div>
-              <span className="ml-2 text-xl font-bold text-gray-900">Travyy</span>
-            </div>
-          )}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition"
-          >
-            {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
+      <aside
+        className={`fixed lg:relative top-0 left-0 h-screen bg-white border-r border-gray-200 z-40 transition-transform duration-300 rounded-lg ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0 w-60 flex flex-col`}
+        style={{ position: "fixed", top: 88, left: 45 }}
+      >
+        {/* Navigation Menu */}
+        <nav className="flex-1 overflow-y-auto py-4">
+          <div className="space-y-0.5">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activePage === item.id;
+              const hasSubItems = item.subItems && item.subItems.length > 0;
+              const isExpanded = expandedMenu === item.id;
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activePage === item.id;
-            const hasSubItems = item.subItems && item.subItems.length > 0;
-            const isExpanded = expandedMenu === item.id;
-
-            return (
-              <div key={item.id}>
-                <button
-                  onClick={() => {
-                    if (hasSubItems) {
-                      toggleSubmenu(item.id);
-                      if (!isOpen) setIsOpen(true);
-                    } else {
-                      handleNavigate(item.path);
-                    }
-                  }}
-                  className={`
-                    w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition
-                    ${isActive 
-                      ? 'bg-blue-50 text-blue-600' 
-                      : 'text-gray-700 hover:bg-gray-100'
-                    }
-                  `}
-                  title={!isOpen ? item.label : ''}
-                >
-                  <div className="flex items-center min-w-0">
-                    <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} />
-                    {isOpen && (
-                      <span className={`ml-3 text-sm font-medium truncate ${isActive ? 'text-blue-600' : ''}`}>
+              return (
+                <div key={item.id}>
+                  <button
+                    onClick={() => {
+                      if (hasSubItems) {
+                        toggleSubmenu(item.id);
+                      } else {
+                        handleNavigate(item.path);
+                      }
+                    }}
+                    className={`w-full flex items-center justify-between px-6 py-2 transition-all border-l-4 ${
+                      isActive
+                        ? 'border-teal-500 bg-teal-50 text-teal-600 font-medium'
+                        : 'border-transparent text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon
+                        className={`w-4 h-4 ${
+                          isActive ? 'text-teal-600' : 'text-gray-500'
+                        }`}
+                      />
+                      <span
+                        className={`text-[13px] transition-transform duration-200 ${
+                          isActive
+                            ? 'text-teal-600 scale-105'
+                            : 'group-hover:scale-105 group-hover:text-blue-500'
+                        }`}
+                      >
                         {item.label}
                       </span>
+                    </div>
+                    {hasSubItems && (
+                      isExpanded ? (
+                        <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                      )
                     )}
-                  </div>
-                  {isOpen && hasSubItems && (
-                    isExpanded ? (
-                      <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 flex-shrink-0 ml-2" />
-                    )
-                  )}
-                </button>
+                  </button>
 
-                {/* Sub Items */}
-                {isOpen && hasSubItems && isExpanded && (
-                  <div className="ml-8 mt-1 space-y-1">
-                    {item.subItems.map((subItem) => (
-                      <button
-                        key={subItem.id}
-                        onClick={() => handleNavigate(subItem.path)}
-                        className="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition"
-                      >
-                        {subItem.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  {/* Sub Items */}
+                  {hasSubItems && isExpanded && (
+                    <div className="ml-8 space-y-0.5">
+                      {item.subItems.map((subItem) => (
+                        <button
+                          key={subItem.id}
+                          onClick={() => handleNavigate(subItem.path)}
+                          className="w-full text-left px-6 py-2 text-[13px] text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all"
+                        >
+                          {subItem.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </nav>
 
         {/* User Profile */}

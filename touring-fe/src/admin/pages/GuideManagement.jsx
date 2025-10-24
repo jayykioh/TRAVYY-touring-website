@@ -5,7 +5,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   RefreshCw,
   Download,
-  Plus,
   Users,
   CheckCircle,
   Clock,
@@ -16,7 +15,6 @@ import {
 import StatCard from '../components/Dashboard/StatsCard';
 import GuideFilters from '../components/Guides/GuideFilters';
 import GuideCard from '../components/Guides/GuideCard';
-import GuideForm from '../components/Guides/GuideForm';
 
 // Data & Utils
 import { MOCK_GUIDES } from '../data/guideData';
@@ -37,8 +35,6 @@ const GuideManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [showForm, setShowForm] = useState(false);
-  const [editingGuide, setEditingGuide] = useState(null);
 
   useEffect(() => {
     loadMockData();
@@ -113,62 +109,24 @@ const GuideManagement = () => {
     downloadCSV(csvContent, `guides_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
-  const handleAddGuide = () => {
-    setEditingGuide(null);
-    setShowForm(true);
-  };
-
-  const handleEditGuide = (guide) => {
-    setEditingGuide(guide);
-    setShowForm(true);
-  };
-
-  const handleVerifyGuide = (guide) => {
-    if (window.confirm(`Xác minh hướng dẫn viên "${guide.name}"?`)) {
-      setGuides(guides.map(g => 
-        g.id === guide.id 
-          ? { ...g, status: 'verified' }
-          : g
-      ));
-      alert('Đã xác minh hướng dẫn viên thành công!');
-    }
-  };
-
   const handleViewGuide = (guide) => {
     alert(`Xem chi tiết: ${guide.name}\nĐây là chức năng demo`);
   };
 
-  const handleFormSubmit = (formData) => {
-    if (editingGuide) {
-      setGuides(guides.map(g => 
-        g.id === editingGuide.id 
-          ? { ...g, ...formData }
-          : g
-      ));
-      alert('Cập nhật hướng dẫn viên thành công!');
-    } else {
-      const newGuide = {
-        id: Math.max(...guides.map(g => g.id)) + 1,
-        ...formData,
-        rating: 0,
-        totalTours: 0,
-        completedTours: 0,
-        status: 'pending',
-        revenue: 0,
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}&background=3B82F6&color=fff`,
-        joinDate: new Date().toISOString().split('T')[0],
-        certifications: []
-      };
-      setGuides([...guides, newGuide]);
-      alert('Thêm hướng dẫn viên mới thành công!');
-    }
-    setShowForm(false);
-    setEditingGuide(null);
+  const handleSyncGuide = async (guide) => {
+    // Giả lập đồng bộ dữ liệu từ Agency
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    console.log('Đồng bộ HDV:', guide.name);
   };
 
-  const handleFormCancel = () => {
-    setShowForm(false);
-    setEditingGuide(null);
+  const handleStatusChange = (guide, newStatus, reason) => {
+    setGuides(guides.map(g => 
+      g.id === guide.id 
+        ? { ...g, activityStatus: newStatus }
+        : g
+    ));
+    console.log(`Chuyển trạng thái ${guide.name} sang ${newStatus}. Lý do: ${reason}`);
+    alert(`Đã chuyển trạng thái ${guide.name} thành công!`);
   };
 
   if (loading) {
@@ -189,7 +147,7 @@ const GuideManagement = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Quản lý Hướng dẫn viên</h1>
-            <p className="text-gray-600 mt-1">Quản lý và xác minh hướng dẫn viên trong hệ thống</p>
+            <p className="text-gray-600 mt-1">Quản lý và theo dõi hướng dẫn viên trong hệ thống</p>
           </div>
           <div className="flex items-center space-x-3">
             <button 
@@ -205,13 +163,6 @@ const GuideManagement = () => {
             >
               <RefreshCw className="w-4 h-4" />
               Làm mới
-            </button>
-            <button 
-              onClick={handleAddGuide}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Thêm HDV
             </button>
           </div>
         </div>
@@ -240,24 +191,6 @@ const GuideManagement = () => {
           </div>
         </div>
 
-        {/* Form Modal */}
-        {showForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b px-6 py-4 z-10">
-                <h2 className="text-xl font-bold text-gray-900">
-                  {editingGuide ? 'Chỉnh sửa Hướng dẫn viên' : 'Thêm Hướng dẫn viên mới'}
-                </h2>
-              </div>
-              <GuideForm 
-                guide={editingGuide}
-                onSubmit={handleFormSubmit}
-                onCancel={handleFormCancel}
-              />
-            </div>
-          </div>
-        )}
-
         {/* Filters */}
         <GuideFilters
           searchTerm={searchTerm}
@@ -275,15 +208,9 @@ const GuideManagement = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Không tìm thấy hướng dẫn viên
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600">
               Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm
             </p>
-            <button 
-              onClick={handleAddGuide}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Thêm hướng dẫn viên mới
-            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -292,8 +219,8 @@ const GuideManagement = () => {
                 key={guide.id}
                 guide={guide}
                 onView={handleViewGuide}
-                onEdit={handleEditGuide}
-                onVerify={handleVerifyGuide}
+                onSync={handleSyncGuide}
+                onStatusChange={handleStatusChange}
               />
             ))}
           </div>
@@ -323,5 +250,3 @@ const GuideManagement = () => {
 };
 
 export default GuideManagement;
-
-

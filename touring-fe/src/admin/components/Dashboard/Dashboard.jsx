@@ -9,7 +9,7 @@ import CategoryPieChart from './CategoryPieChart';
 import BookingTrendsChart from './BookingTrendsChart';
 import GuidesByRegionChart from './GuidesByRegionChart';
 import RecentToursTable from './RecentToursTable';
-import AvailableGuides from './AvailableGuidesTable.jsx';
+import AvailableGuides from './AvailableGuidesTable';
 import AgeDistributionChart from './AgeDistributionChart';
 import TopTravelersComponent from './TopTravelersComponent.jsx';
 
