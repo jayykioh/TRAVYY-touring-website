@@ -351,7 +351,10 @@ exports.createOrder = async (req, res) => {
 };
 
 exports.captureOrder = async (req, res) => {
-  const session = await mongoose.startSession();
+  // Note: We need TWO sessions because Tour uses agencyConn, Booking uses mainConn
+  const { mainConn, agencyConn } = require("../config/db");
+  const mainSession = await mainConn.startSession();
+  const agencySession = await agencyConn.startSession();
 
   try {
     const userId = req.user.sub;
@@ -387,7 +390,7 @@ exports.captureOrder = async (req, res) => {
 
     console.log("Payment session:", paymentSession);
 
-    await session.withTransaction(async () => {
+    await mainSession.withTransaction(async () => {
       // 1) Capture PayPal payment
       const accessToken = await getAccessToken();
       const captureUrl = `${PAYPAL_BASE}/v2/checkout/orders/${orderID}/capture`;
@@ -445,7 +448,7 @@ exports.captureOrder = async (req, res) => {
         console.log(`   date: ${bk.date}`);
         console.log(`   adults: ${bk.adults}, children: ${bk.children}`);
 
-        const tour = await Tour.findById(bk.tourId).session(session);
+        const tour = await Tour.findById(bk.tourId).session(agencySession);
         if (!tour) {
           console.log(`   ⚠️ Tour not found, skipping`);
           continue;
@@ -485,7 +488,7 @@ exports.captureOrder = async (req, res) => {
         const updateResult = await Tour.updateOne(
           { _id: tour._id, "departures.date": bk.date },
           { $inc: { "departures.$.seatsLeft": -needed } },
-          { session }
+          { session: agencySession }
         );
 
         console.log(`   ✅ Update result:`, updateResult);
@@ -511,7 +514,8 @@ exports.captureOrder = async (req, res) => {
     console.error("Stack:", e.stack);
     res.status(e.status || 500).json({ error: e.message || "CAPTURE_FAILED" });
   } finally {
-    session.endSession();
+    mainSession.endSession();
+    agencySession.endSession();
   }
 };
 

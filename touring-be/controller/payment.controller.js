@@ -34,6 +34,7 @@ async function getFetch() {
 }
 
 // Build raw signature according to MoMo docs (v2)
+// IMPORTANT: The order of parameters MUST match MoMo's specification exactly
 function buildRawSignature(payload) {
   return [
     `accessKey=${payload.accessKey}`,
@@ -150,7 +151,7 @@ async function buildMoMoCharge(userId, body) {
 exports.createMoMoPayment = async (req, res) => {
   try {
     const {
-      orderInfo = "Thanh toan don tour",
+      orderInfo = "Thanh toan don tour Travyy", // Use ASCII-safe characters only
       redirectUrl,
       ipnUrl,
       extraData = "",
@@ -170,10 +171,11 @@ exports.createMoMoPayment = async (req, res) => {
       return res.status(400).json({ error: "INVALID_AMOUNT" });
 
     // ENV configuration (provide defaults for sandbox testing)
-    const partnerCode = process.env.MOMO_PARTNER_CODE || "MOMO"; // sample: MOMO
-    const accessKey = process.env.MOMO_ACCESS_KEY || "F8BBA842ECF85"; // sample sandbox
+    const partnerCode =
+      process.env.MOMO_PARTNER_CODE || "MOMOHHIY20251009_TEST";
+    const accessKey = process.env.MOMO_ACCESS_KEY || "XXmpwtA8seF2ejOn";
     const secretKey =
-      process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz"; // sample sandbox
+      process.env.MOMO_SECRET_KEY || "TcX7IEdUrlBRhuZF6ryVJ839QWXrnzlB";
     const endpoint =
       process.env.MOMO_CREATE_ENDPOINT ||
       "https://test-payment.momo.vn/v2/gateway/api/create";
@@ -317,7 +319,7 @@ exports.handleMoMoIPN = async (req, res) => {
   try {
     const body = req.body || {};
     const secretKey =
-      process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz"; // sandbox fallback
+      process.env.MOMO_SECRET_KEY || "TcX7IEdUrlBRhuZF6ryVJ839QWXrnzlB";
     const raw = buildIpnRawSignature(body);
     const expectedSig = crypto
       .createHmac("sha256", secretKey)
@@ -475,12 +477,10 @@ exports.getBookingByPayment = async (req, res) => {
 
     if (!session) {
       console.log(`[Payment] ❌ No payment session found`);
-      return res
-        .status(404)
-        .json({
-          error: "NOT_FOUND",
-          message: "No payment session or booking found",
-        });
+      return res.status(404).json({
+        error: "NOT_FOUND",
+        message: "No payment session or booking found",
+      });
     }
 
     console.log(`[Payment] Payment session status: ${session.status}`);

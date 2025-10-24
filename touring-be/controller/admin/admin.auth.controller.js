@@ -1,15 +1,19 @@
-// controllers/admin.controller.js
+// controller/admin/admin.auth.controller.js
 const bcrypt = require("bcryptjs");
-const User = require("../models/Users");
-const { signAccess, signRefresh, newId } = require("../utils/jwt");
+const User = require("../../models/Users");
+const { signAccess, signRefresh, newId } = require("../../utils/jwt");
 
 const isProd = process.env.NODE_ENV === "production";
 
+/**
+ * Admin Login
+ * POST /api/admin/login
+ */
 exports.adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // ✅ tìm theo email và role
+    // Tìm theo email và role
     const admin = await User.findOne({ email, role: "Admin" });
     if (!admin) {
       return res
@@ -24,7 +28,7 @@ exports.adminLogin = async (req, res) => {
         .json({ success: false, message: "Mật khẩu không đúng" });
     }
 
-    // tạo token + cookie
+    // Tạo token + cookie
     const jti = newId();
     const refresh = signRefresh({ jti, userId: admin.id });
     res.cookie("refresh_token", refresh, {
@@ -50,6 +54,23 @@ exports.adminLogin = async (req, res) => {
     });
   } catch (err) {
     console.error("ADMIN_LOGIN_ERROR:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+/**
+ * Admin Logout (optional)
+ * POST /api/admin/logout
+ */
+exports.adminLogout = async (req, res) => {
+  try {
+    res.clearCookie("refresh_token", { path: "/api/admin" });
+    return res.json({
+      success: true,
+      message: "Đăng xuất thành công",
+    });
+  } catch (err) {
+    console.error("ADMIN_LOGOUT_ERROR:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
