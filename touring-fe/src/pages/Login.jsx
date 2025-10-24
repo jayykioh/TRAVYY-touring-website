@@ -39,7 +39,7 @@ function Login() {
         navigate("/admin/dashboard", { replace: true });
       } else {
       await login(form.username, form.password);
-      toast.success("Đăng nhập thành công");
+      toast.success(`Chào mừng ${form.username} đã trở lại. Khám phá những chuyến đi tuyệt vời!`);
       navigate("/home", { replace: true });
       }
     } catch (err) {
@@ -193,13 +193,13 @@ function Login() {
                 {/* Forgot Password and Register Link*/}
                 <div className="flex flex-row justify-between items-center">
                   <a
-                    href="#"
+                    href="/forgot-password"
                     className="text-sm text-white/90 hover:text-white transition-colors font-medium"
                   >
                     Forgot Password?
                   </a>
                    <a
-                    href="register"
+                    href="/register"
                     className="text-sm text-white/90 hover:text-white transition-colors font-medium"
                   >
                     Register 

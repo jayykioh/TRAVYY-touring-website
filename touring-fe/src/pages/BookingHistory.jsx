@@ -22,7 +22,8 @@ export default function BookingHistory() {
 
         if (!response.ok) throw new Error("Không thể tải lịch sử đặt tour");
         const data = await response.json();
-        setBookings(data.bookings || data.data || []);
+        const bookings = data.bookings || data.data || [];
+        setBookings(bookings);
       } catch (err) {
         console.error("Error fetching bookings:", err);
         setError(err.message);
@@ -30,6 +31,7 @@ export default function BookingHistory() {
         setLoading(false);
       }
     };
+
     if (user?.token) fetchBookings();
   }, [user]);
 
@@ -202,6 +204,23 @@ export default function BookingHistory() {
                         </div>
 
                         <div className="text-right">
+                          {/* Hiển thị giá gốc và discount nếu có */}
+                          {booking.discountAmount > 0 && (
+                            <div className="mb-1 space-y-0.5">
+                              <div className="flex items-center justify-end gap-2 text-xs text-neutral-500">
+                                <span>Tổng tiền:</span>
+                                <span className="line-through">
+                                  {formatCurrency(booking.originalAmount || 0, booking.currency || 'VND')}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-end gap-2 text-xs font-medium" style={{ color: "#02A0AA" }}>
+                                <span className="bg-teal-50 px-2 py-0.5 rounded text-[11px] uppercase font-semibold">
+                                  {booking.voucherCode || 'VOUCHER'}
+                                </span>
+                                <span>-{formatCurrency(booking.discountAmount || 0, booking.currency || 'VND')}</span>
+                              </div>
+                            </div>
+                          )}
                           <p className="text-base font-semibold tracking-tight" style={{ color: "#02A0AA" }}>
                             {formatCurrency(
                               booking.totalVND || booking.totalUSD || 0, 
@@ -218,11 +237,10 @@ export default function BookingHistory() {
                       )}
                     </div>
                   </div>
-                
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

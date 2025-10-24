@@ -284,6 +284,29 @@ export default function Register() {
                   Đăng ký bằng Google
                 </a>
               </div>
+              {/* Facebook OAuth */}
+                <div className="mb-6">
+                  <a
+                    href={`/api/auth/facebook`}
+                    className="flex items-center justify-center w-full px-4 py-3.5 rounded-2xl
+                      backdrop-blur-md bg-white/10 border border-white/20
+                      hover:bg-[#1877F2]/20 text-white transition-all"
+                  >
+                    {/* Facebook Icon */}
+                    <svg
+                      className="w-5 h-5 mr-3"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        fill="#1877F2"
+                        d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.09 4.388 23.093 10.125 24v-8.438H7.078V12.07h3.047V9.412c0-3.007 1.793-4.668 4.533-4.668 1.312 0 2.686.235 2.686.235v2.953h-1.514c-1.493 0-1.955.928-1.955 1.874v2.264h3.328l-.532 3.492h-2.796V24C19.612 23.093 24 18.09 24 12.073z"
+                      />
+                    </svg>
+                    Đăng ký bằng Facebook
+                  </a>
+                </div>
+
 
               {/* Divider */}
               <div className="relative my-5">
@@ -750,6 +773,8 @@ export default function Register() {
                     "Đăng ký"
                   )}
                 </button>
+
+
               </form>
 
               {/* Footer Link */}

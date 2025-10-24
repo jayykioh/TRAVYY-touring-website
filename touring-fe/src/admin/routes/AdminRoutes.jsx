@@ -12,14 +12,7 @@ import TourDetailPage from '../components/Tours/TourDetailPage';
 import GuideManagement from '../pages/GuideManagement';
 import AgencyAPIData from '../pages/AgencyAPIData'; 
 import Settings from '../pages/Settings';
-import CustomerRequestManagement from '../pages/CustomerRequestManagement';
-import RequestDetailPage from '../components/CustomerRequest/RequestDetailPage';
-import RequestUpdatePage from '../components/CustomerRequest/RequestUpdatePage';
-import HiddenGuidesPage from '../components/Guides/HiddenGuidesPage';
-import SyncFromAgencyPage from '../components/Guides/SyncFromAgencyPage';
-import GuideAccountsPage from '../components/Guides/GuideAccountsPage';
-import CustomerAccountsPage from '../components/Customers/CustomerAccountsPage';
-import CustomerAccountDetailPage from '../components/Customers/CustomerAccountDetailPage';
+import PromotionManagement from '../pages/PromotionManagement';
 
 // Placeholder components
 const Certification = () => <div className="p-6">Certification Page - Coming soon</div>;
@@ -161,6 +154,14 @@ const AdminRoutes = () => {
           <AdminProtectedRoute>
             <AdminLayout activePage="settings">
               <Settings />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        } />
+        
+        <Route path="/promotions" element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="promotions">
+              <PromotionManagement />
             </AdminLayout>
           </AdminProtectedRoute>
         } />

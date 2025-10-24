@@ -1,10 +1,14 @@
 import React from "react";
+import { Tag } from "lucide-react";
 
-export default function OrderSummary({ items = [] }) {
+export default function OrderSummary({ items = [], voucherDiscount = 0, voucherCode = null }) {
   const originalTotal = items.reduce((s, t) => s + (t.originalPrice || t.price || 0), 0);
   const total = items.reduce((s, t) => s + (t.price || 0), 0);
   const discountTotal = Math.max(0, originalTotal - total);
   const discountPercent = originalTotal ? Math.round((discountTotal / originalTotal) * 100) : 0;
+  
+  // Final total after voucher
+  const finalTotal = Math.max(0, total - voucherDiscount);
 
   return (
     <div className="w-full lg:w-2/5 bg-gray-50 p-6 lg:p-8">
@@ -20,10 +24,21 @@ export default function OrderSummary({ items = [] }) {
             <span className="text-gray-600">Giảm giá ({discountPercent}%):</span>
             <span className="text-green-600 font-medium">-{discountTotal.toLocaleString("vi-VN")}đ</span>
           </div>
+          
+          {/* Voucher discount */}
+          {voucherDiscount > 0 && (
+            <div className="flex justify-between text-sm bg-gradient-to-r from-orange-50 to-red-50 -mx-3 px-3 py-2 rounded-lg">
+              <span className="text-orange-700 font-medium flex items-center gap-1">
+                <Tag className="w-4 h-4" />
+                Voucher {voucherCode && `(${voucherCode})`}:
+              </span>
+              <span className="text-orange-600 font-bold">-{voucherDiscount.toLocaleString("vi-VN")}đ</span>
+            </div>
+          )}
         </div>
         <div className="flex justify-between items-center">
           <span className="text-lg font-semibold text-gray-900">Tổng cộng ({items.length} tours):</span>
-          <span className="text-2xl font-bold text-blue-600">{total.toLocaleString("vi-VN")}đ</span>
+          <span className="text-2xl font-bold text-blue-600">{finalTotal.toLocaleString("vi-VN")}đ</span>
         </div>
       </div>
 

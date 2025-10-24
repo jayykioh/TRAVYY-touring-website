@@ -52,8 +52,8 @@ export default function Footer() {
           </div>
           <h4 className="font-semibold mb-3 text-gray-800">Thanh toán</h4>
           <div className="flex flex-wrap gap-2">
-            <img src="/visa.png" alt="Visa" className="h-6" />
-            <img src="/mastercard.png" alt="MasterCard" className="h-6" />
+            
+            <img src="/visa.png" alt="MoMo" className="h-6" />
             <img src="/paypal.png" alt="PayPal" className="h-6" />
             <img src="/gpay.png" alt="Google Pay" className="h-6" />
           </div>

@@ -55,6 +55,8 @@ export default function PaymentCallback() {
             setBookingId(data.bookingId);
             // ✅ Refresh cart to remove purchased items
             await refreshCart();
+            // ✅ Dispatch custom event thay vì context
+            window.dispatchEvent(new Event('promotion-changed'));
           } else {
             throw new Error('Không thể hoàn tất thanh toán');
           }
@@ -98,6 +100,8 @@ export default function PaymentCallback() {
                 setBookingId(markData.bookingId);
                 // ✅ Refresh cart to remove purchased items
                 await refreshCart();
+                // ✅ Dispatch custom event
+                window.dispatchEvent(new Event('promotion-changed'));
                 return;
               }
             } else {
@@ -131,6 +135,8 @@ export default function PaymentCallback() {
                   setBookingId(d.booking._id);
                   // ✅ Refresh cart to remove purchased items
                   await refreshCart();
+                  // ✅ Dispatch custom event
+                  window.dispatchEvent(new Event('promotion-changed'));
                   return;
                 }
               } else if (r.status === 202) {

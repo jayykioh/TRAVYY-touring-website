@@ -95,9 +95,20 @@ async function createBookingFromSession(session, additionalData = {}) {
       });
     }
 
-    const amountVND =
-      vndFromItems > 0 ? vndFromItems : Number(session.amount) || 0;
-    const totalUSD = Math.round(amountVND * FX_VND_USD * 100) / 100;
+    // Calculate amounts
+    // session.amount already contains the final amount AFTER discount
+    const finalAmountVND = Number(session.amount) || 0;
+    const discountAmount = Number(session.discountAmount) || 0;
+    const originalAmount = finalAmountVND + discountAmount; // Original = Final + Discount
+    
+    const totalUSD = Math.round(finalAmountVND * FX_VND_USD * 100) / 100;
+
+    console.log(`[Payment] 💰 Booking amounts:`, {
+      originalAmount,
+      discountAmount,
+      finalAmount: finalAmountVND,
+      voucherCode: session.voucherCode
+    });
 
     // ==========================================================
     // 🚀 THÊM MỚI: GIẢM GHẾ + TĂNG usageCount
@@ -139,9 +150,12 @@ async function createBookingFromSession(session, additionalData = {}) {
     const bookingDoc = await Booking.create({
       userId: session.userId,
       items: bookingItems,
-      currency: "VND",
-      totalVND: amountVND,
+      currency: 'VND',
+      totalVND: finalAmountVND, // Số tiền sau giảm giá (đã trừ discount)
       totalUSD: totalUSD,
+      originalAmount: originalAmount, // Số tiền gốc trước giảm
+      discountAmount: discountAmount, // Số tiền được giảm
+      voucherCode: session.voucherCode || undefined, // Mã voucher
       payment: {
         provider: session.provider,
         orderID: session.orderId,
@@ -165,24 +179,18 @@ async function createBookingFromSession(session, additionalData = {}) {
     try {
       const user = await User.findById(session.userId).lean();
       if (user && user.email) {
-        const tourNames = bookingItems.map((item) => item.name).join(", ");
-        const bookingCode =
-          bookingDoc.bookingCode ||
-          bookingDoc._id.toString().substring(0, 8).toUpperCase();
-
-        await axios.post(
-          `http://localhost:${process.env.PORT || 4000}/api/notify/payment`,
-          {
-            email: user.email,
-            amount: amountVND.toLocaleString("vi-VN"),
-            bookingCode: bookingCode,
-            tourTitle: tourNames,
-            bookingId: bookingDoc._id,
-          }
-        );
-        console.log(
-          `[Payment] ✅ Sent payment success notification to ${user.email} with booking code: ${bookingCode}`
-        );
+        const tourNames = bookingItems.map(item => item.name).join(', ');
+        // Sử dụng chính xác booking code như frontend hiển thị
+        const bookingCode = bookingDoc.bookingCode || bookingDoc._id.toString().substring(0, 8).toUpperCase();
+        
+        await axios.post(`http://localhost:${process.env.PORT || 4000}/api/notify/payment`, {
+          email: user.email,
+          amount: finalAmountVND.toLocaleString('vi-VN'),
+          bookingCode: bookingCode,
+          tourTitle: tourNames,
+          bookingId: bookingDoc._id
+        });
+        console.log(`[Payment] ✅ Sent payment success notification to ${user.email} with booking code: ${bookingCode}`);
       }
     } catch (notifyErr) {
       console.error(
