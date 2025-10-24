@@ -1,7 +1,13 @@
 // components/TourManagement.jsx
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { RefreshCw, Download, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  RefreshCw,
+  Download,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Users, DollarSign, Calendar, MapPin } from "lucide-react";
 
 // Components
@@ -24,14 +30,20 @@ import {
 } from "../utils/tourHelpers";
 
 // Pagination Component
-const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage }) => {
+const Pagination = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+  totalItems,
+  itemsPerPage,
+}) => {
   const startItem = (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
-  
+
   const getPageNumbers = () => {
     const pages = [];
     const maxVisible = 5;
-    
+
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
@@ -39,23 +51,23 @@ const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, itemsPe
     } else {
       if (currentPage <= 3) {
         for (let i = 1; i <= 4; i++) pages.push(i);
-        pages.push('...');
+        pages.push("...");
         pages.push(totalPages);
       } else if (currentPage >= totalPages - 2) {
         pages.push(1);
-        pages.push('...');
+        pages.push("...");
         for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
       } else {
         pages.push(1);
-        pages.push('...');
+        pages.push("...");
         pages.push(currentPage - 1);
         pages.push(currentPage);
         pages.push(currentPage + 1);
-        pages.push('...');
+        pages.push("...");
         pages.push(totalPages);
       }
     }
-    
+
     return pages;
   };
 
@@ -77,18 +89,21 @@ const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, itemsPe
           Sau
         </button>
       </div>
-      
+
       <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-gray-700">
-            Hiển thị <span className="font-medium">{startItem}</span> đến{' '}
-            <span className="font-medium">{endItem}</span> trong tổng số{' '}
+            Hiển thị <span className="font-medium">{startItem}</span> đến{" "}
+            <span className="font-medium">{endItem}</span> trong tổng số{" "}
             <span className="font-medium">{totalItems}</span> tours
           </p>
         </div>
-        
+
         <div>
-          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+          <nav
+            className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+            aria-label="Pagination"
+          >
             <button
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
@@ -96,9 +111,9 @@ const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, itemsPe
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-            
-            {getPageNumbers().map((page, index) => (
-              page === '...' ? (
+
+            {getPageNumbers().map((page, index) =>
+              page === "..." ? (
                 <span
                   key={`ellipsis-${index}`}
                   className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
@@ -111,15 +126,15 @@ const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, itemsPe
                   onClick={() => onPageChange(page)}
                   className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                     currentPage === page
-                      ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                      ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
+                      : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
                   }`}
                 >
                   {page}
                 </button>
               )
-            ))}
-            
+            )}
+
             <button
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
@@ -166,7 +181,7 @@ const TourManagement = () => {
   });
   const [showForm, setShowForm] = useState(false);
   const [editingTour, setEditingTour] = useState(null);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -177,13 +192,15 @@ const TourManagement = () => {
     setError(null);
 
     try {
-      const response = await fetch("/api/tours");
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+      const response = await fetch(`${API_URL}/api/tours`);
 
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log("Fetched tours:", data);
       setTours(data);
     } catch (err) {
       console.error("Failed to fetch tours:", err);
@@ -226,7 +243,7 @@ const TourManagement = () => {
   // Handle page change
   const handlePageChange = (page) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Handle items per page change
@@ -323,14 +340,14 @@ const TourManagement = () => {
   // Handle Toggle Visibility
   const handleToggleVisibility = async (tour) => {
     try {
-      const response = await fetch(`/api/tours/${tour._id}`, {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+      const response = await fetch(`${API_URL}/api/tours/${tour._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...tour,
-          isHidden: !tour.isHidden
+          isHidden: !tour.isHidden,
         }),
       });
 
@@ -341,9 +358,7 @@ const TourManagement = () => {
       const updatedTour = await response.json();
 
       // Update the tour in state
-      setTours(
-        tours.map((t) => (t._id === tour._id ? updatedTour : t))
-      );
+      setTours(tours.map((t) => (t._id === tour._id ? updatedTour : t)));
       alert(tour.isHidden ? "Đã hiện tour!" : "Đã ẩn tour!");
     } catch (err) {
       console.error("Failed to toggle visibility:", err);
@@ -355,7 +370,8 @@ const TourManagement = () => {
   const handleDeleteTour = async (tour) => {
     if (window.confirm(`Bạn có chắc muốn xóa tour "${tour.title}"?`)) {
       try {
-        const response = await fetch(`/api/tours/${tour._id}`, {
+        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+        const response = await fetch(`${API_URL}/api/tours/${tour._id}`, {
           method: "DELETE",
         });
 
@@ -376,15 +392,20 @@ const TourManagement = () => {
   // Handle Form Submit
   const handleFormSubmit = async (formData) => {
     try {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
       if (editingTour) {
         // Update existing tour
-        const response = await fetch(`/api/tours/${editingTour._id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        });
+        const response = await fetch(
+          `${API_URL}/api/tours/${editingTour._id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(formData),
+          }
+        );
 
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`);
@@ -399,7 +420,7 @@ const TourManagement = () => {
         alert("Cập nhật tour thành công!");
       } else {
         // Add new tour
-        const response = await fetch("/api/tours", {
+        const response = await fetch(`${API_URL}/api/tours`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -504,9 +525,9 @@ const TourManagement = () => {
               <div className="text-sm text-gray-600">
                 Hiển thị {filteredTours.length} / {tours.length} tours
               </div>
-              <ItemsPerPageSelector 
-                value={itemsPerPage} 
-                onChange={handleItemsPerPageChange} 
+              <ItemsPerPageSelector
+                value={itemsPerPage}
+                onChange={handleItemsPerPageChange}
               />
             </div>
             <div className="flex gap-3">
@@ -611,7 +632,7 @@ const TourManagement = () => {
                   </tbody>
                 </table>
               </div>
-              
+
               {/* Pagination */}
               {totalPages > 1 && (
                 <Pagination

@@ -1,22 +1,25 @@
 // touring-fe/src/admin/context/AdminAuthContext.jsx
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import adminAuthService from '../services/adminAuthService';
+import React, { createContext, useState, useEffect, useContext } from "react";
+import adminAuthService from "../services/adminAuthService";
 
 const AdminAuthContext = createContext();
 
 export const AdminAuthProvider = ({ children }) => {
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(null);
 
   useEffect(() => {
     const initAuth = () => {
       try {
         if (adminAuthService.isAuthenticated()) {
           const currentAdmin = adminAuthService.getCurrentAdmin();
+          const storedToken = sessionStorage.getItem("admin_token");
           setAdmin(currentAdmin);
+          setToken(storedToken);
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error("Auth initialization error:", error);
       } finally {
         setLoading(false);
       }
@@ -29,6 +32,7 @@ export const AdminAuthProvider = ({ children }) => {
     const result = await adminAuthService.login(email, password);
     if (result.success) {
       setAdmin(result.admin);
+      setToken(result.token);
     }
     return result;
   };
@@ -36,20 +40,22 @@ export const AdminAuthProvider = ({ children }) => {
   const logout = () => {
     adminAuthService.logout();
     setAdmin(null);
+    setToken(null);
   };
 
   const updateAdmin = (updatedAdmin) => {
     setAdmin(updatedAdmin);
-    sessionStorage.setItem('admin_user', JSON.stringify(updatedAdmin));
+    sessionStorage.setItem("admin_user", JSON.stringify(updatedAdmin));
   };
 
   const value = {
     admin,
+    token,
     loading,
     login,
     logout,
     updateAdmin,
-    isAuthenticated: adminAuthService.isAuthenticated()
+    isAuthenticated: adminAuthService.isAuthenticated(),
   };
 
   return (
@@ -62,7 +68,7 @@ export const AdminAuthProvider = ({ children }) => {
 export const useAdminAuth = () => {
   const context = useContext(AdminAuthContext);
   if (!context) {
-    throw new Error('useAdminAuth must be used within AdminAuthProvider');
+    throw new Error("useAdminAuth must be used within AdminAuthProvider");
   }
   return context;
 };
