@@ -16,8 +16,12 @@ const bookingSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   items: [bookingItemSchema], // Hỗ trợ nhiều tour trong 1 booking
   currency: { type: String, default: "VND" },
-  totalVND: { type: Number, required: true },
+  totalVND: { type: Number, required: true }, // Tổng tiền sau giảm giá
   totalUSD: { type: Number }, // Giữ lại để backward compatible
+  // Thông tin voucher/promotion
+  originalAmount: { type: Number }, // Tổng tiền trước giảm giá
+  discountAmount: { type: Number, default: 0 }, // Số tiền được giảm
+  voucherCode: { type: String }, // Mã voucher đã sử dụng
   payment: {
     provider: { type: String, enum: ["paypal", "momo"], required: true },
     orderID: { type: String },

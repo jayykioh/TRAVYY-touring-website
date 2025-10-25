@@ -9,6 +9,8 @@ import {
   Plane,
   Mountain,
   Compass,
+  Shield,
+  User,
   Star,
   Sparkles,
 } from "lucide-react";
@@ -20,7 +22,7 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, adminLogin } = useAuth();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -30,9 +32,16 @@ function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
+      if (form.username.includes('@') && form.username.includes('travyy.com')) {
+        // Admin login
+        await adminLogin(form.username, form.password);
+        toast.success("Đăng nhập admin thành công");
+        navigate("/admin/dashboard", { replace: true });
+      } else {
       await login(form.username, form.password);
-      toast.success("Đăng nhập thành công");
+      toast.success(`Chào mừng ${form.username} đã trở lại. Khám phá những chuyến đi tuyệt vời!`);
       navigate("/home", { replace: true });
+      }
     } catch (err) {
       toast.error(err?.body?.message || "Login failed");
     } finally {
@@ -127,8 +136,9 @@ function Login() {
               </div>
             </div>
 
-            {/* Right Side - Login Form */}
+              {/* Right Side - Login Form */}
             <div className="p-8 lg:p-10">
+             
               {/* Header */}
               <div className="text-center mb-8">
                 <h1 className="text-3xl font-bold text-white mb-2">Sign In</h1>

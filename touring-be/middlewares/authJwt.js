@@ -1,6 +1,8 @@
 // middlewares/authJwt.js
 const jwt = require("jsonwebtoken");
-module.exports = (req, res, next) => {
+
+// Required auth - must have valid token
+const verifyToken = (req, res, next) => {
   const h = req.headers.authorization || "";
   console.log(
     "Auth header at",
@@ -13,8 +15,33 @@ module.exports = (req, res, next) => {
   if (!t) return res.status(401).json({ message: "Missing token" });
   try {
     req.user = jwt.verify(t, process.env.JWT_ACCESS_SECRET);
+    // Extract userId and role from token payload
+    req.userId = req.user.sub || req.user.id || req.user._id;
+    req.userRole = req.user.role;
     return next();
   } catch {
     return res.status(401).json({ message: "Invalid/expired token" });
   }
 };
+
+// Optional auth - if token exists, verify it, otherwise continue
+const optionalAuth = (req, res, next) => {
+  const h = req.headers.authorization || "";
+  const t = h.startsWith("Bearer ") ? h.slice(7) : null;
+
+  if (t) {
+    try {
+      req.user = jwt.verify(t, process.env.JWT_ACCESS_SECRET);
+      req.userId = req.user.sub || req.user._id;
+    } catch (err) {
+      // Invalid token, but we don't reject - just continue without user
+      console.log("Optional auth: Invalid token, continuing without user");
+    }
+  }
+
+  next();
+};
+
+module.exports = verifyToken;
+module.exports.verifyToken = verifyToken;
+module.exports.optionalAuth = optionalAuth;

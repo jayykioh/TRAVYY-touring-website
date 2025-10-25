@@ -12,11 +12,41 @@ const SearchFilterResults = () => {
   const { user, withAuth } = useAuth();
   // ✅ matchedTours truyền từ QuickBooking.jsx
   const matchedToursFromState = location.state?.matchedTours || [];
+  
+  // ✅ Load wishlist từ server
+  useEffect(() => {
+    if (!user?.token) return;
+    
+    fetch('/api/wishlist', {
+      headers: { Authorization: `Bearer ${user.token}` },
+      credentials: 'include',
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setFavorites(new Set(data.data.map(item => String(item.tourId._id))));
+        }
+      })
+      .catch(err => console.error('Error fetching wishlist:', err));
+  }, [user?.token]);
+  
   const handleFavoriteToggle = async (tourId) => {
     if (!user?.token) {
       toast.error("Bạn cần đăng nhập để dùng wishlist");
       return;
     }
+
+    // 🚀 OPTIMISTIC UPDATE: Update UI ngay lập tức
+    const wasInWishlist = favorites.has(tourId);
+    setFavorites((prev) => {
+      const newSet = new Set(prev);
+      if (wasInWishlist) {
+        newSet.delete(tourId);
+      } else {
+        newSet.add(tourId);
+      }
+      return newSet;
+    });
 
     try {
       const data = await withAuth("/api/wishlist/toggle", {
@@ -25,13 +55,34 @@ const SearchFilterResults = () => {
         body: JSON.stringify({ tourId }),
       });
 
-      setFavorites((prev) => {
-        const newSet = new Set(prev);
-        data.isFav ? newSet.add(tourId) : newSet.delete(tourId);
-        return newSet;
-      });
+      if (data.success) {
+        // ✅ Confirm lại state từ server
+        setFavorites((prev) => {
+          const newSet = new Set(prev);
+          data.isFav ? newSet.add(tourId) : newSet.delete(tourId);
+          return newSet;
+        });
+        
+      
+      } else {
+        // ❌ Nếu API fail, revert lại state cũ
+        setFavorites((prev) => {
+          const newSet = new Set(prev);
+          wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
+          return newSet;
+        });
+        toast.error("Không thể cập nhật danh sách yêu thích!");
+      }
     } catch (err) {
       console.error("❌ Wishlist toggle error:", err);
+      
+      // ❌ Revert lại state cũ khi có lỗi
+      setFavorites((prev) => {
+        const newSet = new Set(prev);
+        wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
+        return newSet;
+      });
+      
       toast.error("Không thể cập nhật danh sách yêu thích!");
     }
   };
@@ -89,6 +140,7 @@ const SearchFilterResults = () => {
     if (searchParams.destination.trim()) {
       fetchTours(searchParams.destination);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.destination]);
 
   // ==========================
@@ -234,7 +286,7 @@ const SearchFilterResults = () => {
               bookedText={`${tour.usageCount} Đã được đặt`}
               rating={tour.isRating}
               reviews={tour.isReview}
-              priceFrom={tour.basePrice.toString()}
+              priceFrom={tour.departures?.[0]?.priceAdult?.toString() || "N/A"}
               originalPrice={tour.basePrice}
               isFav={favorites.has(tour._id)}
               onFav={() => handleFavoriteToggle(tour._id)}
@@ -260,7 +312,9 @@ const SearchFilterResults = () => {
                   bookedText={`${tour.usageCount} Đã được đặt`}
                   rating={tour.isRating}
                   reviews={tour.isReview}
-                  priceFrom={tour.basePrice.toString()}
+                  priceFrom={
+                    tour.departures?.[0]?.priceAdult?.toString() || "N/A"
+                  }
                   originalPrice={tour.basePrice}
                   isFav={favorites.has(tour._id)}
                   onFav={() => handleFavoriteToggle(tour._id)}

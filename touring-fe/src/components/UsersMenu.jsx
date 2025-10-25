@@ -77,20 +77,7 @@ export default function UserMenu() {
           >
             My Cart
           </Link>
-          <Link
-            to="/settings"
-            className="block px-4 py-2 text-sm hover:bg-gray-100"
-            onClick={() => setOpen(false)}
-          >
-            Settings
-          </Link>
-          <Link
-            to="/help"
-            className="block px-4 py-2 text-sm hover:bg-gray-100"
-            onClick={() => setOpen(false)}
-          >
-            Help
-          </Link>
+        
           <button
             onClick={() => {
               logout();

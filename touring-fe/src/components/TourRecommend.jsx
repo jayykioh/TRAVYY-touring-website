@@ -37,13 +37,33 @@ const TourPromotions = () => {
       })
       .catch((err) => console.error("Error fetching wishlist:", err));
   }, [user]);
+  // 🧹 Reset tim khi user logout
+useEffect(() => {
+  if (!user) {
+    setFavorites(new Set());
+  }
+}, [user]);
 
-  // 👉 Toggle wishlist trên server
+
+  // 👉 Toggle wishlist trên server với Optimistic Update
   const handleFavoriteToggle = async (tourId) => {
     if (!user?.token) {
       toast.error("Bạn cần đăng nhập để dùng wishlist");
       return;
     }
+    
+    // 🚀 OPTIMISTIC UPDATE: Update UI ngay lập tức
+    const wasInWishlist = favorites.has(tourId);
+    setFavorites((prev) => {
+      const newSet = new Set(prev);
+      if (wasInWishlist) {
+        newSet.delete(tourId);
+      } else {
+        newSet.add(tourId);
+      }
+      return newSet;
+    });
+    
     try {
       const res = await fetch("/api/wishlist/toggle", {
         method: "POST",
@@ -54,13 +74,35 @@ const TourPromotions = () => {
         body: JSON.stringify({ tourId }),
       });
       const data = await res.json();
-      setFavorites((prev) => {
-        const newSet = new Set(prev);
-        data.isFav ? newSet.add(tourId) : newSet.delete(tourId);
-        return newSet;
-      });
+      
+      if (data.success) {
+        // ✅ Confirm lại state từ server
+        setFavorites((prev) => {
+          const newSet = new Set(prev);
+          data.isFav ? newSet.add(tourId) : newSet.delete(tourId);
+          return newSet;
+        });
+        
+     
+      } else {
+        // ❌ Revert nếu API fail
+        setFavorites((prev) => {
+          const newSet = new Set(prev);
+          wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
+          return newSet;
+        });
+      }
     } catch (err) {
       console.error("Error toggling wishlist:", err);
+      
+      // ❌ Revert khi có lỗi
+      setFavorites((prev) => {
+        const newSet = new Set(prev);
+        wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
+        return newSet;
+      });
+      
+      toast.error('Có lỗi xảy ra, vui lòng thử lại');
     }
   };
 
@@ -117,7 +159,9 @@ const TourPromotions = () => {
                     bookedText={`${tour.usageCount} Đã được đặt`}
                     rating={tour.isRating}
                     reviews={tour.isReview}
-                    priceFrom={tour.basePrice.toString()}
+                    priceFrom={
+                      tour.departures?.[0]?.priceAdult?.toString() || "N/A"
+                    }
                     originalPrice={tour.basePrice}
                     isFav={favorites.has(tour._id)}
                     onFav={() => handleFavoriteToggle(tour._id)}

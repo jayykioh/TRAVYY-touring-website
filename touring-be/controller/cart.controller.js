@@ -1,7 +1,7 @@
 // controller/cart.controller.js
 const mongoose = require("mongoose");
 const { Cart, CartItem } = require("../models/Carts");
-const Tour = require("../models/Tours");
+const Tour = require("../models/agency/Tours");
 
 /* ============ utils ============ */
 const normalizeDate = (d) => (d ? String(d).slice(0, 10) : "");
@@ -389,12 +389,8 @@ async function updateCartItem(req, res) {
           .json({ error: "EXCEEDS_DEPARTURE_CAPACITY", limit: seatsLeft });
       }
 
-      const {
-        unitPriceAdult,
-        unitPriceChild,
-        originalAdult,
-        originalChild,
-      } = await getPricesAndMeta(line.tourId, line.date);
+      const { unitPriceAdult, unitPriceChild, originalAdult, originalChild } =
+        await getPricesAndMeta(line.tourId, line.date);
 
       line.adults = nextAdults;
       line.children = nextChildren;

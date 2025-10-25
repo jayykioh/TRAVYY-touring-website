@@ -21,6 +21,8 @@ const paymentSessionSchema = new mongoose.Schema(
     status: { type: String, enum: ["pending", "paid", "failed"], default: "pending" },
     mode: { type: String, enum: ["cart", "buy-now"], default: "cart" },
     items: [paymentItemSchema],
+    voucherCode: String, // Promotion/voucher code used
+    discountAmount: { type: Number, default: 0 }, // Discount amount applied
     rawCreateResponse: Object,
     paidAt: Date,
     transId: String,

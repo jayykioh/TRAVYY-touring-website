@@ -1,34 +1,47 @@
-const fetch = global.fetch || ((...args) => import("node-fetch").then(({default: f}) => f(...args)));
+const fetch =
+  global.fetch ||
+  ((...args) => import("node-fetch").then(({ default: f }) => f(...args)));
 const mongoose = require("mongoose");
 const { Cart, CartItem } = require("../models/Carts");
-const Tour = require("../models/Tours");
+const Tour = require("../models/agency/Tours");
 const Bookings = require("../models/Bookings");
 const PaymentSession = require("../models/PaymentSession");
 
 // Import unified helpers
-const { createBookingFromSession, clearCartAfterPayment, FX_VND_USD } = require("../utils/paymentHelpers");
+const {
+  createBookingFromSession,
+  clearCartAfterPayment,
+  FX_VND_USD,
+} = require("../utils/paymentHelpers");
 
 const FX = FX_VND_USD; // Use shared FX rate
-const PAYPAL_BASE = process.env.PAYPAL_MODE === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
-const isProd = process.env.NODE_ENV === 'production';
+const PAYPAL_BASE =
+  process.env.PAYPAL_MODE === "live"
+    ? "https://api-m.paypal.com"
+    : "https://api-m.sandbox.paypal.com";
+const isProd = process.env.NODE_ENV === "production";
 
 // ==== helpers ====
-const normDate = (s) => String(s || "").slice(0,10);
-const clamp0 = (n) => Math.max(0, Number(n)||0);
+const normDate = (s) => String(s || "").slice(0, 10);
+const clamp0 = (n) => Math.max(0, Number(n) || 0);
 
 async function getPricesAndMeta(tourId, date) {
   const tour = await Tour.findById(tourId).lean();
   if (!tour) throw Object.assign(new Error("NOT_FOUND"), { status: 404 });
 
-  const dep = (tour.departures || []).find(d => normDate(d?.date) === date);
+  const dep = (tour.departures || []).find((d) => normDate(d?.date) === date);
 
   const unitPriceAdult =
-    typeof dep?.priceAdult === "number" ? dep.priceAdult :
-    typeof tour.basePrice === "number" ? tour.basePrice : 0;
+    typeof dep?.priceAdult === "number"
+      ? dep.priceAdult
+      : typeof tour.basePrice === "number"
+      ? tour.basePrice
+      : 0;
 
   const unitPriceChild =
-    typeof dep?.priceChild === "number" ? dep.priceChild :
-    Math.round((unitPriceAdult || 0) * 0.5);
+    typeof dep?.priceChild === "number"
+      ? dep.priceChild
+      : Math.round((unitPriceAdult || 0) * 0.5);
 
   return {
     name: tour.title || tour.name || "",
@@ -39,7 +52,7 @@ async function getPricesAndMeta(tourId, date) {
 }
 
 function toUSD(vnd) {
-  const usd = (Number(vnd)||0) * FX;
+  const usd = (Number(vnd) || 0) * FX;
   // PayPal cần 2 chữ số thập phân
   return (Math.round(usd * 100) / 100).toFixed(2);
 }
@@ -58,7 +71,7 @@ async function getAccessToken() {
   const res = await fetch(`${PAYPAL_BASE}/v1/oauth2/token`, {
     method: "POST",
     headers: {
-      "Authorization": `Basic ${auth}`,
+      Authorization: `Basic ${auth}`,
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: "grant_type=client_credentials",
@@ -92,7 +105,7 @@ async function buildChargeForUser(userId, body) {
         await getPricesAndMeta(line.tourId, line.date);
       const a = clamp0(line.adults);
       const c = clamp0(line.children);
-      const amt = unitPriceAdult*a + unitPriceChild*c;
+      const amt = unitPriceAdult * a + unitPriceChild * c;
       totalVND += amt;
 
       items.push({
@@ -109,25 +122,37 @@ async function buildChargeForUser(userId, body) {
   if (mode === "buy-now") {
     const inc = body?.item || {};
     const tourId = inc.tourId || inc.id;
-    if (!tourId || !inc.date) throw Object.assign(new Error("BAD"), { status: 400 });
+    if (!tourId || !inc.date)
+      throw Object.assign(new Error("BAD"), { status: 400 });
 
     const { name, image, unitPriceAdult, unitPriceChild } =
       await getPricesAndMeta(tourId, normDate(inc.date));
     const a = clamp0(inc.adults);
     const c = clamp0(inc.children);
-    const amt = unitPriceAdult*a + unitPriceChild*c;
+    const amt = unitPriceAdult * a + unitPriceChild * c;
 
     return {
       currency: "USD",
-      items: [{
-        sku: `${tourId}-${normDate(inc.date)}`,
-        name: `${name} • ${normDate(inc.date)}`,
-        quantity: 1,
-        unit_amount_vnd: amt,
-        image,
-      }],
+      items: [
+        {
+          sku: `${tourId}-${normDate(inc.date)}`,
+          name: `${name} • ${normDate(inc.date)}`,
+          quantity: 1,
+          unit_amount_vnd: amt,
+          image,
+        },
+      ],
       totalVND: amt,
-      _buyNowMeta: { tourId, date: normDate(inc.date), name, image, adults: a, children: c, unitPriceAdult, unitPriceChild }
+      _buyNowMeta: {
+        tourId,
+        date: normDate(inc.date),
+        name,
+        image,
+        adults: a,
+        children: c,
+        unitPriceAdult,
+        unitPriceChild,
+      },
     };
   }
 
@@ -136,7 +161,7 @@ async function buildChargeForUser(userId, body) {
 
 // ==== controllers ====
 exports.createOrder = async (req, res) => {
-  let stage = 'start';
+  let stage = "start";
   try {
     const userId = req.user.sub;
     const { mode } = req.body;
@@ -145,77 +170,102 @@ exports.createOrder = async (req, res) => {
     console.log("   userId:", userId);
     console.log("   body:", JSON.stringify(req.body, null, 2));
 
-  stage = 'buildCharge';
-  const { items, totalVND, currency, _buyNowMeta } = await buildChargeForUser(userId, req.body);
+    stage = "buildCharge";
+    const { items, totalVND, currency, _buyNowMeta } = await buildChargeForUser(
+      userId,
+      req.body
+    );
 
-    if (!items.length || totalVND <= 0) {
+    // Apply discount from voucher/promotion
+    const discountAmount = Number(req.body.discountAmount) || 0;
+    const finalTotalVND = Math.max(0, totalVND - discountAmount);
+
+    console.log("💰 Price calculation:", {
+      originalTotal: totalVND,
+      discountAmount,
+      finalTotal: finalTotalVND,
+      voucherCode: req.body.promotionCode || req.body.voucherCode,
+    });
+
+    if (!items.length || finalTotalVND <= 0) {
       return res.status(400).json({ error: "EMPTY_OR_INVALID_AMOUNT" });
     }
 
-  stage = 'oauth';
-  const accessToken = await getAccessToken();
+    stage = "oauth";
+    const accessToken = await getAccessToken();
 
     // Xây purchase_units với logic làm tròn nhất quán để tránh mismatch giá (CREATE_ORDER_FAILED)
     // Quy tắc: Mỗi line item chuyển sang USD -> cents (integer), sum lại = item_totalCents.
     // Sau đó amount.value = item_total (không lấy toUSD(totalVND) nếu lệch do làm tròn).
-  // Normalize client URL to avoid double slashes if env ends with '/'
-  const CLIENT_URL = (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/+$/,'');
+    // Normalize client URL to avoid double slashes if env ends with '/'
+    const CLIENT_URL = (
+      process.env.CLIENT_URL || "http://localhost:5173"
+    ).replace(/\/+$/, "");
 
-    const lineCents = items.map(i => {
+    const lineCents = items.map((i) => {
       const usd = Number(toUSD(i.unit_amount_vnd)); // string -> number (2 decimals)
       return Math.round(usd * 100) * (i.quantity || 1);
     });
-    const itemTotalCents = lineCents.reduce((a,b)=>a+b,0);
-    const amountTotalCentsFromVND = Math.round(Number(toUSD(totalVND)) * 100);
+    const itemTotalCents = lineCents.reduce((a, b) => a + b, 0);
+    const discountCents = Math.round(Number(toUSD(discountAmount)) * 100);
+    const finalAmountCents = Math.max(0, itemTotalCents - discountCents);
 
-    let amountCents = itemTotalCents; // ưu tiên khớp item_total
-    const mismatch = amountTotalCentsFromVND !== itemTotalCents;
-    if (mismatch) {
-      console.warn("[PayPal] Rounding mismatch total vs item_total — adjusting amount.value to match item_total", {
-        totalVND,
-        amountTotalCentsFromVND,
-        itemTotalCents,
-      });
-    }
-    const amountUSD = (amountCents/100).toFixed(2);
-    const itemsTotalFormatted = amountUSD; // đảm bảo bằng nhau tuyệt đối
-
-    console.log("Payment details:", {
+    console.log("Payment calculation:", {
       totalVND,
-      amountUSD,
+      discountAmount,
+      finalTotalVND,
       itemTotalCents,
-      amountTotalCentsFromVND,
-      mismatch,
-      items: items.map(i => ({
+      discountCents,
+      finalAmountCents,
+      items: items.map((i) => ({
         name: i.name,
         qty: i.quantity,
         unitVND: i.unit_amount_vnd,
-        unitUSD: toUSD(i.unit_amount_vnd)
-      }))
+        unitUSD: toUSD(i.unit_amount_vnd),
+      })),
     });
+
+    const itemsTotalUSD = (itemTotalCents / 100).toFixed(2);
+    const discountUSD = (discountCents / 100).toFixed(2);
+    const finalAmountUSD = (finalAmountCents / 100).toFixed(2);
+
+    // Build breakdown - include discount if applicable
+    const breakdown = {
+      item_total: {
+        currency_code: currency,
+        value: itemsTotalUSD,
+      },
+    };
+
+    if (discountCents > 0) {
+      breakdown.discount = {
+        currency_code: currency,
+        value: discountUSD,
+      };
+    }
 
     const orderBody = {
       intent: "CAPTURE",
-      purchase_units: [{
-        amount: {
-          currency_code: currency,
-          value: amountUSD,
-          breakdown: {
-            item_total: {
+      purchase_units: [
+        {
+          amount: {
+            currency_code: currency,
+            value: finalAmountUSD,
+            breakdown: breakdown,
+          },
+          items: items.map((i) => ({
+            name: i.name.substring(0, 127), // PayPal limit 127 chars
+            quantity: String(i.quantity || 1),
+            unit_amount: {
               currency_code: currency,
-              value: itemsTotalFormatted
-            }
-          }
+              value: toUSD(i.unit_amount_vnd),
+            },
+          })),
         },
-        items: items.map(i => ({
-          name: i.name.substring(0, 127), // PayPal limit 127 chars
-          quantity: String(i.quantity || 1),
-          unit_amount: { currency_code: currency, value: toUSD(i.unit_amount_vnd) },
-        })),
-      }],
+      ],
       application_context: {
-  return_url: `${CLIENT_URL}/payment/callback`,
-  cancel_url: `${CLIENT_URL}/shoppingcarts`,
+        return_url: `${CLIENT_URL}/payment/callback`,
+        cancel_url: `${CLIENT_URL}/shoppingcarts`,
         brand_name: "Travyy Tour",
         shipping_preference: "NO_SHIPPING",
       },
@@ -223,23 +273,35 @@ exports.createOrder = async (req, res) => {
 
     console.log("PayPal orderBody:", JSON.stringify(orderBody, null, 2));
 
-    stage = 'createOrder';
+    stage = "createOrder";
     const resp = await fetch(`${PAYPAL_BASE}/v2/checkout/orders`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`,
-        "PayPal-Request-Id": `order-${userId}-${Date.now()}`
+        Authorization: `Bearer ${accessToken}`,
+        "PayPal-Request-Id": `order-${userId}-${Date.now()}`,
       },
       body: JSON.stringify(orderBody),
     });
     const data = await resp.json();
-    
+
     if (!resp.ok) {
-      console.error("PayPal create order failed:", JSON.stringify(data, null, 2));
+      console.error(
+        "PayPal create order failed:",
+        JSON.stringify(data, null, 2)
+      );
       return res.status(resp.status).json({
-        error: 'PAYPAL_CREATE_FAILED',
-        ...(isProd ? {} : { debug: { stage, status: resp.status, data, hint: 'Check credentials, amount/item_total match, currency format' } })
+        error: "PAYPAL_CREATE_FAILED",
+        ...(isProd
+          ? {}
+          : {
+              debug: {
+                stage,
+                status: resp.status,
+                data,
+                hint: "Check credentials, amount/item_total match, currency format",
+              },
+            }),
       });
     }
 
@@ -250,27 +312,32 @@ exports.createOrder = async (req, res) => {
         provider: "paypal",
         orderId: data.id,
         requestId: `order-${userId}-${Date.now()}`,
-        amount: totalVND,
+        amount: finalTotalVND,
         status: "pending",
-        mode: mode || 'cart',
-        items: items.map(i => {
-          const tourId = i.sku?.split('-')[0];
-          const date = _buyNowMeta?.date || i.sku?.substring(tourId?.length + 1);
-          
+        mode: mode || "cart",
+        items: items.map((i) => {
+          const tourId = i.sku?.split("-")[0];
+          const date =
+            _buyNowMeta?.date || i.sku?.substring(tourId?.length + 1);
+
           return {
             name: i.name,
             price: i.unit_amount_vnd,
-            tourId: tourId && mongoose.isValidObjectId(tourId) ? tourId : undefined,
+            tourId:
+              tourId && mongoose.isValidObjectId(tourId) ? tourId : undefined,
             meta: {
               date: date,
               adults: _buyNowMeta?.adults || 0,
               children: _buyNowMeta?.children || 0,
               unitPriceAdult: _buyNowMeta?.unitPriceAdult || 0,
               unitPriceChild: _buyNowMeta?.unitPriceChild || 0,
-              image: i.image || _buyNowMeta?.image || ''
-            }
+              image: i.image || _buyNowMeta?.image || "",
+            },
           };
         }),
+        voucherCode:
+          req.body.promotionCode || req.body.voucherCode || undefined,
+        discountAmount: discountAmount,
         rawCreateResponse: data,
       });
       console.log(`[PayPal] Payment session created for orderId: ${data.id}`);
@@ -283,14 +350,24 @@ exports.createOrder = async (req, res) => {
     console.error("createOrder error", e);
     res.status(e.status || 500).json({
       error: "CREATE_ORDER_FAILED",
-      ...(isProd ? {} : { debug: { message: e.message, code: e.code, stage, detail: e.detail, raw: e.raw } })
+      ...(isProd
+        ? {}
+        : {
+            debug: {
+              message: e.message,
+              code: e.code,
+              stage,
+              detail: e.detail,
+              raw: e.raw,
+            },
+          }),
     });
   }
 };
 
 exports.captureOrder = async (req, res) => {
-  const session = await mongoose.startSession();
-  
+  const mongoSession = await mongoose.startSession();
+
   try {
     const userId = req.user.sub;
     const { orderID } = req.body;
@@ -300,26 +377,36 @@ exports.captureOrder = async (req, res) => {
     console.log("orderID:", orderID);
 
     // ⬇️ CHECK BOOKING ĐÃ TỒN TẠI TRƯỚC (IDEMPOTENT)
-    const existingBooking = await Bookings.findOne({ "payment.orderID": orderID });
+    const existingBooking = await Bookings.findOne({
+      "payment.orderID": orderID,
+    });
     if (existingBooking) {
-      console.log("✅ Booking already exists (idempotent):", existingBooking._id);
+      console.log(
+        "✅ Booking already exists (idempotent):",
+        existingBooking._id
+      );
       return res.json({ success: true, bookingId: existingBooking._id });
     }
 
     // ⬇️ LẤY METADATA TỪ PaymentSession (thay vì req.session)
-    const paymentSession = await PaymentSession.findOne({ orderId: orderID, provider: 'paypal' });
+    const paymentSession = await PaymentSession.findOne({
+      orderId: orderID,
+      provider: "paypal",
+    });
     if (!paymentSession) {
       console.log("❌ Payment session not found");
-      throw Object.assign(new Error("PAYMENT_SESSION_NOT_FOUND"), { status: 400 });
+      throw Object.assign(new Error("PAYMENT_SESSION_NOT_FOUND"), {
+        status: 400,
+      });
     }
 
     console.log("Payment session:", paymentSession);
 
-    await session.withTransaction(async () => {
+    await mongoSession.withTransaction(async () => {
       // 1) Capture PayPal payment
       const accessToken = await getAccessToken();
       const captureUrl = `${PAYPAL_BASE}/v2/checkout/orders/${orderID}/capture`;
-      
+
       const captureRes = await fetch(captureUrl, {
         method: "POST",
         headers: {
@@ -332,58 +419,120 @@ exports.captureOrder = async (req, res) => {
 
       if (!captureRes.ok) {
         console.error("❌ PayPal capture failed:", captureData);
-        throw Object.assign(new Error("PAYPAL_CAPTURE_FAILED"), { status: 422 });
+        throw Object.assign(new Error("PAYPAL_CAPTURE_FAILED"), {
+          status: 422,
+        });
       }
 
       console.log("✅ PayPal capture successful:", captureData.id);
 
       // 2) Update payment session status
-      paymentSession.status = 'paid';
+      paymentSession.status = "paid";
       paymentSession.paidAt = new Date();
-      paymentSession.rawCreateResponse = { ...paymentSession.rawCreateResponse, capture: captureData };
+      paymentSession.rawCreateResponse = {
+        ...paymentSession.rawCreateResponse,
+        capture: captureData,
+      };
       await paymentSession.save();
 
+      // 2.5) Mark voucher as used if stored in session
+      if (paymentSession.voucherCode && paymentSession.userId) {
+        try {
+          const User = require("../models/Users");
+          const Promotion = require("../models/Promotion");
+
+          console.log(
+            `🎫 Marking voucher ${paymentSession.voucherCode} as used for user ${paymentSession.userId}`
+          );
+
+          const promotion = await Promotion.findOne({
+            code: paymentSession.voucherCode.toUpperCase(),
+          });
+          if (promotion) {
+            console.log(`   Found promotion: ${promotion._id}`);
+
+            // ✅ Tăng usageCount của promotion
+            await Promotion.findByIdAndUpdate(
+              promotion._id,
+              { $inc: { usageCount: 1 } },
+              { session: mongoSession }
+            );
+            console.log(`   ✅ Incremented usageCount`);
+
+            // ✅ Đánh dấu user đã sử dụng voucher
+            await User.findByIdAndUpdate(
+              paymentSession.userId,
+              {
+                $addToSet: {
+                  usedPromotions: {
+                    promotionId: promotion._id,
+                    code: promotion.code,
+                    usedAt: new Date(),
+                  },
+                },
+              },
+              { session: mongoSession }
+            );
+            console.log(
+              `✅ [PayPal] Marked promotion ${paymentSession.voucherCode} as used for user ${paymentSession.userId} and incremented usageCount`
+            );
+          } else {
+            console.warn(
+              `   ⚠️ Promotion not found: ${paymentSession.voucherCode}`
+            );
+          }
+        } catch (voucherError) {
+          console.error(
+            "[PayPal] Error marking voucher as used:",
+            voucherError
+          );
+          // Don't fail the payment if voucher marking fails
+        }
+      }
+
       // 3) Get booked items from payment session
-      const bookedItems = paymentSession.items.map(it => ({
+      const bookedItems = paymentSession.items.map((it) => ({
         tourId: it.tourId,
-        date: it.meta?.date || '',
+        date: it.meta?.date || "",
         name: it.name,
-        image: it.meta?.image || '',
+        image: it.meta?.image || "",
         adults: it.meta?.adults || 0,
         children: it.meta?.children || 0,
         unitPriceAdult: it.meta?.unitPriceAdult || 0,
         unitPriceChild: it.meta?.unitPriceChild || 0,
       }));
-      
+
       console.log(`\n📦 Found ${bookedItems.length} items to book`);
 
       // 4) Kiểm tra và giảm seats
       console.log("\n🎫 Checking and reducing seats...");
-      
+
       for (const bk of bookedItems) {
         if (!bk.tourId) continue; // Skip if no tourId
-        
+
         console.log(`\n   Processing: ${bk.name}`);
         console.log(`   tourId: ${bk.tourId}`);
         console.log(`   date: ${bk.date}`);
         console.log(`   adults: ${bk.adults}, children: ${bk.children}`);
 
-        const tour = await Tour.findById(bk.tourId).session(session);
+        const tour = await Tour.findById(bk.tourId).session(mongoSession);
         if (!tour) {
           console.log(`   ⚠️ Tour not found, skipping`);
           continue;
         }
 
-        const dep = tour.departures.find(d => normDate(d.date) === bk.date);
+        const dep = tour.departures.find((d) => normDate(d.date) === bk.date);
         if (!dep) {
           console.log(`   ⚠️ Departure not found, skipping`);
           continue;
         }
 
-        console.log(`   📊 Current seats: left=${dep.seatsLeft}, total=${dep.seatsTotal}`);
+        console.log(
+          `   📊 Current seats: left=${dep.seatsLeft}, total=${dep.seatsTotal}`
+        );
 
         const seatsLeft = Number(dep.seatsLeft);
-        
+
         if (dep.seatsLeft == null || isNaN(seatsLeft)) {
           console.log(`   ✅ Unlimited seats, skip reduction`);
           continue;
@@ -394,10 +543,11 @@ exports.captureOrder = async (req, res) => {
 
         if (seatsLeft < needed) {
           console.log(`   ❌ NOT ENOUGH SEATS!`);
-          throw Object.assign(
-            new Error("INSUFFICIENT_SEATS_DURING_BOOKING"),
-            { status: 409, tourId: String(tour._id), date: bk.date }
-          );
+          throw Object.assign(new Error("INSUFFICIENT_SEATS_DURING_BOOKING"), {
+            status: 409,
+            tourId: String(tour._id),
+            date: bk.date,
+          });
         }
 
         console.log(`   🔄 Reducing ${needed} seats...`);
@@ -405,7 +555,7 @@ exports.captureOrder = async (req, res) => {
         const updateResult = await Tour.updateOne(
           { _id: tour._id, "departures.date": bk.date },
           { $inc: { "departures.$.seatsLeft": -needed } },
-          { session }
+          { session: mongoSession }
         );
 
         console.log(`   ✅ Update result:`, updateResult);
@@ -414,10 +564,10 @@ exports.captureOrder = async (req, res) => {
 
       // 5) Create booking using unified helper
       console.log("\n💾 Creating booking using unified helper...");
-      
-      const booking = await createBookingFromSession(paymentSession, { 
+
+      const booking = await createBookingFromSession(paymentSession, {
         capture: captureData,
-        sessionId: paymentSession._id 
+        sessionId: paymentSession._id,
       });
 
       console.log("✅ Booking created:", booking._id);
@@ -425,14 +575,13 @@ exports.captureOrder = async (req, res) => {
       console.log("\n✅ ===== CAPTURE ORDER SUCCESS =====\n");
       res.json({ success: true, bookingId: booking._id });
     });
-
   } catch (e) {
     console.error("\n❌ ===== CAPTURE ORDER FAILED =====");
     console.error("Error:", e.message);
     console.error("Stack:", e.stack);
     res.status(e.status || 500).json({ error: e.message || "CAPTURE_FAILED" });
   } finally {
-    session.endSession();
+    mongoSession.endSession();
   }
 };
 
@@ -440,6 +589,6 @@ exports.captureOrder = async (req, res) => {
 exports.getConfig = (req, res) => {
   res.json({
     clientId: process.env.PAYPAL_CLIENT_ID,
-    currency: "USD"
+    currency: "USD",
   });
 };

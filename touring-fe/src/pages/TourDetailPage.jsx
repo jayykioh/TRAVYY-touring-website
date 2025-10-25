@@ -9,6 +9,9 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Copy,
+  Check,
+  Tag,
 } from "lucide-react";
 import TourCard from "../components/TourCard";
 import { TourReviews } from "../components/ProfileReviews";
@@ -20,9 +23,11 @@ import { toast, Toaster } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import LocationCard from "../components/LocationCard";
 import { optimizeImage } from "@/utils/imageUrl";
+import ItinerarySection from "@/components/ItinerarySection";
 
 export default function TourDetailPage() {
   const { id: routeId } = useParams();
+  const { withAuth } = useAuth(); // ⬅️ Lấy withAuth từ AuthContext
   const navigate = useNavigate();
   const { add } = useCart();
   const { user } = useAuth();
@@ -32,6 +37,10 @@ export default function TourDetailPage() {
   const [isFav, setIsFav] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState("");
+  
+  // promotions state
+  const [promotions, setPromotions] = useState([]);
+  const [showPromotions, setShowPromotions] = useState(false);
 
   const primaryLoc = Array.isArray(tour?.locations) ? tour.locations[0] : null;
   const lat = primaryLoc?.coordinates?.lat ?? primaryLoc?.lat ?? null;
@@ -98,6 +107,29 @@ export default function TourDetailPage() {
       ac.abort();
     };
   }, [routeId, user?.token]);
+
+  // Load active promotions
+  useEffect(() => {
+    async function loadPromotions() {
+      try {
+        console.log('🎫 TourDetailPage: Loading promotions with auth');
+        const data = withAuth 
+          ? await withAuth('/api/promotions/active')
+          : await fetch('/api/promotions/active').then(r => r.json());
+        console.log('✅ TourDetailPage: Got promotions:', data.data?.length);
+        setPromotions(data.data || []);
+      } catch (error) {
+        console.error("❌ TourDetailPage: Error loading promotions:", error);
+      }
+    }
+    loadPromotions();
+
+    // ✅ Listen event refresh
+    const handleRefresh = () => loadPromotions();
+    window.addEventListener('promotion-changed', handleRefresh);
+    return () => window.removeEventListener('promotion-changed', handleRefresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ========== GIÁ + NGÀY ========== */
 
@@ -386,6 +418,22 @@ export default function TourDetailPage() {
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 leading-tight">
                 {getTitle(tour)}
               </h1>
+              {/* Hiển thị thông tin đại lý */}
+              {tour?.agencyId && (
+                <div className="flex items-center gap-2 mt-1">
+                  <img
+                    src={tour.agencyId.image}
+                    alt={tour.agencyId.name}
+                    className="w-7 h-7 rounded-full object-cover border-2 border-gray-300 shadow-sm"
+                  />
+                  <div className="text-sm text-gray-700">
+                    <span className="font-medium">{tour.agencyId.name}</span>
+                    <div className="text-xs text-gray-500">
+                      {tour.agencyId.contact}
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 text-amber-400 fill-current" />
@@ -524,21 +572,13 @@ export default function TourDetailPage() {
             </div>
           </div>
 
-          {/* Priority Banner */}
-          <div
-            onClick={() => navigate("/discounts")}
-            className="cursor-pointer rounded-2xl px-4 py-3 backdrop-blur-xl bg-white/60 border border-white/50 hover:bg-white/70 transition-colors"
-          >
-            <div className="flex items-center justify-between text-gray-900 font-semibold">
-              <span>Ưu đãi cho bạn</span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs px-2 py-1 rounded-full border border-black/10 bg-black/5">
-                  {discountPercent ? `Giảm ${discountPercent}%` : "Deal hot"}
-                </span>
-                <span aria-hidden>›</span>
-              </div>
-            </div>
-          </div>
+          {/* Promotion Banner - NEW */}
+          <PromotionBanner 
+            promotions={promotions}
+            showPromotions={showPromotions}
+            setShowPromotions={setShowPromotions}
+            discountPercent={discountPercent}
+          />
 
           {/* Main Content */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
@@ -570,10 +610,9 @@ export default function TourDetailPage() {
                     </li>
                     <li>Not available from 00:00–05:00 h hằng ngày.</li>
                     <li>Hotline: +84866624188</li>
-                    <li>
-                      {tour?.itinerary?.[0]?.description ||
-                        "Chưa có lịch trình"}
-                    </li>
+                  </Section>
+                  <Section title="Lịch trình chi tiết">
+                    <ItinerarySection itinerary={tour.itinerary} />
                   </Section>
                 </div>
               </div>
@@ -864,17 +903,16 @@ function RelatedTours({ tours }) {
         {tours.map((tour) => {
           return (
             <TourCard
-              key={tour._id}
               id={tour._id}
               to={`/tours/${tour._id}`}
-              image={tour.imageItems?.[0]?.imageUrl}
+              image={optimizeImage(tour.imageItems?.[0]?.imageUrl, 800)}
               title={tour.description}
               location={tour.locations?.[0]?.name || "Địa điểm"}
               tags={tour.tags}
               bookedText={`${tour.usageCount} Đã được đặt`}
               rating={tour.isRating}
               reviews={tour.isReview}
-              priceFrom={String(tour.basePrice ?? 0)}
+              priceFrom={tour.departures?.[0]?.priceAdult?.toString() || "N/A"}
               originalPrice={tour.basePrice}
             />
           );
@@ -974,6 +1012,179 @@ function ImageGalleryModal({ images, onClose }) {
       </div>
     </div>,
     document.body
+  );
+}
+function PromotionBanner({ promotions = [], showPromotions, setShowPromotions, discountPercent }) {
+  const [copiedCode, setCopiedCode] = useState(null);
+
+  const handleCopyCode = (code) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    toast.success(`Đã sao chép mã: ${code}`, {
+      duration: 2000,
+      style: {
+        background: '#10b981',
+        color: 'white',
+        fontWeight: '500',
+      },
+    });
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
+
+  const hasPromotions = Array.isArray(promotions) && promotions.length > 0;
+  
+  if (!hasPromotions) return null;
+
+  return (
+    <>
+      {/* Main Banner - Clean & Simple */}
+      <div
+        onClick={() => setShowPromotions(!showPromotions)}
+        className="rounded-2xl p-4 mb-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)] cursor-pointer hover:shadow-lg transition-shadow"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 bg-emerald-500 rounded-lg">
+              <Tag className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Mã giảm giá</h3>
+              <p className="text-sm text-gray-600">{promotions.length} mã khả dụng</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {discountPercent && (
+              <span className="px-3 py-1 rounded-full text-sm font-semibold text-emerald-700 bg-emerald-100">
+                Giảm {discountPercent}%
+              </span>
+            )}
+            <div className={`text-gray-600 transition-transform ${showPromotions ? 'rotate-180' : ''}`}>
+              ▼
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded List - Clean cards */}
+      {showPromotions && (
+        <div className="rounded-2xl p-5 mb-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)] space-y-3">
+          <h3 className="font-semibold text-gray-900 mb-3">Chọn mã giảm giá</h3>
+          
+          {promotions.map((promo) => (
+            <PromotionCard
+              key={promo._id}
+              promotion={promo}
+              copiedCode={copiedCode}
+              onCopy={handleCopyCode}
+            />
+          ))}
+
+          <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-100">
+            <p className="text-xs text-gray-600 text-center">
+              💡 Nhấn "Sao chép" để copy mã, sau đó áp dụng tại trang thanh toán
+            </p>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+
+function PromotionCard({ promotion, copiedCode, onCopy }) {
+  const isExpiringSoon = () => {
+    const endDate = new Date(promotion.endDate);
+    const today = new Date();
+    const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+    return daysLeft <= 3 && daysLeft > 0;
+  };
+
+  const formatPromoValue = () => {
+    if (promotion.type === "percentage") {
+      return `Giảm ${promotion.value}%`;
+    }
+    return `Giảm ${formatCurrency(promotion.value)}₫`;
+  };
+
+  const isCopied = copiedCode === promotion.code;
+
+  return (
+    <div className="relative rounded-lg p-4 bg-white border border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all">
+      {/* Expiring Badge */}
+      {isExpiringSoon() && (
+        <span className="absolute -top-2 -right-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+          ⚡ Sắp hết hạn
+        </span>
+      )}
+      
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 space-y-3">
+          {/* Code */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500 rounded-lg">
+            <span className="font-bold text-white text-sm tracking-wide">
+              {promotion.code}
+            </span>
+          </div>
+
+          {/* Description */}
+          <p className="text-sm text-gray-700 line-clamp-2">
+            {promotion.description}
+          </p>
+
+          {/* Value */}
+          <div className="inline-flex items-center py-1.5 px-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+            <span className="font-bold text-emerald-600 text-sm">
+              {formatPromoValue()}
+            </span>
+          </div>
+
+          {/* Details */}
+          <div className="space-y-1 text-xs text-gray-600">
+            {promotion.minOrderValue > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-gray-400">•</span>
+                <span>Đơn tối thiểu: <span className="font-semibold text-gray-900">{formatCurrency(promotion.minOrderValue)}₫</span></span>
+              </div>
+            )}
+            
+            {promotion.maxDiscount && promotion.type === "percentage" && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-gray-400">•</span>
+                <span>Giảm tối đa: <span className="font-semibold text-gray-900">{formatCurrency(promotion.maxDiscount)}₫</span></span>
+              </div>
+            )}
+            
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-400">•</span>
+              <span>HSD: {new Date(promotion.endDate).toLocaleDateString('vi-VN')}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Copy Button */}
+        <button
+          onClick={() => onCopy(promotion.code)}
+          className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+            isCopied
+              ? 'bg-green-500 text-white'
+              : 'bg-gray-900 text-white hover:bg-gray-800'
+          }`}
+        >
+          {isCopied ? (
+            <>
+              <Check className="w-4 h-4" />
+              Đã copy
+            </>
+          ) : (
+            <>
+              <Copy className="w-4 h-4" />
+              Sao chép
+            </>
+          )}
+        </button>
+      </div>
+    </div>
   );
 }
 

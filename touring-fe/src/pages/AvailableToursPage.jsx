@@ -4,6 +4,8 @@ import { Filter, Search } from "lucide-react";
 import TourCard from "../components/TourCard";
 import { useAuth } from "../auth/context";
 import { optimizeImage } from "@/utils/imageUrl";
+import { toast } from "sonner";
+
 export default function ToursPage() {
   const [allTours, setAllTours] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -20,12 +22,42 @@ export default function ToursPage() {
     "Nước ngoài",
   ];
 
-  // 👉 Toggle wishlist trên server
+  // ✅ Load wishlist từ server
+  useEffect(() => {
+    if (!user?.token) return;
+    
+    fetch('/api/wishlist', {
+      headers: { Authorization: `Bearer ${user.token}` },
+      credentials: 'include',
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setFavorites(new Set(data.data.map(item => String(item.tourId._id))));
+        }
+      })
+      .catch(err => console.error('Error fetching wishlist:', err));
+  }, [user?.token]);
+
+  // ✅ Toggle wishlist trên server với Optimistic Update
   const handleFavoriteToggle = async (tourId) => {
     if (!user?.token) {
       toast.error("Bạn cần đăng nhập để dùng wishlist");
       return;
     }
+    
+    // 🚀 OPTIMISTIC UPDATE: Update UI ngay lập tức
+    const wasInWishlist = favorites.has(tourId);
+    setFavorites((prev) => {
+      const newSet = new Set(prev);
+      if (wasInWishlist) {
+        newSet.delete(tourId);
+      } else {
+        newSet.add(tourId);
+      }
+      return newSet;
+    });
+    
     try {
       const res = await fetch("/api/wishlist/toggle", {
         method: "POST",
@@ -33,16 +65,41 @@ export default function ToursPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${user.token}`,
         },
+        credentials: 'include',
         body: JSON.stringify({ tourId }),
       });
+      
       const data = await res.json();
-      setFavorites((prev) => {
-        const newSet = new Set(prev);
-        data.isFav ? newSet.add(tourId) : newSet.delete(tourId);
-        return newSet;
-      });
+      
+      if (data.success) {
+        // ✅ Confirm lại state từ server
+        setFavorites((prev) => {
+          const newSet = new Set(prev);
+          data.isFav ? newSet.add(tourId) : newSet.delete(tourId);
+          return newSet;
+        });
+        
+      
+      } else {
+        // ❌ Nếu API fail, revert lại state cũ
+        setFavorites((prev) => {
+          const newSet = new Set(prev);
+          wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
+          return newSet;
+        });
+        toast.error('Không thể cập nhật wishlist');
+      }
     } catch (err) {
       console.error("Error toggling wishlist:", err);
+      
+      // ❌ Revert lại state cũ khi có lỗi
+      setFavorites((prev) => {
+        const newSet = new Set(prev);
+        wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
+        return newSet;
+      });
+      
+      toast.error('Có lỗi xảy ra, vui lòng thử lại');
     }
   };
 
@@ -94,7 +151,7 @@ export default function ToursPage() {
     setFilteredTours(result);
   }, [searchQuery, selectedCategory, allTours]);
 
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800">
       {/* 🌅 HERO */}
@@ -172,17 +229,18 @@ export default function ToursPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredTours.map((tour) => (
                 <TourCard
-                  key={tour._id || tour.id}
                   id={tour._id}
                   to={`/tours/${tour._id}`}
-                  image={optimizeImage(tour.imageItems?.[0]?.imageUrl, 1400)}
+                  image={optimizeImage(tour.imageItems?.[0]?.imageUrl, 800)}
                   title={tour.description}
                   location={tour.locations?.[0]?.name || "Địa điểm"}
                   tags={tour.tags}
                   bookedText={`${tour.usageCount} Đã được đặt`}
                   rating={tour.isRating}
                   reviews={tour.isReview}
-                  priceFrom={tour.basePrice.toString()}
+                  priceFrom={
+                    tour.departures?.[0]?.priceAdult?.toString() || "N/A"
+                  }
                   originalPrice={tour.basePrice}
                   isFav={favorites.has(tour._id)}
                   onFav={() => handleFavoriteToggle(tour._id)}

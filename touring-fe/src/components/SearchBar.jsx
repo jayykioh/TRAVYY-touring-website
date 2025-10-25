@@ -16,6 +16,9 @@ const SearchBar = ({
   const inputRef = useRef(null);
   const navigate = useNavigate();
 
+  const [suggestions, setSuggestions] = useState([]);
+  const [filteredSuggestions, setFilteredSuggestions] = useState([]);
+
   const popularDestinations = [
     "Hạ Long",
     "Đà Nẵng",
@@ -68,27 +71,30 @@ const SearchBar = ({
   };
 
   const handleSuggestionClick = (suggestion) => {
-    setQuery("");
-    setIsOpen(false);
+    // Normalize input: support both string and object suggestions
+    const val =
+      typeof suggestion === "string"
+        ? suggestion
+        : suggestion?.name || suggestion?.label || suggestion?.title;
+    if (!val) return;
 
-    const newHistory = [
-      suggestion,
-      ...history.filter((item) => item !== suggestion),
-    ].slice(0, 10);
+    // Update history (do not close UI before navigate to avoid race)
+    const newHistory = [val, ...history.filter((h) => h !== val)].slice(0, 10);
     setHistory(newHistory);
-    localStorage.setItem("searchHistory", JSON.stringify(newHistory));
+    try {
+      localStorage.setItem("searchHistory", JSON.stringify(newHistory));
+    } catch (e) {}
 
-    if (setBookingData) {
-      setBookingData((prev) => ({ ...prev, destination: suggestion }));
-    }
+    if (setBookingData) setBookingData((p) => ({ ...p, destination: val }));
 
-    if (onSearch) {
-      onSearch(suggestion);
-    } else {
-      navigate(
-        `/search-filter-results?destination=${encodeURIComponent(suggestion)}`
-      );
-    }
+    // Navigate first (ensure route receives param), then close UI after microtask
+    navigate(`/search-filter-results?destination=${encodeURIComponent(val)}`);
+
+    // close dropdown and clear query after short delay to avoid interrupting navigation
+    setTimeout(() => {
+      setIsOpen(false);
+      setQuery("");
+    }, 0);
   };
 
   const clearHistory = () => {
@@ -98,6 +104,16 @@ const SearchBar = ({
 
   const handleInputChange = (e) => {
     setQuery(e.target.value);
+  };
+
+  const handleKeyDown = (e) => {
+    // Stop propagation so parent/global listeners don't intercept Space
+    e.stopPropagation();
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSearch(e);
+    }
+    // allow Space and other keys normally
   };
 
   useEffect(() => {
@@ -111,22 +127,82 @@ const SearchBar = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  //Suggest Tour
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      try {
+        const res = await fetch("http://localhost:4000/api/locations");
+        const data = await res.json();
+        setSuggestions(data); // [{ name: "Hội An" }, { name: "Đà Nẵng" }, ...]
+      } catch (err) {
+        console.error("Error fetching suggestions:", err);
+      }
+    };
+
+    fetchSuggestions();
+  }, []);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setFilteredSuggestions([]);
+      return;
+    }
+
+    const normalizeText = (str) =>
+      (str || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d");
+
+    const normalizedQuery = normalizeText(query);
+
+    // Build a combined list: backend suggestions + hardcoded popular destinations
+    const seen = new Set();
+    const combined = [];
+
+    (suggestions || []).forEach((s) => {
+      const name = (s && (s.name || s.label || s.title)) || "";
+      if (!name) return;
+      const key = normalizeText(name);
+      if (!seen.has(key)) {
+        seen.add(key);
+        combined.push({ name, _source: "api" });
+      }
+    });
+
+    (popularDestinations || []).forEach((p) => {
+      const key = normalizeText(p);
+      if (!seen.has(key)) {
+        seen.add(key);
+        combined.push({ name: p, _source: "popular" });
+      }
+    });
+
+    const filtered = combined.filter((item) =>
+      normalizeText(item.name).includes(normalizedQuery)
+    );
+    setFilteredSuggestions(filtered);
+    setIsOpen(true);
+  }, [query, suggestions]);
+
   return (
     <div className="relative w-full max-w-lg" ref={dropdownRef}>
       <div className="relative">
         <input
           ref={inputRef}
-          type="search"
+          type="text" // ✅ không dùng search nữa
+          inputMode="text"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          autoComplete="off"
           placeholder="Tìm tour, địa điểm..."
           value={query}
           onChange={handleInputChange}
           onFocus={() => showSuggestions && setIsOpen(true)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              handleSearch(e);
-            }
-          }}
-          className="w-full rounded-full border-2 border-[#03B3BE] bg-white/80 px-4 py-2 pr-12 text-sm outline-none transition focus:ring-2 focus:ring-[#03B3BE]/50 focus:border-[#03B3BE]"
+          onKeyDown={handleKeyDown}
+          className="w-full rounded-full border-2 border-[#03B3BE] bg-white/80 px-4 py-2 pr-12 text-sm outline-none tracking-wide focus:ring-2 focus:ring-[#03B3BE]/50 focus:border-[#03B3BE]"
         />
         <button
           onClick={handleSearch}
@@ -173,6 +249,27 @@ const SearchBar = ({
                   </li>
                 ))}
               </ul>
+            )}
+
+            {/* Dynamic suggestions */}
+            {filteredSuggestions.length > 0 && (
+              <div className="px-4 py-2">
+                <h4 className="text-sm font-semibold text-gray-600 mb-2">
+                  Kết quả phù hợp
+                </h4>
+                <ul>
+                  {filteredSuggestions.map((item, i) => (
+                    <li
+                      key={i}
+                      onClick={() => handleSuggestionClick(item.name)}
+                      className="flex items-center space-x-2 cursor-pointer hover:bg-[#03B3BE]/10 px-3 py-2 rounded-lg"
+                    >
+                      <MapPin className="w-4 h-4 text-[#03B3BE]" />
+                      <span className="text-sm text-gray-800">{item.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
 
             {/* Popular destinations */}

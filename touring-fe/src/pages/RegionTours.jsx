@@ -3,10 +3,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { destinationList } from "../mockdata/destinationList";
 import TourCard from "../components/TourCard";
 import { MapPin, Package, Filter, SlidersHorizontal, ChevronLeft, Sparkles } from "lucide-react";
+import { useAuth } from "../auth/context";
+import { toast } from "sonner";
 
 export default function RegionTours() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [tours, setTours] = useState([]);
   const [favorites, setFavorites] = useState(new Set());
   const [sortBy, setSortBy] = useState("popular");
@@ -25,12 +28,89 @@ export default function RegionTours() {
     }
   }, [slug]);
 
-  const handleFavoriteToggle = (tourId) => {
-    setFavorites((prev) => {
-      const next = new Set(prev);
-      next.has(tourId) ? next.delete(tourId) : next.add(tourId);
-      return next;
+  // ✅ Load wishlist từ server
+  useEffect(() => {
+    if (!user?.token) return;
+    
+    fetch('/api/wishlist', {
+      headers: { Authorization: `Bearer ${user.token}` },
+      credentials: 'include',
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setFavorites(new Set(data.data.map(item => String(item.tourId._id))));
+        }
+      })
+      .catch(err => console.error('Error fetching wishlist:', err));
+  }, [user?.token]);
+
+  // ✅ Toggle wishlist với Optimistic Update
+  const handleFavoriteToggle = async (tourId) => {
+    if (!user?.token) {
+      toast.error('Bạn cần đăng nhập để sử dụng wishlist');
+      return;
+    }
+
+    // 🚀 OPTIMISTIC UPDATE: Update UI ngay lập tức
+    const wasInWishlist = favorites.has(tourId);
+    setFavorites(prev => {
+      const newSet = new Set(prev);
+      if (wasInWishlist) {
+        newSet.delete(tourId);
+      } else {
+        newSet.add(tourId);
+      }
+      return newSet;
     });
+
+    try {
+      const res = await fetch('/api/wishlist/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({ tourId }),
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        // ✅ Confirm lại state từ server
+        setFavorites(prev => {
+          const newSet = new Set(prev);
+          if (data.isFav) {
+            newSet.add(tourId);
+          } else {
+            newSet.delete(tourId);
+          }
+          return newSet;
+        });
+        
+      
+      } else {
+        // ❌ Nếu API fail, revert lại state cũ
+        setFavorites(prev => {
+          const newSet = new Set(prev);
+          wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
+          return newSet;
+        });
+        toast.error('Không thể cập nhật wishlist');
+      }
+    } catch (err) {
+      console.error('Error toggling wishlist:', err);
+      
+      // ❌ Revert lại state cũ khi có lỗi
+      setFavorites(prev => {
+        const newSet = new Set(prev);
+        wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
+        return newSet;
+      });
+      
+      toast.error('Có lỗi xảy ra, vui lòng thử lại');
+    }
   };
 
   // Lấy categories duy nhất

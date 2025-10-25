@@ -1,6 +1,6 @@
-const path = require('path');
+const path = require("path");
 // Load .env explicitly relative to this file to avoid CWD issues
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const PORT = process.env.PORT || 4000;
 const express = require("express");
 const mongoose = require("mongoose");
@@ -15,6 +15,8 @@ const cookieParser = require("cookie-parser");
 const tourRoutes = require("./routes/tour.routes");
 const profileRoutes = require("./routes/profile.routes");
 const authRoutes = require("./routes/auth.routes");
+// Admin Routes (modular structure)
+const adminRoutes = require("./routes/admin");
 const blogRoutes = require("./routes/blogs");
 const vnAddrRoutes = require("./middlewares/vnAddress.routes");
 const cartRoutes = require("./routes/carts.routes");
@@ -28,6 +30,8 @@ const isProd = process.env.NODE_ENV === "production";
 const notifyRoutes = require("./routes/notifyRoutes");
 const paymentRoutes = require("./routes/payment.routes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const promotionRoutes = require("./routes/promotion.routes");
+const helpRoutes = require("./routes/help.routes");
 // Quick visibility of PayPal env presence (not actual secrets)
 console.log("[Boot] PayPal env present:", {
   hasClient: !!process.env.PAYPAL_CLIENT_ID,
@@ -37,17 +41,17 @@ console.log("[Boot] PayPal env present:", {
 // Deep diagnostics: list any env keys containing 'PAYPAL'
 try {
   const paypalLike = Object.keys(process.env)
-    .filter(k => k.toUpperCase().includes('PAYPAL'))
-    .map(k => ({
+    .filter((k) => k.toUpperCase().includes("PAYPAL"))
+    .map((k) => ({
       key: k,
       length: k.length,
-      codes: k.split('').map(c=>c.charCodeAt(0)),
-      valuePreview: (process.env[k]||'').slice(0,6)+ '...'
+      codes: k.split("").map((c) => c.charCodeAt(0)),
+      valuePreview: (process.env[k] || "").slice(0, 6) + "...",
     }));
-  console.log('[Boot] PayPal related raw keys:', paypalLike);
-} catch(e){ console.warn('Diag paypal keys failed', e); }
-
-
+  console.log("[Boot] PayPal related raw keys:", paypalLike);
+} catch (e) {
+  console.warn("Diag paypal keys failed", e);
+}
 
 // --- Core middlewares ---
 app.use(helmet());
@@ -99,12 +103,21 @@ app.use("/api/tours", tourRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
-
+app.use("/api/admin", adminRoutes); // Updated to use modular admin routes
 app.use("/api/payments", paymentRoutes);
 
 app.use("/api/locations", locationRoutes);
 app.use("/api/notify", notifyRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/promotions", promotionRoutes);
+app.use("/api/help", helpRoutes);
+
+// Debug routes (remove in production)
+if (process.env.NODE_ENV !== 'production') {
+  const debugRoutes = require("./routes/debug.routes");
+  app.use("/api/debug", debugRoutes);
+  console.log("🐛 Debug routes enabled at /api/debug");
+}
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -113,12 +126,14 @@ app.get("/healthz", (_req, res) => res.json({ ok: true }));
 app.use("/api/paypal", paypalRoutes);
 
 // Lightweight ping to verify credentials loaded (non-sensitive)
-app.get('/api/paypal/ping', (_req,res)=>{
+app.get("/api/paypal/ping", (_req, res) => {
   res.json({
     ok: true,
     hasClient: !!process.env.PAYPAL_CLIENT_ID,
-    hasSecret: !!(process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET),
-    mode: process.env.PAYPAL_MODE || 'sandbox'
+    hasSecret: !!(
+      process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET
+    ),
+    mode: process.env.PAYPAL_MODE || "sandbox",
   });
 });
 
