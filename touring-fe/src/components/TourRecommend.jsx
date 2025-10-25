@@ -1,20 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { ChevronRight, ChevronLeft, Heart } from "lucide-react";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import TourCard from "./TourCard";
-import { Link } from "react-router-dom";
+import { useAuth } from "../auth/context";
+import { toast, Toaster } from "sonner";
+import { optimizeImage } from "../utils/imageUrl";
 
 const TourPromotions = () => {
+  const { user } = useAuth(); // 👈 lấy user.token
   const [currentTourSlide, setCurrentTourSlide] = useState(0);
-
-  const [favorites, setFavorites] = useState(() => {
-    try {
-      const raw = localStorage.getItem("FAVORITES");
-      const arr = raw ? JSON.parse(raw) : [];
-      return new Set(arr);
-    } catch {
-      return new Set();
-    }
-  });
+  const [favorites, setFavorites] = useState(new Set());
   const [featuredTours, setFeaturedTours] = useState([]);
 
   useEffect(() => {
@@ -27,14 +21,89 @@ const TourPromotions = () => {
       .catch((err) => console.error("Error fetching tours:", err));
   }, []);
 
-  const handleFavoriteToggle = (tourId) => {
+  // 👉 Lấy wishlist từ server
+  useEffect(() => {
+    if (!user?.token) return;
+    fetch("/api/wishlist", {
+      headers: { Authorization: `Bearer ${user.token}` },
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.success) {
+          setFavorites(
+            new Set(res.data.map((item) => String(item.tourId._id)))
+          );
+        }
+      })
+      .catch((err) => console.error("Error fetching wishlist:", err));
+  }, [user]);
+  // 🧹 Reset tim khi user logout
+useEffect(() => {
+  if (!user) {
+    setFavorites(new Set());
+  }
+}, [user]);
+
+
+  // 👉 Toggle wishlist trên server với Optimistic Update
+  const handleFavoriteToggle = async (tourId) => {
+    if (!user?.token) {
+      toast.error("Bạn cần đăng nhập để dùng wishlist");
+      return;
+    }
+    
+    // 🚀 OPTIMISTIC UPDATE: Update UI ngay lập tức
+    const wasInWishlist = favorites.has(tourId);
     setFavorites((prev) => {
-      const newFavorites = new Set(prev);
-      newFavorites.has(tourId)
-        ? newFavorites.delete(tourId)
-        : newFavorites.add(tourId);
-      return newFavorites;
+      const newSet = new Set(prev);
+      if (wasInWishlist) {
+        newSet.delete(tourId);
+      } else {
+        newSet.add(tourId);
+      }
+      return newSet;
     });
+    
+    try {
+      const res = await fetch("/api/wishlist/toggle", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ tourId }),
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        // ✅ Confirm lại state từ server
+        setFavorites((prev) => {
+          const newSet = new Set(prev);
+          data.isFav ? newSet.add(tourId) : newSet.delete(tourId);
+          return newSet;
+        });
+        
+     
+      } else {
+        // ❌ Revert nếu API fail
+        setFavorites((prev) => {
+          const newSet = new Set(prev);
+          wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
+          return newSet;
+        });
+      }
+    } catch (err) {
+      console.error("Error toggling wishlist:", err);
+      
+      // ❌ Revert khi có lỗi
+      setFavorites((prev) => {
+        const newSet = new Set(prev);
+        wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
+        return newSet;
+      });
+      
+      toast.error('Có lỗi xảy ra, vui lòng thử lại');
+    }
   };
 
   const nextTourSlide = () => {
@@ -46,11 +115,11 @@ const TourPromotions = () => {
   };
 
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div>
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">
+            <h2 className="text-3xl font-bold text-[#007980] mb-2">
               Các hoạt động nổi bật
             </h2>
             <div className="flex space-x-2">
@@ -74,23 +143,25 @@ const TourPromotions = () => {
           <div className="relative overflow-hidden">
             <div
               className="flex gap-x-4 transition-transform duration-500 ease-in-out"
-              style={{ transform: `translateX(-${currentTourSlide * 33.33}%)` }}
+              style={{
+                transform: `translateX(-${currentTourSlide * 33.33}%)`,
+              }}
             >
               {featuredTours.map((tour) => (
                 <div key={tour._id} className="flex-shrink-0">
-                  {/* discount={tour.discount}
-                     
-                      */}
                   <TourCard
+                    id={tour._id}
                     to={`/tours/${tour._id}`}
-                    image={tour.imageItems?.[0]?.imageUrl}
+                    image={optimizeImage(tour.imageItems?.[0]?.imageUrl, 800)}
                     title={tour.description}
                     location={tour.locations?.[0]?.name || "Địa điểm"}
                     tags={tour.tags}
                     bookedText={`${tour.usageCount} Đã được đặt`}
                     rating={tour.isRating}
                     reviews={tour.isReview}
-                    priceFrom={tour.basePrice.toString()}
+                    priceFrom={
+                      tour.departures?.[0]?.priceAdult?.toString() || "N/A"
+                    }
                     originalPrice={tour.basePrice}
                     isFav={favorites.has(tour._id)}
                     onFav={() => handleFavoriteToggle(tour._id)}
@@ -101,6 +172,7 @@ const TourPromotions = () => {
           </div>
         </div>
       </div>
+      <Toaster richColors closeButton />
     </section>
   );
 };

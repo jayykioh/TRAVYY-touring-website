@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/select";
 
 axios.defaults.withCredentials = true;
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const VN_PHONE = /^(03|05|07|08|09)\d{8}$/;
 const USERNAME = /^[a-z0-9_]{3,20}$/i;
@@ -65,7 +64,7 @@ export default function Register() {
   useEffect(() => {
     let cancelled = false;
     axios
-      .get(`${API_BASE}/api/vn/provinces`)
+      .get(`/api/vn/provinces`)
       .then(({ data }) => {
         if (!cancelled) setProvinces(Array.isArray(data) ? data : []);
       })
@@ -89,7 +88,7 @@ export default function Register() {
     }
     let cancelled = false;
     axios
-      .get(`${API_BASE}/api/vn/wards`, {
+      .get(`/api/vn/wards`, {
         params: { province_id: form.provinceId },
       })
       .then(({ data }) => {
@@ -145,58 +144,69 @@ export default function Register() {
   }
 
   async function onSubmit(e) {
-    e.preventDefault();
-    const errs = validate;
-    setErrors(errs);
-    if (Object.keys(errs).length) {
-      toast.error("Vui lòng sửa các lỗi trước khi đăng ký");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const payload = {
-        name: form.name.trim(),
-        username: form.username.trim(),
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-        phone: form.phone.trim(),
-        role: form.role,
-        provinceId: form.provinceId,
-        wardId: form.wardId,
-        addressLine: form.addressLine.trim(),
-      };
-
-      await axios.post(`${API_BASE}/api/auth/register`, payload, {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      });
-
-      toast.success("Đăng ký thành công!");
-      navigate("/login", { replace: true });
-    } catch (error) {
-      const data = error.response?.data;
-      if (data?.error === "EMAIL_TAKEN") {
-        setErrors((e) => ({ ...e, email: "Email đã được sử dụng" }));
-        toast.error("Email đã được sử dụng");
-      } else if (data?.error === "PHONE_TAKEN") {
-        setErrors((e) => ({ ...e, phone: "Số điện thoại đã được sử dụng" }));
-        toast.error("Số điện thoại đã được sử dụng");
-      } else if (data?.error === "USERNAME_TAKEN") {
-        setErrors((e) => ({ ...e, username: "Username đã được sử dụng" }));
-        toast.error("Username đã được sử dụng");
-      } else if (data?.error === "VALIDATION_ERROR") {
-        toast.error(data.message || "Dữ liệu không hợp lệ");
-      } else {
-        toast.error(data?.message || "Đăng ký thất bại");
-      }
-    } finally {
-      setLoading(false);
-    }
+  e.preventDefault();
+  const errs = validate;
+  setErrors(errs);
+  if (Object.keys(errs).length) {
+    toast.error("Vui lòng sửa các lỗi trước khi đăng ký");
+    return;
   }
+
+  setLoading(true);
+  try {
+    const payload = {
+      name: form.name.trim(),
+      username: form.username.trim(),
+      email: form.email.trim().toLowerCase(),
+      password: form.password,
+      phone: form.phone.trim(),
+      role: form.role,
+      provinceId: form.provinceId,
+      wardId: form.wardId,
+      addressLine: form.addressLine.trim(),
+    };
+
+    // 1. Đăng ký user
+    await axios.post(`/api/auth/register`, payload, {
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+
+    // 2. Gọi notify để gửi email chào mừng
+    try {
+      await axios.post(`/api/notify/register`, {
+        email: payload.email,
+        fullName: payload.name,
+      });
+    } catch (notifyErr) {
+      console.error("Không gửi được email chào mừng:", notifyErr);
+    }
+
+    toast.success("Đăng ký thành công!");
+    navigate("/login", { replace: true });
+  } catch (error) {
+    const data = error.response?.data;
+    if (data?.error === "EMAIL_TAKEN") {
+      setErrors((e) => ({ ...e, email: "Email đã được sử dụng" }));
+      toast.error("Email đã được sử dụng");
+    } else if (data?.error === "PHONE_TAKEN") {
+      setErrors((e) => ({ ...e, phone: "Số điện thoại đã được sử dụng" }));
+      toast.error("Số điện thoại đã được sử dụng");
+    } else if (data?.error === "USERNAME_TAKEN") {
+      setErrors((e) => ({ ...e, username: "Username đã được sử dụng" }));
+      toast.error("Username đã được sử dụng");
+    } else if (data?.error === "VALIDATION_ERROR") {
+      toast.error(data.message || "Dữ liệu không hợp lệ");
+    } else {
+      toast.error(data?.message || "Đăng ký thất bại");
+    }
+  } finally {
+    setLoading(false);
+  }
+}
 
   return (
     <div className="min-h-screen w-full relative flex items-center justify-center p-4 overflow-hidden">
@@ -248,7 +258,7 @@ export default function Register() {
               {/* Google OAuth */}
               <div className="mb-6">
                 <a
-                  href={`${API_BASE}/api/auth/google`}
+                  href={`/api/auth/google`}
                   className="flex items-center justify-center w-full px-4 py-3.5 rounded-2xl
                  backdrop-blur-md bg-white/10 border border-white/20
                  hover:bg-white/20 text-white transition-all"
@@ -274,6 +284,29 @@ export default function Register() {
                   Đăng ký bằng Google
                 </a>
               </div>
+              {/* Facebook OAuth */}
+                <div className="mb-6">
+                  <a
+                    href={`/api/auth/facebook`}
+                    className="flex items-center justify-center w-full px-4 py-3.5 rounded-2xl
+                      backdrop-blur-md bg-white/10 border border-white/20
+                      hover:bg-[#1877F2]/20 text-white transition-all"
+                  >
+                    {/* Facebook Icon */}
+                    <svg
+                      className="w-5 h-5 mr-3"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        fill="#1877F2"
+                        d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.09 4.388 23.093 10.125 24v-8.438H7.078V12.07h3.047V9.412c0-3.007 1.793-4.668 4.533-4.668 1.312 0 2.686.235 2.686.235v2.953h-1.514c-1.493 0-1.955.928-1.955 1.874v2.264h3.328l-.532 3.492h-2.796V24C19.612 23.093 24 18.09 24 12.073z"
+                      />
+                    </svg>
+                    Đăng ký bằng Facebook
+                  </a>
+                </div>
+
 
               {/* Divider */}
               <div className="relative my-5">
@@ -740,6 +773,8 @@ export default function Register() {
                     "Đăng ký"
                   )}
                 </button>
+
+
               </form>
 
               {/* Footer Link */}

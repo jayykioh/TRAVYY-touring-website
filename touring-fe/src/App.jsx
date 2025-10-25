@@ -1,28 +1,44 @@
 // App.jsx
+import { Fragment } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./auth/context";
 import MainLayout from "./layout/MainLayout";
 import LandingPage from "./pages/LandingPage";
 import MainHome from "./pages/MainHome";
 import DestinationPage from "./pages/Blogs";
-import RegionTours from "./components/RegionTours";
-import SearchResults from "./pages/SearchResults";
+import RegionTours from "./pages/RegionTours";
+import SearchFilterResults from "./pages/SearchFilterResults";
 import TourDetailPage from "./pages/TourDetailPage";
-import DiscountCodesPage from "./pages/DiscountCodesPage";
 import BlogDetailPage from "./pages/BlogDetailPage"; // ✅ THÊM IMPORT NÀY
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import ChangePassword from "./pages/ChangePassword";
 import ProfileLayout from "./pages/UserProfile";
 import ProfileInfo from "./components/ProfileInfo";
 import ProfileReviews from "./components/ProfileReviews";
-import RolePopup from "./components/RolePopup";
+import ProfilePromotions from "./components/ProfilePromotions";
+import RolePopup from "./components/RolePopUp";
 import OAuthCallback from "./pages/OAuthCallback";
-<<<<<<< HEAD
+import HelpCenter from "./components/HelpCenter";
+import HelpCategoryView from "./components/HelpCategoryView";
+import HelpArticleView from "./components/HelpArticleView";
 
-// Route guard function
-=======
 import Cart from "./pages/Cart";
 import WishlistPage from "./pages/WishlistPage";
+import LoadingScreen from "./components/LoadingScreen";
+import NotFoundPage from "./pages/NotFound";
+import BookingPage from "./pages/BookingPage";
+import BookingHistory from "./pages/BookingHistory";
+import AvailableToursPage from "./pages/AvailableToursPage";
+import AITourCreator from "./pages/AITourCreator";
+import PaymentCallback from "./pages/PaymentCallback";
+
+// ✅ THÊM: Import Admin components
+// import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
+import AdminRoutes from "./admin/routes/AdminRoutes";
+
 // Route guard
 >>>>>>> origin/main
 function ProtectedRoute({ children }) {
@@ -35,27 +51,64 @@ function ProtectedRoute({ children }) {
 export default function App() {
   const { booting, isAuth, user } = useAuth();
   console.log("Auth state:", { isAuth, user });
-  if (booting) return <p className="p-6">Loading app...</p>;
-  
+  if (booting) return <LoadingScreen />;
+
   return (
-    <>
+    <Fragment>
       <Routes>
+
+{/* ✅ CẬP NHẬT 2: Admin routes - AdminAuthProvider đã wrap BÊN TRONG AdminRoutes */}
+      <Route path="/admin/*" element={<AdminRoutes />} />
+
         {/* ----- Public + Main layout ----- */}
         <Route element={<MainLayout />}>
           {/* Nếu muốn / tự động là Home khi chưa login, MainHome khi đã login */}
           <Route path="/" element={isAuth ? <MainHome /> : <LandingPage />} />
           <Route path="/home" element={<MainHome />} />
           <Route path="/destinations/:slug" element={<DestinationPage />} />
-          <Route path="/search-results" element={<SearchResults />} />
-          <Route path="/discount-codes" element={<DiscountCodesPage />} />
+          {/* <Route path="/search-results" element={<SearchResults />} /> */}
+          <Route
+            path="/search-filter-results"
+            element={<SearchFilterResults />}
+          />
           <Route path="/tours/:id" element={<TourDetailPage />} />
           <Route path="/region/:slug" element={<RegionTours />} />
-<<<<<<< HEAD
-          <Route path="/blog/:id" element={<BlogDetailPage />} /> {/* ✅ THÊM ROUTE NÀY */}
+          {/* <Route path="/region/:slug/detail" element={<RegionDetailPage />} /> */}
+          {/* <Route path="/region/all" element={<RegionPage />} /> */}
+          <Route
+            path="/booking"
+            element={
+              <ProtectedRoute>
+                <BookingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
+          {/* ✅ THÊM ROUTE NÀY */}
+          <Route path="/shoppingcarts" element={<Cart />} />
           
-=======
-            <Route path="/shoppingcarts" element={<Cart/> }/>
->>>>>>> origin/main
+          {/* Help Center routes */}
+          <Route path="/help" element={<HelpCenter />} />
+          <Route path="/help/category/:category" element={<HelpCategoryView />} />
+          <Route path="/help/article/:slug" element={<HelpArticleView />} />
+          {/* <Route path="/region/:slug" element={<RegionTours />} /> */}
+          {/* ✅ BẢO VỆ 2 ROUTE NÀY */}
+          <Route
+            path="/available-tours"
+            element={
+              <ProtectedRoute>
+                <AvailableToursPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai-tour-creator"
+            element={
+              <ProtectedRoute>
+                <AITourCreator />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/profile"
             element={
@@ -68,27 +121,41 @@ export default function App() {
             <Route index element={<Navigate to="info" replace />} />
             <Route path="info" element={<ProfileInfo />} />
             <Route path="reviews" element={<ProfileReviews />} />
+            <Route path="vouchers" element={<ProfilePromotions />} />
             <Route path="favorites" element={<WishlistPage />} />
+            <Route path="booking-history" element={<BookingHistory />} />
+            <Route path="change-password" element={<ChangePassword />} />
           </Route>
         </Route>
 
         {/* ----- Auth routes (public) ----- */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
 
+        {/* ----- Payment callback ----- */}
+        <Route
+          path="/payment/callback"
+          element={
+            <ProtectedRoute>
+              <PaymentCallback />
+            </ProtectedRoute>
+          }
+        />
+
         {/* ----- 404 ----- */}
-        <Route path="*" element={<div className="p-6">404</div>} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
 
       {/* Popup chọn role sau khi login */}
       {isAuth && (!user?.role || user.role === "uninitialized") && (
         <RolePopup />
       )}
-    </>
+    </Fragment>
   );
 <<<<<<< HEAD
 }   
 =======
 }
->>>>>>> origin/main
