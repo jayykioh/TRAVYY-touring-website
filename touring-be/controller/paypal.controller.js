@@ -245,20 +245,53 @@ exports.createOrder = async (req, res) => {
     }
 
     const orderBody = {
+
       intent: "CAPTURE",
+
       purchase_units: [{
+
         amount: {
+
           currency_code: currency,
+
           value: finalAmountUSD,
+
           breakdown: breakdown
+
         },
-      ],
+
+        items: items.map((i) => ({
+
+          name: i.name,
+
+          quantity: i.quantity,
+
+          unit_amount: {
+
+            currency_code: currency,
+
+            value: toUSD(i.unit_amount_vnd),
+
+          },
+
+          sku: i.sku,
+
+        })),
+
+      }],
+
       application_context: {
+
         return_url: `${CLIENT_URL}/payment/callback`,
+
         cancel_url: `${CLIENT_URL}/shoppingcarts`,
+
         brand_name: "Travyy Tour",
+
         shipping_preference: "NO_SHIPPING",
+
       },
+
     };
 
     console.log("PayPal orderBody:", JSON.stringify(orderBody, null, 2));
