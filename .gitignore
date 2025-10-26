@@ -23,3 +23,6 @@ touring-be/.env
 .idea/
 .DS_Store
 Thumbs.db
+
+# Ignore node modules
+node_modules/
