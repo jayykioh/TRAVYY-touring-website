@@ -85,10 +85,23 @@ const createReview = async (req, res) => {
       status: 'approved' // Auto approve vì đã verify booking
     });
 
+    console.log('✅ Review created successfully:', {
+      reviewId: review._id,
+      userId,
+      tourId,
+      bookingId,
+      rating: review.rating
+    });
+
     const populatedReview = await Review.findById(review._id)
       .populate('userId', 'name avatar')
       .populate('tourId', 'title imageItems')
       .populate('bookingId', 'bookingCode');
+
+    console.log('📤 Sending review response:', {
+      reviewId: populatedReview._id,
+      status: populatedReview.status
+    });
 
     res.status(201).json({
       success: true,
@@ -102,7 +115,7 @@ const createReview = async (req, res) => {
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
-        message: "Bạn đã đánh giá booking này rồi"
+        message: "Bạn đã đánh giá tour này trong booking này rồi"
       });
     }
 
@@ -177,12 +190,20 @@ const getUserReviews = async (req, res) => {
     const userId = req.user?.sub || req.user?._id;
     const { page = 1, limit = 10 } = req.query;
 
+    console.log('🔍 Fetching reviews for user:', userId);
+
     const reviews = await Review.getUserReviews(userId, {
       page: parseInt(page),
       limit: parseInt(limit)
     });
 
     const totalReviews = await Review.countDocuments({ userId });
+
+    console.log('✅ Found reviews:', {
+      count: reviews.length,
+      total: totalReviews,
+      reviewIds: reviews.map(r => r._id.toString())
+    });
 
     res.json({
       success: true,

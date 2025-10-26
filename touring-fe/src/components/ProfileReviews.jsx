@@ -125,10 +125,21 @@ function ReviewModal({
       setImages([]);
     } catch (error) {
       console.error("Error submitting review:", error);
-      // If server returned JSON body with message, show it
-      const serverMsg = error?.body?.message || error?.message;
-      if (serverMsg) toast.error(serverMsg);
-      else toast.error("Không thể kết nối đến server. Vui lòng thử lại");
+      
+      // Try to get error message from response
+      let errorMessage = "Không thể gửi đánh giá. Vui lòng thử lại";
+      
+      if (error?.message) {
+        // If error has a message, use it
+        errorMessage = error.message;
+      }
+      
+      // Check if it's a 409 conflict (duplicate review)
+      if (error?.message?.includes('409') || error?.status === 409) {
+        errorMessage = "Bạn đã đánh giá tour này rồi. Vui lòng tải lại trang.";
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -604,6 +615,11 @@ export default function ProfileReviews() {
   const [reviewModal, setReviewModal] = useState(null);
   const [activeTab, setActiveTab] = useState('reviewed'); // 'reviewed' or 'pending'
 
+  // ✅ Add effect to log state changes
+  useEffect(() => {
+    console.log('📊 State changed - Reviews:', userReviews.length, 'Pending:', pendingBookings.length);
+  }, [userReviews, pendingBookings]);
+
   // Fetch user's reviews and pending bookings
   useEffect(() => {
     const fetchData = async () => {
@@ -612,71 +628,25 @@ export default function ProfileReviews() {
       try {
         setLoading(true);
         
-        // Fetch reviews
-        const reviewsData = await withAuth('/api/reviews/my');
+        // ✅ Fetch both reviews and reviewable tours from backend
+        const [reviewsData, reviewableData] = await Promise.all([
+          withAuth('/api/reviews/my?limit=50'), // ✅ Increase limit to fetch more reviews
+          withAuth('/api/reviews/reviewable-bookings')
+        ]);
+        
         const reviews = reviewsData.reviews || [];
+        const reviewableTours = reviewableData.tours || [];
+        
+        console.log('✅ Fetched reviews:', reviews.length);
+        console.log('⏳ Reviewable tours:', reviewableTours.length);
+        console.log('📋 Reviewable tours data:', reviewableTours);
+        console.log('📊 Total reviews in pagination:', reviewsData.pagination?.totalReviews);
+        
         setUserReviews(reviews);
-        
-        // Fetch bookings to find pending reviews
-        const bookingsResponse = await withAuth('/api/bookings/my');
-        const bookings = bookingsResponse.bookings || bookingsResponse.data || [];
-        
-        // ✅ Create a Set of reviewed tour combinations (userId + tourId + bookingId)
-        const reviewedTourKeys = new Set(
-          reviews.map(r => {
-            const bid = typeof r.bookingId === 'object' 
-              ? (r.bookingId._id || r.bookingId.toString())
-              : r.bookingId?.toString();
-            const tid = typeof r.tourId === 'object' 
-              ? (r.tourId._id || r.tourId.toString())
-              : r.tourId?.toString();
-            return `${tid}-${bid}`; // tourId-bookingId combination
-          }).filter(key => key !== '-')
-        );
-        
-        console.log('📋 Reviewed tour-booking combinations:', Array.from(reviewedTourKeys));
-        
-        // ✅ Collect individual tours that haven't been reviewed yet
-        const pendingTourItems = [];
-        bookings.forEach(booking => {
-          const isCompleted = booking.status === 'completed' || booking.status === 'confirmed' || booking.status === 'paid';
-          const bookingIdStr = booking._id?.toString();
-          
-          if (isCompleted && booking.items?.length > 0) {
-            // Check each tour in the booking
-            booking.items.forEach(item => {
-              const tourId = typeof item.tourId === 'object' 
-                ? (item.tourId._id || item.tourId) 
-                : item.tourId;
-              const tourIdStr = tourId?.toString();
-              
-              if (tourIdStr) {
-                const tourKey = `${tourIdStr}-${bookingIdStr}`;
-                
-                // Only add if this specific tour in this booking hasn't been reviewed
-                if (!reviewedTourKeys.has(tourKey)) {
-                  pendingTourItems.push({
-                    ...item,
-                    tourId: tourIdStr,
-                    bookingId: booking._id,
-                    bookingDate: booking.createdAt,
-                    bookingStatus: booking.status
-                  });
-                }
-              }
-            });
-          }
-        });
-        
-        console.log('⏳ Pending tours to review:', pendingTourItems.length);
-        console.log('📊 Details:', pendingTourItems.map(t => ({
-          tourId: t.tourId,
-          tourName: t.name,
-          bookingId: t.bookingId
-        })));
-        setPendingBookings(pendingTourItems);
+        setPendingBookings(reviewableTours);
       } catch (error) {
         console.error('Error fetching data:', error);
+        toast.error('Không thể tải dữ liệu đánh giá');
       } finally {
         setLoading(false);
       }
@@ -717,7 +687,7 @@ export default function ProfileReviews() {
     });
 
   return (
-    <div>
+    <div key={`reviews-${userReviews.length}-${pendingBookings.length}`}>
       <h1 className="text-xl font-bold mb-4">Đánh giá của bạn</h1>
       
       {/* Tabs */}
@@ -887,9 +857,22 @@ export default function ProfileReviews() {
         ) : (
           <div className="space-y-4">
             {pendingBookings.map((item, idx) => {
-              const tourId = item.tourId || (typeof item.tourId === 'object' 
-                ? (item.tourId._id || item.tourId) 
-                : item.tourId);
+              // Backend returns: { bookingId, tourId, tourInfo, date, adults, children, bookingDate }
+              const tourId = item.tourId;
+              const tourInfo = item.tourInfo || {};
+              
+              // ✅ Get first image URL from imageItems array (array of objects with imageUrl property)
+              const tourImage = tourInfo.imageItems && tourInfo.imageItems.length > 0 
+                ? tourInfo.imageItems[0].imageUrl 
+                : null;
+              
+              console.log('Pending tour item:', { 
+                tourId, 
+                title: tourInfo.title, 
+                imageItems: tourInfo.imageItems,
+                firstImageObj: tourInfo.imageItems?.[0],
+                tourImage 
+              });
               
               return (
                 <div key={`${item.bookingId}-${tourId}-${idx}`} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
@@ -912,17 +895,17 @@ export default function ProfileReviews() {
                   <div className="p-4">
                     <div className="flex gap-3">
                       {/* Tour image */}
-                      {item.image && (
+                      {tourImage && (
                         <img
-                          src={item.image}
-                          alt={item.name}
+                          src={tourImage}
+                          alt={tourInfo.title}
                           className="w-20 h-20 object-cover rounded-lg border border-gray-200 flex-shrink-0"
                         />
                       )}
                       
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-gray-900 mb-2">
-                          {item.name || 'Tour'}
+                          {tourInfo.title || 'Tour'}
                         </h3>
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
@@ -948,7 +931,7 @@ export default function ProfileReviews() {
                             setReviewModal({
                               isOpen: true,
                               tourId: tourId,
-                              tourTitle: item.name || 'Tour',
+                              tourTitle: tourInfo.title || 'Tour',
                               bookingId: item.bookingId
                             });
                           }}
@@ -975,78 +958,57 @@ export default function ProfileReviews() {
           tourId={reviewModal.tourId}
           tourTitle={reviewModal.tourTitle}
           bookingId={reviewModal.bookingId}
-          onReviewSubmitted={async (newReview) => {
+          onReviewSubmitted={async () => {
+            // Close modal first
             setReviewModal(null);
             
-            // Refresh data without full page reload
+            // Show loading toast
+            toast.loading('Đang cập nhật...', { id: 'refresh-reviews' });
+            
+            // Refresh data to update both tabs
             try {
-              // ✅ Add new review to state immediately
-              setUserReviews(prev => [newReview, ...prev]);
+              console.log('🔄 Refreshing review data...');
               
-              // Fetch updated reviews to ensure consistency
-              const reviewsData = await withAuth('/api/reviews/my');
+              // ✅ Increase delay to 2 seconds to ensure backend has committed the review
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              // ✅ Fetch fresh data from backend
+              const [reviewsData, reviewableData] = await Promise.all([
+                withAuth('/api/reviews/my?limit=50'), // ✅ Increase limit to fetch more reviews
+                withAuth('/api/reviews/reviewable-bookings')
+              ]);
+              
               const reviews = reviewsData.reviews || [];
-              setUserReviews(reviews);
+              const reviewableTours = reviewableData.tours || [];
               
-              // Fetch updated bookings to refresh pending list
-              const bookingsResponse = await withAuth('/api/bookings/my');
-              const bookings = bookingsResponse.bookings || bookingsResponse.data || [];
+              console.log('✅ Updated reviews count:', reviews.length);
+              console.log('⏳ Updated reviewable count:', reviewableTours.length);
+              console.log('📊 New reviews:', reviews.map(r => r._id));
+              console.log('📋 New reviewable:', reviewableTours.map(t => t.tourId));
+              console.log('📈 Total reviews in DB:', reviewsData.pagination?.totalReviews);
               
-              // ✅ Update reviewed tour-booking combinations
-              const reviewedTourKeys = new Set(
-                reviews.map(r => {
-                  const bid = typeof r.bookingId === 'object' 
-                    ? (r.bookingId._id || r.bookingId.toString())
-                    : r.bookingId?.toString();
-                  const tid = typeof r.tourId === 'object' 
-                    ? (r.tourId._id || r.tourId.toString())
-                    : r.tourId?.toString();
-                  return `${tid}-${bid}`;
-                }).filter(key => key !== '-')
-              );
+              // ✅ Force state update with new array references
+              console.log('🔄 Before setState - userReviews:', userReviews.length, 'pendingBookings:', pendingBookings.length);
               
-              console.log('📋 Updated reviewed tour-booking combinations:', Array.from(reviewedTourKeys));
+              setUserReviews([...reviews]); // Create new array reference
+              setPendingBookings([...reviewableTours]); // Create new array reference
               
-              // ✅ Update pending tours - check each tour individually
-              const pendingTourItems = [];
-              bookings.forEach(booking => {
-                const isCompleted = booking.status === 'completed' || booking.status === 'confirmed' || booking.status === 'paid';
-                const bookingIdStr = booking._id?.toString();
-                
-                if (isCompleted && booking.items?.length > 0) {
-                  booking.items.forEach(item => {
-                    const tourId = typeof item.tourId === 'object' 
-                      ? (item.tourId._id || item.tourId) 
-                      : item.tourId;
-                    const tourIdStr = tourId?.toString();
-                    
-                    if (tourIdStr) {
-                      const tourKey = `${tourIdStr}-${bookingIdStr}`;
-                      
-                      if (!reviewedTourKeys.has(tourKey)) {
-                        pendingTourItems.push({
-                          ...item,
-                          tourId: tourIdStr,
-                          bookingId: booking._id,
-                          bookingDate: booking.createdAt,
-                          bookingStatus: booking.status
-                        });
-                      }
-                    }
-                  });
-                }
-              });
+              console.log('✅ After setState - should be:', reviews.length, reviewableTours.length);
               
-              console.log('⏳ Updated pending tours:', pendingTourItems.length);
-              setPendingBookings(pendingTourItems);
+              // Wait a tick for state to propagate
+              await new Promise(resolve => setTimeout(resolve, 100));
+              
+              console.log('✅ State updated successfully');
+              
+              // Dismiss loading and show success
+              toast.success('Đã thêm đánh giá thành công!', { id: 'refresh-reviews' });
               
               // Switch to reviewed tab to show the new review
               setActiveTab('reviewed');
               
-              toast.success("Đánh giá đã được thêm vào danh sách!");
             } catch (error) {
-              console.error('Error refreshing data:', error);
-              toast.error('Không thể cập nhật danh sách. Vui lòng tải lại trang.');
+              console.error('❌ Error refreshing data:', error);
+              toast.error('Không thể cập nhật danh sách. Vui lòng tải lại trang.', { id: 'refresh-reviews' });
             }
           }}
         />
