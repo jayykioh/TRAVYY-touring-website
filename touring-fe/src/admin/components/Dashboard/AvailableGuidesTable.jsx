@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import TableCard from '../Common/TableCard';
 import { X, Calendar, Users, Clock, DollarSign, CheckCircle } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 
 const AvailableGuidesTable = ({ data }) => {
   const [selectedGuide, setSelectedGuide] = useState(null);
@@ -55,6 +56,31 @@ const AvailableGuidesTable = ({ data }) => {
 
   return (
     <>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: "#fff",
+            color: "#333",
+            borderRadius: "12px",
+            padding: "16px",
+            boxShadow: "0 10px 25px rgba(0, 121, 128, 0.15)",
+          },
+          success: {
+            iconTheme: {
+              primary: "#007980",
+              secondary: "#fff",
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: "#ef4444",
+              secondary: "#fff",
+            },
+          },
+        }}
+      />
       <TableCard
         title="Hướng dẫn viên rảnh / chưa có tour trong tuần"
         headers={['Tên', 'Khu vực', 'Số tour tuần này', 'Trạng thái', 'Action']}
@@ -87,14 +113,14 @@ const AssignTourModal = ({ guide, onClose }) => {
 
   const handleSubmit = () => {
     if (selectedTour) {
-      alert(`Đã giao tour cho ${guide.name}!`);
+      toast.success(`Đã giao tour cho ${guide.name}!`);
       onClose();
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-gray-100 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="bg-teal-600 px-6 py-4 flex items-center justify-between sticky top-0">
           <h3 className="text-xl font-semibold text-white">Giao Tour cho {guide.name}</h3>
@@ -214,8 +240,8 @@ const ScheduleModal = ({ guide, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full border border-gray-100 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="bg-teal-600 px-6 py-4 flex items-center justify-between sticky top-0">
           <h3 className="text-xl font-semibold text-white">Lịch làm việc - {guide.name}</h3>

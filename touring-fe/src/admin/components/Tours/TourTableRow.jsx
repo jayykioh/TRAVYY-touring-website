@@ -15,14 +15,15 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, tour, isHiding }) => {
 
   return (
     <div 
-      className="fixed inset-0 backdrop-blur-sm bg-white/30 flex items-center justify-center z-50"
+      className="fixed inset-0 flex items-center justify-center z-50 p-4"
       onClick={onClose}
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
     >
       <div 
-        className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 border-2 border-gray-200"
+        className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-xl font-bold text-gray-800 mb-3">
+        <h3 className="text-lg font-bold text-gray-900 mb-3">
           {isHiding ? 'Xác nhận ẩn tour' : 'Xác nhận hiện tour'}
         </h3>
         <p className="text-gray-600 mb-6">

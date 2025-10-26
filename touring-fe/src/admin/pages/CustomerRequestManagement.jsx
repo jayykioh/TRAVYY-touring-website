@@ -13,6 +13,7 @@ import {
 import StatCard from '../components/Dashboard/StatsCard';
 import RequestFilters from '../components/CustomerRequest/RequestFilters';
 import RequestTableRow from '../components/CustomerRequest/RequestTableRow';
+import Pagination from '../components/Common/Pagination';
 
 // Data
 import {
@@ -211,87 +212,7 @@ const CustomerRequestManagement = () => {
     navigate(`/admin/customer-requests/${request.requestId}/update`);
   };
 
-  // Pagination component
-  const Pagination = () => {
-    const pages = [];
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
-    if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
-
-    return (
-      <div className="flex items-center justify-center gap-2 mt-6 mb-4">
-        <button
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className={`px-4 py-2 rounded-xl font-medium transition-all ${
-            currentPage === 1
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              : 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:shadow-md'
-          }`}
-        >
-          ‹ Trước
-        </button>
-
-        {startPage > 1 && (
-          <>
-            <button
-              onClick={() => handlePageChange(1)}
-              className="px-4 py-2 rounded-xl bg-white border-2 border-purple-200 text-purple-700 hover:bg-purple-50 font-medium transition-all"
-            >
-              1
-            </button>
-            {startPage > 2 && <span className="px-2 text-gray-400">...</span>}
-          </>
-        )}
-
-        {pages.map((page) => (
-          <button
-            key={page}
-            onClick={() => handlePageChange(page)}
-            className={`px-4 py-2 rounded-xl font-medium transition-all ${
-              currentPage === page
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'bg-white border-2 border-purple-200 text-purple-700 hover:bg-purple-50'
-            }`}
-          >
-            {page}
-          </button>
-        ))}
-
-        {endPage < totalPages && (
-          <>
-            {endPage < totalPages - 1 && <span className="px-2 text-gray-400">...</span>}
-            <button
-              onClick={() => handlePageChange(totalPages)}
-              className="px-4 py-2 rounded-xl bg-white border-2 border-purple-200 text-purple-700 hover:bg-purple-50 font-medium transition-all"
-            >
-              {totalPages}
-            </button>
-          </>
-        )}
-
-        <button
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className={`px-4 py-2 rounded-xl font-medium transition-all ${
-            currentPage === totalPages
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              : 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:shadow-md'
-          }`}
-        >
-          Sau ›
-        </button>
-      </div>
-    );
-  };
 
   // Main list view
   if (loading) {
@@ -416,7 +337,15 @@ const CustomerRequestManagement = () => {
               </div>
 
               {/* Pagination */}
-              {totalPages > 1 && <Pagination />}
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                  totalItems={filteredRequests.length}
+                  itemsPerPage={itemsPerPage}
+                />
+              )}
 
               <div className="text-center text-sm text-gray-500 mt-2 mb-4">
                 Hiển thị {startIndex + 1}-{Math.min(endIndex, filteredRequests.length)} trong tổng số {filteredRequests.length} yêu cầu

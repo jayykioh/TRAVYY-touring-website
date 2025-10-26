@@ -5,25 +5,21 @@
 import React, { useState } from 'react';
 import {
   Eye,
-  RefreshCw,
   Star,
   MapPin,
   Phone,
   Mail,
   X,
-  CheckCircle,
-  Loader,
   Building2
 } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 import { formatPrice } from '../../utils/guideHelpers';
 
-const GuideCard = ({ guide, onView, onSync, onStatusChange }) => {
+const GuideCard = ({ guide, onView, onStatusChange }) => {
   const [showStatusPopup, setShowStatusPopup] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [reason, setReason] = useState('');
-  const [showSyncPopup, setShowSyncPopup] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncSuccess, setSyncSuccess] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const statusOptions = [
     { value: 'active', label: 'Đang hoạt động', color: 'text-green-600', icon: '🟢' },
@@ -31,18 +27,18 @@ const GuideCard = ({ guide, onView, onSync, onStatusChange }) => {
     { value: 'suspended', label: 'Bị đình chỉ', color: 'text-red-600', icon: '🔴' }
   ];
 
-  const handleStatusClick = (currentActivityStatus) => {
+  const handleStatusClick = () => {
     setSelectedStatus(null);
     setShowStatusPopup(true);
   };
 
   const handleConfirmStatusChange = () => {
     if (!selectedStatus) {
-      alert('Vui lòng chọn trạng thái mới');
+      toast.error('Vui lòng chọn trạng thái mới');
       return;
     }
     if (!reason.trim()) {
-      alert('Vui lòng nhập lý do chuyển đổi trạng thái');
+      toast.error('Vui lòng nhập lý do chuyển đổi trạng thái');
       return;
     }
     onStatusChange(guide, selectedStatus, reason);
@@ -57,44 +53,54 @@ const GuideCard = ({ guide, onView, onSync, onStatusChange }) => {
     setSelectedStatus(null);
   };
 
-  const handleSyncClick = () => {
-    setShowSyncPopup(true);
-  };
-
-  const handleConfirmSync = async () => {
-    setIsSyncing(true);
-    try {
-      await onSync(guide);
-      setSyncSuccess(true);
-      setTimeout(() => {
-        setShowSyncPopup(false);
-        setSyncSuccess(false);
-        setIsSyncing(false);
-      }, 2000);
-    } catch (error) {
-      setIsSyncing(false);
-      alert('Đồng bộ thất bại. Vui lòng thử lại!');
-    }
-  };
-
-  const handleCancelSync = () => {
-    setShowSyncPopup(false);
-  };
-
   const currentStatus = statusOptions.find(s => s.value === guide.activityStatus) || statusOptions[0];
 
   return (
     <>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: "#fff",
+            color: "#333",
+            borderRadius: "12px",
+            padding: "16px",
+            boxShadow: "0 10px 25px rgba(0, 121, 128, 0.15)",
+          },
+          success: {
+            iconTheme: {
+              primary: "#007980",
+              secondary: "#fff",
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: "#ef4444",
+              secondary: "#fff",
+            },
+          },
+        }}
+      />
       {/* Guide Card */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition">
         <div className="p-6">
           {/* Header với avatar và info */}
           <div className="flex items-start gap-4 mb-4 pb-4 border-b border-gray-100">
-            <img
-              src={guide.avatar}
-              alt={guide.name}
-              className="w-20 h-20 rounded-full border-2 border-gray-200 flex-shrink-0 object-cover"
-            />
+            {imageError ? (
+              <div className="w-20 h-20 rounded-full border-2 border-gray-200 flex-shrink-0 bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                <span className="text-white text-2xl font-bold">
+                  {guide.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            ) : (
+              <img
+                src={guide.avatar}
+                alt={guide.name}
+                onError={() => setImageError(true)}
+                className="w-20 h-20 rounded-full border-2 border-gray-200 flex-shrink-0 object-cover"
+              />
+            )}
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between mb-2">
                 <h3 className="text-lg font-bold text-gray-900">{guide.name}</h3>
@@ -188,91 +194,10 @@ const GuideCard = ({ guide, onView, onSync, onStatusChange }) => {
                 <Eye className="w-4 h-4 mr-1" />
                 Xem chi tiết
               </button>
-              
-              <button 
-                onClick={handleSyncClick}
-                className="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 text-sm flex items-center font-medium"
-                title="Đồng bộ dữ liệu HDV"
-              >
-                <RefreshCw className="w-4 h-4 mr-1" />
-                Đồng bộ
-              </button>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Sync Confirmation Popup */}
-      {showSyncPopup && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100">
-            {!syncSuccess ? (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-gray-900">Xác nhận đồng bộ</h3>
-                  <button 
-                    onClick={handleCancelSync}
-                    disabled={isSyncing}
-                    className="p-1 hover:bg-gray-100 rounded transition disabled:opacity-50"
-                  >
-                    <X className="w-5 h-5 text-gray-500" />
-                  </button>
-                </div>
-
-                <div className="mb-6">
-                  <div className="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <RefreshCw className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-gray-700 mb-2">
-                        Đồng bộ thông tin hướng dẫn viên <strong>{guide.name}</strong> từ dữ liệu Agency.
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Hệ thống sẽ cập nhật thông tin mới nhất từ Agency về Admin Dashboard.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleConfirmSync}
-                    disabled={isSyncing}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center justify-center"
-                  >
-                    {isSyncing ? (
-                      <>
-                        <Loader className="w-4 h-4 mr-2 animate-spin" />
-                        Đang đồng bộ...
-                      </>
-                    ) : (
-                      'Xác nhận đồng bộ'
-                    )}
-                  </button>
-                  <button
-                    onClick={handleCancelSync}
-                    disabled={isSyncing}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Hủy
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <div className="flex justify-center mb-4">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-10 h-10 text-green-600" />
-                  </div>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Đồng bộ thành công!</h3>
-                <p className="text-sm text-gray-600">
-                  Thông tin của <strong>{guide.name}</strong> đã được cập nhật.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Status Change Confirmation Popup */}
       {showStatusPopup && (

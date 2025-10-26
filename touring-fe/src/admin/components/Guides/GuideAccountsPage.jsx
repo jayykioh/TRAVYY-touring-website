@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Search, Lock, Unlock, Key, Trash2, Shield, LogIn, Calendar } from 'lucide-react';
+import { Search, Lock, Unlock, Trash2, Shield, LogIn, Calendar, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import Pagination from '../Common/Pagination';
 import { 
   MOCK_GUIDE_ACCOUNTS, 
   ACCOUNT_STATUS_LABELS, 
@@ -15,6 +16,10 @@ const GuideAccountsPage = () => {
   const [showActionModal, setShowActionModal] = useState(false);
   const [actionType, setActionType] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [imageErrors, setImageErrors] = useState({});
+  const [lockReason, setLockReason] = useState('');
+  const [showLockHistory, setShowLockHistory] = useState(false);
+  const [expandedLockItems, setExpandedLockItems] = useState({});
   const itemsPerPage = 10;
 
   const filteredAccounts = useMemo(() => {
@@ -46,11 +51,47 @@ const GuideAccountsPage = () => {
   };
 
   const confirmAction = () => {
-    console.log(`${actionType} for account:`, selectedAccount);
-    // Call API based on actionType
+    // Validate lock reason if action is lock
+    if (actionType === 'lock' && !lockReason.trim()) {
+      alert('Vui lòng nhập lý do khóa tài khoản');
+      return;
+    }
+    
+    // Handle lock action - add to lock history
+    if (actionType === 'lock') {
+      const newLockEntry = {
+        id: (selectedAccount.lockHistory?.length || 0) + 1,
+        action: 'lock',
+        reason: lockReason.trim(),
+        lockedAt: new Date().toISOString(),
+        lockedBy: 'admin@travyy.com',
+        unlockedAt: null,
+        unlockedBy: null
+      };
+      console.log(`Lock account:`, selectedAccount.name, { newLockEntry });
+      // In real app: call API to lock account and save reason
+    } 
+    
+    // Handle unlock action - update lock history
+    if (actionType === 'unlock' && selectedAccount.lockHistory?.length > 0) {
+      const lastLock = selectedAccount.lockHistory[selectedAccount.lockHistory.length - 1];
+      if (lastLock && !lastLock.unlockedAt) {
+        lastLock.unlockedAt = new Date().toISOString();
+        lastLock.unlockedBy = 'admin@travyy.com';
+      }
+      console.log(`Unlock account:`, selectedAccount.name, { updatedLockHistory: selectedAccount.lockHistory });
+      // In real app: call API to unlock account
+    }
+    
+    if (actionType === 'delete') {
+      console.log(`Delete account:`, selectedAccount.name);
+      // In real app: call API to delete account
+    }
+    
     setShowActionModal(false);
     setSelectedAccount(null);
     setActionType('');
+    setLockReason('');
   };
 
   const formatDate = (dateString) => {
@@ -73,15 +114,15 @@ const GuideAccountsPage = () => {
     });
   };
 
+  const toggleLockItemExpand = (id) => {
+    setExpandedLockItems(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
   const getActionConfig = () => {
     const configs = {
-      reset: {
-        title: 'Đặt lại mật khẩu',
-        icon: <Key className="w-6 h-6 text-blue-600" />,
-        message: 'Mật khẩu mới sẽ được gửi qua email.',
-        buttonText: 'Đặt lại',
-        buttonClass: 'bg-blue-600 hover:bg-blue-700'
-      },
       lock: {
         title: 'Khóa tài khoản',
         icon: <Lock className="w-6 h-6 text-red-600" />,
@@ -104,7 +145,7 @@ const GuideAccountsPage = () => {
         buttonClass: 'bg-red-600 hover:bg-red-700'
       }
     };
-    return configs[actionType] || configs.reset;
+    return configs[actionType] || configs.lock;
   };
 
   const stats = {
@@ -241,11 +282,20 @@ const GuideAccountsPage = () => {
                   <tr key={account.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <img
-                          src={account.avatar}
-                          alt={account.name}
-                          className="w-10 h-10 rounded-full mr-3"
-                        />
+                        {imageErrors[account.id] ? (
+                          <div className="w-10 h-10 rounded-full mr-3 bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                            <span className="text-white text-sm font-bold">
+                              {account.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        ) : (
+                          <img
+                            src={account.avatar}
+                            alt={account.name}
+                            onError={() => setImageErrors(prev => ({ ...prev, [account.id]: true }))}
+                            className="w-10 h-10 rounded-full mr-3 object-cover flex-shrink-0"
+                          />
+                        )}
                         <div>
                           <p className="font-medium text-gray-900">{account.name}</p>
                           <p className="text-sm text-gray-500">{account.email}</p>
@@ -281,15 +331,6 @@ const GuideAccountsPage = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
-                        {account.canResetPassword && (
-                          <button
-                            onClick={() => handleAction(account, 'reset')}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                            title="Đặt lại mật khẩu"
-                          >
-                            <Key className="w-4 h-4" />
-                          </button>
-                        )}
                         {account.canLock && (
                           <>
                             {account.status === 'locked' ? (
@@ -331,53 +372,20 @@ const GuideAccountsPage = () => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-700">
-                Hiển thị <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> đến{' '}
-                <span className="font-medium">
-                  {Math.min(currentPage * itemsPerPage, filteredAccounts.length)}
-                </span>{' '}
-                trong tổng số <span className="font-medium">{filteredAccounts.length}</span> kết quả
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Trước
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 border rounded-lg ${
-                      currentPage === page
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Sau
-                </button>
-              </div>
-            </div>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={filteredAccounts.length}
+            itemsPerPage={itemsPerPage}
+          />
         )}
       </div>
 
       {/* Action Confirmation Modal */}
       {showActionModal && selectedAccount && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-2xl border border-gray-100 my-8">
             <div className="flex items-center mb-4">
               {getActionConfig().icon}
               <h3 className="text-lg font-semibold ml-2">{getActionConfig().title}</h3>
@@ -386,12 +394,103 @@ const GuideAccountsPage = () => {
               Bạn có chắc chắn muốn {getActionConfig().title.toLowerCase()} cho <strong>{selectedAccount.name}</strong>?
             </p>
             <p className="text-sm text-gray-500 mb-4">{getActionConfig().message}</p>
+            
+            {/* Lock Reason Input - for lock action */}
+            {actionType === 'lock' && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Lý do khóa tài khoản <span className="text-red-600">*</span>
+                </label>
+                <textarea
+                  value={lockReason}
+                  onChange={(e) => setLockReason(e.target.value)}
+                  placeholder="Nhập lý do khóa tài khoản (bắt buộc)..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                  rows="3"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Lý do này sẽ được gửi cho hướng dẫn viên
+                </p>
+              </div>
+            )}
+
+            {/* Lock History - for unlock action */}
+            {actionType === 'unlock' && selectedAccount.lockHistory && selectedAccount.lockHistory.length > 0 && (
+              <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div className="flex items-start mb-3">
+                  <AlertCircle className="w-5 h-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="text-sm font-semibold text-blue-900 mb-2">Lịch sử khóa tài khoản</h4>
+                    <p className="text-xs text-blue-700">
+                      Dưới đây là tất cả các lần khóa tài khoản này:
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {selectedAccount.lockHistory.map((lockItem) => (
+                    <div key={lockItem.id} className="bg-white rounded border border-gray-200">
+                      <button
+                        onClick={() => toggleLockItemExpand(lockItem.id)}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-gray-50"
+                      >
+                        <div className="flex items-center flex-1 text-left">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              Lần khóa #{lockItem.id}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {formatDateTime(lockItem.lockedAt)}
+                              {lockItem.unlockedAt && (
+                                <> • Mở khóa: {formatDateTime(lockItem.unlockedAt)}</>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        {expandedLockItems[lockItem.id] ? (
+                          <ChevronUp className="w-4 h-4 text-gray-400" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-gray-400" />
+                        )}
+                      </button>
+
+                      {expandedLockItems[lockItem.id] && (
+                        <div className="border-t border-gray-200 px-3 py-2 bg-gray-50 text-xs space-y-1">
+                          <p>
+                            <span className="font-medium text-gray-700">Lý do:</span>{' '}
+                            <span className="text-gray-600">{lockItem.reason}</span>
+                          </p>
+                          <p>
+                            <span className="font-medium text-gray-700">Khóa bởi:</span>{' '}
+                            <span className="text-gray-600">{lockItem.lockedBy}</span>
+                          </p>
+                          {lockItem.unlockedAt && (
+                            <p>
+                              <span className="font-medium text-gray-700">Mở khóa bởi:</span>{' '}
+                              <span className="text-gray-600">{lockItem.unlockedBy}</span>
+                            </p>
+                          )}
+                          {!lockItem.unlockedAt && (
+                            <p className="text-red-600 font-medium">
+                              • Hiện đang bị khóa
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => {
                   setShowActionModal(false);
                   setSelectedAccount(null);
                   setActionType('');
+                  setLockReason('');
+                  setExpandedLockItems({});
                 }}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >

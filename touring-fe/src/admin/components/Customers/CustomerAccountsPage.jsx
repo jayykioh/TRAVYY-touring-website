@@ -5,13 +5,16 @@ import {
   Eye,
   Lock,
   Unlock,
-  Trash2,
   Mail,
   Download,
   UserCheck,
   UserX,
   Users,
-  TrendingUp
+  TrendingUp,
+  ChevronUp,
+  ChevronDown,
+  X,
+  AlertCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -23,6 +26,7 @@ import {
   STATUS_LABELS,
   STATUS_COLORS
 } from '../../data/customerAccountData';
+import Pagination from '../Common/Pagination';
 
 export default function CustomerAccountsPage() {
   const navigate = useNavigate();
@@ -30,6 +34,13 @@ export default function CustomerAccountsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  
+  // Lock/Unlock states
+  const [showActionModal, setShowActionModal] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [actionType, setActionType] = useState('');
+  const [lockReason, setLockReason] = useState('');
+  const [expandedLockItems, setExpandedLockItems] = useState({});
 
   // Calculate statistics
   const stats = useMemo(() => getCustomerStats(MOCK_CUSTOMER_ACCOUNTS), []);
@@ -61,24 +72,103 @@ export default function CustomerAccountsPage() {
   };
 
   const handleAction = (action, customer) => {
-    switch (action) {
-      case 'lock':
-        alert(`Khóa tài khoản: ${customer.fullName}`);
-        break;
-      case 'unlock':
-        alert(`Mở khóa tài khoản: ${customer.fullName}`);
-        break;
-      case 'delete':
-        if (window.confirm(`Bạn có chắc muốn xóa tài khoản ${customer.fullName}?`)) {
-          alert('Đã xóa tài khoản');
-        }
-        break;
-      case 'email':
-        alert(`Gửi email tới: ${customer.email}`);
-        break;
-      default:
-        break;
+    setActionType(action);
+    setSelectedAccount(customer);
+    setShowActionModal(true);
+  };
+
+  const confirmAction = () => {
+    // Validate lock reason if action is lock
+    if (actionType === 'lock' && !lockReason.trim()) {
+      alert('Vui lòng nhập lý do khóa tài khoản');
+      return;
     }
+    
+    // Handle lock action - add to lock history
+    if (actionType === 'lock') {
+      const newLockEntry = {
+        id: (selectedAccount.lockHistory?.length || 0) + 1,
+        action: 'lock',
+        reason: lockReason.trim(),
+        lockedAt: new Date().toISOString(),
+        lockedBy: 'admin@travyy.com',
+        unlockedAt: null,
+        unlockedBy: null
+      };
+      console.log(`Lock account:`, selectedAccount.fullName, { newLockEntry });
+      // In real app: call API to lock account and save reason
+    } 
+    
+    // Handle unlock action - update lock history
+    if (actionType === 'unlock' && selectedAccount.lockHistory?.length > 0) {
+      const lastLock = selectedAccount.lockHistory[selectedAccount.lockHistory.length - 1];
+      if (lastLock && !lastLock.unlockedAt) {
+        lastLock.unlockedAt = new Date().toISOString();
+        lastLock.unlockedBy = 'admin@travyy.com';
+      }
+      console.log(`Unlock account:`, selectedAccount.fullName, { updatedLockHistory: selectedAccount.lockHistory });
+      // In real app: call API to unlock account
+    }
+    
+    if (actionType === 'email') {
+      console.log(`Send email to:`, selectedAccount.email);
+      // In real app: call API to send email
+    }
+    
+    closeModal();
+  };
+
+  const closeModal = () => {
+    setShowActionModal(false);
+    setSelectedAccount(null);
+    setActionType('');
+    setLockReason('');
+    setExpandedLockItems({});
+  };
+
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const toggleLockItemExpand = (id) => {
+    setExpandedLockItems(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const getActionConfig = () => {
+    const configs = {
+      lock: {
+        title: 'Khóa tài khoản',
+        icon: <Lock className="w-6 h-6 text-red-600" />,
+        message: 'Tài khoản sẽ không thể đăng nhập.',
+        buttonText: 'Khóa',
+        buttonClass: 'bg-red-600 hover:bg-red-700'
+      },
+      unlock: {
+        title: 'Mở khóa tài khoản',
+        icon: <Unlock className="w-6 h-6 text-green-600" />,
+        message: 'Tài khoản sẽ có thể đăng nhập trở lại.',
+        buttonText: 'Mở khóa',
+        buttonClass: 'bg-green-600 hover:bg-green-700'
+      },
+      email: {
+        title: 'Gửi email',
+        icon: <Mail className="w-6 h-6 text-blue-600" />,
+        message: 'Gửi email cho khách hàng.',
+        buttonText: 'Gửi',
+        buttonClass: 'bg-blue-600 hover:bg-blue-700'
+      }
+    };
+    return configs[actionType] || configs.lock;
   };
 
   return (
@@ -308,13 +398,6 @@ export default function CustomerAccountsPage() {
                           <Unlock className="w-4 h-4" />
                         </button>
                       ) : null}
-                      <button
-                        onClick={() => handleAction('delete', customer)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                        title="Xóa"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -325,39 +408,14 @@ export default function CustomerAccountsPage() {
 
         {/* Pagination */}
         {filteredCustomers.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredCustomers.length)} trong số {filteredCustomers.length} khách hàng
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Trước
-              </button>
-              {[...Array(totalPages)].map((_, index) => (
-                <button
-                  key={index + 1}
-                  onClick={() => setCurrentPage(index + 1)}
-                  className={`px-3 py-1 border rounded ${
-                    currentPage === index + 1
-                      ? 'bg-teal-600 text-white border-teal-600'
-                      : 'border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {index + 1}
-                </button>
-              ))}
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Sau
-              </button>
-            </div>
+          <div className="px-6 py-4 border-t border-gray-200">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredCustomers.length}
+              itemsPerPage={itemsPerPage}
+            />
           </div>
         )}
 
@@ -369,6 +427,129 @@ export default function CustomerAccountsPage() {
           </div>
         )}
       </div>
+
+      {/* Action Modal */}
+      {showActionModal && selectedAccount && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-2xl border border-gray-100 my-8">
+            {/* Modal Header */}
+            <div className="flex items-center mb-4">
+              {getActionConfig().icon}
+              <h3 className="text-lg font-semibold ml-2">{getActionConfig().title}</h3>
+            </div>
+
+            {/* Modal Content */}
+            <p className="text-gray-600 mb-2">
+              Bạn có chắc chắn muốn {getActionConfig().title.toLowerCase()} cho <strong>{selectedAccount.fullName}</strong>?
+            </p>
+            <p className="text-sm text-gray-500 mb-4">{getActionConfig().message}</p>
+
+            {/* Lock Reason Input */}
+            {actionType === 'lock' && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Lý do khóa tài khoản <span className="text-red-600">*</span>
+                </label>
+                <textarea
+                  value={lockReason}
+                  onChange={(e) => setLockReason(e.target.value)}
+                  placeholder="Nhập lý do khóa tài khoản (bắt buộc)..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                  rows="3"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Lý do này sẽ được gửi cho khách hàng
+                </p>
+              </div>
+            )}
+
+            {/* Lock History Display - Show when Unlocking */}
+            {actionType === 'unlock' && selectedAccount.lockHistory && selectedAccount.lockHistory.length > 0 && (
+              <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div className="flex items-start mb-3">
+                  <AlertCircle className="w-5 h-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="text-sm font-semibold text-blue-900 mb-2">Lịch sử khóa tài khoản</h4>
+                    <p className="text-xs text-blue-700">
+                      Dưới đây là tất cả các lần khóa tài khoản này:
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {selectedAccount.lockHistory.map((lockItem) => (
+                    <div key={lockItem.id} className="bg-white rounded border border-gray-200">
+                      <button
+                        onClick={() => toggleLockItemExpand(lockItem.id)}
+                        className="w-full px-3 py-2 flex items-center justify-between hover:bg-gray-50"
+                      >
+                        <div className="flex items-center flex-1 text-left">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              Lần khóa #{lockItem.id}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {formatDateTime(lockItem.lockedAt)}
+                              {lockItem.unlockedAt && (
+                                <> • Mở khóa: {formatDateTime(lockItem.unlockedAt)}</>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        {expandedLockItems[lockItem.id] ? (
+                          <ChevronUp className="w-4 h-4 text-gray-400" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-gray-400" />
+                        )}
+                      </button>
+
+                      {expandedLockItems[lockItem.id] && (
+                        <div className="border-t border-gray-200 px-3 py-2 bg-gray-50 text-xs space-y-1">
+                          <p>
+                            <span className="font-medium text-gray-700">Lý do:</span>{' '}
+                            <span className="text-gray-600">{lockItem.reason}</span>
+                          </p>
+                          <p>
+                            <span className="font-medium text-gray-700">Khóa bởi:</span>{' '}
+                            <span className="text-gray-600">{lockItem.lockedBy}</span>
+                          </p>
+                          {lockItem.unlockedAt && (
+                            <p>
+                              <span className="font-medium text-gray-700">Mở khóa bởi:</span>{' '}
+                              <span className="text-gray-600">{lockItem.unlockedBy}</span>
+                            </p>
+                          )}
+                          {!lockItem.unlockedAt && (
+                            <p className="text-red-600 font-medium">
+                              • Hiện đang bị khóa
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Modal Footer */}
+            <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmAction}
+                className={`px-4 py-2 rounded-lg text-white transition-colors font-medium ${getActionConfig().buttonClass}`}
+              >
+                {getActionConfig().buttonText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

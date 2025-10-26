@@ -40,7 +40,6 @@ import PaymentCallback from "./pages/PaymentCallback";
 import AdminRoutes from "./admin/routes/AdminRoutes";
 
 // Route guard
->>>>>>> origin/main
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
   if (booting) return <p className="p-6">Loading...</p>;
@@ -155,7 +154,5 @@ export default function App() {
       )}
     </Fragment>
   );
-<<<<<<< HEAD
-}   
-=======
+
 }
