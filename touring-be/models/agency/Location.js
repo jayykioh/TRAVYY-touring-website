@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { agencyConn } = require("../../config/db");
 
 const LocationSchema = new mongoose.Schema(
   {
@@ -15,4 +16,4 @@ const LocationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Location", LocationSchema);
+module.exports = agencyConn.model("Location", LocationSchema);

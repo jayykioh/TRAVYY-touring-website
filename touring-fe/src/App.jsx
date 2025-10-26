@@ -39,7 +39,6 @@ import PaymentCallback from "./pages/PaymentCallback";
 // import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
 import AdminRoutes from "./admin/routes/AdminRoutes";
 
-
 // Route guard
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
@@ -83,10 +82,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
-         
-
-
           <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
           {/* ✅ THÊM ROUTE NÀY */}
           <Route path="/shoppingcarts" element={<Cart />} />
@@ -138,15 +133,15 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
-        
+
         {/* ----- Payment callback ----- */}
-        <Route 
-          path="/payment/callback" 
+        <Route
+          path="/payment/callback"
           element={
             <ProtectedRoute>
               <PaymentCallback />
             </ProtectedRoute>
-          } 
+          }
         />
 
         {/* ----- 404 ----- */}

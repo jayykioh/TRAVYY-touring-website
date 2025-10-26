@@ -117,6 +117,22 @@ const StatCard = ({ stat }) => {
           </div>
         )}
       </div>
+      
+{/* Breakdown section */}
+              {stat.breakdown && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex items-center divide-x-2 divide-gray-300">
+                    {stat.breakdown.map((item, index) => (
+                      <div key={index} className="flex-1 text-center px-4 first:pl-0 last:pr-0">
+                        <p className="text-sm text-gray-600">
+                          <span className="font-medium">{item.label}:</span>{' '}
+                          <span className="font-bold text-gray-800">{item.value}</span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
     </div>
   );
 };

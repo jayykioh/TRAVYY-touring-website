@@ -8,13 +8,13 @@ import AdminLayout from '../components/Common/layout/AdminLayout';
 import AdminLogin from '../pages/AdminLogin';
 import Dashboard from '../components/Dashboard/Dashboard';
 import TourManagement from '../pages/TourManagement';
+import TourDetailPage from '../components/Tours/TourDetailPage';
 import GuideManagement from '../pages/GuideManagement';
 import AgencyAPIData from '../pages/AgencyAPIData'; 
 import Settings from '../pages/Settings';
 import PromotionManagement from '../pages/PromotionManagement';
 
 // Placeholder components
-const CustomerRequests = () => <div className="p-6">Customer Requests Page - Coming soon</div>;
 const Certification = () => <div className="p-6">Certification Page - Coming soon</div>;
 const AgencyAPI = () => <div className="p-6">Agency API Data Page - Coming soon</div>;
 const Reports = () => <div className="p-6">Reports Page - Coming soon</div>;
@@ -43,6 +43,14 @@ const AdminRoutes = () => {
           </AdminProtectedRoute>
         } />
         
+        <Route path="/tours/:id" element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="tours">
+              <TourDetailPage />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        } />
+        
         <Route path="/guides" element={
           <AdminProtectedRoute>
             <AdminLayout activePage="guides">
@@ -51,21 +59,72 @@ const AdminRoutes = () => {
           </AdminProtectedRoute>
         } />
         
-        <Route path="/guides/compatibility" element={
+        <Route path="/guides/hidden" element={
           <AdminProtectedRoute>
             <AdminLayout activePage="guides">
-              <div className="p-6">Check Compatibility - Coming soon</div>
+              <HiddenGuidesPage />
             </AdminLayout>
           </AdminProtectedRoute>
         } />
         
-        <Route path="/customers" element={
+        <Route path="/guides/sync" element={
           <AdminProtectedRoute>
-            <AdminLayout activePage="customers">
-              <CustomerRequests />
+            <AdminLayout activePage="guides">
+              <SyncFromAgencyPage />
             </AdminLayout>
           </AdminProtectedRoute>
         } />
+        
+        <Route path="/guides/accounts" element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="guides">
+              <GuideAccountsPage />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        } />
+        
+        {/* Customer Management Routes */}
+        <Route path="/customers/accounts" element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="customers">
+              <CustomerAccountsPage />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        } />
+        
+        <Route path="/customers/:id" element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="customers">
+              <CustomerAccountDetailPage />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        } />
+        
+        {/* Customer Requests Routes */}
+        <Route path="/customer-requests" element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="customer-requests">
+              <CustomerRequestManagement />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        } />
+        
+        <Route path="/customer-requests/:id" element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="customer-requests">
+              <RequestDetailPage />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        } />
+        
+        <Route path="/customer-requests/:id/update" element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="customer-requests">
+              <RequestUpdatePage />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        } />
+        
         
         <Route path="/certification" element={
           <AdminProtectedRoute>

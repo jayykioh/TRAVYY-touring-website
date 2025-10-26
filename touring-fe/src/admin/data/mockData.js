@@ -48,14 +48,17 @@
     { region: 'Central', guides: 18 },
   ];
   
-  export const recentTours= [
-    { id: 1, name: 'Du lịch Hà Nội - Hạ Long', date: '15/10/2025', bookings: '25', status: 'Hoạt động' },
-    { id: 2, name: 'Tour Sài Gòn - Phú Quốc', date: '18/10/2025', bookings: '18', status: 'Hoạt động' },
-    { id: 3, name: 'Khám phá Đà Nẵng - Hội An', date: '20/10/2025', bookings: '32', status: 'Hoạt động' },
-    { id: 4, name: 'Nha Trang - Đảo Điệp Sơn', date: '22/10/2025', bookings: '15', status: 'Chờ xác nhận' },
-    { id: 5, name: 'Tây Nguyên - Pleiku - Kon Tum', date: '25/10/2025', bookings: '12', status: 'Hoạt động' },
-    { id: 6, name: 'Mù Cang Chải - Sapa', date: '28/10/2025', bookings: '20', status: 'Hoạt động' },
-      ];
+
+// Sample data for recentTours
+export const recentTours = [
+  { id: 1, name: 'Du lịch Hà Nội - Hạ Long', date: '15/10/2025', bookings: '25', status: 'Hoạt động' },
+  { id: 2, name: 'Tour Sài Gòn - Phú Quốc', date: '22/10/2025', bookings: '18', status: 'Sắp khởi hành' },
+  { id: 3, name: 'Khám phá Đà Nẵng - Hội An', date: '20/10/2025', bookings: '32', status: 'Hoạt động' },
+  { id: 4, name: 'Nha Trang - Đảo Điệp Sơn', date: '10/10/2025', bookings: '15', status: 'Đã kết thúc' },
+  { id: 5, name: 'Tây Nguyên - Pleiku - Kon Tum', date: '25/10/2025', bookings: '12', status: 'Hoạt động' },
+  { id: 6, name: 'Mù Cang Chải - Sapa', date: '15/10/2025', bookings: '20', status: 'Đã hủy' },
+];
+
   
   
   export const topGuides = [
@@ -65,13 +68,14 @@
     { id: 'G04', name: 'Sophia Chen', avatar: 'guide-4', toursCompleted: 95, rating: 4.7 },
     { id: 'G05', name: 'Michael Brown', avatar: 'guide-5', toursCompleted: 85, rating: 4.7 },
   ];
-import { MapPin, Users, DollarSign, CalendarCheck, Star, AlertTriangle } from 'lucide-react';
+import { MapPin, Users, DollarSign, UserPlus, UserCheck, AlertTriangle, TrendingDown } from 'lucide-react';
+
 export const summaryStats = [
   { 
     id: 1,
-    variant: 'mint', // Nền xanh mint nhạt
-    label: 'Tổng số tour', 
-    subtitle: 'Tours đang hoạt động',
+    variant: 'mint',
+    label: 'Tổng số tour đang mở bán', 
+    subtitle: 'Tour lấy từ API các agency',
     value: '248', 
     change: '+12%', 
     trend: 'up', 
@@ -89,14 +93,14 @@ export const summaryStats = [
   },
   { 
     id: 2,
-    variant: 'gray', // Nền xám nhạt
-    label: 'Hướng dẫn viên', 
-    subtitle: 'HDV đã đăng ký',
+    variant: 'gray',
+    label: 'Custom tour đang chờ duyệt', 
+    subtitle: 'Tour khách tự tạo, chưa được guide nhận',
     value: '156', 
     change: '+8%', 
     trend: 'up', 
     icon: Users, 
-    iconColor: 'text-green-600',
+    iconColor: 'text-orange-600',
     chartData: [
       { value: 120 },
       { value: 128 },
@@ -109,33 +113,13 @@ export const summaryStats = [
   },
   { 
     id: 3,
-    variant: 'mint', // Nền xanh mint
-    label: 'Doanh thu tháng', 
-    subtitle: 'Tổng doanh thu tháng này',
-    value: '2.4B đ', 
-    change: '+23%', 
-    trend: 'up', 
-    icon: DollarSign, 
-    iconColor: 'text-yellow-600',
-    chartData: [
-      { value: 1.5 },
-      { value: 1.7 },
-      { value: 1.9 },
-      { value: 2.0 },
-      { value: 2.1 },
-      { value: 2.3 },
-      { value: 2.4 }
-    ]
-  },
-  { 
-    id: 4,
-    variant: 'gray', // Nền xám nhạt
-    label: 'Đơn đặt tour', 
-    subtitle: 'Booking tháng này',
+    variant: 'gray',
+    label: 'Khách hàng mới', 
+    subtitle: 'Số user mới đăng ký trong kỳ',
     value: '1,284', 
     change: '+15%', 
     trend: 'up', 
-    icon: CalendarCheck, 
+    icon: UserPlus, 
     iconColor: 'text-purple-600',
     chartData: [
       { value: 980 },
@@ -148,29 +132,53 @@ export const summaryStats = [
     ]
   },
   { 
-    id: 5,
-    variant: 'mint', // Nền xanh mint
-    label: 'Đánh giá TB', 
-    subtitle: 'Rating trung bình',
-    value: '4.7', 
-    change: '+0.2', 
+    id: 4,
+    variant: 'mint',
+    label: 'Guide đang hoạt động', 
+    subtitle: 'Guide đang dẫn tour/nhận tour mới',
+    value: '87', 
+    change: '+5', 
     trend: 'up', 
-    icon: Star, 
-    iconColor: 'text-orange-600',
+    icon: UserCheck, 
+    iconColor: 'text-blue-500',
     chartData: [
-      { value: 4.3 },
-      { value: 4.4 },
-      { value: 4.5 },
-      { value: 4.5 },
-      { value: 4.6 },
-      { value: 4.6 },
-      { value: 4.7 }
+      { value: 72 },
+      { value: 75 },
+      { value: 78 },
+      { value: 80 },
+      { value: 82 },
+      { value: 85 },
+      { value: 87 }
     ]
   },
   { 
+    id: 5,
+    variant: 'mint',
+    label: 'Doanh thu hôm nay / tháng này', 
+    subtitle: 'Tổng thu (API + custom)',
+    value: '2.4B đ', 
+    change: '+23%', 
+    trend: 'up', 
+    icon: DollarSign, 
+    iconColor: 'text-green-600',
+    breakdown: [
+  { label: 'API', value: '1.5B', color: '#3b82f6' },
+  { label: 'Custom', value: '0.9B', color: '#f97316' }
+],
+    chartData: [
+      { value: 1.5 },
+      { value: 1.7 },
+      { value: 1.9 },
+      { value: 2.0 },
+      { value: 2.1 },
+      { value: 2.3 },
+      { value: 2.4 }
+    ]
+  },
+    { 
     id: 6,
-    variant: 'yellow', // Nền vàng cảnh báo
-    label: 'Báo cáo chờ', 
+    variant: 'yellow',
+    label: 'Yêu cầu refund / khiếu nại', 
     subtitle: 'Cần xử lý',
     value: '12', 
     change: '-3', 
@@ -188,6 +196,102 @@ export const summaryStats = [
     ]
   }
 ];
+
+// Metrics chi tiết
+export const detailedMetrics = [
+  {
+    id: 1,
+    icon: "Users",
+    label: "Tổng số traveler",
+    description: "Tổng lượng người dùng đã đăng ký",
+    value: "12,450",
+    change: "+8.2%",
+    trend: "up",
+    previousValue: "11,500",
+    unit: "người",
+  },
+  {
+    id: 2,
+    icon: "UserPlus",
+    label: "Traveler mới trong tháng",
+    description: "Đo lượng tăng trưởng người dùng",
+    value: "1,240",
+    change: "+15.3%",
+    trend: "up",
+    previousValue: "1,075",
+    unit: "người",
+  },
+  {
+    id: 3,
+    icon: "ShoppingCart",
+    label: "Số traveler đã đặt ít nhất 1 tour",
+    description: "Đo lượng tỷ lệ chuyển đổi user → booking",
+    value: "8,320",
+    change: "+12.5%",
+    trend: "up",
+    previousValue: "7,395",
+    unit: "người",
+    percentage: "66.8%",
+  },
+  {
+    id: 4,
+    icon: "RotateCw",
+    label: "Tỷ lệ khách quay lại đặt tour",
+    description: "Đo độ trung thành (retention rate)",
+    value: "68.5%",
+    change: "+3.2%",
+    trend: "up",
+    previousValue: "66.4%",
+    unit: "%",
+  },
+  {
+    id: 5,
+    icon: "MessageSquare",
+    label: "Số review / feedback trung bình mỗi traveler",
+    description: "Đo mức độ tương tác",
+    value: "4.2",
+    change: "+0.3",
+    trend: "up",
+    previousValue: "3.9",
+    unit: "review/người",
+    rating: "★★★★☆",
+  },
+  {
+    id: 6,
+    icon: "AlertCircle",
+    label: "Số traveler bị khóa / báo vì phạm",
+    description: "Theo dõi tình trạng abuse / spam",
+    value: "23",
+    change: "-18.2%",
+    trend: "down",
+    previousValue: "28",
+    unit: "người",
+    status: "good",
+  },
+];
+
+export const DetailedMetric = (detailedMetrics)[0];
+
+export const availableGuides = [
+    {
+      id: 1,
+      name: 'Nguyễn A',
+      region: 'Đà Nẵng',
+      toursThisWeek: 0,
+      statusIcon: '🟢',
+      status: 'Rảnh',
+      action: 'Giao tour'
+    },
+    {
+      id: 2,
+      name: 'Trần B',
+      region: 'Huế',
+      toursThisWeek: 1,
+      statusIcon: '🟡',
+      status: 'Sắp rảnh',
+      action: 'Xem lịch'
+    }
+  ];
 
 
 export const tours = [

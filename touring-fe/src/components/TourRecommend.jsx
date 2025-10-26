@@ -159,7 +159,9 @@ useEffect(() => {
                     bookedText={`${tour.usageCount} Đã được đặt`}
                     rating={tour.isRating}
                     reviews={tour.isReview}
-                    priceFrom={tour.basePrice.toString()}
+                    priceFrom={
+                      tour.departures?.[0]?.priceAdult?.toString() || "N/A"
+                    }
                     originalPrice={tour.basePrice}
                     isFav={favorites.has(tour._id)}
                     onFav={() => handleFavoriteToggle(tour._id)}
