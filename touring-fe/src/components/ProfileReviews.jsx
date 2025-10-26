@@ -621,43 +621,60 @@ export default function ProfileReviews() {
         const bookingsResponse = await withAuth('/api/bookings/my');
         const bookings = bookingsResponse.bookings || bookingsResponse.data || [];
         
-        // Create a Set of reviewed tourIds (not bookingIds)
-        const reviewedTourIds = new Set(
+        // ✅ Create a Set of reviewed tour combinations (userId + tourId + bookingId)
+        const reviewedTourKeys = new Set(
           reviews.map(r => {
             const bid = typeof r.bookingId === 'object' 
               ? (r.bookingId._id || r.bookingId.toString())
               : r.bookingId?.toString();
-            return bid;
-          }).filter(Boolean)
+            const tid = typeof r.tourId === 'object' 
+              ? (r.tourId._id || r.tourId.toString())
+              : r.tourId?.toString();
+            return `${tid}-${bid}`; // tourId-bookingId combination
+          }).filter(key => key !== '-')
         );
         
-        // Filter bookings and their items - only keep tours that haven't been reviewed
-        const pendingItems = [];
+        console.log('📋 Reviewed tour-booking combinations:', Array.from(reviewedTourKeys));
+        
+        // ✅ Collect individual tours that haven't been reviewed yet
+        const pendingTourItems = [];
         bookings.forEach(booking => {
           const isCompleted = booking.status === 'completed' || booking.status === 'confirmed' || booking.status === 'paid';
+          const bookingIdStr = booking._id?.toString();
           
           if (isCompleted && booking.items?.length > 0) {
-            // For each tour in this booking, check if it's been reviewed
+            // Check each tour in the booking
             booking.items.forEach(item => {
               const tourId = typeof item.tourId === 'object' 
                 ? (item.tourId._id || item.tourId) 
                 : item.tourId;
               const tourIdStr = tourId?.toString();
               
-              // Only add if this specific tour hasn't been reviewed
-              if (tourIdStr && !reviewedTourIds.has(booking._id.toString())) {
-                pendingItems.push({
-                  ...item,
-                  bookingId: booking._id,
-                  bookingDate: booking.createdAt,
-                  bookingStatus: booking.status
-                });
+              if (tourIdStr) {
+                const tourKey = `${tourIdStr}-${bookingIdStr}`;
+                
+                // Only add if this specific tour in this booking hasn't been reviewed
+                if (!reviewedTourKeys.has(tourKey)) {
+                  pendingTourItems.push({
+                    ...item,
+                    tourId: tourIdStr,
+                    bookingId: booking._id,
+                    bookingDate: booking.createdAt,
+                    bookingStatus: booking.status
+                  });
+                }
               }
             });
           }
         });
         
-        setPendingBookings(pendingItems);
+        console.log('⏳ Pending tours to review:', pendingTourItems.length);
+        console.log('📊 Details:', pendingTourItems.map(t => ({
+          tourId: t.tourId,
+          tourName: t.name,
+          bookingId: t.bookingId
+        })));
+        setPendingBookings(pendingTourItems);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -870,12 +887,12 @@ export default function ProfileReviews() {
         ) : (
           <div className="space-y-4">
             {pendingBookings.map((item, idx) => {
-              const tourId = typeof item.tourId === 'object' 
+              const tourId = item.tourId || (typeof item.tourId === 'object' 
                 ? (item.tourId._id || item.tourId) 
-                : item.tourId;
+                : item.tourId);
               
               return (
-                <div key={`${item.bookingId}-${idx}`} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                <div key={`${item.bookingId}-${tourId}-${idx}`} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                   {/* Header */}
                   <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
                     <div className="flex items-center justify-between">
@@ -958,12 +975,15 @@ export default function ProfileReviews() {
           tourId={reviewModal.tourId}
           tourTitle={reviewModal.tourTitle}
           bookingId={reviewModal.bookingId}
-          onReviewSubmitted={async () => {
+          onReviewSubmitted={async (newReview) => {
             setReviewModal(null);
             
             // Refresh data without full page reload
             try {
-              // Fetch updated reviews
+              // ✅ Add new review to state immediately
+              setUserReviews(prev => [newReview, ...prev]);
+              
+              // Fetch updated reviews to ensure consistency
               const reviewsData = await withAuth('/api/reviews/my');
               const reviews = reviewsData.reviews || [];
               setUserReviews(reviews);
@@ -972,25 +992,53 @@ export default function ProfileReviews() {
               const bookingsResponse = await withAuth('/api/bookings/my');
               const bookings = bookingsResponse.bookings || bookingsResponse.data || [];
               
-              // Update reviewed booking IDs
-              const reviewedBookingIds = new Set(
+              // ✅ Update reviewed tour-booking combinations
+              const reviewedTourKeys = new Set(
                 reviews.map(r => {
                   const bid = typeof r.bookingId === 'object' 
                     ? (r.bookingId._id || r.bookingId.toString())
                     : r.bookingId?.toString();
-                  return bid;
-                }).filter(Boolean)
+                  const tid = typeof r.tourId === 'object' 
+                    ? (r.tourId._id || r.tourId.toString())
+                    : r.tourId?.toString();
+                  return `${tid}-${bid}`;
+                }).filter(key => key !== '-')
               );
               
-              // Update pending bookings
-              const pending = bookings.filter(booking => {
-                const bookingId = booking._id?.toString();
-                const isCompleted = booking.status === 'completed' || booking.status === 'confirmed';
-                const notReviewed = !reviewedBookingIds.has(bookingId);
-                return isCompleted && notReviewed && booking.items?.length > 0;
+              console.log('📋 Updated reviewed tour-booking combinations:', Array.from(reviewedTourKeys));
+              
+              // ✅ Update pending tours - check each tour individually
+              const pendingTourItems = [];
+              bookings.forEach(booking => {
+                const isCompleted = booking.status === 'completed' || booking.status === 'confirmed' || booking.status === 'paid';
+                const bookingIdStr = booking._id?.toString();
+                
+                if (isCompleted && booking.items?.length > 0) {
+                  booking.items.forEach(item => {
+                    const tourId = typeof item.tourId === 'object' 
+                      ? (item.tourId._id || item.tourId) 
+                      : item.tourId;
+                    const tourIdStr = tourId?.toString();
+                    
+                    if (tourIdStr) {
+                      const tourKey = `${tourIdStr}-${bookingIdStr}`;
+                      
+                      if (!reviewedTourKeys.has(tourKey)) {
+                        pendingTourItems.push({
+                          ...item,
+                          tourId: tourIdStr,
+                          bookingId: booking._id,
+                          bookingDate: booking.createdAt,
+                          bookingStatus: booking.status
+                        });
+                      }
+                    }
+                  });
+                }
               });
               
-              setPendingBookings(pending);
+              console.log('⏳ Updated pending tours:', pendingTourItems.length);
+              setPendingBookings(pendingTourItems);
               
               // Switch to reviewed tab to show the new review
               setActiveTab('reviewed');
@@ -998,8 +1046,7 @@ export default function ProfileReviews() {
               toast.success("Đánh giá đã được thêm vào danh sách!");
             } catch (error) {
               console.error('Error refreshing data:', error);
-              // Fallback to page reload if refresh fails
-              window.location.reload();
+              toast.error('Không thể cập nhật danh sách. Vui lòng tải lại trang.');
             }
           }}
         />

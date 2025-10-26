@@ -45,7 +45,13 @@ export default function BookingPage() {
         });
         if (!cancelled) setQuote(res?.items?.[0] || null);
       } catch (e) {
-        if (!cancelled) setQuoteErr(e,"Không thể tạo báo giá cho Đặt ngay.");
+        console.error("Quote error:", e);
+        if (!cancelled) {
+          const errorMsg = e.response?.data?.error === "EXCEEDS_DEPARTURE_CAPACITY" 
+            ? `Không đủ chỗ trống. Chỉ còn ${e.response?.data?.limit || 0} chỗ.`
+            : "Không thể tạo báo giá cho Đặt ngay.";
+          setQuoteErr(errorMsg);
+        }
       } finally {
         if (!cancelled) setQuoteLoading(false);
       }
@@ -152,7 +158,12 @@ export default function BookingPage() {
           ) : (
             <div className="w-full lg:w-2/5 p-6 lg:p-8">
               <div className="bg-white rounded-xl p-6 border text-gray-700">
-                {buyNowItem ? (quoteErr || "Không có dữ liệu báo giá.") : "Chưa có tour nào được chọn để thanh toán."}
+                {buyNowItem ? (
+                  <div>
+                    <p className="text-red-600 font-medium">{quoteErr || "Không có dữ liệu báo giá."}</p>
+                    {quoteLoading && <p className="mt-2 text-gray-500">Đang tải...</p>}
+                  </div>
+                ) : "Chưa có tour nào được chọn để thanh toán."}
                 {!buyNowItem && (
                   <div className="mt-4">
                     <Link to="/shoppingcarts" className="inline-block px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold">

@@ -110,13 +110,6 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/promotions", promotionRoutes);
 app.use("/api/help", helpRoutes);
 
-// Debug routes (remove in production)
-if (process.env.NODE_ENV !== 'production') {
-  const debugRoutes = require("./routes/debug.routes");
-  app.use("/api/debug", debugRoutes);
-  console.log("🐛 Debug routes enabled at /api/debug");
-}
-
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // --- Healthcheck ---
@@ -143,17 +136,20 @@ app.use((err, _req, res, _next) => {
 });
 
 // --- Connect Mongo + Start server ---
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("✅ MongoDB connected");
-    app.listen(PORT, () =>
-      console.log(`🚀 API listening on http://localhost:${PORT}`)
-    );
-  })
-  .catch((e) => {
-    console.error("❌ Mongo connect error:", e);
-    process.exit(1);
-  });
+// Only run if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  mongoose
+    .connect(process.env.MONGO_URI)
+    .then(() => {
+      console.log("✅ MongoDB connected");
+      app.listen(PORT, () =>
+        console.log(`🚀 API listening on http://localhost:${PORT}`)
+      );
+    })
+    .catch((e) => {
+      console.error("❌ Mongo connect error:", e);
+      process.exit(1);
+    });
+}
 
 module.exports = app;

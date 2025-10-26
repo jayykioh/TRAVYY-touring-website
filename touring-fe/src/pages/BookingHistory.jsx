@@ -50,8 +50,12 @@ export default function BookingHistory() {
         return { text: "Đã thanh toán", className: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" };
       case "pending":
         return { text: "Chờ thanh toán", className: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200" };
+      case "cancelled":
+        return { text: "Thanh toán thất bại", className: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200" };
+      case "refunded":
+        return { text: "Đã hoàn tiền", className: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200" };
       default:
-        return { text: "Đã hủy", className: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200" };
+        return { text: "Đã hủy", className: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200" };
     }
   };
 
@@ -127,7 +131,7 @@ export default function BookingHistory() {
                         <div className="leading-tight">
                           <p className="text-[11px] text-neutral-500">Mã đặt chỗ</p>
                           <p className="text-sm font-medium">
-                            {booking.bookingCode || booking._id.substring(0, 8).toUpperCase()}
+                            {booking.orderRef || booking._id.substring(0, 8).toUpperCase()}
                           </p>
                         </div>
                       </div>
@@ -194,11 +198,11 @@ export default function BookingHistory() {
                           <CreditCard className="w-4 h-4" />
                           <div className="text-sm">
                             <span className="text-neutral-500">Thanh toán:&nbsp;</span>
-                            <span className="font-medium text-neutral-900 uppercase">
+                            <span className="font-semibold text-neutral-900">
                               {booking.payment?.provider || "N/A"}
                             </span>
-                            {booking.payment?.orderID && (
-                              <span className="ml-2 text-[12px] text-neutral-500">(ID: {booking.payment.orderID})</span>
+                            {booking.payment?.orderId && (
+                              <span className="ml-2 text-[12px] text-neutral-500">(ID: {booking.payment.orderId})</span>
                             )}
                           </div>
                         </div>

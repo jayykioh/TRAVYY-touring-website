@@ -29,27 +29,12 @@ const createReview = async (req, res) => {
       });
     }
 
-    console.log("=== DEBUG REVIEW SUBMISSION ===");
-    console.log("Received data:", { tourId, bookingId, userId });
-
     // Kiểm tra booking có thuộc về user và đã completed
     const booking = await Booking.findOne({
       _id: bookingId,
       userId,
       status: 'paid'
     });
-
-    console.log("Found booking:", booking ? {
-      _id: booking._id,
-      userId: booking.userId,
-      status: booking.status,
-      itemsCount: booking.items?.length || 0,
-      items: booking.items?.map(item => ({
-        tourId: item.tourId?.toString(),
-        name: item.name,
-        date: item.date
-      }))
-    } : null);
 
     if (!booking) {
       return res.status(404).json({
@@ -59,46 +44,28 @@ const createReview = async (req, res) => {
     }
 
     // Kiểm tra tour có trong booking không
-    console.log("Looking for tourId:", tourId);
-    console.log("Available tourIds in booking:", booking.items.map(item => item.tourId?.toString()));
-
     const tourInBooking = booking.items.find(
       item => item.tourId?.toString() === tourId?.toString()
     );
 
     if (!tourInBooking) {
-      console.log("❌ Tour NOT found in booking!");
-      console.log("Comparison details:");
-      booking.items.forEach((item, index) => {
-        console.log(`Item ${index}:`, {
-          tourId: item.tourId?.toString(),
-          matches: item.tourId?.toString() === tourId?.toString(),
-          name: item.name
-        });
-      });
-      
       return res.status(400).json({
         success: false,
-        message: "Tour không có trong booking này",
-        debug: {
-          requestedTourId: tourId,
-          availableTourIds: booking.items.map(item => item.tourId?.toString()),
-          bookingId: bookingId
-        }
+        message: "Tour không có trong booking này"
       });
     }
 
-    console.log("✅ Tour found in booking:", {
-      tourId: tourInBooking.tourId?.toString(),
-      name: tourInBooking.name
+    // ✅ Kiểm tra đã review tour này trong booking này chưa
+    const existingReview = await Review.findOne({ 
+      userId, 
+      tourId,
+      bookingId 
     });
-
-    // Kiểm tra đã review chưa
-    const existingReview = await Review.findOne({ userId, bookingId });
+    
     if (existingReview) {
       return res.status(409).json({
         success: false,
-        message: "Bạn đã đánh giá booking này rồi"
+        message: "Bạn đã đánh giá tour này rồi"
       });
     }
 
@@ -412,26 +379,46 @@ const getReviewableBookings = async (req, res) => {
   try {
     const userId = req.user?.sub || req.user?._id;
 
-    // Lấy các booking đã hoàn thành nhưng chưa review
+    // Lấy các booking đã hoàn thành
     const bookings = await Booking.find({
       userId,
       status: 'paid'
     }).populate('items.tourId', 'title imageItems basePrice');
 
-    // Lấy danh sách bookingId đã review
-    const reviewedBookingIds = await Review.distinct('bookingId', { userId });
-
-    // Lọc ra bookings chưa review
-    const reviewableBookings = bookings.filter(
-      booking => !reviewedBookingIds.some(
-        id => id.toString() === booking._id.toString()
-      )
+    // ✅ Lấy danh sách tour-booking combinations đã review
+    const reviews = await Review.find({ userId }, 'tourId bookingId').lean();
+    const reviewedTourKeys = new Set(
+      reviews.map(r => `${r.tourId.toString()}-${r.bookingId.toString()}`)
     );
+
+    // ✅ Lọc ra từng tour chưa review
+    const reviewableTours = [];
+    bookings.forEach(booking => {
+      booking.items.forEach(item => {
+        const tourIdStr = item.tourId?._id?.toString() || item.tourId?.toString();
+        if (tourIdStr) {
+          const tourKey = `${tourIdStr}-${booking._id.toString()}`;
+          
+          // Chỉ thêm tour chưa được review
+          if (!reviewedTourKeys.has(tourKey)) {
+            reviewableTours.push({
+              bookingId: booking._id,
+              tourId: tourIdStr,
+              tourInfo: item.tourId,
+              date: item.date,
+              adults: item.adults,
+              children: item.children,
+              bookingDate: booking.createdAt
+            });
+          }
+        }
+      });
+    });
 
     res.json({
       success: true,
-      bookings: reviewableBookings,
-      total: reviewableBookings.length
+      tours: reviewableTours,
+      total: reviewableTours.length
     });
 
   } catch (error) {

@@ -11,7 +11,7 @@ const Tour = require("../models/Tours");
 const { Cart, CartItem } = require("../models/Carts");
 
 // Import unified helpers
-const { clearCartAfterPayment, createBookingFromSession, FX_VND_USD } = require("../utils/paymentHelpers");
+const { clearCartAfterPayment, createBookingFromSession, markBookingAsPaid, markBookingAsFailed, FX_VND_USD } = require("../utils/paymentHelpers");
 
 // Export helpers for use in other controllers
 module.exports.clearCartAfterPayment = clearCartAfterPayment;
@@ -132,30 +132,14 @@ exports.createMoMoPayment = async (req, res) => {
     const discountAmount = Number(req.body.discountAmount) || 0;
     const finalTotalVND = Math.max(0, totalVND - discountAmount);
     
-    // ⚠️ MOMO SANDBOX LIMIT: 
-    // - Test wallet: Max 10,000,000 VNĐ per transaction
-    // - For development, can cap lower (e.g. 50,000) for quick testing
-    const MOMO_TEST_LIMIT = process.env.MOMO_SANDBOX_MODE === 'true' 
-      ? (Number(process.env.MOMO_MAX_AMOUNT) || 10000000)  // Default 10 triệu
-      : Infinity;
-    
-    const cappedAmount = Math.min(finalTotalVND, MOMO_TEST_LIMIT);
-    
-    if (cappedAmount !== finalTotalVND) {
-      console.log(`⚠️ MoMo Test Limit: Amount capped from ${finalTotalVND.toLocaleString()} to ${cappedAmount.toLocaleString()} VNĐ`);
-      console.log(`   Reason: MoMo test wallet limit is ${MOMO_TEST_LIMIT.toLocaleString()} VNĐ`);
-    }
-    
     console.log("💰 MoMo Price calculation:", {
       originalTotal: totalVND,
       discountAmount,
       finalTotal: finalTotalVND,
-      cappedForTest: cappedAmount,
-      testLimit: MOMO_TEST_LIMIT,
       voucherCode: req.body.promotionCode || req.body.voucherCode
     });
 
-    const amt = Number(cappedAmount);
+    const amt = Number(finalTotalVND);
     if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'INVALID_AMOUNT' });
 
     // ENV configuration (provide defaults for sandbox testing)
@@ -317,14 +301,19 @@ exports.handleMoMoIPN = async (req, res) => {
     session.payType = body.payType;
 
     let justPaid = false;
+    let justFailed = false;
+    
     if (String(body.resultCode) === "0") {
       if (session.status !== "paid") {
         session.status = "paid";
         session.paidAt = new Date();
         justPaid = true;
+        console.log(`✅ [MoMo IPN] Payment successful (resultCode: 0) - setting status to 'paid'`);
       }
     } else if (session.status === "pending") {
       session.status = "failed";
+      justFailed = true;
+      console.log(`⚠️ [MoMo IPN] Payment failed (resultCode: ${body.resultCode}) - setting status to 'failed'`);
     }
 
     await session.save();
@@ -366,7 +355,45 @@ exports.handleMoMoIPN = async (req, res) => {
       }
       
       // Create booking (unified helper with idempotent check)
-      await createBookingFromSession(session, { ipn: body, sessionId: session._id });
+      const booking = await createBookingFromSession(session, { ipn: body, sessionId: session._id });
+      
+      // Mark booking as paid
+      if (booking) {
+        try {
+          await markBookingAsPaid(session.orderId, {
+            transactionId: body.transId || session.orderId,
+            momo: {
+              orderId: body.orderId,
+              transId: body.transId,
+              resultCode: body.resultCode,
+              message: body.message
+            }
+          });
+          console.log(`✅ [MoMo IPN] Booking ${booking._id} marked as paid`);
+        } catch (markError) {
+          console.error(`❌ [MoMo IPN] Failed to mark booking ${booking._id} as paid:`, markError);
+        }
+      }
+    }
+    
+    // If failed -> create booking with failed status
+    if (justFailed) {
+      console.log(`⚠️ [MoMo IPN] Payment failed (resultCode: ${body.resultCode}), creating failed booking...`);
+      try {
+        await markBookingAsFailed(session.orderId, {
+          transactionId: body.transId || session.orderId,
+          momo: {
+            orderId: body.orderId,
+            transId: body.transId,
+            resultCode: body.resultCode,
+            message: body.message,
+            failedAt: new Date()
+          }
+        });
+        console.log(`✅ [MoMo IPN] Failed booking created for orderId: ${session.orderId}`);
+      } catch (failError) {
+        console.error(`❌ [MoMo IPN] Failed to create failed booking:`, failError);
+      }
     }
     
     // Important: MoMo expects 200/204 to stop retrying
@@ -401,20 +428,59 @@ exports.getMoMoSessionStatus = async (req, res) => {
 exports.markMoMoPaid = async (req, res) => {
   try {
     const { orderId, resultCode } = req.body || {};
+    console.log(`\n🔍 [markMoMoPaid] Starting with orderId: ${orderId}, resultCode: ${resultCode}`);
+    
     if (!orderId) return res.status(400).json({ error: "MISSING_ORDER_ID" });
     
     const sess = await PaymentSession.findOne({ orderId });
-    if (!sess) return res.status(404).json({ error: "SESSION_NOT_FOUND" });
+    if (!sess) {
+      console.log(`❌ [markMoMoPaid] Session not found for orderId: ${orderId}`);
+      return res.status(404).json({ error: "SESSION_NOT_FOUND" });
+    }
     
-    if (sess.status !== "paid") {
-      if (String(resultCode) !== "0") {
+    console.log(`✅ [markMoMoPaid] Found session: ${sess._id}, current status: "${sess.status}"`);
+    
+    // Handle failed payment
+    if (String(resultCode) !== "0") {
+      console.log(`⚠️ [MoMo mark-paid] Payment failed (resultCode: ${resultCode}) - setting status to 'failed'`);
+      
+      if (sess.status !== "failed") {
         sess.status = "failed";
         await sess.save();
+        console.log(`💾 [markMoMoPaid] Session status saved as 'failed'`);
+      }
+      
+      // Create failed booking
+      try {
+        const failedBooking = await markBookingAsFailed(orderId, {
+          transactionId: orderId,
+          momo: {
+            orderId: orderId,
+            resultCode: resultCode,
+            message: req.body.message,
+            failedAt: new Date()
+          }
+        });
+        console.log(`✅ [MoMo mark-paid] Failed booking created: ${failedBooking?._id}`);
+        
+        return res.json({ 
+          status: 'failed', 
+          bookingId: failedBooking?._id,
+          message: 'Payment failed but booking recorded'
+        });
+      } catch (failError) {
+        console.error(`❌ [MoMo mark-paid] Failed to create failed booking:`, failError);
         return res.status(400).json({ error: "RESULT_NOT_SUCCESS" });
       }
+    }
+    
+    // Handle successful payment
+    if (sess.status !== "paid") {
       sess.status = "paid";
       sess.paidAt = new Date();
       await sess.save();
+      console.log(`✅ [MoMo mark-paid] Payment successful - setting status to 'paid'`);
+      console.log(`💾 [markMoMoPaid] Session status saved as 'paid', paidAt: ${sess.paidAt}`);
       
       // Mark voucher as used if stored in session
       if (sess.voucherCode && sess.userId) {
@@ -453,8 +519,28 @@ exports.markMoMoPaid = async (req, res) => {
     }
 
     // Idempotent: create booking if not exists (using unified helper)
+    console.log(`📝 [markMoMoPaid] Creating booking from session...`);
     const booking = await createBookingFromSession(sess, { markPaid: true, sessionId: sess._id });
+    console.log(`📝 [markMoMoPaid] Booking created/found: ${booking?._id}`);
     
+    // Mark booking as paid
+    if (booking) {
+      try {
+        await markBookingAsPaid(orderId, {
+          transactionId: orderId,
+          momo: {
+            orderId: orderId,
+            resultCode: resultCode,
+            message: req.body.message
+          }
+        });
+        console.log(`✅ [MoMo] Booking ${booking._id} marked as paid`);
+      } catch (markError) {
+        console.error(`❌ [MoMo] Failed to mark booking ${booking._id} as paid:`, markError);
+      }
+    }
+    
+    console.log(`\n✅ [markMoMoPaid] Returning response: status="${sess.status}", bookingId="${booking?._id}"`);
     res.json({ status: sess.status, paidAt: sess.paidAt, bookingId: booking?._id });
   } catch (e) {
     console.error("markMoMoPaid error", e);
@@ -484,7 +570,7 @@ exports.getBookingByPayment = async (req, res) => {
     // First check if booking exists
     const booking = await Booking.findOne({ 
       'payment.provider': provider, 
-      'payment.orderID': orderId, 
+      'payment.orderId': orderId, 
       userId 
     })
     .populate('items.tourId', 'title imageItems')
@@ -511,6 +597,24 @@ exports.getBookingByPayment = async (req, res) => {
       console.log(`[Payment] 🔄 Session is paid, attempting to create booking...`);
       try {
         const newBooking = await createBookingFromSession(session, { lateCreation: true });
+        
+        // Mark booking as paid
+        if (newBooking) {
+          try {
+            await markBookingAsPaid(orderId, {
+              transactionId: session.transactionId || orderId,
+              [provider]: {
+                orderId: orderId,
+                status: 'completed',
+                lateCreation: true
+              }
+            });
+            console.log(`✅ [Late Creation] Booking ${newBooking._id} marked as paid`);
+          } catch (markError) {
+            console.error(`❌ [Late Creation] Failed to mark booking ${newBooking._id} as paid:`, markError);
+          }
+        }
+        
         return res.json({ success: true, booking: newBooking });
       } catch (createErr) {
         console.error('[Payment] Failed to create booking from paid session:', createErr);

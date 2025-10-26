@@ -15,7 +15,9 @@ export default function UserMenu() {
 
     // Nếu user đã có avatar trong MongoDB
     if (user.avatar) {
-      return `/api/profile/avatar/${user._id}`;
+      // ✅ Thêm timestamp để force reload khi avatar thay đổi
+      const timestamp = user.updatedAt || Date.now();
+      return `/api/profile/avatar/${user._id}?v=${timestamp}`;
     }
 
     // Nếu chưa có => sinh avatar Discord-style (chữ cái đầu + màu ngẫu nhiên)
