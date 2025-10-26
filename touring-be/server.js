@@ -27,6 +27,10 @@ const locationRoutes = require("./routes/location.routes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const app = express();
 const isProd = process.env.NODE_ENV === "production";
+const MONGO_URI =
+  process.env.MONGO_URI ||
+  process.env.MONGODB_URI ||
+  "mongodb://127.0.0.1:27017/travelApp";
 const notifyRoutes = require("./routes/notifyRoutes");
 const paymentRoutes = require("./routes/payment.routes");
 const reviewRoutes = require("./routes/reviewRoutes");
@@ -78,7 +82,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URI,
+      mongoUrl: MONGO_URI,
       collectionName: "sessions",
       ttl: 60 * 60 * 24 * 7,
     }),
@@ -148,7 +152,7 @@ app.use((err, _req, res, _next) => {
 
 // --- Connect Mongo + Start server ---
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(MONGO_URI)
   .then(() => {
     console.log("✅ MongoDB connected");
     app.listen(PORT, () =>

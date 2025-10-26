@@ -2,6 +2,7 @@
 // ============================================
 
 import React, { useState } from 'react';
+import { Upload, X } from 'lucide-react';
 import { validateGuideData } from '../../utils/guideHelpers';
 
 const GuideForm = ({ guide, onSubmit, onCancel }) => {
@@ -12,16 +13,68 @@ const GuideForm = ({ guide, onSubmit, onCancel }) => {
     location: guide?.location || '',
     experience: guide?.experience || '',
     languages: guide?.languages?.join(', ') || '',
-    specialties: guide?.specialties?.join(', ') || ''
+    specialties: guide?.specialties?.join(', ') || '',
+    avatar: guide?.avatar || ''
   });
   
+  const [avatarPreview, setAvatarPreview] = useState(guide?.avatar || '');
   const [errors, setErrors] = useState({});
+  const [imageLoadError, setImageLoadError] = useState(false);
 
   const handleChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
     if (errors[field]) {
       setErrors({ ...errors, [field]: '' });
     }
+  };
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setErrors({ ...errors, avatar: 'Vui lòng chọn một tệp hình ảnh' });
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors({ ...errors, avatar: 'Kích thước hình ảnh không được vượt quá 5MB' });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result);
+        setFormData({ ...formData, avatar: reader.result });
+        setErrors({ ...errors, avatar: '' });
+        setImageLoadError(false);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAvatarUrl = (e) => {
+    const url = e.target.value;
+    setFormData({ ...formData, avatar: url });
+    if (url) {
+      setAvatarPreview(url);
+      setImageLoadError(false);
+    }
+  };
+
+  const handleImageError = () => {
+    setImageLoadError(true);
+  };
+
+  const handleImageLoad = () => {
+    setImageLoadError(false);
+  };
+
+  const removeAvatar = () => {
+    setFormData({ ...formData, avatar: '' });
+    setAvatarPreview('');
+    setImageLoadError(false);
   };
 
   const handleSubmit = (e) => {
@@ -44,9 +97,74 @@ const GuideForm = ({ guide, onSubmit, onCancel }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-6">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Tên HDV *</label>
+    <>
+      {/* Overlay Background - Hiển thị nền phía sau như popup đồng bộ */}
+      <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+        <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 overflow-y-auto max-h-screen">
+          <form onSubmit={handleSubmit} className="space-y-4 p-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh đại diện</label>
+              <div className="space-y-3">
+                {/* Avatar Preview */}
+                {avatarPreview && (
+                  <div className="relative w-24 h-24">
+                    <img
+                      src={avatarPreview}
+                      alt="Preview"
+                      onError={handleImageError}
+                      onLoad={handleImageLoad}
+                      className={`w-full h-full rounded-lg object-cover border-2 ${
+                        imageLoadError ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                    />
+                    {imageLoadError && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-red-50 rounded-lg">
+                        <span className="text-xs text-red-600 text-center px-1">Lỗi tải ảnh</span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={removeAvatar}
+                      className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-700 shadow-md"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+                
+                {/* Upload File Input */}
+                <div className="flex gap-2">
+                  <label className="flex-1 flex items-center justify-center px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                      className="hidden"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Upload className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm text-gray-600">Tải ảnh lên</span>
+                    </div>
+                  </label>
+                </div>
+
+                {/* URL Input */}
+                <input
+                  type="url"
+                  placeholder="hoặc nhập URL ảnh đại diện"
+                  value={formData.avatar}
+                  onChange={handleAvatarUrl}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+                
+                {errors.avatar && (
+                  <p className="text-red-500 text-sm">{errors.avatar}</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tên HDV *</label>
         <input
           type="text"
           value={formData.name}
@@ -159,7 +277,10 @@ const GuideForm = ({ guide, onSubmit, onCancel }) => {
           Hủy
         </button>
       </div>
-    </form>
+          </form>
+        </div>
+      </div>
+    </>
   );
 };
 

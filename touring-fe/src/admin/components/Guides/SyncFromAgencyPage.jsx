@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { RefreshCw, CheckCircle, XCircle, Clock, TrendingUp, TrendingDown, Minus, AlertCircle } from 'lucide-react';
 import { MOCK_SYNC_HISTORY } from '../../data/guideData';
+import Pagination from '../Common/Pagination';
 
 const SyncFromAgencyPage = () => {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -244,44 +245,13 @@ const SyncFromAgencyPage = () => {
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-700">
-                Hiển thị <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> đến{' '}
-                <span className="font-medium">
-                  {Math.min(currentPage * itemsPerPage, MOCK_SYNC_HISTORY.length)}
-                </span>{' '}
-                trong tổng số <span className="font-medium">{MOCK_SYNC_HISTORY.length}</span> kết quả
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Trước
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 border rounded-lg ${
-                      currentPage === page
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Sau
-                </button>
-              </div>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={MOCK_SYNC_HISTORY.length}
+              itemsPerPage={itemsPerPage}
+            />
           </div>
         )}
       </div>

@@ -66,8 +66,8 @@ export default function AdminHeader({ toggleSidebar, isSidebarOpen }) {
     <header
       className={`fixed top-0 left-0 w-full h-16 z-50 transition-all duration-300 ${
         isScrolled
-          ? "bg-white/95 backdrop-blur-xl shadow-lg border-b border-gray-200"
-          : "bg-white border-b border-gray-100"
+          ? "bg-white/70 backdrop-blur-xl shadow-lg border-b border-white/30"
+          : "bg-transparent"
       }`}
     >
       <div className="flex items-center justify-between h-full px-4 md:px-6">
@@ -76,7 +76,7 @@ export default function AdminHeader({ toggleSidebar, isSidebarOpen }) {
           {/* Mobile Menu Button */}
           <button
             onClick={toggleSidebar}
-            className="lg:hidden p-2 hover:bg-gray-100 rounded-xl transition-all duration-200"
+            className="lg:hidden p-2 hover:bg-white/20 rounded-xl transition-all duration-200"
           >
             {isSidebarOpen ? (
               <X className="w-6 h-6 text-gray-700" />
@@ -108,17 +108,17 @@ export default function AdminHeader({ toggleSidebar, isSidebarOpen }) {
             <input
               type="text"
               placeholder="Search tours, guides, customers..."
-              className="w-64 xl:w-96 pl-12 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007980] focus:border-transparent focus:bg-white text-sm transition-all placeholder:text-gray-400"
+              className="w-64 xl:w-96 pl-12 pr-4 py-2.5 bg-white/80 backdrop-blur-sm border border-white/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007980] focus:border-transparent focus:bg-white text-sm transition-all placeholder:text-gray-500"
             />
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-600" />
           </div>
 
           {/* Mobile Search Button */}
           <button
             onClick={() => setShowMobileSearch(!showMobileSearch)}
-            className="lg:hidden p-2.5 hover:bg-gray-100 rounded-xl transition-all duration-200"
+            className="lg:hidden p-2.5 hover:bg-white/20 rounded-xl transition-all duration-200"
           >
-            <Search className="w-5 h-5 text-gray-600" />
+            <Search className="w-5 h-5 text-gray-700" />
           </button>
 
           {/* Icons Group */}
@@ -127,9 +127,9 @@ export default function AdminHeader({ toggleSidebar, isSidebarOpen }) {
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 md:p-2.5 hover:bg-gray-100 rounded-xl transition-all duration-200 group"
+                className="relative p-2 md:p-2.5 hover:bg-white/20 rounded-xl transition-all duration-200 group"
               >
-                <Bell className="w-5 h-5 text-gray-600 group-hover:text-[#007980] transition-colors" />
+                <Bell className="w-5 h-5 text-gray-700 group-hover:text-[#007980] transition-colors" />
                 {unreadCount > 0 && (
                   <span className="absolute top-0 right-0 min-w-[18px] md:min-w-[20px] h-4 md:h-5 px-1 md:px-1.5 bg-gradient-to-r from-red-500 to-pink-500 text-white text-[10px] md:text-xs rounded-full flex items-center justify-center font-semibold shadow-lg shadow-red-500/30 animate-pulse">
                     {unreadCount}
@@ -207,7 +207,7 @@ export default function AdminHeader({ toggleSidebar, isSidebarOpen }) {
             <div className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center gap-2 md:gap-3 p-1.5 md:p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="flex items-center gap-2 md:gap-3 p-1.5 md:p-2 hover:bg-white/20 rounded-lg transition-colors"
               >
                 <img
                   src={
@@ -215,13 +215,13 @@ export default function AdminHeader({ toggleSidebar, isSidebarOpen }) {
                     "https://ui-avatars.com/api/?name=Admin&background=3B82F6&color=fff"
                   }
                   alt="Profile"
-                  className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover ring-2 ring-gray-100"
+                  className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover ring-2 ring-white/50"
                 />
                 <div className="hidden md:block text-left">
                   <p className="text-sm font-medium text-gray-900">
                     {user?.name || "Admin"}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-600">
                     {user?.adminRole || user?.role || "admin"}
                   </p>
                 </div>

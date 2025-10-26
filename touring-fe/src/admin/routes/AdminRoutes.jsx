@@ -14,6 +14,7 @@ import AgencyAPIData from "../pages/AgencyAPIData";
 import Settings from "../pages/Settings";
 import PromotionManagement from "../pages/PromotionManagement";
 import CustomerRequestManagement from "../pages/CustomerRequestManagement";
+import Reports from "../pages/Reports";
 
 // Guide components
 import HiddenGuidesPage from "../components/Guides/HiddenGuidesPage";
@@ -35,7 +36,6 @@ const Certification = () => (
 const AgencyAPI = () => (
   <div className="p-6">Agency API Data Page - Coming soon</div>
 );
-const Reports = () => <div className="p-6">Reports Page - Coming soon</div>;
 
 const AdminRoutes = () => {
   return (

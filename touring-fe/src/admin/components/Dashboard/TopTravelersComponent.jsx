@@ -103,8 +103,8 @@ export default function TopTravelersComponent() {
 
       {/* Modal */}
       {selectedTraveler && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-emerald-200">
+        <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
             {/* Modal Header */}
             <div className="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 p-6 rounded-t-2xl relative">
               <button

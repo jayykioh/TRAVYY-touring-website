@@ -1,13 +1,21 @@
 // touring-fe/src/admin/components/Auth/AdminProtectedRoute.jsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import adminAuthService from '../../services/adminAuthService';
 
 const AdminProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAdminAuth();
+  const [authVerified, setAuthVerified] = useState(false);
+
+  useEffect(() => {
+    // Double-check auth on route change (safety measure)
+    const verified = adminAuthService.isAuthenticated();
+    setAuthVerified(verified);
+  }, []);
 
   // Show loading state
-  if (loading) {
+  if (loading || !authVerified) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -19,7 +27,7 @@ const AdminProtectedRoute = ({ children }) => {
   }
 
   // Redirect to login if not authenticated
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !authVerified) {
     return <Navigate to="/admin/login" replace />;
   }
 
