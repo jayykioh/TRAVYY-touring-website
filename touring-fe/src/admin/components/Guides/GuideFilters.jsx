@@ -1,22 +1,19 @@
 // 📁 src/components/Guides/GuideFilters.jsx
 // ============================================
 
-import React from 'react';
-import { Search } from 'lucide-react';
+import React from "react";
+import { Search } from "lucide-react";
 
-const GuideFilters = ({ 
-  searchTerm, 
-  onSearchChange, 
-  combinedStatusFilter, 
-  onCombinedStatusChange
+const GuideFilters = ({
+  searchTerm,
+  onSearchChange,
+  statusFilter,
+  onStatusChange,
 }) => {
-  const COMBINED_STATUS_OPTIONS = [
-    { value: 'all', label: 'Tất cả' },
-    { value: 'verified-active', label: 'Đã xác minh - 🟢 Đang hoạt động' },
-    { value: 'verified-hidden', label: 'Đã xác minh - ⚪ Tạm ẩn' },
-    { value: 'verified-suspended', label: 'Đã xác minh - 🔴 Bị đình chỉ' },
-    { value: 'pending', label: 'Chờ xác minh' },
-    { value: 'rejected', label: 'Từ chối' }
+  const STATUS_OPTIONS = [
+    { value: "all", label: "Tất cả trạng thái" },
+    { value: "active", label: "✅ Đang hoạt động" },
+    { value: "suspended", label: "⛔ Tạm ngừng" },
   ];
 
   return (
@@ -27,20 +24,20 @@ const GuideFilters = ({
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Tìm kiếm hướng dẫn viên..."
+            placeholder="Tìm kiếm theo tên, email, số điện thoại..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
-        {/* Combined Status Filter */}
+        {/* Status Filter */}
         <select
-          value={combinedStatusFilter}
-          onChange={(e) => onCombinedStatusChange(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[250px]"
+          value={statusFilter}
+          onChange={(e) => onStatusChange(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[200px]"
         >
-          {COMBINED_STATUS_OPTIONS.map(option => (
+          {STATUS_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>

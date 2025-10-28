@@ -2,29 +2,30 @@
 // ============================================
 // Admin chỉ xem, đồng bộ, thống kê - không tạo dữ liệu gốc
 
-import React, { useState } from 'react';
-import {
-  Eye,
-  Star,
-  MapPin,
-  Phone,
-  Mail,
-  X,
-  Building2
-} from 'lucide-react';
-import toast, { Toaster } from 'react-hot-toast';
-import { formatPrice } from '../../utils/guideHelpers';
+import React, { useState } from "react";
+import { Eye, Star, MapPin, Phone, Mail, X, Building2 } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
+import { formatPrice } from "../../utils/guideHelpers";
 
 const GuideCard = ({ guide, onView, onStatusChange }) => {
   const [showStatusPopup, setShowStatusPopup] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState(null);
-  const [reason, setReason] = useState('');
+  const [reason, setReason] = useState("");
   const [imageError, setImageError] = useState(false);
 
   const statusOptions = [
-    { value: 'active', label: 'Đang hoạt động', color: 'text-green-600', icon: '🟢' },
-    { value: 'hidden', label: 'Tạm ẩn', color: 'text-gray-600', icon: '⚪' },
-    { value: 'suspended', label: 'Bị đình chỉ', color: 'text-red-600', icon: '🔴' }
+    {
+      value: "active",
+      label: "Đang hoạt động",
+      color: "text-green-600 bg-green-50 border-green-200",
+      icon: "✅",
+    },
+    {
+      value: "suspended",
+      label: "Tạm ngừng",
+      color: "text-red-600 bg-red-50 border-red-200",
+      icon: "⛔",
+    },
   ];
 
   const handleStatusClick = () => {
@@ -34,26 +35,28 @@ const GuideCard = ({ guide, onView, onStatusChange }) => {
 
   const handleConfirmStatusChange = () => {
     if (!selectedStatus) {
-      toast.error('Vui lòng chọn trạng thái mới');
+      toast.error("Vui lòng chọn trạng thái mới");
       return;
     }
     if (!reason.trim()) {
-      toast.error('Vui lòng nhập lý do chuyển đổi trạng thái');
+      toast.error("Vui lòng nhập lý do chuyển đổi trạng thái");
       return;
     }
     onStatusChange(guide, selectedStatus, reason);
     setShowStatusPopup(false);
-    setReason('');
+    setReason("");
     setSelectedStatus(null);
   };
 
   const handleCancelStatusChange = () => {
     setShowStatusPopup(false);
-    setReason('');
+    setReason("");
     setSelectedStatus(null);
   };
 
-  const currentStatus = statusOptions.find(s => s.value === guide.activityStatus) || statusOptions[0];
+  const currentStatus =
+    statusOptions.find((s) => s.value === guide.activityStatus) ||
+    statusOptions[0];
 
   return (
     <>
@@ -103,10 +106,14 @@ const GuideCard = ({ guide, onView, onStatusChange }) => {
             )}
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-lg font-bold text-gray-900">{guide.name}</h3>
+                <h3 className="text-lg font-bold text-gray-900">
+                  {guide.name}
+                </h3>
                 <div className="flex items-center bg-yellow-50 px-3 py-1.5 rounded-lg border border-yellow-200 ml-3">
                   <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                  <span className="ml-1.5 text-sm font-bold text-gray-900">{guide.rating}</span>
+                  <span className="ml-1.5 text-sm font-bold text-gray-900">
+                    {guide.rating}
+                  </span>
                 </div>
               </div>
               <div className="space-y-2">
@@ -138,24 +145,35 @@ const GuideCard = ({ guide, onView, onStatusChange }) => {
 
             <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
               <div className="text-center">
-                <p className="text-lg font-bold text-gray-900">{guide.totalTours}</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {guide.totalTours}
+                </p>
                 <p className="text-xs text-gray-600">Tours</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-green-600">{guide.completedTours}</p>
+                <p className="text-lg font-bold text-green-600">
+                  {guide.completedTours}
+                </p>
                 <p className="text-xs text-gray-600">Hoàn thành</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-blue-600">₫{formatPrice(guide.revenue)}</p>
+                <p className="text-lg font-bold text-blue-600">
+                  ₫{formatPrice(guide.revenue)}
+                </p>
                 <p className="text-xs text-gray-600">Doanh thu</p>
               </div>
             </div>
 
             <div>
-              <p className="text-xs font-medium text-gray-700 mb-2">Ngôn ngữ:</p>
+              <p className="text-xs font-medium text-gray-700 mb-2">
+                Ngôn ngữ:
+              </p>
               <div className="flex flex-wrap gap-1">
                 {guide.languages.map((lang, i) => (
-                  <span key={i} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                  <span
+                    key={i}
+                    className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
+                  >
                     {lang}
                   </span>
                 ))}
@@ -163,10 +181,15 @@ const GuideCard = ({ guide, onView, onStatusChange }) => {
             </div>
 
             <div>
-              <p className="text-xs font-medium text-gray-700 mb-2">Chuyên môn:</p>
+              <p className="text-xs font-medium text-gray-700 mb-2">
+                Chuyên môn:
+              </p>
               <div className="flex flex-wrap gap-1">
                 {guide.specialties.map((specialty, i) => (
-                  <span key={i} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded">
+                  <span
+                    key={i}
+                    className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded"
+                  >
                     {specialty}
                   </span>
                 ))}
@@ -175,7 +198,9 @@ const GuideCard = ({ guide, onView, onStatusChange }) => {
 
             {/* Trạng thái hoạt động */}
             <div className="pt-4 border-t border-gray-200">
-              <p className="text-xs font-medium text-gray-700 mb-2">Trạng thái hoạt động:</p>
+              <p className="text-xs font-medium text-gray-700 mb-2">
+                Trạng thái hoạt động:
+              </p>
               <button
                 onClick={() => handleStatusClick(guide.activityStatus)}
                 className={`flex items-center px-3 py-1.5 rounded-lg border-2 transition-all text-sm font-medium ${currentStatus.color} border-current bg-opacity-10 hover:shadow-md`}
@@ -187,7 +212,7 @@ const GuideCard = ({ guide, onView, onStatusChange }) => {
 
             {/* Action Buttons */}
             <div className="flex items-center space-x-2">
-              <button 
+              <button
                 onClick={() => onView(guide)}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center justify-center"
               >
@@ -201,11 +226,16 @@ const GuideCard = ({ guide, onView, onStatusChange }) => {
 
       {/* Status Change Confirmation Popup */}
       {showStatusPopup && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
+        >
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Xác nhận chuyển trạng thái</h3>
-              <button 
+              <h3 className="text-lg font-bold text-gray-900">
+                Xác nhận chuyển trạng thái
+              </h3>
+              <button
                 onClick={handleCancelStatusChange}
                 className="p-1 hover:bg-gray-100 rounded transition"
               >
@@ -215,11 +245,15 @@ const GuideCard = ({ guide, onView, onStatusChange }) => {
 
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-3">
-                Bạn đang chuyển trạng thái của <strong>{guide.name}</strong> từ <strong className={currentStatus.color}>{currentStatus.icon} {currentStatus.label}</strong> sang:
+                Bạn đang chuyển trạng thái của <strong>{guide.name}</strong> từ{" "}
+                <strong className={currentStatus.color}>
+                  {currentStatus.icon} {currentStatus.label}
+                </strong>{" "}
+                sang:
               </p>
               <div className="space-y-2">
                 {statusOptions
-                  .filter(status => status.value !== guide.activityStatus)
+                  .filter((status) => status.value !== guide.activityStatus)
                   .map((status) => (
                     <button
                       key={status.value}
@@ -227,7 +261,7 @@ const GuideCard = ({ guide, onView, onStatusChange }) => {
                       className={`w-full flex items-center px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${
                         selectedStatus === status.value
                           ? `${status.color} border-current bg-opacity-20`
-                          : 'border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+                          : "border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50"
                       }`}
                     >
                       <span className="mr-2 text-lg">{status.icon}</span>

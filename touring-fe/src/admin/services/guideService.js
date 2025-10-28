@@ -69,12 +69,18 @@ export const getTourGuides = async (filters = {}) => {
  */
 export const getGuideById = async (guideId) => {
   try {
-    const response = await fetchWithAuth(`${API_URL}/admin/users/${guideId}`);
+    const response = await fetchWithAuth(
+      `${API_URL}/admin/users/guides/${guideId}`
+    );
     const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to fetch guide");
+    }
 
     return {
       success: true,
-      data: data.data,
+      data: transformUserToGuide(data.data),
     };
   } catch (error) {
     console.error("❌ Get guide error:", error);
@@ -86,18 +92,26 @@ export const getGuideById = async (guideId) => {
 };
 
 /**
- * Update guide status (verify/suspend/activate)
+ * Update guide status (active/suspended)
  */
 export const updateGuideStatus = async (guideId, status, reason = "") => {
   try {
     const response = await fetchWithAuth(
-      `${API_URL}/admin/users/${guideId}/status`,
+      `${API_URL}/admin/users/guides/${guideId}/status`,
       {
         method: "PUT",
         body: JSON.stringify({ status, reason }),
       }
     );
+
     const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.message || "Cập nhật thất bại",
+      };
+    }
 
     return {
       success: true,

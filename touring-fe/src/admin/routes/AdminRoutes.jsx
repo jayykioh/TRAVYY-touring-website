@@ -10,16 +10,11 @@ import Dashboard from "../components/Dashboard/Dashboard";
 import TourManagement from "../pages/TourManagement";
 import TourDetailPage from "../components/Tours/TourDetailPage";
 import GuideManagement from "../pages/GuideManagement";
-import AgencyAPIData from "../pages/AgencyAPIData";
 import Settings from "../pages/Settings";
 import PromotionManagement from "../pages/PromotionManagement";
 import CustomerRequestManagement from "../pages/CustomerRequestManagement";
-import Reports from "../pages/Reports";
 
-// Guide components
-import HiddenGuidesPage from "../components/Guides/HiddenGuidesPage";
-import SyncFromAgencyPage from "../components/Guides/SyncFromAgencyPage";
-import GuideAccountsPage from "../components/Guides/GuideAccountsPage";
+// Guide components - REMOVED: Only GuideManagement remains
 
 // Customer components
 import CustomerAccountsPage from "../components/Customers/CustomerAccountsPage";
@@ -32,9 +27,6 @@ import RequestUpdatePage from "../components/CustomerRequest/RequestUpdatePage";
 // Placeholder components
 const Certification = () => (
   <div className="p-6">Certification Page - Coming soon</div>
-);
-const AgencyAPI = () => (
-  <div className="p-6">Agency API Data Page - Coming soon</div>
 );
 
 const AdminRoutes = () => {
@@ -84,39 +76,6 @@ const AdminRoutes = () => {
             <AdminProtectedRoute>
               <AdminLayout activePage="guides">
                 <GuideManagement />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/guides/hidden"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="guides">
-                <HiddenGuidesPage />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/guides/sync"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="guides">
-                <SyncFromAgencyPage />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/guides/accounts"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="guides">
-                <GuideAccountsPage />
               </AdminLayout>
             </AdminProtectedRoute>
           }
@@ -185,28 +144,6 @@ const AdminRoutes = () => {
             <AdminProtectedRoute>
               <AdminLayout activePage="certification">
                 <Certification />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/api"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="api">
-                <AgencyAPIData />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/reports"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="reports">
-                <Reports />
               </AdminLayout>
             </AdminProtectedRoute>
           }

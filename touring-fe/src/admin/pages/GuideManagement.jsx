@@ -1,5 +1,7 @@
 // 📁 src/pages/GuideManagement.jsx
 // ============================================
+// All Guides Management - Consolidated Page
+// ============================================
 
 import React, { useState, useMemo, useEffect } from "react";
 import {
@@ -9,13 +11,15 @@ import {
   CheckCircle,
   Clock,
   Star,
+  TrendingUp,
+  DollarSign,
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 
 // Components
-import StatCard from "../components/Dashboard/StatsCard";
 import GuideFilters from "../components/Guides/GuideFilters";
 import GuideCard from "../components/Guides/GuideCard";
+import GuideDetailModal from "../components/Guides/GuideDetailModal";
 import Pagination from "../components/Common/Pagination";
 
 // Services
@@ -36,7 +40,8 @@ const GuideManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [selectedGuideId, setSelectedGuideId] = useState(null);
+  const itemsPerPage = 12; // Increased for better grid display
 
   useEffect(() => {
     loadGuides();
@@ -55,6 +60,8 @@ const GuideManagement = () => {
           guideService.transformUserToGuide
         );
         setGuides(transformedGuides);
+        // ✅ Chỉ log ra console, không hiện toast mỗi lần load
+        console.log(`✅ Loaded ${transformedGuides.length} guides`);
       } else {
         toast.error(result.error || "Không thể tải dữ liệu hướng dẫn viên");
         setGuides([]);
@@ -91,33 +98,39 @@ const GuideManagement = () => {
       id: "total",
       label: "Tổng HDV",
       value: guideStats.total,
-      subtitle: "Hướng dẫn viên",
+      subtitle: `${guideStats.active} đang hoạt động`,
       icon: Users,
       color: "blue",
+      trend: "+12%",
     },
     {
       id: "verified",
       label: "Đã xác minh",
       value: guideStats.verified,
-      subtitle: "HDV đã xác minh",
+      subtitle: `${Math.round(
+        (guideStats.verified / (guideStats.total || 1)) * 100
+      )}% tổng số`,
       icon: CheckCircle,
       color: "green",
+      trend: "+5%",
     },
     {
       id: "pending",
-      label: "Chờ xác minh",
+      label: "Chờ xử lý",
       value: guideStats.pending,
-      subtitle: "Cần xử lý",
+      subtitle: "Cần xem xét",
       icon: Clock,
       color: "yellow",
+      trend: "-3%",
     },
     {
-      id: "rating",
-      label: "Đánh giá TB",
-      value: `${guideStats.averageRating}⭐`,
-      subtitle: "Trung bình",
-      icon: Star,
+      id: "revenue",
+      label: "Doanh thu",
+      value: `₫${formatPrice(guideStats.totalRevenue)}`,
+      subtitle: `${guideStats.totalTours} tours`,
+      icon: DollarSign,
       color: "purple",
+      trend: "+18%",
     },
   ];
 
@@ -135,7 +148,11 @@ const GuideManagement = () => {
   };
 
   const handleViewGuide = (guide) => {
-    toast.info(`Xem chi tiết: ${guide.name}\nĐây là chức năng demo`);
+    setSelectedGuideId(guide.id);
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedGuideId(null);
   };
 
   const handleStatusChange = async (guide, newStatus, reason) => {
@@ -169,17 +186,28 @@ const GuideManagement = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <RefreshCw className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Đang tải dữ liệu...</p>
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-blue-200 rounded-full animate-pulse mx-auto mb-4"></div>
+            <RefreshCw
+              className="w-10 h-10 text-blue-600 animate-spin absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+              style={{ marginTop: "-40px" }}
+            />
+          </div>
+          <p className="text-gray-600 font-medium">
+            Đang tải dữ liệu hướng dẫn viên...
+          </p>
+          <p className="text-gray-400 text-sm mt-2">
+            Vui lòng đợi trong giây lát
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 p-6">
       <Toaster
         position="top-right"
         toastOptions={{
@@ -193,7 +221,7 @@ const GuideManagement = () => {
           },
           success: {
             iconTheme: {
-              primary: "#007980",
+              primary: "#10b981",
               secondary: "#fff",
             },
           },
@@ -206,96 +234,166 @@ const GuideManagement = () => {
         }}
       />
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Quản lý Hướng dẫn viên
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Quản lý và theo dõi hướng dẫn viên trong hệ thống
-            </p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={handleExport}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Export Data
-            </button>
-            <button
-              onClick={handleRefresh}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Làm mới
-            </button>
+        {/* Header with gradient */}
+        <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl shadow-xl p-8 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
+                <Users className="w-10 h-10" />
+                Quản lý Hướng dẫn viên
+              </h1>
+              <p className="text-blue-100 text-lg flex items-center gap-2">
+                <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></span>
+                {filteredGuides.length} hướng dẫn viên • {guideStats.active}{" "}
+                đang hoạt động
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleExport}
+                className="px-5 py-3 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-xl flex items-center gap-2 transition-all duration-200 font-medium"
+              >
+                <Download className="w-5 h-5" />
+                Export
+              </button>
+              <button
+                onClick={handleRefresh}
+                className="px-5 py-3 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-xl flex items-center gap-2 transition-all duration-200 font-medium"
+              >
+                <RefreshCw className="w-5 h-5" />
+                Làm mới
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Stats Cards with better styling */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((stat) => (
-            <StatCard key={stat.id} stat={stat} />
+            <div
+              key={stat.id}
+              className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6 border border-gray-100"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-600 mb-1">
+                    {stat.label}
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 mb-2">
+                    {stat.value}
+                  </p>
+                  <p className="text-xs text-gray-500">{stat.subtitle}</p>
+                </div>
+                <div className={`p-3 rounded-xl bg-${stat.color}-50`}>
+                  <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
+                </div>
+              </div>
+              {stat.trend && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <span
+                    className={`text-sm font-medium ${
+                      stat.trend.startsWith("+")
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {stat.trend}
+                  </span>
+                  <span className="text-xs text-gray-500 ml-2">
+                    vs tháng trước
+                  </span>
+                </div>
+              )}
+            </div>
           ))}
         </div>
 
-        {/* Action Bar */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Hiển thị {filteredGuides.length} / {guides.length} hướng dẫn viên
-            </div>
-            <div className="flex gap-3">
-              <div className="text-sm text-gray-600">
-                Tổng doanh thu:{" "}
-                <span className="font-bold text-green-600">
-                  ₫{formatPrice(guideStats.totalRevenue)}
-                </span>
-              </div>
-              <div className="text-sm text-gray-600">
-                Tổng tours:{" "}
-                <span className="font-bold text-blue-600">
-                  {guideStats.totalTours}
-                </span>
-              </div>
-            </div>
-          </div>
+        {/* Filters with better design */}
+        <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
+          <GuideFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+          />
         </div>
-
-        {/* Filters */}
-        <GuideFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          statusFilter={statusFilter}
-          onStatusChange={setStatusFilter}
-        />
 
         {/* Guides Grid */}
         {filteredGuides.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Users className="w-12 h-12 text-gray-400" />
+          <div className="bg-white rounded-xl shadow-md border border-gray-100 p-16 text-center">
+            <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Users className="w-16 h-16 text-gray-400" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">
               Không tìm thấy hướng dẫn viên
             </h3>
-            <p className="text-gray-600">
-              Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm
+            <p className="text-gray-600 mb-6">
+              {searchTerm || statusFilter !== "all"
+                ? "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm"
+                : "Chưa có hướng dẫn viên nào trong hệ thống"}
             </p>
+            {(searchTerm || statusFilter !== "all") && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setStatusFilter("all");
+                }}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Xóa bộ lọc
+              </button>
+            )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredGuides.map((guide) => (
-              <GuideCard
-                key={guide.id}
-                guide={guide}
-                onView={handleViewGuide}
-                onStatusChange={handleStatusChange}
-              />
-            ))}
-          </div>
+          <>
+            {/* Result count */}
+            <div className="flex items-center justify-between px-1">
+              <p className="text-sm text-gray-600">
+                Hiển thị{" "}
+                <span className="font-semibold text-gray-900">
+                  {filteredGuides.length}
+                </span>{" "}
+                kết quả
+                {searchTerm && ` cho "${searchTerm}"`}
+              </p>
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-green-600" />
+                  <span>
+                    Tổng doanh thu:{" "}
+                    <span className="font-bold text-green-600">
+                      ₫{formatPrice(guideStats.totalRevenue)}
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Star className="w-4 h-4 text-yellow-500" />
+                  <span>
+                    Đánh giá TB:{" "}
+                    <span className="font-bold text-yellow-600">
+                      {guideStats.averageRating}⭐
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredGuides
+                .slice(
+                  (currentPage - 1) * itemsPerPage,
+                  currentPage * itemsPerPage
+                )
+                .map((guide) => (
+                  <GuideCard
+                    key={guide.id}
+                    guide={guide}
+                    onView={handleViewGuide}
+                    onStatusChange={handleStatusChange}
+                  />
+                ))}
+            </div>
+          </>
         )}
 
         {/* Pagination */}
@@ -309,6 +407,14 @@ const GuideManagement = () => {
           />
         )}
       </div>
+
+      {/* Guide Detail Modal */}
+      {selectedGuideId && (
+        <GuideDetailModal
+          guideId={selectedGuideId}
+          onClose={handleCloseDetail}
+        />
+      )}
     </div>
   );
 };

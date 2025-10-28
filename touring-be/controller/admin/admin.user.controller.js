@@ -421,3 +421,171 @@ exports.deleteUser = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get guide detail by ID (from TravelAgency employees)
+ */
+exports.getGuideDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the guide across all agencies
+    const agencies = await TravelAgency.find({
+      "employees.employeeId": id,
+    })
+      .select("name employees location contact")
+      .lean();
+
+    let guide = null;
+    let agency = null;
+
+    for (const ag of agencies) {
+      const employee = ag.employees.find(
+        (emp) => emp.employeeId && emp.employeeId.toString() === id
+      );
+
+      if (employee) {
+        guide = employee;
+        agency = ag;
+        break;
+      }
+    }
+
+    if (!guide || !agency) {
+      return res.status(404).json({
+        success: false,
+        message: "Guide not found",
+      });
+    }
+
+    // Build detailed guide information
+    const guideDetail = {
+      _id: guide.employeeId,
+      name: guide.name,
+      email: guide.email || "",
+      phone: guide.phone || "",
+      avatar: guide.avatarUrl || null,
+      role: "TourGuide",
+
+      // Location info
+      location: {
+        city: agency.location?.city || agency.name,
+        province: agency.location?.province || "",
+        country: agency.location?.country || "Vietnam",
+      },
+
+      // Agency info
+      agencyId: agency._id,
+      agencyName: agency.name,
+      agencyContact: agency.contact || {},
+
+      // Guide details
+      rating: guide.rating || 0,
+      experienceYears: guide.experienceYears || 0,
+      languages: guide.languages || ["Tiếng Việt"],
+      specializations: guide.specializations || [],
+      bio: guide.bio || "",
+      certifications: guide.certifications || [],
+
+      // Stats
+      stats: {
+        totalTours: guide.stats?.tours || 0,
+        completedTours: guide.stats?.completed || 0,
+        canceledTours: guide.stats?.canceled || 0,
+        totalRevenue: guide.stats?.revenue || 0,
+        totalReviews: guide.stats?.reviews || 0,
+        averageRating: guide.rating || 0,
+      },
+
+      // Status
+      accountStatus: guide.status === "suspended" ? "banned" : "active",
+      employeeStatus: guide.status || "active",
+      statusReason: guide.statusReason || "",
+
+      // Timestamps
+      joinedAt: guide.joinedAt || agency.createdAt,
+      updatedAt: guide.updatedAt || agency.updatedAt,
+      lastActive: guide.lastActive || null,
+    };
+
+    res.json({
+      success: true,
+      data: guideDetail,
+    });
+  } catch (error) {
+    console.error("❌ Get guide detail error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * Update guide status (active/suspended)
+ */
+exports.updateGuideStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, reason } = req.body;
+
+    // Validate status
+    if (!["active", "suspended"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Must be 'active' or 'suspended'",
+      });
+    }
+
+    // Find the agency containing this guide
+    const agency = await TravelAgency.findOne({
+      "employees.employeeId": id,
+    });
+
+    if (!agency) {
+      return res.status(404).json({
+        success: false,
+        message: "Guide not found",
+      });
+    }
+
+    // Find and update the employee
+    const employeeIndex = agency.employees.findIndex(
+      (emp) => emp.employeeId && emp.employeeId.toString() === id
+    );
+
+    if (employeeIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Guide not found in agency",
+      });
+    }
+
+    // Update employee status
+    agency.employees[employeeIndex].status = status;
+    agency.employees[employeeIndex].statusReason = reason || "";
+    agency.employees[employeeIndex].updatedAt = new Date();
+
+    // Save agency
+    await agency.save();
+
+    const updatedGuide = agency.employees[employeeIndex];
+
+    res.json({
+      success: true,
+      message: `Guide status updated to ${status}`,
+      data: {
+        _id: updatedGuide.employeeId,
+        name: updatedGuide.name,
+        status: updatedGuide.status,
+        statusReason: updatedGuide.statusReason,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Update guide status error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
