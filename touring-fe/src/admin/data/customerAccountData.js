@@ -100,6 +100,7 @@ export const MOCK_CUSTOMER_ACCOUNTS = [
     totalSpent: 35000000,
     totalBookings: 8,
     averageRating: 4.6,
+    lockHistory: [],
     bookingHistory: [
       {
         bookingId: 'T001',
@@ -172,6 +173,7 @@ export const MOCK_CUSTOMER_ACCOUNTS = [
     totalSpent: 52000000,
     totalBookings: 12,
     averageRating: 4.8,
+    lockHistory: [],
     bookingHistory: [
       {
         bookingId: 'T004',
@@ -225,6 +227,7 @@ export const MOCK_CUSTOMER_ACCOUNTS = [
     totalSpent: 68000000,
     totalBookings: 15,
     averageRating: 4.5,
+    lockHistory: [],
     bookingHistory: [
       {
         bookingId: 'T006',
@@ -270,6 +273,7 @@ export const MOCK_CUSTOMER_ACCOUNTS = [
     totalSpent: 28000000,
     totalBookings: 6,
     averageRating: 4.7,
+    lockHistory: [],
     bookingHistory: [
       {
         bookingId: 'T007',
@@ -310,6 +314,17 @@ export const MOCK_CUSTOMER_ACCOUNTS = [
     totalSpent: 15000000,
     totalBookings: 3,
     averageRating: 3.2,
+    lockHistory: [
+      {
+        id: 1,
+        action: 'lock',
+        reason: 'Hành vi qu骗欺',
+        lockedAt: '2025-10-20T10:30:00Z',
+        lockedBy: 'admin@travyy.com',
+        unlockedAt: null,
+        unlockedBy: null
+      }
+    ],
     bookingHistory: [
       {
         bookingId: 'T008',
@@ -350,6 +365,7 @@ export const MOCK_CUSTOMER_ACCOUNTS = [
     totalSpent: 42000000,
     totalBookings: 9,
     averageRating: 4.4,
+    lockHistory: [],
     bookingHistory: [
       {
         bookingId: 'T009',
@@ -395,6 +411,7 @@ export const MOCK_CUSTOMER_ACCOUNTS = [
     totalSpent: 75000000,
     totalBookings: 18,
     averageRating: 4.9,
+    lockHistory: [],
     bookingHistory: [
       {
         bookingId: 'T010',
@@ -440,6 +457,7 @@ export const MOCK_CUSTOMER_ACCOUNTS = [
     totalSpent: 31000000,
     totalBookings: 7,
     averageRating: 4.3,
+    lockHistory: [],
     bookingHistory: [
       {
         bookingId: 'T011',
@@ -480,6 +498,7 @@ export const MOCK_CUSTOMER_ACCOUNTS = [
     totalSpent: 58000000,
     totalBookings: 13,
     averageRating: 4.7,
+    lockHistory: [],
     bookingHistory: [
       {
         bookingId: 'T012',
@@ -525,6 +544,7 @@ export const MOCK_CUSTOMER_ACCOUNTS = [
     totalSpent: 22000000,
     totalBookings: 5,
     averageRating: 4.6,
+    lockHistory: [],
     bookingHistory: [
       {
         bookingId: 'T013',
@@ -570,6 +590,7 @@ export const MOCK_CUSTOMER_ACCOUNTS = [
     totalSpent: 8000000,
     totalBookings: 2,
     averageRating: 4.0,
+    lockHistory: [],
     bookingHistory: [
       {
         bookingId: 'T014',
@@ -615,6 +636,7 @@ export const MOCK_CUSTOMER_ACCOUNTS = [
     totalSpent: 18000000,
     totalBookings: 4,
     averageRating: 4.5,
+    lockHistory: [],
     bookingHistory: [
       {
         bookingId: 'T015',

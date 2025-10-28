@@ -3,7 +3,7 @@
 
 const mongoose = require("mongoose");
 const Booking = require("../models/Bookings");
-const Tour = require("../models/Tours");
+const Tour = require("../models/agency/Tours");
 const { Cart, CartItem } = require("../models/Carts");
 
 // Exchange rate (VND to USD)
@@ -29,269 +29,118 @@ async function createBookingFromPayment({
     return existing;
   }
 
-  const { originalAmount, discountAmount, totalAmount, currency } = pricing;
+  try {
+    // Convert items snapshot
+    let vndFromItems = 0;
+    const bookingItems = [];
 
-  // Enrich items with tour data if needed
-  const enrichedItems = await Promise.all(items.map(async (item) => {
-    let tourData = { name: item.name, image: item.image };
+    for (const it of session.items || []) {
+      const a = Number(it?.meta?.adults) || 0;
+      const c = Number(it?.meta?.children) || 0;
+      const uA = Number(it?.meta?.unitPriceAdult) || 0;
+      const uC = Number(it?.meta?.unitPriceChild) || 0;
+      const line = uA * a + uC * c;
+      vndFromItems += line > 0 ? line : Number(it.price) || 0;
 
-    if (item.tourId && mongoose.isValidObjectId(item.tourId)) {
-      const tour = await Tour.findById(item.tourId).lean();
-      if (tour) {
-        tourData = {
-          name: tour.title || tour.name || item.name,
-          image: tour.imageItems?.[0]?.imageUrl || tour.image || item.image
-        };
+      // Enrich with tour info if missing
+      let tourMeta = { name: it.name, image: it.meta?.image || it.image || "" };
+      if (it.tourId && mongoose.isValidObjectId(it.tourId)) {
+        const t = await Tour.findById(it.tourId).lean();
+        if (t) {
+          tourMeta = {
+            name: t.title || t.name || it.name,
+            image: t.imageItems?.[0]?.imageUrl || t.image || tourMeta.image,
+          };
+        }
       }
+
+      bookingItems.push({
+        tourId: it.tourId,
+        date: it.meta?.date || "",
+        name: tourMeta.name,
+        image: tourMeta.image,
+        adults: a,
+        children: c,
+        unitPriceAdult: uA,
+        unitPriceChild: uC,
+      });
     }
 
-    return { ...item, name: tourData.name, image: tourData.image };
-  }));
+    // Calculate amounts
+    // session.amount already contains the final amount AFTER discount
+    const finalAmountVND = Number(session.amount) || 0;
+    const discountAmount = Number(session.discountAmount) || 0;
+    const originalAmount = finalAmountVND + discountAmount; // Original = Final + Discount
 
-  const booking = new Booking({
-    userId,
-    items: enrichedItems,
-    currency,
-    originalAmount,
-    discountAmount,
-    totalAmount,
-    totalVND: currency === 'VND' ? totalAmount : Math.round(totalAmount / FX_VND_USD),
-    totalUSD: currency === 'USD' ? totalAmount : Number((totalAmount * FX_VND_USD).toFixed(2)),
-    voucherCode: voucher.code,
-    promotionId: voucher.promotionId,
-    contactInfo,
-    payment: {
-      provider,
-      orderId,
-      transactionId: paymentData.transactionId,
-      requestId: paymentData.requestId,
-      status: 'pending',
-      amount: totalAmount,
-      currency,
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-      ipAddress: paymentData.ipAddress,
-      userAgent: paymentData.userAgent
-    },
-    status: 'pending'
-  });
+    const totalUSD = Math.round(finalAmountVND * FX_VND_USD * 100) / 100;
 
-  console.log(`[Payment] 📝 Creating booking with status='pending', payment.status='pending'`);
-
-  // Add provider-specific data
-  if (provider === 'paypal' && paymentData.paypal) {
-    booking.payment.paypalData = paymentData.paypal;
-  } else if (provider === 'momo' && paymentData.momo) {
-    booking.payment.momoData = paymentData.momo;
-  }
-
-  booking.generateOrderRef();
-  await booking.save();
-  
-  console.log(`[Payment] ✅ Created booking ${booking.orderRef} for ${provider}: ${orderId}`);
-  return booking;
-}
-
-/**
- * Create booking from PaymentSession (backward compatibility)
- */
-async function createBookingFromSession(session) {
-  const finalAmountVND = Number(session.amount) || 0;
-  const discountAmount = Number(session.discountAmount) || 0;
-  const originalAmount = finalAmountVND + discountAmount;
-
-  const items = (session.items || []).map(it => ({
-    tourId: it.tourId,
-    date: it.meta?.date || '',
-    name: it.name,
-    image: it.meta?.image || it.image || '',
-    adults: Number(it.meta?.adults) || 0,
-    children: Number(it.meta?.children) || 0,
-    unitPriceAdult: Number(it.meta?.unitPriceAdult) || 0,
-    unitPriceChild: Number(it.meta?.unitPriceChild) || 0
-  }));
-
-  return createBookingFromPayment({
-    userId: session.userId,
-    items,
-    provider: session.provider || 'paypal',
-    orderId: session.orderId,
-    pricing: {
+    console.log(`[Payment] 💰 Booking amounts:`, {
       originalAmount,
       discountAmount,
-      totalAmount: finalAmountVND,
-      currency: 'VND'
-    },
-    voucher: {
-      code: session.voucherCode,
-      promotionId: session.promotionId
-    },
-    paymentData: { raw: session.response }
-  });
-}
+      finalAmount: finalAmountVND,
+      voucherCode: session.voucherCode,
+    });
 
-/**
- * Mark booking as paid
- */
-async function markBookingAsPaid(orderId, paymentData = {}) {
-  try {
-    console.log(`[markBookingAsPaid] 🔍 Looking for booking with orderId: ${orderId}`);
-    
-    // Query directly using payment.orderId field
-    const booking = await Booking.findOne({ 'payment.orderId': orderId });
-    
-    if (!booking) {
-      const error = new Error(`Booking not found for payment.orderId: ${orderId}`);
-      console.error('[markBookingAsPaid] ❌ Error:', error.message);
-      
-      // Debug: check if booking exists with different field
-      const bookingByOrderRef = await Booking.findOne({ orderRef: orderId });
-      if (bookingByOrderRef) {
-        console.error(`[markBookingAsPaid] ⚠️ WARNING: Booking found by orderRef instead of payment.orderId!`);
-        console.error(`[markBookingAsPaid] This booking has payment.orderId: ${bookingByOrderRef.payment.orderId}`);
-      }
-      
-      throw error;
-    }
+    const bookingDoc = await Booking.create({
+      userId: session.userId,
+      items: bookingItems,
+      currency: "VND",
+      totalVND: finalAmountVND, // Số tiền sau giảm giá (đã trừ discount)
+      totalUSD: totalUSD,
+      originalAmount: originalAmount, // Số tiền gốc trước giảm
+      discountAmount: discountAmount, // Số tiền được giảm
+      voucherCode: session.voucherCode || undefined, // Mã voucher
+      payment: {
+        provider: session.provider,
+        orderID: session.orderId,
+        status: "completed",
+        raw: additionalData,
+      },
+      status: "paid",
+    });
 
-    console.log(`[markBookingAsPaid] ✅ Found booking ${booking._id}`);
-    console.log(`[markBookingAsPaid] Current status: "${booking.status}", payment.status: "${booking.payment.status}"`);
+    // Tạo booking code nhất quán với frontend
+    const bookingCode = bookingDoc._id.toString().substring(0, 8).toUpperCase();
+    bookingDoc.bookingCode = bookingCode;
+    await bookingDoc.save();
 
-    // Update payment status
-    booking.payment.status = 'completed';
-    booking.payment.paidAt = new Date();
-    
-    if (paymentData.transactionId) {
-      booking.payment.transactionId = paymentData.transactionId;
-    }
+    console.log(
+      `[Payment] Booking created from ${session.provider} payment:`,
+      bookingDoc._id
+    );
 
-    // Update provider-specific data
-    if (booking.payment.provider === 'paypal' && paymentData.paypal) {
-      booking.payment.paypalData = {
-        ...(booking.payment.paypalData?.toObject?.() || {}),
-        ...paymentData.paypal
-      };
-    } else if (booking.payment.provider === 'momo' && paymentData.momo) {
-      booking.payment.momoData = {
-        ...(booking.payment.momoData?.toObject?.() || {}),
-        ...paymentData.momo
-      };
-    }
-
-    // ✅ Update booking status to PAID
-    booking.status = 'paid';
-    
-    console.log(`[markBookingAsPaid] 💾 Saving with status: "${booking.status}", payment.status: "${booking.payment.status}"`);
-    
-    await booking.save();
-    
-    console.log(`[markBookingAsPaid] ✅ SUCCESS! Booking ${booking.orderRef} marked as paid`);
-    console.log(`[markBookingAsPaid] Final verified status: "${booking.status}", payment.status: "${booking.payment.status}"`);
-    
-    // ✅ Clear cart after successful payment (only if payment was from cart mode)
-    try {
-      const PaymentSession = require("../models/PaymentSession");
-      const session = await PaymentSession.findOne({ orderId });
-      
-      if (session && session.mode === 'cart') {
-        console.log(`[markBookingAsPaid] 🛒 Payment was from cart, clearing cart items...`);
-        await clearCartAfterPayment(booking.userId);
-      } else {
-        console.log(`[markBookingAsPaid] 🛒 Payment mode: ${session?.mode || 'unknown'}, skipping cart clear`);
-      }
-    } catch (cartError) {
-      console.error(`[markBookingAsPaid] ⚠️ Failed to clear cart:`, cartError);
-      // Don't fail the booking if cart clear fails
-    }
-    
-    // ✅ Send confirmation email via notify controller
+    // Gửi thông báo thanh toán thành công
     try {
       const User = require("../models/Users");
       const user = await User.findById(booking.userId);
       
       if (user && user.email) {
-        // Gọi notification service
-        const notifyController = require("../controller/notifyController");
-        
-        // Format data for email
-        const emailData = {
-          email: user.email,
-          amount: booking.totalAmount.toLocaleString('vi-VN'),
-          bookingCode: booking.orderRef,
-          tourTitle: booking.items.map(i => i.name).join(', '),
-          bookingId: booking._id.toString()
-        };
-        
-        // Create mock req/res objects
-        const mockReq = { body: emailData };
-        const mockRes = {
-          json: () => {},
-          status: () => mockRes
-        };
-        
-        await notifyController.notifyPaymentSuccess(mockReq, mockRes);
-        console.log(`[markBookingAsPaid] 📧 Confirmation email sent to ${user.email}`);
+        const tourNames = bookingItems.map((item) => item.name).join(", ");
+        // Sử dụng chính xác booking code như frontend hiển thị
+        const bookingCode =
+          bookingDoc.bookingCode ||
+          bookingDoc._id.toString().substring(0, 8).toUpperCase();
+
+        await axios.post(
+          `http://localhost:${process.env.PORT || 4000}/api/notify/payment`,
+          {
+            email: user.email,
+            amount: finalAmountVND.toLocaleString("vi-VN"),
+            bookingCode: bookingCode,
+            tourTitle: tourNames,
+            bookingId: bookingDoc._id,
+          }
+        );
+        console.log(
+          `[Payment] ✅ Sent payment success notification to ${user.email} with booking code: ${bookingCode}`
+        );
       }
-    } catch (emailError) {
-      console.error(`[markBookingAsPaid] ❌ Failed to send confirmation email:`, emailError);
-      // Don't fail the booking if email fails
-    }
-    
-    return booking;
-  } catch (error) {
-    console.error('[markBookingAsPaid] ❌ CRITICAL ERROR marking booking as paid:', error.message);
-    console.error('[markBookingAsPaid] Stack:', error.stack);
-    throw error;
-  }
-}
-
-/**
- * Mark booking as failed
- */
-async function markBookingAsFailed(orderId, failureData = {}) {
-  try {
-    console.log(`[markBookingAsFailed] 🔍 Looking for booking with orderId: ${orderId}`);
-    
-    // Try to find existing booking
-    let booking = await Booking.findOne({ 'payment.orderId': orderId });
-    
-    if (!booking) {
-      console.log(`[markBookingAsFailed] ⚠️ No booking found, creating failed booking record...`);
-      
-      // Get session to create booking
-      const PaymentSession = require("../models/PaymentSession");
-      const session = await PaymentSession.findOne({ orderId });
-      
-      if (!session) {
-        console.error(`[markBookingAsFailed] ❌ No session found for orderId: ${orderId}`);
-        return null;
-      }
-      
-      // Create booking from session
-      booking = await createBookingFromSession(session, { failureData });
-    }
-
-    console.log(`[markBookingAsFailed] ✅ Found/Created booking ${booking._id}`);
-    console.log(`[markBookingAsFailed] Current status: "${booking.status}", payment.status: "${booking.payment.status}"`);
-
-    // Update payment status
-    booking.payment.status = 'failed';
-    booking.payment.failedAt = new Date();
-    
-    if (failureData.transactionId) {
-      booking.payment.transactionId = failureData.transactionId;
-    }
-
-    // Update provider-specific data
-    if (booking.payment.provider === 'paypal' && failureData.paypal) {
-      booking.payment.paypalData = {
-        ...(booking.payment.paypalData?.toObject?.() || {}),
-        ...failureData.paypal
-      };
-    } else if (booking.payment.provider === 'momo' && failureData.momo) {
-      booking.payment.momoData = {
-        ...(booking.payment.momoData?.toObject?.() || {}),
-        ...failureData.momo
-      };
+    } catch (notifyErr) {
+      console.error(
+        "[Payment] ❌ Failed to send payment notification:",
+        notifyErr
+      );
+      // Không throw error để không ảnh hưởng đến quá trình chính
     }
 
     // ✅ Update booking status to CANCELLED (failed payment)

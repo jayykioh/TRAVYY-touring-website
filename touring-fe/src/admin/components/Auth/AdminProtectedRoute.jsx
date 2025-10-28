@@ -1,7 +1,7 @@
 // touring-fe/src/admin/components/Auth/AdminProtectedRoute.jsx
-import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAdminAuth } from '../../context/AdminAuthContext';
+import React from "react";
+import { Navigate } from "react-router-dom";
+import { useAdminAuth } from "../../context/AdminAuthContext";
 
 const AdminProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAdminAuth();

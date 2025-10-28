@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, RefreshCw, Download, Upload, Filter, MoreVertical, CheckCircle, XCircle, Clock, Eye, Edit, Trash2, AlertCircle, Server, Database, Activity, TrendingUp } from 'lucide-react';
+import { Search, RefreshCw, Download, Upload, Filter, MoreVertical, CheckCircle, XCircle, Clock, Eye, Edit, Trash2, AlertCircle, Server, Database, Activity, TrendingUp, Plus, X, Calendar, BarChart3, Settings, Users } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 import StatCard from '../components/Dashboard/StatsCard';
 import { 
   formatPrice, 
@@ -20,6 +21,8 @@ const AgencyAPIData = () => {
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [syncingItem, setSyncingItem] = useState(null);
   const [lastSyncTime, setLastSyncTime] = useState(new Date());
+  const [selectedAgency, setSelectedAgency] = useState(null);
+  const [showAgencyDetail, setShowAgencyDetail] = useState(false);
 
   // Mock data cho tours
   const mockTours = [
@@ -104,6 +107,102 @@ const AgencyAPIData = () => {
       guide: 'Pham Thi D'
     }
   ];
+
+  // Mock data cho agencies
+  const mockAgencies = [
+    {
+      id: 'A001',
+      name: 'Vietravel',
+      apiBaseUrl: 'https://api.vietravel.com/v1',
+      apiKey: 'vt_prod_key_abc123',
+      status: 'active',
+      toursCount: 245,
+      lastSync: '2025-10-26 14:30:00',
+      syncStatus: 'success',
+      responseTime: 324,
+      headers: { 'Authorization': 'Bearer token', 'Content-Type': 'application/json' },
+      params: { 'limit': 100, 'offset': 0 }
+    },
+    {
+      id: 'A002',
+      name: 'Saigontourist',
+      apiBaseUrl: 'https://api.saigontourist.com/v2',
+      apiKey: 'st_prod_key_xyz789',
+      status: 'active',
+      toursCount: 189,
+      lastSync: '2025-10-26 13:15:00',
+      syncStatus: 'success',
+      responseTime: 456,
+      headers: { 'Authorization': 'Bearer token', 'Content-Type': 'application/json' },
+      params: { 'limit': 50, 'offset': 0 }
+    },
+    {
+      id: 'A003',
+      name: 'Ben Thanh Tours',
+      apiBaseUrl: 'https://api.benthanhours.com/v1',
+      apiKey: 'bt_prod_key_def456',
+      status: 'active',
+      toursCount: 156,
+      lastSync: '2025-10-26 12:00:00',
+      syncStatus: 'failed',
+      responseTime: null,
+      headers: { 'Authorization': 'Bearer token', 'Content-Type': 'application/json' },
+      params: { 'limit': 100, 'offset': 0 }
+    },
+    {
+      id: 'A004',
+      name: 'Asia Tours',
+      apiBaseUrl: 'https://api.asiatours.com/v3',
+      apiKey: 'at_prod_key_ghi123',
+      status: 'disabled',
+      toursCount: 98,
+      lastSync: '2025-10-25 18:45:00',
+      syncStatus: 'pending',
+      responseTime: null,
+      headers: { 'Authorization': 'Bearer token', 'Content-Type': 'application/json' },
+      params: { 'limit': 100, 'offset': 0 }
+    }
+  ];
+
+  // Mock data cho sync logs
+  const mockSyncLogs = {
+    'A001': [
+      { timestamp: '2025-10-26 14:30:00', status: 'success', tourCount: 245, responseTime: 324, error: null },
+      { timestamp: '2025-10-26 10:15:00', status: 'success', tourCount: 245, responseTime: 298, error: null },
+      { timestamp: '2025-10-26 06:00:00', status: 'success', tourCount: 243, responseTime: 412, error: null }
+    ],
+    'A002': [
+      { timestamp: '2025-10-26 13:15:00', status: 'success', tourCount: 189, responseTime: 456, error: null },
+      { timestamp: '2025-10-26 09:00:00', status: 'failed', tourCount: 0, responseTime: null, error: 'Connection timeout' },
+      { timestamp: '2025-10-26 03:30:00', status: 'success', tourCount: 189, responseTime: 378, error: null }
+    ],
+    'A003': [
+      { timestamp: '2025-10-26 12:00:00', status: 'failed', tourCount: 0, responseTime: null, error: 'Invalid API key' },
+      { timestamp: '2025-10-26 08:00:00', status: 'success', tourCount: 156, responseTime: 512, error: null }
+    ]
+  };
+
+  // Mock data cho guides từ mỗi agency
+  const agencyGuides = {
+    'A001': [
+      { id: 'AG001', name: 'Tran Van A', email: 'trana@vietravel.com', phone: '0901234567', specialties: ['Beach', 'Island'], languages: ['English', 'Vietnamese', 'French'], rating: 4.9, totalTours: 234, status: 'active' },
+      { id: 'AG002', name: 'Pham Thi B', email: 'phamb@vietravel.com', phone: '0902345678', specialties: ['Cultural', 'Historical'], languages: ['English', 'Vietnamese', 'Chinese'], rating: 4.7, totalTours: 156, status: 'active' },
+      { id: 'AG003', name: 'Nguyen Van C', email: 'nguyenc@vietravel.com', phone: '0903456789', specialties: ['Mountain', 'Adventure'], languages: ['English', 'Vietnamese'], rating: 4.8, totalTours: 189, status: 'active' },
+      { id: 'AG004', name: 'Le Thi D', email: 'lethi@vietravel.com', phone: '0904567890', specialties: ['Food', 'Cooking'], languages: ['English', 'Vietnamese'], rating: 4.6, totalTours: 98, status: 'inactive' }
+    ],
+    'A002': [
+      { id: 'AG101', name: 'Ho Van A', email: 'hova@saigontour.com', phone: '0911234567', specialties: ['Urban', 'Heritage'], languages: ['English', 'Vietnamese'], rating: 4.8, totalTours: 167, status: 'active' },
+      { id: 'AG102', name: 'Vo Thi B', email: 'vothi@saigontour.com', phone: '0912345678', specialties: ['River', 'Delta'], languages: ['English', 'Vietnamese', 'Thai'], rating: 4.9, totalTours: 212, status: 'active' },
+      { id: 'AG103', name: 'Tran Van C', email: 'tranc@saigontour.com', phone: '0913456789', specialties: ['Market', 'Street Food'], languages: ['English', 'Vietnamese'], rating: 4.7, totalTours: 145, status: 'active' }
+    ],
+    'A003': [
+      { id: 'AG201', name: 'Pham Van A', email: 'phamabt@benthanh.com', phone: '0921234567', specialties: ['Temple', 'Religious'], languages: ['English', 'Vietnamese'], rating: 4.6, totalTours: 123, status: 'active' },
+      { id: 'AG202', name: 'Dang Thi B', email: 'dangthi@benthanh.com', phone: '0922345678', specialties: ['Cave', 'Underground'], languages: ['English', 'Vietnamese'], rating: 4.5, totalTours: 89, status: 'active' }
+    ],
+    'A004': [
+      { id: 'AG301', name: 'Ngo Van A', email: 'ngova@asiatours.com', phone: '0931234567', specialties: ['General'], languages: ['English', 'Vietnamese'], rating: 4.4, totalTours: 67, status: 'inactive' }
+    ]
+  };
 
   // Mock data cho bookings
   const mockBookings = [
@@ -296,7 +395,7 @@ const AgencyAPIData = () => {
     setTimeout(() => {
       setSyncingItem(null);
       setLastSyncTime(new Date());
-      alert(`✓ Synced ${id} successfully`);
+      toast.success(`✓ Synced ${id} successfully`);
     }, 1500);
   };
 
@@ -305,7 +404,7 @@ const AgencyAPIData = () => {
     setTimeout(() => {
       setShowSyncModal(false);
       setLastSyncTime(new Date());
-      alert('✓ All data synced successfully');
+      toast.success('✓ All data synced successfully');
     }, 2000);
   };
 
@@ -340,7 +439,7 @@ const AgencyAPIData = () => {
     input.onchange = (e) => {
       const file = e.target.files[0];
       if (file) {
-        alert(`Importing ${file.name}...`);
+        toast.info(`Importing ${file.name}...`);
       }
     };
     input.click();
@@ -348,10 +447,10 @@ const AgencyAPIData = () => {
 
   const handleBulkSync = () => {
     if (selectedItems.length === 0) {
-      alert('Please select items to sync');
+      toast.error('Please select items to sync');
       return;
     }
-    alert(`Syncing ${selectedItems.length} items...`);
+    toast.success(`Syncing ${selectedItems.length} items...`);
     setSelectedItems([]);
   };
 
@@ -392,8 +491,41 @@ const AgencyAPIData = () => {
     return matchesSearch && matchesFilter;
   });
 
+  const filteredAgencies = mockAgencies.filter(agency => {
+    const matchesSearch = 
+      agency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      agency.apiBaseUrl.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === 'all' || agency.status === filterStatus;
+    return matchesSearch && matchesFilter;
+  });
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: "#fff",
+            color: "#333",
+            borderRadius: "12px",
+            padding: "16px",
+            boxShadow: "0 10px 25px rgba(0, 121, 128, 0.15)",
+          },
+          success: {
+            iconTheme: {
+              primary: "#007980",
+              secondary: "#fff",
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: "#ef4444",
+              secondary: "#fff",
+            },
+          },
+        }}
+      />
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
@@ -416,8 +548,8 @@ const AgencyAPIData = () => {
 
       {/* Sync Modal */}
       {showSyncModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100">
             <div className="flex items-center gap-3 mb-4">
               <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
               <h3 className="text-lg font-semibold">Syncing All Data...</h3>
@@ -438,7 +570,8 @@ const AgencyAPIData = () => {
             {[
               { key: 'tours', label: 'Tours', count: mockTours.length },
               { key: 'bookings', label: 'Bookings', count: mockBookings.length },
-              { key: 'guides', label: 'Guides', count: mockGuides.length }
+              { key: 'guides', label: 'Guides', count: mockGuides.length },
+              { key: 'agencies', label: 'Agencies', count: mockAgencies.length }
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -494,6 +627,15 @@ const AgencyAPIData = () => {
             </div>
 
             <div className="flex gap-2 w-full lg:w-auto">
+              {activeTab === 'agencies' && (
+                <button
+                  onClick={() => toast.error('Add New Agency feature coming soon')}
+                  className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add New Agency
+                </button>
+              )}
               {selectedItems.length > 0 && (
                 <button
                   onClick={handleBulkSync}
@@ -806,10 +948,351 @@ const AgencyAPIData = () => {
           </div>
         )}
 
+        {/* Agencies Table */}
+        {activeTab === 'agencies' && !showAgencyDetail && (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.length === filteredAgencies.length && filteredAgencies.length > 0}
+                      onChange={() => handleSelectAll(filteredAgencies)}
+                      className="rounded border-gray-300"
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Agency Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">API Base URL</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tours Synced</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Sync</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sync Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredAgencies.map((agency) => (
+                  <tr key={agency.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.includes(agency.id)}
+                        onChange={() => toggleItemSelection(agency.id)}
+                        className="rounded border-gray-300"
+                      />
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{agency.name}</td>
+                    <td className="px-6 py-4">
+                      <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-700 max-w-xs truncate inline-block">
+                        {agency.apiBaseUrl}
+                      </code>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 font-medium">{agency.toursCount}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{agency.lastSync}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(agency.syncStatus)}`}>
+                        {getStatusIcon(agency.syncStatus)}
+                        {agency.syncStatus}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(agency.status)}`}>
+                        {getStatusIcon(agency.status)}
+                        {agency.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedAgency(agency);
+                            setShowAgencyDetail(true);
+                          }}
+                          className="p-1 hover:bg-gray-100 rounded"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4 text-gray-600" />
+                        </button>
+                        <button
+                          onClick={() => handleSync(agency.id)}
+                          disabled={syncingItem === agency.id}
+                          className="p-1 hover:bg-gray-100 rounded disabled:opacity-50"
+                          title="Sync Now"
+                        >
+                          <RefreshCw className={`w-4 h-4 text-gray-600 ${syncingItem === agency.id ? 'animate-spin' : ''}`} />
+                        </button>
+                        <button className="p-1 hover:bg-gray-100 rounded" title="Edit Config">
+                          <Edit className="w-4 h-4 text-gray-600" />
+                        </button>
+                        <button className="p-1 hover:bg-gray-100 rounded" title="Disable">
+                          <AlertCircle className="w-4 h-4 text-yellow-600" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Agency Detail View */}
+        {activeTab === 'agencies' && showAgencyDetail && selectedAgency && (
+          <div className="p-6">
+            {/* Back Button */}
+            <button
+              onClick={() => setShowAgencyDetail(false)}
+              className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+            >
+              <X className="w-5 h-5" />
+              Quay lại
+            </button>
+
+            {/* Agency Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-bold mb-2">{selectedAgency.name}</h2>
+                  <p className="text-blue-100">API Configuration & Sync Management</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-blue-100 text-sm mb-2">Status</p>
+                  <span className="inline-flex items-center gap-2 px-4 py-2 bg-white bg-opacity-20 rounded-lg font-semibold">
+                    {getStatusIcon(selectedAgency.status)}
+                    {selectedAgency.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+              {/* Configuration Info */}
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-lg shadow p-6 mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-blue-600" />
+                    Configuration
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">API Base URL</label>
+                      <code className="block w-full bg-gray-100 border border-gray-300 rounded px-4 py-2 text-sm text-gray-700 font-mono">
+                        {selectedAgency.apiBaseUrl}
+                      </code>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                      <code className="block w-full bg-gray-100 border border-gray-300 rounded px-4 py-2 text-sm text-gray-700 font-mono">
+                        {selectedAgency.apiKey}
+                      </code>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Headers</label>
+                        <div className="bg-gray-50 rounded border border-gray-200 p-3">
+                          {Object.entries(selectedAgency.headers).map(([key, value]) => (
+                            <div key={key} className="text-xs mb-1">
+                              <span className="font-mono text-gray-700">{key}: </span>
+                              <span className="text-gray-600">{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Parameters</label>
+                        <div className="bg-gray-50 rounded border border-gray-200 p-3">
+                          {Object.entries(selectedAgency.params).map(([key, value]) => (
+                            <div key={key} className="text-xs mb-1">
+                              <span className="font-mono text-gray-700">{key}: </span>
+                              <span className="text-gray-600">{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sync Logs */}
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-blue-600" />
+                    Recent Sync Logs
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-medium text-gray-700">Timestamp</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-700">Status</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-700">Tours</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-700">Response Time</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-700">Error</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {mockSyncLogs[selectedAgency.id]?.map((log, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-4 py-2 text-gray-900">{log.timestamp}</td>
+                            <td className="px-4 py-2">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(log.status)}`}>
+                                {getStatusIcon(log.status)}
+                                {log.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2 text-gray-900 font-medium">{log.tourCount}</td>
+                            <td className="px-4 py-2 text-gray-600">{log.responseTime ? `${log.responseTime}ms` : '-'}</td>
+                            <td className="px-4 py-2 text-red-600 text-xs">{log.error || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats Sidebar */}
+              <div className="space-y-4">
+                {/* Tours Summary */}
+                <div className="bg-white rounded-lg shadow p-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-blue-600" />
+                    Tour Summary
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                      <span className="text-gray-600">Total Tours</span>
+                      <span className="text-2xl font-bold text-gray-900">{selectedAgency.toursCount}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                      <span className="text-gray-600">Active</span>
+                      <span className="text-lg font-semibold text-green-600">{Math.floor(selectedAgency.toursCount * 0.85)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                      <span className="text-gray-600">Hidden</span>
+                      <span className="text-lg font-semibold text-yellow-600">{Math.floor(selectedAgency.toursCount * 0.10)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Failed Parse</span>
+                      <span className="text-lg font-semibold text-red-600">{Math.floor(selectedAgency.toursCount * 0.05)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Last Sync Info */}
+                <div className="bg-white rounded-lg shadow p-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-blue-600" />
+                    Last Sync
+                  </h4>
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-gray-600 text-xs mb-1">Time</p>
+                      <p className="text-gray-900 font-medium">{selectedAgency.lastSync}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 text-xs mb-1">Response Time</p>
+                      <p className="text-gray-900 font-medium">{selectedAgency.responseTime ? `${selectedAgency.responseTime}ms` : 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => handleSync(selectedAgency.id)}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Sync Now
+                  </button>
+                  <button className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2 font-medium">
+                    <Edit className="w-4 h-4" />
+                    Edit Config
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Guides from this Agency */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5 text-teal-600" />
+                Guides from {selectedAgency.name}
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Name</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Email</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Phone</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Specialties</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Languages</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Rating</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Tours</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-700">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {agencyGuides[selectedAgency.id]?.map((guide) => (
+                      <tr key={guide.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium text-gray-900">{guide.name}</td>
+                        <td className="px-4 py-3 text-gray-600">{guide.email}</td>
+                        <td className="px-4 py-3 text-gray-600">{guide.phone}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {guide.specialties.map((spec, idx) => (
+                              <span key={idx} className="px-2 py-1 bg-teal-100 text-teal-700 text-xs rounded">
+                                {spec}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {guide.languages.map((lang, idx) => (
+                              <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                                {lang}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium text-gray-900">{guide.rating}</span>
+                            <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-900 font-medium">{guide.totalTours}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(guide.status)}`}>
+                            {getStatusIcon(guide.status)}
+                            {guide.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!agencyGuides[selectedAgency.id] || agencyGuides[selectedAgency.id].length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    No guides available for this agency
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Empty State */}
         {((activeTab === 'tours' && filteredTours.length === 0) ||
           (activeTab === 'bookings' && filteredBookings.length === 0) ||
-          (activeTab === 'guides' && filteredGuides.length === 0)) && (
+          (activeTab === 'guides' && filteredGuides.length === 0) ||
+          (activeTab === 'agencies' && filteredAgencies.length === 0)) && (
           <div className="p-12 text-center">
             <Database className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No data found</h3>

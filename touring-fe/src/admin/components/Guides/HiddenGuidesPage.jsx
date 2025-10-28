@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Eye, Search, RotateCcw, Calendar, User, AlertCircle } from 'lucide-react';
+import Pagination from '../Common/Pagination';
 import { MOCK_HIDDEN_GUIDES } from '../../data/guideData';
 
 const HiddenGuidesPage = () => {
@@ -7,6 +8,7 @@ const HiddenGuidesPage = () => {
   const [selectedGuide, setSelectedGuide] = useState(null);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [imageErrors, setImageErrors] = useState({});
   const itemsPerPage = 10;
 
   const filteredGuides = useMemo(() => {
@@ -146,11 +148,20 @@ const HiddenGuidesPage = () => {
                   <tr key={guide.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <img
-                          src={guide.avatar}
-                          alt={guide.name}
-                          className="w-10 h-10 rounded-full mr-3"
-                        />
+                        {imageErrors[guide.id] ? (
+                          <div className="w-10 h-10 rounded-full mr-3 bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                            <span className="text-white text-sm font-bold">
+                              {guide.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        ) : (
+                          <img
+                            src={guide.avatar}
+                            alt={guide.name}
+                            onError={() => setImageErrors(prev => ({ ...prev, [guide.id]: true }))}
+                            className="w-10 h-10 rounded-full mr-3 object-cover flex-shrink-0"
+                          />
+                        )}
                         <div>
                           <p className="font-medium text-gray-900">{guide.name}</p>
                           <p className="text-sm text-gray-500">{guide.email}</p>
@@ -201,53 +212,20 @@ const HiddenGuidesPage = () => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-700">
-                Hiển thị <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> đến{' '}
-                <span className="font-medium">
-                  {Math.min(currentPage * itemsPerPage, filteredGuides.length)}
-                </span>{' '}
-                trong tổng số <span className="font-medium">{filteredGuides.length}</span> kết quả
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Trước
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 border rounded-lg ${
-                      currentPage === page
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Sau
-                </button>
-              </div>
-            </div>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={filteredGuides.length}
+            itemsPerPage={itemsPerPage}
+          />
         )}
       </div>
 
       {/* Restore Confirmation Modal */}
       {showRestoreModal && selectedGuide && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100">
             <div className="flex items-center mb-4">
               <RotateCcw className="w-6 h-6 text-green-600 mr-2" />
               <h3 className="text-lg font-semibold">Xác nhận khôi phục</h3>

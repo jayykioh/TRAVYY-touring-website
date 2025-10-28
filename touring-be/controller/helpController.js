@@ -4,36 +4,36 @@ const HelpFeedback = require("../models/HelpFeedback");
 
 // Categories configuration
 const CATEGORIES = {
-  'booking-payment': {
-    name: 'Đặt tour & thanh toán',
-    icon: '🧾',
-    description: 'Hướng dẫn đặt tour và thanh toán'
+  "booking-payment": {
+    name: "Đặt tour & thanh toán",
+    icon: "🧾",
+    description: "Hướng dẫn đặt tour và thanh toán",
   },
-  'voucher-promotion': {
-    name: 'Mã giảm giá & khuyến mãi',
-    icon: '🎟',
-    description: 'Cách sử dụng và nhận voucher'
+  "voucher-promotion": {
+    name: "Mã giảm giá & khuyến mãi",
+    icon: "🎟",
+    description: "Cách sử dụng và nhận voucher",
   },
-  'refund-cancel': {
-    name: 'Hoàn tiền & hủy tour',
-    icon: '💰',
-    description: 'Chính sách hoàn tiền và hủy đặt'
+  "refund-cancel": {
+    name: "Hoàn tiền & hủy tour",
+    icon: "💰",
+    description: "Chính sách hoàn tiền và hủy đặt",
   },
-  'account-security': {
-    name: 'Tài khoản & bảo mật',
-    icon: '👤',
-    description: 'Quản lý tài khoản và bảo mật'
+  "account-security": {
+    name: "Tài khoản & bảo mật",
+    icon: "👤",
+    description: "Quản lý tài khoản và bảo mật",
   },
-  'guide-agency': {
-    name: 'Hướng dẫn viên / Agency',
-    icon: '🧳',
-    description: 'Dành cho đối tác hướng dẫn'
+  "guide-agency": {
+    name: "Hướng dẫn viên / Agency",
+    icon: "🧳",
+    description: "Dành cho đối tác hướng dẫn",
   },
-  'contact-report': {
-    name: 'Liên hệ / Báo lỗi',
-    icon: '⚙️',
-    description: 'Liên hệ hỗ trợ và báo lỗi'
-  }
+  "contact-report": {
+    name: "Liên hệ / Báo lỗi",
+    icon: "⚙️",
+    description: "Liên hệ hỗ trợ và báo lỗi",
+  },
 };
 
 // Get all categories with article count
@@ -41,26 +41,26 @@ exports.getCategories = async (req, res) => {
   try {
     const categoriesWithCount = await Promise.all(
       Object.entries(CATEGORIES).map(async ([slug, info]) => {
-        const count = await HelpArticle.countDocuments({ 
-          category: slug, 
-          status: 'published' 
+        const count = await HelpArticle.countDocuments({
+          category: slug,
+          status: "published",
         });
         return {
           slug,
           ...info,
-          articleCount: count
+          articleCount: count,
         };
       })
     );
 
     res.json({
       success: true,
-      data: categoriesWithCount
+      data: categoriesWithCount,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -69,33 +69,33 @@ exports.getCategories = async (req, res) => {
 exports.getArticlesByCategory = async (req, res) => {
   try {
     const { category } = req.params;
-    
+
     if (!CATEGORIES[category]) {
       return res.status(404).json({
         success: false,
-        message: 'Category not found'
+        message: "Category not found",
       });
     }
 
-    const articles = await HelpArticle.find({ 
-      category, 
-      status: 'published' 
+    const articles = await HelpArticle.find({
+      category,
+      status: "published",
     })
-      .select('title slug excerpt icon views helpfulCount notHelpfulCount')
+      .select("title slug excerpt icon views helpfulCount notHelpfulCount")
       .sort({ order: 1, createdAt: -1 });
 
     res.json({
       success: true,
       category: {
         slug: category,
-        ...CATEGORIES[category]
+        ...CATEGORIES[category],
       },
-      data: articles
+      data: articles,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -104,14 +104,16 @@ exports.getArticlesByCategory = async (req, res) => {
 exports.getArticle = async (req, res) => {
   try {
     const { slug } = req.params;
-    
-    const article = await HelpArticle.findOne({ slug, status: 'published' })
-      .populate('relatedArticles', 'title slug excerpt icon');
+
+    const article = await HelpArticle.findOne({
+      slug,
+      status: "published",
+    }).populate("relatedArticles", "title slug excerpt icon");
 
     if (!article) {
       return res.status(404).json({
         success: false,
-        message: 'Article not found'
+        message: "Article not found",
       });
     }
 
@@ -121,12 +123,12 @@ exports.getArticle = async (req, res) => {
 
     res.json({
       success: true,
-      data: article
+      data: article,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -135,37 +137,39 @@ exports.getArticle = async (req, res) => {
 exports.searchArticles = async (req, res) => {
   try {
     const { q, category } = req.query;
-    
+
     if (!q || q.trim().length < 2) {
       return res.status(400).json({
         success: false,
-        message: 'Search query too short'
+        message: "Search query too short",
       });
     }
 
     const filter = {
-      status: 'published',
-      $text: { $search: q }
+      status: "published",
+      $text: { $search: q },
     };
 
     if (category && CATEGORIES[category]) {
       filter.category = category;
     }
 
-    const articles = await HelpArticle.find(filter, { score: { $meta: "textScore" } })
-      .select('title slug excerpt category icon')
+    const articles = await HelpArticle.find(filter, {
+      score: { $meta: "textScore" },
+    })
+      .select("title slug excerpt category icon")
       .sort({ score: { $meta: "textScore" } })
       .limit(10);
 
     res.json({
       success: true,
       query: q,
-      data: articles
+      data: articles,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -181,17 +185,20 @@ exports.submitFeedback = async (req, res) => {
     if (!article) {
       return res.status(404).json({
         success: false,
-        message: 'Article not found'
+        message: "Article not found",
       });
     }
 
     // Check if user already gave feedback (prevent spam)
     if (userId) {
-      const existingFeedback = await HelpFeedback.findOne({ articleId, userId });
+      const existingFeedback = await HelpFeedback.findOne({
+        articleId,
+        userId,
+      });
       if (existingFeedback) {
         return res.status(400).json({
           success: false,
-          message: 'You have already submitted feedback for this article'
+          message: "You have already submitted feedback for this article",
         });
       }
     }
@@ -203,7 +210,7 @@ exports.submitFeedback = async (req, res) => {
       helpful,
       comment,
       ipAddress: req.ip,
-      userAgent: req.get('user-agent')
+      userAgent: req.get("user-agent"),
     });
     await feedback.save();
 
@@ -217,17 +224,17 @@ exports.submitFeedback = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Thank you for your feedback!',
+      message: "Thank you for your feedback!",
       data: {
         helpfulCount: article.helpfulCount,
         notHelpfulCount: article.notHelpfulCount,
-        helpfulnessRate: article.helpfulnessRate
-      }
+        helpfulnessRate: article.helpfulnessRate,
+      },
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -235,22 +242,109 @@ exports.submitFeedback = async (req, res) => {
 // Get featured/popular articles
 exports.getFeaturedArticles = async (req, res) => {
   try {
-    const articles = await HelpArticle.find({ 
-      status: 'published',
-      featured: true
+    const articles = await HelpArticle.find({
+      status: "published",
+      featured: true,
     })
-      .select('title slug excerpt category icon views')
+      .select("title slug excerpt category icon views")
       .sort({ views: -1 })
       .limit(5);
 
     res.json({
       success: true,
-      data: articles
+      data: articles,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
+    });
+  }
+};
+
+// [ADMIN] Get all feedback (Customer Requests)
+exports.getAllFeedback = async (req, res) => {
+  try {
+    const feedback = await HelpFeedback.find()
+      .populate("articleId", "title slug category")
+      .populate("userId", "name email phone")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: feedback,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// [ADMIN] Get single feedback
+exports.getFeedbackById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const feedback = await HelpFeedback.findById(id)
+      .populate("articleId", "title slug category content")
+      .populate("userId", "name email phone");
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: feedback,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// [ADMIN] Update feedback status
+exports.updateFeedbackStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, responseMessage } = req.body;
+
+    const feedback = await HelpFeedback.findByIdAndUpdate(
+      id,
+      {
+        status,
+        responseMessage,
+        respondedAt: status === "resolved" ? new Date() : undefined,
+        respondedBy: req.userId,
+      },
+      { new: true }
+    )
+      .populate("articleId", "title slug")
+      .populate("userId", "name email");
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Feedback status updated",
+      data: feedback,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
@@ -260,18 +354,18 @@ exports.createArticle = async (req, res) => {
   try {
     const article = new HelpArticle({
       ...req.body,
-      createdBy: req.userId
+      createdBy: req.userId,
     });
     await article.save();
 
     res.status(201).json({
       success: true,
-      data: article
+      data: article,
     });
   } catch (error) {
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -280,12 +374,12 @@ exports.createArticle = async (req, res) => {
 exports.updateArticle = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const article = await HelpArticle.findByIdAndUpdate(
       id,
       {
         ...req.body,
-        lastUpdatedBy: req.userId
+        lastUpdatedBy: req.userId,
       },
       { new: true, runValidators: true }
     );
@@ -293,18 +387,18 @@ exports.updateArticle = async (req, res) => {
     if (!article) {
       return res.status(404).json({
         success: false,
-        message: 'Article not found'
+        message: "Article not found",
       });
     }
 
     res.json({
       success: true,
-      data: article
+      data: article,
     });
   } catch (error) {
     res.status(400).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -313,24 +407,24 @@ exports.updateArticle = async (req, res) => {
 exports.deleteArticle = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const article = await HelpArticle.findByIdAndDelete(id);
-    
+
     if (!article) {
       return res.status(404).json({
         success: false,
-        message: 'Article not found'
+        message: "Article not found",
       });
     }
 
     res.json({
       success: true,
-      message: 'Article deleted'
+      message: "Article deleted",
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };

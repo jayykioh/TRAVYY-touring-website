@@ -37,7 +37,7 @@ export default function TourDetailPage() {
   const [isFav, setIsFav] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState("");
-  
+
   // promotions state
   const [promotions, setPromotions] = useState([]);
   const [showPromotions, setShowPromotions] = useState(false);
@@ -88,7 +88,11 @@ export default function TourDetailPage() {
               .then((data) => setIsFav(data.isFav))
               .catch(() => {});
           }
-          setAllTours(Array.isArray(listData) ? listData : []);
+          // Filter out hidden tours from the list
+          const visibleTours = Array.isArray(listData)
+            ? listData.filter((tour) => !tour.isHidden)
+            : [];
+          setAllTours(visibleTours);
         }
       } catch (e) {
         if (!ignore && e.name !== "AbortError") {
@@ -112,11 +116,11 @@ export default function TourDetailPage() {
   useEffect(() => {
     async function loadPromotions() {
       try {
-        console.log('🎫 TourDetailPage: Loading promotions with auth');
-        const data = withAuth 
-          ? await withAuth('/api/promotions/active')
-          : await fetch('/api/promotions/active').then(r => r.json());
-        console.log('✅ TourDetailPage: Got promotions:', data.data?.length);
+        console.log("🎫 TourDetailPage: Loading promotions with auth");
+        const data = withAuth
+          ? await withAuth("/api/promotions/active")
+          : await fetch("/api/promotions/active").then((r) => r.json());
+        console.log("✅ TourDetailPage: Got promotions:", data.data?.length);
         setPromotions(data.data || []);
       } catch (error) {
         console.error("❌ TourDetailPage: Error loading promotions:", error);
@@ -126,8 +130,8 @@ export default function TourDetailPage() {
 
     // ✅ Listen event refresh
     const handleRefresh = () => loadPromotions();
-    window.addEventListener('promotion-changed', handleRefresh);
-    return () => window.removeEventListener('promotion-changed', handleRefresh);
+    window.addEventListener("promotion-changed", handleRefresh);
+    return () => window.removeEventListener("promotion-changed", handleRefresh);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -573,7 +577,7 @@ export default function TourDetailPage() {
           </div>
 
           {/* Promotion Banner - NEW */}
-          <PromotionBanner 
+          <PromotionBanner
             promotions={promotions}
             showPromotions={showPromotions}
             setShowPromotions={setShowPromotions}
@@ -620,7 +624,7 @@ export default function TourDetailPage() {
               <div className="mt-6">
                 <LocationCard lat={lat} lng={lng} title={title} />
               </div>
-           
+
               <FAQSection />
             </div>
 
@@ -677,8 +681,6 @@ function Section({ title, children }) {
     </div>
   );
 }
-
-
 
 function BookingSidebar({
   // ngày
@@ -1014,7 +1016,12 @@ function ImageGalleryModal({ images, onClose }) {
     document.body
   );
 }
-function PromotionBanner({ promotions = [], showPromotions, setShowPromotions, discountPercent }) {
+function PromotionBanner({
+  promotions = [],
+  showPromotions,
+  setShowPromotions,
+  discountPercent,
+}) {
   const [copiedCode, setCopiedCode] = useState(null);
 
   const handleCopyCode = (code) => {
@@ -1023,16 +1030,16 @@ function PromotionBanner({ promotions = [], showPromotions, setShowPromotions, d
     toast.success(`Đã sao chép mã: ${code}`, {
       duration: 2000,
       style: {
-        background: '#10b981',
-        color: 'white',
-        fontWeight: '500',
+        background: "#10b981",
+        color: "white",
+        fontWeight: "500",
       },
     });
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
   const hasPromotions = Array.isArray(promotions) && promotions.length > 0;
-  
+
   if (!hasPromotions) return null;
 
   return (
@@ -1049,7 +1056,9 @@ function PromotionBanner({ promotions = [], showPromotions, setShowPromotions, d
             </div>
             <div>
               <h3 className="font-semibold text-gray-900">Mã giảm giá</h3>
-              <p className="text-sm text-gray-600">{promotions.length} mã khả dụng</p>
+              <p className="text-sm text-gray-600">
+                {promotions.length} mã khả dụng
+              </p>
             </div>
           </div>
 
@@ -1059,7 +1068,11 @@ function PromotionBanner({ promotions = [], showPromotions, setShowPromotions, d
                 Giảm {discountPercent}%
               </span>
             )}
-            <div className={`text-gray-600 transition-transform ${showPromotions ? 'rotate-180' : ''}`}>
+            <div
+              className={`text-gray-600 transition-transform ${
+                showPromotions ? "rotate-180" : ""
+              }`}
+            >
               ▼
             </div>
           </div>
@@ -1070,7 +1083,7 @@ function PromotionBanner({ promotions = [], showPromotions, setShowPromotions, d
       {showPromotions && (
         <div className="rounded-2xl p-5 mb-6 backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)] space-y-3">
           <h3 className="font-semibold text-gray-900 mb-3">Chọn mã giảm giá</h3>
-          
+
           {promotions.map((promo) => (
             <PromotionCard
               key={promo._id}
@@ -1090,7 +1103,6 @@ function PromotionBanner({ promotions = [], showPromotions, setShowPromotions, d
     </>
   );
 }
-
 
 function PromotionCard({ promotion, copiedCode, onCopy }) {
   const isExpiringSoon = () => {
@@ -1117,7 +1129,7 @@ function PromotionCard({ promotion, copiedCode, onCopy }) {
           ⚡ Sắp hết hạn
         </span>
       )}
-      
+
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 space-y-3">
           {/* Code */}
@@ -1144,20 +1156,32 @@ function PromotionCard({ promotion, copiedCode, onCopy }) {
             {promotion.minOrderValue > 0 && (
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-400">•</span>
-                <span>Đơn tối thiểu: <span className="font-semibold text-gray-900">{formatCurrency(promotion.minOrderValue)}₫</span></span>
+                <span>
+                  Đơn tối thiểu:{" "}
+                  <span className="font-semibold text-gray-900">
+                    {formatCurrency(promotion.minOrderValue)}₫
+                  </span>
+                </span>
               </div>
             )}
-            
+
             {promotion.maxDiscount && promotion.type === "percentage" && (
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-400">•</span>
-                <span>Giảm tối đa: <span className="font-semibold text-gray-900">{formatCurrency(promotion.maxDiscount)}₫</span></span>
+                <span>
+                  Giảm tối đa:{" "}
+                  <span className="font-semibold text-gray-900">
+                    {formatCurrency(promotion.maxDiscount)}₫
+                  </span>
+                </span>
               </div>
             )}
-            
+
             <div className="flex items-center gap-1.5">
               <span className="text-gray-400">•</span>
-              <span>HSD: {new Date(promotion.endDate).toLocaleDateString('vi-VN')}</span>
+              <span>
+                HSD: {new Date(promotion.endDate).toLocaleDateString("vi-VN")}
+              </span>
             </div>
           </div>
         </div>
@@ -1167,8 +1191,8 @@ function PromotionCard({ promotion, copiedCode, onCopy }) {
           onClick={() => onCopy(promotion.code)}
           className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
             isCopied
-              ? 'bg-green-500 text-white'
-              : 'bg-gray-900 text-white hover:bg-gray-800'
+              ? "bg-green-500 text-white"
+              : "bg-gray-900 text-white hover:bg-gray-800"
           }`}
         >
           {isCopied ? (

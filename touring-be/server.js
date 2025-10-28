@@ -2,9 +2,6 @@ const path = require("path");
 // Load .env explicitly relative to this file to avoid CWD issues
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 const PORT = process.env.PORT || 4000;
-
-require("./config/db");
-
 const express = require("express");
 const mongoose = require("mongoose");
 const passport = require("passport");
@@ -18,8 +15,8 @@ const cookieParser = require("cookie-parser");
 const tourRoutes = require("./routes/tour.routes");
 const profileRoutes = require("./routes/profile.routes");
 const authRoutes = require("./routes/auth.routes");
-// Admin
-const adminAuthRoutes = require("./routes/admin.routes");
+// Admin Routes (modular structure)
+const adminRoutes = require("./routes/admin");
 const blogRoutes = require("./routes/blogs");
 const vnAddrRoutes = require("./middlewares/vnAddress.routes");
 const cartRoutes = require("./routes/carts.routes");
@@ -30,6 +27,10 @@ const locationRoutes = require("./routes/location.routes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const app = express();
 const isProd = process.env.NODE_ENV === "production";
+const MONGO_URI =
+  process.env.MONGO_URI ||
+  process.env.MONGODB_URI ||
+  "mongodb://127.0.0.1:27017/travelApp";
 const notifyRoutes = require("./routes/notifyRoutes");
 const paymentRoutes = require("./routes/payment.routes");
 const reviewRoutes = require("./routes/reviewRoutes");
@@ -81,7 +82,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URI,
+      mongoUrl: MONGO_URI,
       collectionName: "sessions",
       ttl: 60 * 60 * 24 * 7,
     }),
@@ -106,14 +107,24 @@ app.use("/api/tours", tourRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
-app.use("/api/admin", adminAuthRoutes);
+app.use("/api/admin", adminRoutes); // Updated to use modular admin routes
 app.use("/api/payments", paymentRoutes);
+
+const securityRoutes = require("./routes/security.routes");
+app.use("/api/security", securityRoutes);
 
 app.use("/api/locations", locationRoutes);
 app.use("/api/notify", notifyRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/promotions", promotionRoutes);
 app.use("/api/help", helpRoutes);
+
+// Debug routes (remove in production)
+if (process.env.NODE_ENV !== "production") {
+  const debugRoutes = require("./routes/debug.routes");
+  app.use("/api/debug", debugRoutes);
+  console.log("🐛 Debug routes enabled at /api/debug");
+}
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -143,20 +154,17 @@ app.use((err, _req, res, _next) => {
 });
 
 // --- Connect Mongo + Start server ---
-// Only run if not in test environment
-if (process.env.NODE_ENV !== 'test') {
-  mongoose
-    .connect(process.env.MONGO_URI)
-    .then(() => {
-      console.log("✅ MongoDB connected");
-      app.listen(PORT, () =>
-        console.log(`🚀 API listening on http://localhost:${PORT}`)
-      );
-    })
-    .catch((e) => {
-      console.error("❌ Mongo connect error:", e);
-      process.exit(1);
-    });
-}
+mongoose
+  .connect(MONGO_URI)
+  .then(() => {
+    console.log("✅ MongoDB connected");
+    app.listen(PORT, () =>
+      console.log(`🚀 API listening on http://localhost:${PORT}`)
+    );
+  })
+  .catch((e) => {
+    console.error("❌ Mongo connect error:", e);
+    process.exit(1);
+  });
 
 module.exports = app;

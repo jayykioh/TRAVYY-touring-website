@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-// ...các import khác nếu có
+import { tourCategoryData } from '../../data/mockData';
 
-const CategoryPieChart = ({ data = mockCategoryData }) => {
+const CategoryPieChart = ({ data = tourCategoryData }) => {
   // Custom label hiển thị phần trăm
   const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
     const RADIAN = Math.PI / 180;

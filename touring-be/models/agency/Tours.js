@@ -61,6 +61,9 @@ const TourSchema = new mongoose.Schema(
     tags: [String],
     usageCount: { type: Number, default: 0 },
 
+    // Admin controls
+    isHidden: { type: Boolean, default: false }, // Ẩn tour khỏi user frontend
+
     // Nếu còn nhu cầu theo dõi chỗ ở mức tour (không khuyến nghị):
     remainingSeats: { type: Number, default: null },
   },

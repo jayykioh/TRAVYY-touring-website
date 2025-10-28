@@ -63,6 +63,7 @@ export default function ProfileLayout() {
                 ["Lịch sử chuyến đi", "booking-history", true],
                 ["Mã giảm giá", "vouchers", true],
                 ["Đánh giá", "reviews", true],
+                ["Bảo mật", "security", true], // ✅ Thêm menu Bảo mật
                 ["Đổi mật khẩu", "change-password", hasPassword], // Chỉ hiển thị nếu có password
               ]
                 .filter(([, , show]) => show) // Lọc ra các menu item được phép hiển thị

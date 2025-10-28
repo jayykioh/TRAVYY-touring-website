@@ -1,55 +1,76 @@
 // 📁 src/pages/GuideManagement.jsx
 // ============================================
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from "react";
 import {
   RefreshCw,
   Download,
   Users,
   CheckCircle,
   Clock,
-  Star
-} from 'lucide-react';
+  Star,
+} from "lucide-react";
+import { toast, Toaster } from "react-hot-toast";
 
 // Components
-import StatCard from '../components/Dashboard/StatsCard';
-import GuideFilters from '../components/Guides/GuideFilters';
-import GuideCard from '../components/Guides/GuideCard';
+import StatCard from "../components/Dashboard/StatsCard";
+import GuideFilters from "../components/Guides/GuideFilters";
+import GuideCard from "../components/Guides/GuideCard";
+import Pagination from "../components/Common/Pagination";
 
-// Data & Utils
-import { MOCK_GUIDES } from '../data/guideData';
+// Services
+import * as guideService from "../services/guideService";
+
+// Utils
 import {
   searchGuides,
   filterByStatus,
-  calculateTotalRevenue,
-  calculateTotalTours,
-  getGuidesByStatus,
-  calculateAverageRating,
   exportGuidesToCSV,
   downloadCSV,
-  formatPrice
-} from '../utils/guideHelpers';
+  formatPrice,
+} from "../utils/guideHelpers";
 
 const GuideManagement = () => {
   const [guides, setGuides] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
-    loadMockData();
+    loadGuides();
   }, []);
 
-  const loadMockData = () => {
+  const loadGuides = async () => {
     setLoading(true);
-    setTimeout(() => {
-      setGuides(MOCK_GUIDES);
+    try {
+      const result = await guideService.getTourGuides({
+        search: searchTerm,
+        status: statusFilter,
+      });
+
+      if (result.success) {
+        const transformedGuides = result.data.map(
+          guideService.transformUserToGuide
+        );
+        setGuides(transformedGuides);
+      } else {
+        toast.error(result.error || "Không thể tải dữ liệu hướng dẫn viên");
+        setGuides([]);
+      }
+    } catch (error) {
+      console.error("❌ Load guides error:", error);
+      toast.error("Có lỗi xảy ra khi tải dữ liệu");
+      setGuides([]);
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   const handleRefresh = () => {
-    loadMockData();
+    loadGuides();
+    toast.success("Đã làm mới dữ liệu");
   };
 
   const filteredGuides = useMemo(() => {
@@ -59,74 +80,91 @@ const GuideManagement = () => {
     return result;
   }, [guides, searchTerm, statusFilter]);
 
-  const totalRevenue = calculateTotalRevenue(guides);
-  const totalTours = calculateTotalTours(guides);
-  const verifiedGuides = getGuidesByStatus(guides, 'verified').length;
-  const pendingGuides = getGuidesByStatus(guides, 'pending').length;
-  const averageRating = calculateAverageRating(guides);
+  // Calculate stats from transformed guides
+  const guideStats = useMemo(
+    () => guideService.calculateGuideStats(guides),
+    [guides]
+  );
 
   const stats = [
     {
-      id: 'total',
-      label: 'Tổng HDV',
-      value: guides.length,
-      subtitle: 'Hướng dẫn viên',
+      id: "total",
+      label: "Tổng HDV",
+      value: guideStats.total,
+      subtitle: "Hướng dẫn viên",
       icon: Users,
-      color: 'blue'
+      color: "blue",
     },
     {
-      id: 'verified',
-      label: 'Đã xác minh',
-      value: verifiedGuides,
-      subtitle: 'HDV đã xác minh',
+      id: "verified",
+      label: "Đã xác minh",
+      value: guideStats.verified,
+      subtitle: "HDV đã xác minh",
       icon: CheckCircle,
-      color: 'green'
+      color: "green",
     },
     {
-      id: 'pending',
-      label: 'Chờ xác minh',
-      value: pendingGuides,
-      subtitle: 'Cần xử lý',
+      id: "pending",
+      label: "Chờ xác minh",
+      value: guideStats.pending,
+      subtitle: "Cần xử lý",
       icon: Clock,
-      color: 'yellow'
+      color: "yellow",
     },
     {
-      id: 'rating',
-      label: 'Đánh giá TB',
-      value: `${averageRating}⭐`,
-      subtitle: 'Trung bình',
+      id: "rating",
+      label: "Đánh giá TB",
+      value: `${guideStats.averageRating}⭐`,
+      subtitle: "Trung bình",
       icon: Star,
-      color: 'purple'
-    }
+      color: "purple",
+    },
   ];
 
   const handleExport = () => {
     if (filteredGuides.length === 0) {
-      alert('Không có dữ liệu để export');
+      toast.error("Không có dữ liệu để export");
       return;
     }
     const csvContent = exportGuidesToCSV(filteredGuides);
-    downloadCSV(csvContent, `guides_${new Date().toISOString().split('T')[0]}.csv`);
+    downloadCSV(
+      csvContent,
+      `guides_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    toast.success("Export thành công!");
   };
 
   const handleViewGuide = (guide) => {
-    alert(`Xem chi tiết: ${guide.name}\nĐây là chức năng demo`);
+    toast.info(`Xem chi tiết: ${guide.name}\nĐây là chức năng demo`);
   };
 
-  const handleSyncGuide = async (guide) => {
-    // Giả lập đồng bộ dữ liệu từ Agency
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log('Đồng bộ HDV:', guide.name);
-  };
+  const handleStatusChange = async (guide, newStatus, reason) => {
+    try {
+      const result = await guideService.updateGuideStatus(
+        guide.id,
+        newStatus,
+        reason
+      );
 
-  const handleStatusChange = (guide, newStatus, reason) => {
-    setGuides(guides.map(g => 
-      g.id === guide.id 
-        ? { ...g, activityStatus: newStatus }
-        : g
-    ));
-    console.log(`Chuyển trạng thái ${guide.name} sang ${newStatus}. Lý do: ${reason}`);
-    alert(`Đã chuyển trạng thái ${guide.name} thành công!`);
+      if (result.success) {
+        // Update local state
+        setGuides(
+          guides.map((g) =>
+            g.id === guide.id
+              ? { ...g, verificationStatus: newStatus, statusReason: reason }
+              : g
+          )
+        );
+        toast.success(
+          result.message || `Đã chuyển trạng thái ${guide.name} thành công!`
+        );
+      } else {
+        toast.error(result.error || "Cập nhật thất bại");
+      }
+    } catch (error) {
+      console.error("❌ Update guide status error:", error);
+      toast.error("Có lỗi xảy ra khi cập nhật trạng thái");
+    }
   };
 
   if (loading) {
@@ -142,22 +180,51 @@ const GuideManagement = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: "#fff",
+            color: "#333",
+            borderRadius: "12px",
+            padding: "16px",
+            boxShadow: "0 10px 25px rgba(0, 121, 128, 0.15)",
+          },
+          success: {
+            iconTheme: {
+              primary: "#007980",
+              secondary: "#fff",
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: "#ef4444",
+              secondary: "#fff",
+            },
+          },
+        }}
+      />
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Quản lý Hướng dẫn viên</h1>
-            <p className="text-gray-600 mt-1">Quản lý và theo dõi hướng dẫn viên trong hệ thống</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Quản lý Hướng dẫn viên
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Quản lý và theo dõi hướng dẫn viên trong hệ thống
+            </p>
           </div>
           <div className="flex items-center space-x-3">
-            <button 
+            <button
               onClick={handleExport}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
               Export Data
             </button>
-            <button 
+            <button
               onClick={handleRefresh}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
             >
@@ -182,10 +249,16 @@ const GuideManagement = () => {
             </div>
             <div className="flex gap-3">
               <div className="text-sm text-gray-600">
-                Tổng doanh thu: <span className="font-bold text-green-600">₫{formatPrice(totalRevenue)}</span>
+                Tổng doanh thu:{" "}
+                <span className="font-bold text-green-600">
+                  ₫{formatPrice(guideStats.totalRevenue)}
+                </span>
               </div>
               <div className="text-sm text-gray-600">
-                Tổng tours: <span className="font-bold text-blue-600">{totalTours}</span>
+                Tổng tours:{" "}
+                <span className="font-bold text-blue-600">
+                  {guideStats.totalTours}
+                </span>
               </div>
             </div>
           </div>
@@ -219,7 +292,6 @@ const GuideManagement = () => {
                 key={guide.id}
                 guide={guide}
                 onView={handleViewGuide}
-                onSync={handleSyncGuide}
                 onStatusChange={handleStatusChange}
               />
             ))}
@@ -228,21 +300,13 @@ const GuideManagement = () => {
 
         {/* Pagination */}
         {filteredGuides.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 px-6 py-4 flex items-center justify-between">
-            <div className="text-sm text-gray-700">
-              Hiển thị <span className="font-medium">1-{filteredGuides.length}</span> trong tổng số <span className="font-medium">{filteredGuides.length}</span> hướng dẫn viên
-            </div>
-            <div className="flex items-center space-x-2">
-              <button className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 text-sm">
-                Trước
-              </button>
-              <button className="px-3 py-1 bg-blue-600 text-white rounded-md text-sm">1</button>
-              <button className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 text-sm">2</button>
-              <button className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 text-sm">
-                Sau
-              </button>
-            </div>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filteredGuides.length / itemsPerPage)}
+            onPageChange={setCurrentPage}
+            totalItems={filteredGuides.length}
+            itemsPerPage={itemsPerPage}
+          />
         )}
       </div>
     </div>

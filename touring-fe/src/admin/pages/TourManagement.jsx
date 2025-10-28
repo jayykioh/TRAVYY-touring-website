@@ -1,14 +1,19 @@
 // components/TourManagement.jsx
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { RefreshCw, Download, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  RefreshCw,
+  Download,
+} from "lucide-react";
 import { Users, DollarSign, Calendar, MapPin } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
 
 // Components
 import StatCard from "../components/Dashboard/StatsCard";
 import TourFilters from "../components/Tours/TourFilters";
 import TourTableRow from "../components/Tours/TourTableRow";
 import TourForm from "../components/Tours/TourForm";
+import Pagination from "../components/Common/Pagination";
 
 // Data & Utils
 import { MOCK_CHART_DATA } from "../data/mockData";
@@ -22,117 +27,6 @@ import {
   exportToursToCSV,
   downloadCSV,
 } from "../utils/tourHelpers";
-
-// Pagination Component
-const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage }) => {
-  const startItem = (currentPage - 1) * itemsPerPage + 1;
-  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
-  
-  const getPageNumbers = () => {
-    const pages = [];
-    const maxVisible = 5;
-    
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(1);
-        pages.push('...');
-        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
-      } else {
-        pages.push(1);
-        pages.push('...');
-        pages.push(currentPage - 1);
-        pages.push(currentPage);
-        pages.push(currentPage + 1);
-        pages.push('...');
-        pages.push(totalPages);
-      }
-    }
-    
-    return pages;
-  };
-
-  return (
-    <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-      <div className="flex-1 flex justify-between sm:hidden">
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Trước
-        </button>
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Sau
-        </button>
-      </div>
-      
-      <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm text-gray-700">
-            Hiển thị <span className="font-medium">{startItem}</span> đến{' '}
-            <span className="font-medium">{endItem}</span> trong tổng số{' '}
-            <span className="font-medium">{totalItems}</span> tours
-          </p>
-        </div>
-        
-        <div>
-          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-            <button
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            
-            {getPageNumbers().map((page, index) => (
-              page === '...' ? (
-                <span
-                  key={`ellipsis-${index}`}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
-                >
-                  ...
-                </span>
-              ) : (
-                <button
-                  key={page}
-                  onClick={() => onPageChange(page)}
-                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                    currentPage === page
-                      ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                  }`}
-                >
-                  {page}
-                </button>
-              )
-            ))}
-            
-            <button
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </nav>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Items Per Page Selector
 const ItemsPerPageSelector = ({ value, onChange }) => {
@@ -166,7 +60,7 @@ const TourManagement = () => {
   });
   const [showForm, setShowForm] = useState(false);
   const [editingTour, setEditingTour] = useState(null);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -177,13 +71,15 @@ const TourManagement = () => {
     setError(null);
 
     try {
-      const response = await fetch("/api/tours");
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+      const response = await fetch(`${API_URL}/api/tours`);
 
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log("Fetched tours:", data);
       setTours(data);
     } catch (err) {
       console.error("Failed to fetch tours:", err);
@@ -226,7 +122,7 @@ const TourManagement = () => {
   // Handle page change
   const handlePageChange = (page) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Handle items per page change
@@ -296,7 +192,7 @@ const TourManagement = () => {
   // Handle Export CSV
   const handleExport = () => {
     if (filteredTours.length === 0) {
-      alert("Không có dữ liệu để export");
+      toast.error("Không có dữ liệu để export");
       return;
     }
 
@@ -305,17 +201,12 @@ const TourManagement = () => {
       csvContent,
       `tours_${new Date().toISOString().split("T")[0]}.csv`
     );
-  };
-
-  // Handle Add Tour
-  const navigate = useNavigate();
-
-  const handleAddTour = () => {
-    setEditingTour(null);
-    setShowForm(true);
+    toast.success("Export thành công!");
   };
 
   // Handle View Detail Tour
+  const navigate = useNavigate();
+
   const handleViewDetail = (tour) => {
     navigate(`/admin/tours/${tour._id}`);
   };
@@ -323,14 +214,14 @@ const TourManagement = () => {
   // Handle Toggle Visibility
   const handleToggleVisibility = async (tour) => {
     try {
-      const response = await fetch(`/api/tours/${tour._id}`, {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+      const response = await fetch(`${API_URL}/api/tours/${tour._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...tour,
-          isHidden: !tour.isHidden
+          isHidden: !tour.isHidden,
         }),
       });
 
@@ -341,13 +232,11 @@ const TourManagement = () => {
       const updatedTour = await response.json();
 
       // Update the tour in state
-      setTours(
-        tours.map((t) => (t._id === tour._id ? updatedTour : t))
-      );
-      alert(tour.isHidden ? "Đã hiện tour!" : "Đã ẩn tour!");
+      setTours(tours.map((t) => (t._id === tour._id ? updatedTour : t)));
+      toast.success(tour.isHidden ? "Đã hiện tour!" : "Đã ẩn tour!");
     } catch (err) {
       console.error("Failed to toggle visibility:", err);
-      alert("Lỗi khi thay đổi trạng thái tour. Vui lòng thử lại.");
+      toast.error("Lỗi khi thay đổi trạng thái tour. Vui lòng thử lại.");
     }
   };
 
@@ -355,7 +244,8 @@ const TourManagement = () => {
   const handleDeleteTour = async (tour) => {
     if (window.confirm(`Bạn có chắc muốn xóa tour "${tour.title}"?`)) {
       try {
-        const response = await fetch(`/api/tours/${tour._id}`, {
+        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+        const response = await fetch(`${API_URL}/api/tours/${tour._id}`, {
           method: "DELETE",
         });
 
@@ -365,10 +255,10 @@ const TourManagement = () => {
 
         // Remove tour from state after successful API call
         setTours(tours.filter((t) => t._id !== tour._id));
-        alert("Đã xóa tour thành công!");
+        toast.success("Đã xóa tour thành công!");
       } catch (err) {
         console.error("Failed to delete tour:", err);
-        alert("Lỗi khi xóa tour. Vui lòng thử lại.");
+        toast.error("Lỗi khi xóa tour. Vui lòng thử lại.");
       }
     }
   };
@@ -376,15 +266,20 @@ const TourManagement = () => {
   // Handle Form Submit
   const handleFormSubmit = async (formData) => {
     try {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
       if (editingTour) {
         // Update existing tour
-        const response = await fetch(`/api/tours/${editingTour._id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        });
+        const response = await fetch(
+          `${API_URL}/api/tours/${editingTour._id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(formData),
+          }
+        );
 
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`);
@@ -396,10 +291,10 @@ const TourManagement = () => {
         setTours(
           tours.map((t) => (t._id === editingTour._id ? updatedTour : t))
         );
-        alert("Cập nhật tour thành công!");
+        toast.success("Cập nhật tour thành công!");
       } else {
         // Add new tour
-        const response = await fetch("/api/tours", {
+        const response = await fetch(`${API_URL}/api/tours`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -413,14 +308,14 @@ const TourManagement = () => {
 
         const newTour = await response.json();
         setTours([...tours, newTour]);
-        alert("Thêm tour mới thành công!");
+        toast.success("Thêm tour mới thành công!");
       }
 
       setShowForm(false);
       setEditingTour(null);
     } catch (err) {
       console.error("Failed to save tour:", err);
-      alert("Lỗi khi lưu tour. Vui lòng thử lại.");
+      toast.error("Lỗi khi lưu tour. Vui lòng thử lại.");
     }
   };
 
@@ -481,6 +376,31 @@ const TourManagement = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: "#fff",
+            color: "#333",
+            borderRadius: "12px",
+            padding: "16px",
+            boxShadow: "0 10px 25px rgba(0, 121, 128, 0.15)",
+          },
+          success: {
+            iconTheme: {
+              primary: "#007980",
+              secondary: "#fff",
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: "#ef4444",
+              secondary: "#fff",
+            },
+          },
+        }}
+      />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -504,9 +424,9 @@ const TourManagement = () => {
               <div className="text-sm text-gray-600">
                 Hiển thị {filteredTours.length} / {tours.length} tours
               </div>
-              <ItemsPerPageSelector 
-                value={itemsPerPage} 
-                onChange={handleItemsPerPageChange} 
+              <ItemsPerPageSelector
+                value={itemsPerPage}
+                onChange={handleItemsPerPageChange}
               />
             </div>
             <div className="flex gap-3">
@@ -525,21 +445,14 @@ const TourManagement = () => {
                 <Download className="w-4 h-4" />
                 Export CSV
               </button>
-              <button
-                onClick={handleAddTour}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Thêm Tour
-              </button>
             </div>
           </div>
         </div>
 
         {/* Form Modal */}
         {showForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-gray-100 max-h-[90vh] overflow-y-auto">
               <div className="sticky top-0 bg-white border-b px-6 py-4 z-10">
                 <h2 className="text-xl font-bold text-gray-900">
                   {editingTour ? "Chỉnh sửa Tour" : "Thêm Tour Mới"}
@@ -611,7 +524,7 @@ const TourManagement = () => {
                   </tbody>
                 </table>
               </div>
-              
+
               {/* Pagination */}
               {totalPages > 1 && (
                 <Pagination

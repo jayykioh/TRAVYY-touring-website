@@ -1,4 +1,4 @@
-'use client';
+"use client";
 import {
   Area,
   AreaChart,
@@ -7,24 +7,23 @@ import {
   YAxis,
   Tooltip,
   Legend,
-} from 'recharts';
+} from "recharts";
 import {
-    ChartContainer,
-    ChartTooltipContent,
-    ChartLegend,
-    ChartLegendContent,
-} from '@/admin/components/ui/chart';
-
+  ChartContainer,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/admin/components/ui/chart";
 
 export default function RevenueChart({ data }) {
   const chartConfig = {
     revenue: {
-      label: 'Doanh thu',
-      color: 'hsl(217, 91%, 60%)',
+      label: "Doanh thu",
+      color: "hsl(217, 91%, 60%)",
     },
     profit: {
-      label: 'Lợi nhuận',
-      color: 'hsl(142, 76%, 36%)',
+      label: "Lợi nhuận",
+      color: "hsl(142, 76%, 36%)",
     },
   };
 
@@ -55,7 +54,7 @@ export default function RevenueChart({ data }) {
         />
         <Tooltip cursor={false} content={<ChartTooltipContent />} />
         <Legend content={<ChartLegendContent />} />
-        
+
         <defs>
           <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
             <stop
@@ -82,7 +81,7 @@ export default function RevenueChart({ data }) {
             />
           </linearGradient>
         </defs>
-        
+
         <Area
           dataKey="revenue"
           type="monotone"

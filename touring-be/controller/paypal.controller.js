@@ -1,7 +1,7 @@
 const fetch = global.fetch || ((...args) => import("node-fetch").then(({default: f}) => f(...args)));
 const mongoose = require("mongoose");
 const { Cart, CartItem } = require("../models/Carts");
-const Tour = require("../models/Tours");
+const Tour = require("../models/agency/Tours");
 const Booking = require("../models/Bookings");
 const PaymentSession = require("../models/PaymentSession");
 
@@ -169,7 +169,7 @@ exports.createOrder = async (req, res) => {
       originalTotal: totalVND,
       discountAmount,
       finalTotal: finalTotalVND,
-      voucherCode: req.body.promotionCode || req.body.voucherCode
+      voucherCode: req.body.promotionCode || req.body.voucherCode,
     });
 
     if (!items.length || finalTotalVND <= 0) {
@@ -189,7 +189,7 @@ exports.createOrder = async (req, res) => {
       const usd = Number(toUSD(i.unit_amount_vnd)); // string -> number (2 decimals)
       return Math.round(usd * 100) * (i.quantity || 1);
     });
-    const itemTotalCents = lineCents.reduce((a,b)=>a+b,0);
+    const itemTotalCents = lineCents.reduce((a, b) => a + b, 0);
     const discountCents = Math.round(Number(toUSD(discountAmount)) * 100);
     const finalAmountCents = Math.max(0, itemTotalCents - discountCents);
 
@@ -200,7 +200,7 @@ exports.createOrder = async (req, res) => {
       itemTotalCents,
       discountCents,
       finalAmountCents,
-      items: items.map(i => ({
+      items: items.map((i) => ({
         name: i.name,
         qty: i.quantity,
         unitVND: i.unit_amount_vnd,
@@ -208,22 +208,22 @@ exports.createOrder = async (req, res) => {
       }))
     });
 
-    const itemsTotalUSD = (itemTotalCents/100).toFixed(2);
-    const discountUSD = (discountCents/100).toFixed(2);
-    const finalAmountUSD = (finalAmountCents/100).toFixed(2);
+    const itemsTotalUSD = (itemTotalCents / 100).toFixed(2);
+    const discountUSD = (discountCents / 100).toFixed(2);
+    const finalAmountUSD = (finalAmountCents / 100).toFixed(2);
 
     // Build breakdown - include discount if applicable
     const breakdown = {
       item_total: {
         currency_code: currency,
-        value: itemsTotalUSD
-      }
+        value: itemsTotalUSD,
+      },
     };
-    
+
     if (discountCents > 0) {
       breakdown.discount = {
         currency_code: currency,
-        value: discountUSD
+        value: discountUSD,
       };
     }
 
@@ -233,7 +233,7 @@ exports.createOrder = async (req, res) => {
         amount: {
           currency_code: currency,
           value: finalAmountUSD,
-          breakdown: breakdown
+          breakdown: breakdown,
         },
         items: items.map(i => ({
           name: i.name.substring(0, 127), // PayPal limit 127 chars
@@ -242,8 +242,8 @@ exports.createOrder = async (req, res) => {
         })),
       }],
       application_context: {
-  return_url: `${CLIENT_URL}/payment/callback`,
-  cancel_url: `${CLIENT_URL}/shoppingcarts`,
+        return_url: `${CLIENT_URL}/payment/callback`,
+        cancel_url: `${CLIENT_URL}/shoppingcarts`,
         brand_name: "Travyy Tour",
         shipping_preference: "NO_SHIPPING",
       },
@@ -307,7 +307,8 @@ exports.createOrder = async (req, res) => {
             }
           };
         }),
-        voucherCode: req.body.promotionCode || req.body.voucherCode || undefined,
+        voucherCode:
+          req.body.promotionCode || req.body.voucherCode || undefined,
         discountAmount: discountAmount,
         rawCreateResponse: data,
       });
@@ -334,8 +335,7 @@ exports.createOrder = async (req, res) => {
 
 exports.captureOrder = async (req, res) => {
   const mongoSession = await mongoose.startSession();
-  let orderID; // Declare here so it's accessible in catch block
-  
+
   try {
     const userId = req.user.sub;
     orderID = req.body.orderID; // Assign without const/let
@@ -389,21 +389,23 @@ exports.captureOrder = async (req, res) => {
       paymentSession.paidAt = new Date();
       paymentSession.rawCreateResponse = { ...paymentSession.rawCreateResponse, capture: captureData };
       await paymentSession.save();
-      console.log(`✅ [PayPal] Payment session status set to 'paid'`);
-      console.log(`💾 [PayPal] Session saved: status="${paymentSession.status}", paidAt="${paymentSession.paidAt}"`);
-      
+
       // 2.5) Mark voucher as used if stored in session
       if (paymentSession.voucherCode && paymentSession.userId) {
         try {
           const User = require("../models/Users");
           const Promotion = require("../models/Promotion");
-          
-          console.log(`🎫 Marking voucher ${paymentSession.voucherCode} as used for user ${paymentSession.userId}`);
-          
-          const promotion = await Promotion.findOne({ code: paymentSession.voucherCode.toUpperCase() });
+
+          console.log(
+            `🎫 Marking voucher ${paymentSession.voucherCode} as used for user ${paymentSession.userId}`
+          );
+
+          const promotion = await Promotion.findOne({
+            code: paymentSession.voucherCode.toUpperCase(),
+          });
           if (promotion) {
             console.log(`   Found promotion: ${promotion._id}`);
-            
+
             // ✅ Tăng usageCount của promotion
             await Promotion.findByIdAndUpdate(
               promotion._id,
@@ -411,7 +413,7 @@ exports.captureOrder = async (req, res) => {
               { session: mongoSession }
             );
             console.log(`   ✅ Incremented usageCount`);
-            
+
             // ✅ Đánh dấu user đã sử dụng voucher
             await User.findByIdAndUpdate(
               paymentSession.userId,
@@ -420,18 +422,25 @@ exports.captureOrder = async (req, res) => {
                   usedPromotions: {
                     promotionId: promotion._id,
                     code: promotion.code,
-                    usedAt: new Date()
-                  }
-                }
+                    usedAt: new Date(),
+                  },
+                },
               },
               { session: mongoSession }
             );
-            console.log(`✅ [PayPal] Marked promotion ${paymentSession.voucherCode} as used for user ${paymentSession.userId} and incremented usageCount`);
+            console.log(
+              `✅ [PayPal] Marked promotion ${paymentSession.voucherCode} as used for user ${paymentSession.userId} and incremented usageCount`
+            );
           } else {
-            console.warn(`   ⚠️ Promotion not found: ${paymentSession.voucherCode}`);
+            console.warn(
+              `   ⚠️ Promotion not found: ${paymentSession.voucherCode}`
+            );
           }
         } catch (voucherError) {
-          console.error("[PayPal] Error marking voucher as used:", voucherError);
+          console.error(
+            "[PayPal] Error marking voucher as used:",
+            voucherError
+          );
           // Don't fail the payment if voucher marking fails
         }
       }

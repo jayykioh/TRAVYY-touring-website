@@ -7,7 +7,7 @@ const crypto = require("crypto");
 const PaymentSession = require("../models/PaymentSession");
 const mongoose = require("mongoose");
 const Booking = require("../models/Bookings");
-const Tour = require("../models/Tours");
+const Tour = require("../models/agency/Tours");
 const { Cart, CartItem } = require("../models/Carts");
 
 // Import unified helpers
@@ -124,23 +124,65 @@ exports.createMoMoPayment = async (req, res) => {
       item: buyNowItem,
     } = req.body || {};
 
+    console.log("📥 [MoMo] Received payment request:", {
+      mode,
+      buyNowItem,
+      frontendAmount: req.body.amount,
+      frontendItems: items,
+      userId: req.user?.sub || req.user?._id,
+    });
+
     // Authoritatively recompute amount from server-side state
     const userId = req.user?.sub || req.user?._id;
-    const { items: serverItems, totalVND } = await buildMoMoCharge(userId, { mode, item: buyNowItem });
-    
+    const { items: serverItems, totalVND } = await buildMoMoCharge(userId, {
+      mode,
+      item: buyNowItem,
+    });
+
+    console.log("🧮 [MoMo] Server calculated:", {
+      totalVND,
+      serverItems: serverItems.map((it) => ({
+        name: it.name,
+        price: it.price,
+        meta: it.meta,
+      })),
+    });
+
     // Apply discount from voucher/promotion
     const discountAmount = Number(req.body.discountAmount) || 0;
     const finalTotalVND = Math.max(0, totalVND - discountAmount);
-    
+
+    // ⚠️ MOMO SANDBOX LIMIT:
+    // - Test wallet: Max 10,000,000 VNĐ per transaction
+    // - For development, can cap lower (e.g. 50,000) for quick testing
+    const MOMO_TEST_LIMIT =
+      process.env.MOMO_SANDBOX_MODE === "true"
+        ? Number(process.env.MOMO_MAX_AMOUNT) || 10000000 // Default 10 triệu
+        : Infinity;
+
+    const cappedAmount = Math.min(finalTotalVND, MOMO_TEST_LIMIT);
+
+    if (cappedAmount !== finalTotalVND) {
+      console.log(
+        `⚠️ MoMo Test Limit: Amount capped from ${finalTotalVND.toLocaleString()} to ${cappedAmount.toLocaleString()} VNĐ`
+      );
+      console.log(
+        `   Reason: MoMo test wallet limit is ${MOMO_TEST_LIMIT.toLocaleString()} VNĐ`
+      );
+    }
+
     console.log("💰 MoMo Price calculation:", {
       originalTotal: totalVND,
       discountAmount,
       finalTotal: finalTotalVND,
-      voucherCode: req.body.promotionCode || req.body.voucherCode
+      cappedForTest: cappedAmount,
+      testLimit: MOMO_TEST_LIMIT,
+      voucherCode: req.body.promotionCode || req.body.voucherCode,
     });
 
-    const amt = Number(finalTotalVND);
-    if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'INVALID_AMOUNT' });
+    const amt = Number(cappedAmount);
+    if (!Number.isFinite(amt) || amt <= 0)
+      return res.status(400).json({ error: "INVALID_AMOUNT" });
 
     // ENV configuration (provide defaults for sandbox testing)
     const partnerCode = process.env.MOMO_PARTNER_CODE || "MOMO"; // sample: MOMO
@@ -236,7 +278,8 @@ exports.createMoMoPayment = async (req, res) => {
           tourId: it.tourId && mongoose.isValidObjectId(it.tourId) ? it.tourId : undefined,
           meta: it.meta || {},
         })),
-        voucherCode: req.body.promotionCode || req.body.voucherCode || undefined,
+        voucherCode:
+          req.body.promotionCode || req.body.voucherCode || undefined,
         discountAmount: discountAmount,
         rawCreateResponse: data,
       });
@@ -325,75 +368,43 @@ exports.handleMoMoIPN = async (req, res) => {
         try {
           const User = require("../models/Users");
           const Promotion = require("../models/Promotion");
-          
-          const promotion = await Promotion.findOne({ code: session.voucherCode.toUpperCase() });
+
+          const promotion = await Promotion.findOne({
+            code: session.voucherCode.toUpperCase(),
+          });
           if (promotion) {
             // ✅ Tăng usageCount
-            await Promotion.findByIdAndUpdate(
-              promotion._id,
-              { $inc: { usageCount: 1 } }
-            );
-            
+            await Promotion.findByIdAndUpdate(promotion._id, {
+              $inc: { usageCount: 1 },
+            });
+
             // ✅ Đánh dấu user đã sử dụng
-            await User.findByIdAndUpdate(
-              session.userId,
-              {
-                $addToSet: {
-                  usedPromotions: {
-                    promotionId: promotion._id,
-                    code: promotion.code,
-                    usedAt: new Date()
-                  }
-                }
-              }
+            await User.findByIdAndUpdate(session.userId, {
+              $addToSet: {
+                usedPromotions: {
+                  promotionId: promotion._id,
+                  code: promotion.code,
+                  usedAt: new Date(),
+                },
+              },
+            });
+            console.log(
+              `✅ [MoMo IPN] Marked promotion ${session.voucherCode} as used for user ${session.userId} and incremented usageCount`
             );
-            console.log(`✅ [MoMo IPN] Marked promotion ${session.voucherCode} as used for user ${session.userId} and incremented usageCount`);
           }
         } catch (voucherError) {
-          console.error("[MoMo IPN] Error marking voucher as used:", voucherError);
+          console.error(
+            "[MoMo IPN] Error marking voucher as used:",
+            voucherError
+          );
         }
       }
-      
+
       // Create booking (unified helper with idempotent check)
-      const booking = await createBookingFromSession(session, { ipn: body, sessionId: session._id });
-      
-      // Mark booking as paid
-      if (booking) {
-        try {
-          await markBookingAsPaid(session.orderId, {
-            transactionId: body.transId || session.orderId,
-            momo: {
-              orderId: body.orderId,
-              transId: body.transId,
-              resultCode: body.resultCode,
-              message: body.message
-            }
-          });
-          console.log(`✅ [MoMo IPN] Booking ${booking._id} marked as paid`);
-        } catch (markError) {
-          console.error(`❌ [MoMo IPN] Failed to mark booking ${booking._id} as paid:`, markError);
-        }
-      }
-    }
-    
-    // If failed -> create booking with failed status
-    if (justFailed) {
-      console.log(`⚠️ [MoMo IPN] Payment failed (resultCode: ${body.resultCode}), creating failed booking...`);
-      try {
-        await markBookingAsFailed(session.orderId, {
-          transactionId: body.transId || session.orderId,
-          momo: {
-            orderId: body.orderId,
-            transId: body.transId,
-            resultCode: body.resultCode,
-            message: body.message,
-            failedAt: new Date()
-          }
-        });
-        console.log(`✅ [MoMo IPN] Failed booking created for orderId: ${session.orderId}`);
-      } catch (failError) {
-        console.error(`❌ [MoMo IPN] Failed to create failed booking:`, failError);
-      }
+      await createBookingFromSession(session, {
+        ipn: body,
+        sessionId: session._id,
+      });
     }
     
     // Important: MoMo expects 200/204 to stop retrying
@@ -479,37 +490,35 @@ exports.markMoMoPaid = async (req, res) => {
       sess.status = "paid";
       sess.paidAt = new Date();
       await sess.save();
-      console.log(`✅ [MoMo mark-paid] Payment successful - setting status to 'paid'`);
-      console.log(`💾 [markMoMoPaid] Session status saved as 'paid', paidAt: ${sess.paidAt}`);
-      
+
       // Mark voucher as used if stored in session
       if (sess.voucherCode && sess.userId) {
         try {
           const User = require("../models/Users");
           const Promotion = require("../models/Promotion");
-          
-          const promotion = await Promotion.findOne({ code: sess.voucherCode.toUpperCase() });
+
+          const promotion = await Promotion.findOne({
+            code: sess.voucherCode.toUpperCase(),
+          });
           if (promotion) {
             // ✅ Tăng usageCount
-            await Promotion.findByIdAndUpdate(
-              promotion._id,
-              { $inc: { usageCount: 1 } }
-            );
-            
+            await Promotion.findByIdAndUpdate(promotion._id, {
+              $inc: { usageCount: 1 },
+            });
+
             // ✅ Đánh dấu user đã sử dụng
-            await User.findByIdAndUpdate(
-              sess.userId,
-              {
-                $addToSet: {
-                  usedPromotions: {
-                    promotionId: promotion._id,
-                    code: promotion.code,
-                    usedAt: new Date()
-                  }
-                }
-              }
+            await User.findByIdAndUpdate(sess.userId, {
+              $addToSet: {
+                usedPromotions: {
+                  promotionId: promotion._id,
+                  code: promotion.code,
+                  usedAt: new Date(),
+                },
+              },
+            });
+            console.log(
+              `✅ [MoMo] Marked promotion ${sess.voucherCode} as used for user ${sess.userId} and incremented usageCount`
             );
-            console.log(`✅ [MoMo] Marked promotion ${sess.voucherCode} as used for user ${sess.userId} and incremented usageCount`);
           }
         } catch (voucherError) {
           console.error("[MoMo] Error marking voucher as used:", voucherError);
@@ -587,7 +596,10 @@ exports.getBookingByPayment = async (req, res) => {
     
     if (!session) {
       console.log(`[Payment] ❌ No payment session found`);
-      return res.status(404).json({ error: 'NOT_FOUND', message: 'No payment session or booking found' });
+      return res.status(404).json({
+        error: "NOT_FOUND",
+        message: "No payment session or booking found",
+      });
     }
     
     console.log(`[Payment] Payment session status: ${session.status}`);

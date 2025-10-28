@@ -1,12 +1,74 @@
 // services/adminAPI.js
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 const USE_MOCK_DATA = true; // Đổi thành false khi backend ready
 
 // Import mock data
-import { mockTours, mockBookings, mockGuides } from '../data/mockData';
+import { mockTours, mockBookings, mockGuides } from "../data/mockData";
 
 // Simulate API delay
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Helper function to refresh token
+const refreshAdminToken = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      credentials: "include", // Send cookies
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const newToken = data.accessToken;
+      sessionStorage.setItem("admin_token", newToken);
+      return newToken;
+    }
+    return null;
+  } catch (error) {
+    console.error("Failed to refresh admin token:", error);
+    return null;
+  }
+};
+
+// Helper function to make authenticated request with auto-refresh
+const fetchWithAuth = async (url, options = {}) => {
+  let token = sessionStorage.getItem("admin_token");
+
+  // First attempt
+  let response = await fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  // If 401, try to refresh token and retry once
+  if (response.status === 401) {
+    console.log("Token expired, attempting to refresh...");
+    const newToken = await refreshAdminToken();
+
+    if (newToken) {
+      console.log("Token refreshed successfully, retrying request...");
+      response = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          Authorization: `Bearer ${newToken}`,
+        },
+      });
+    } else {
+      console.error("Failed to refresh token, redirecting to login...");
+      // Clear session and redirect to login
+      sessionStorage.removeItem("admin_token");
+      sessionStorage.removeItem("admin_user");
+      window.location.href = "/admin/login";
+      throw new Error("Authentication failed");
+    }
+  }
+
+  return response;
+};
 
 export const adminAPI = {
   // ==================== TOURS ====================
@@ -22,7 +84,7 @@ export const adminAPI = {
   getTourById: async (id) => {
     if (USE_MOCK_DATA) {
       await delay(300);
-      const tour = mockTours.find(t => t.id === id);
+      const tour = mockTours.find((t) => t.id === id);
       return { success: true, data: tour };
     }
     const response = await fetch(`${API_BASE_URL}/admin/tours/${id}`);
@@ -32,12 +94,16 @@ export const adminAPI = {
   createTour: async (tourData) => {
     if (USE_MOCK_DATA) {
       await delay(500);
-      return { success: true, message: 'Tour created successfully', data: tourData };
+      return {
+        success: true,
+        message: "Tour created successfully",
+        data: tourData,
+      };
     }
     const response = await fetch(`${API_BASE_URL}/admin/tours`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tourData)
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(tourData),
     });
     return response.json();
   },
@@ -45,12 +111,16 @@ export const adminAPI = {
   updateTour: async (id, tourData) => {
     if (USE_MOCK_DATA) {
       await delay(500);
-      return { success: true, message: 'Tour updated successfully', data: tourData };
+      return {
+        success: true,
+        message: "Tour updated successfully",
+        data: tourData,
+      };
     }
     const response = await fetch(`${API_BASE_URL}/admin/tours/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tourData)
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(tourData),
     });
     return response.json();
   },
@@ -58,10 +128,10 @@ export const adminAPI = {
   deleteTour: async (id) => {
     if (USE_MOCK_DATA) {
       await delay(500);
-      return { success: true, message: 'Tour deleted successfully' };
+      return { success: true, message: "Tour deleted successfully" };
     }
     const response = await fetch(`${API_BASE_URL}/admin/tours/${id}`, {
-      method: 'DELETE'
+      method: "DELETE",
     });
     return response.json();
   },
@@ -69,10 +139,14 @@ export const adminAPI = {
   syncTour: async (id) => {
     if (USE_MOCK_DATA) {
       await delay(1000);
-      return { success: true, message: 'Tour synced successfully', syncTime: new Date().toISOString() };
+      return {
+        success: true,
+        message: "Tour synced successfully",
+        syncTime: new Date().toISOString(),
+      };
     }
     const response = await fetch(`${API_BASE_URL}/admin/tours/${id}/sync`, {
-      method: 'POST'
+      method: "POST",
     });
     return response.json();
   },
@@ -80,10 +154,14 @@ export const adminAPI = {
   syncAllTours: async () => {
     if (USE_MOCK_DATA) {
       await delay(2000);
-      return { success: true, message: 'All tours synced successfully', count: mockTours.length };
+      return {
+        success: true,
+        message: "All tours synced successfully",
+        count: mockTours.length,
+      };
     }
     const response = await fetch(`${API_BASE_URL}/admin/tours/sync-all`, {
-      method: 'POST'
+      method: "POST",
     });
     return response.json();
   },
@@ -101,7 +179,7 @@ export const adminAPI = {
   getBookingById: async (id) => {
     if (USE_MOCK_DATA) {
       await delay(300);
-      const booking = mockBookings.find(b => b.id === id);
+      const booking = mockBookings.find((b) => b.id === id);
       return { success: true, data: booking };
     }
     const response = await fetch(`${API_BASE_URL}/admin/bookings/${id}`);
@@ -111,23 +189,30 @@ export const adminAPI = {
   updateBookingStatus: async (id, status) => {
     if (USE_MOCK_DATA) {
       await delay(500);
-      return { success: true, message: 'Booking status updated', data: { id, status } };
+      return {
+        success: true,
+        message: "Booking status updated",
+        data: { id, status },
+      };
     }
-    const response = await fetch(`${API_BASE_URL}/admin/bookings/${id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/admin/bookings/${id}/status`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      }
+    );
     return response.json();
   },
 
   syncBooking: async (id) => {
     if (USE_MOCK_DATA) {
       await delay(1000);
-      return { success: true, message: 'Booking synced successfully' };
+      return { success: true, message: "Booking synced successfully" };
     }
     const response = await fetch(`${API_BASE_URL}/admin/bookings/${id}/sync`, {
-      method: 'POST'
+      method: "POST",
     });
     return response.json();
   },
@@ -135,10 +220,14 @@ export const adminAPI = {
   syncAllBookings: async () => {
     if (USE_MOCK_DATA) {
       await delay(2000);
-      return { success: true, message: 'All bookings synced successfully', count: mockBookings.length };
+      return {
+        success: true,
+        message: "All bookings synced successfully",
+        count: mockBookings.length,
+      };
     }
     const response = await fetch(`${API_BASE_URL}/admin/bookings/sync-all`, {
-      method: 'POST'
+      method: "POST",
     });
     return response.json();
   },
@@ -156,7 +245,7 @@ export const adminAPI = {
   getGuideById: async (id) => {
     if (USE_MOCK_DATA) {
       await delay(300);
-      const guide = mockGuides.find(g => g.id === id);
+      const guide = mockGuides.find((g) => g.id === id);
       return { success: true, data: guide };
     }
     const response = await fetch(`${API_BASE_URL}/admin/guides/${id}`);
@@ -166,23 +255,30 @@ export const adminAPI = {
   updateGuideAvailability: async (id, availability) => {
     if (USE_MOCK_DATA) {
       await delay(500);
-      return { success: true, message: 'Guide availability updated', data: { id, availability } };
+      return {
+        success: true,
+        message: "Guide availability updated",
+        data: { id, availability },
+      };
     }
-    const response = await fetch(`${API_BASE_URL}/admin/guides/${id}/availability`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ availability })
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/admin/guides/${id}/availability`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ availability }),
+      }
+    );
     return response.json();
   },
 
   syncGuide: async (id) => {
     if (USE_MOCK_DATA) {
       await delay(1000);
-      return { success: true, message: 'Guide synced successfully' };
+      return { success: true, message: "Guide synced successfully" };
     }
     const response = await fetch(`${API_BASE_URL}/admin/guides/${id}/sync`, {
-      method: 'POST'
+      method: "POST",
     });
     return response.json();
   },
@@ -190,10 +286,14 @@ export const adminAPI = {
   syncAllGuides: async () => {
     if (USE_MOCK_DATA) {
       await delay(2000);
-      return { success: true, message: 'All guides synced successfully', count: mockGuides.length };
+      return {
+        success: true,
+        message: "All guides synced successfully",
+        count: mockGuides.length,
+      };
     }
     const response = await fetch(`${API_BASE_URL}/admin/guides/sync-all`, {
-      method: 'POST'
+      method: "POST",
     });
     return response.json();
   },
@@ -202,37 +302,103 @@ export const adminAPI = {
   bulkSync: async (ids, type) => {
     if (USE_MOCK_DATA) {
       await delay(1500);
-      return { success: true, message: `Synced ${ids.length} ${type} successfully` };
+      return {
+        success: true,
+        message: `Synced ${ids.length} ${type} successfully`,
+      };
     }
     const response = await fetch(`${API_BASE_URL}/admin/${type}/bulk-sync`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
     });
     return response.json();
   },
 
   // ==================== EXPORT/IMPORT ====================
-  exportData: async (type, format = 'csv') => {
+  exportData: async (type, format = "csv") => {
     if (USE_MOCK_DATA) {
       await delay(500);
-      return { success: true, message: 'Data exported successfully' };
+      return { success: true, message: "Data exported successfully" };
     }
-    const response = await fetch(`${API_BASE_URL}/admin/export/${type}?format=${format}`);
+    const response = await fetch(
+      `${API_BASE_URL}/admin/export/${type}?format=${format}`
+    );
     return response.blob();
   },
 
   importData: async (type, file) => {
     if (USE_MOCK_DATA) {
       await delay(1000);
-      return { success: true, message: 'Data imported successfully', imported: 10 };
+      return {
+        success: true,
+        message: "Data imported successfully",
+        imported: 10,
+      };
     }
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
     const response = await fetch(`${API_BASE_URL}/admin/import/${type}`, {
-      method: 'POST',
-      body: formData
+      method: "POST",
+      body: formData,
     });
     return response.json();
-  }
+  },
+
+  // ==================== DASHBOARD STATS ====================
+  getRevenueStats: async (year) => {
+    // Không dùng mock data cho stats, luôn fetch từ backend
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/admin/revenue-stats?year=${
+        year || new Date().getFullYear()
+      }`
+    );
+    return response.json();
+  },
+
+  getCategoryStats: async () => {
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/admin/category-stats`
+    );
+    return response.json();
+  },
+
+  getDashboardStats: async () => {
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/admin/dashboard-stats`
+    );
+    return response.json();
+  },
+
+  getUserMetrics: async () => {
+    const response = await fetchWithAuth(`${API_BASE_URL}/admin/user-metrics`);
+    return response.json();
+  },
+
+  // ==================== NEW DASHBOARD STATS ====================
+  getBookingTrends: async () => {
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/admin/booking-trends`
+    );
+    return response.json();
+  },
+
+  getToursByRegion: async () => {
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/admin/tours-by-region`
+    );
+    return response.json();
+  },
+
+  getAgeDistribution: async () => {
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/admin/age-distribution`
+    );
+    return response.json();
+  },
+
+  getTopTravelers: async () => {
+    const response = await fetchWithAuth(`${API_BASE_URL}/admin/top-travelers`);
+    return response.json();
+  },
 };
