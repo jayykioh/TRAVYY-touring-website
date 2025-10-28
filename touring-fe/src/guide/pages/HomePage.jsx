@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import WelcomeBanner from "../components/home/WelcomeBanner";
 import UpcomingTourList from "../components/home/UpcomingTourList";
 import Card from "../components/common/Card";
@@ -10,24 +10,11 @@ import { AnimatePresence, motion } from "framer-motion";
 
 const HomePage = () => {
   const navigate = useNavigate();
-  const [showBlogNotification, setShowBlogNotification] = useState(() => {
-    // Chỉ hiện lần đầu, kiểm tra localStorage
-    const hasSeenNotification = localStorage.getItem(
-      "hasSeenGuideNotification"
-    );
-    return !hasSeenNotification && true;
-  });
-
-  const handleCloseBlogNotification = () => {
-    setShowBlogNotification(false);
-    localStorage.setItem("hasSeenGuideNotification", "true");
-  };
 
   const ongoingTours = mockTours.ongoing || [];
   const upcomingTours = mockTours.upcoming || [];
-  const pendingRequests = mockRequests.length;
 
-  // tính số yêu cầu mới: requested trong 48 giờ gần nhất
+  // Danh sách yêu cầu mới trong 48h
   const newRequests = mockRequests.filter((r) => {
     try {
       return new Date() - new Date(r.requestedAt) < 48 * 60 * 60 * 1000;
@@ -36,7 +23,33 @@ const HomePage = () => {
     }
   });
 
-  // Kiểm tra đã xem requests chưa
+  const pendingRequests = mockRequests.length;
+
+  // Modal hiển thị khi có yêu cầu mới hơn số lần trước
+  const [showBlogNotification, setShowBlogNotification] = useState(false);
+
+  useEffect(() => {
+    const prevCount = parseInt(
+      localStorage.getItem("lastRequestCount") || "0",
+      10
+    );
+
+    // Nếu hiện tại có nhiều yêu cầu hơn lần trước → hiện modal
+    if (newRequests.length > prevCount) {
+      setShowBlogNotification(true);
+      localStorage.setItem("hasSeenGuideNotification", "false");
+    }
+
+    // Lưu lại số lượng hiện tại
+    localStorage.setItem("lastRequestCount", newRequests.length);
+  }, [newRequests.length]);
+
+  const handleCloseBlogNotification = () => {
+    setShowBlogNotification(false);
+    localStorage.setItem("hasSeenGuideNotification", "true");
+  };
+
+  // Đọc trạng thái đã xem yêu cầu
   const [hasViewedRequests, setHasViewedRequests] = useState(() => {
     return localStorage.getItem("hasViewedGuideRequests") === "true";
   });
@@ -47,6 +60,16 @@ const HomePage = () => {
     navigate("/guide/requests");
   };
 
+  // Cập nhật lại "đã xem yêu cầu" khi modal đóng
+  useEffect(() => {
+    if (!showBlogNotification) return;
+    const timer = setTimeout(() => {
+      localStorage.setItem("hasViewedGuideRequests", "false");
+      setHasViewedRequests(false);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [showBlogNotification]);
+
   return (
     <div className="p-6 space-y-6">
       {/* Welcome Banner */}
@@ -54,7 +77,8 @@ const HomePage = () => {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="text-center">
+        {/* Yêu cầu mới */}
+        <Card className="text-center relative">
           <div className="text-4xl mb-2">📬</div>
           <div className="text-2xl font-bold text-gray-900">
             {pendingRequests}
@@ -70,8 +94,9 @@ const HomePage = () => {
               >
                 Xem yêu cầu
               </Button>
+              {/* Dấu chấm than đỏ chỉ hiện khi có yêu cầu tour mới */}
               {newRequests.length > 0 && !hasViewedRequests && (
-                <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold">
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold animate-bounce">
                   !
                 </span>
               )}
@@ -79,6 +104,7 @@ const HomePage = () => {
           )}
         </Card>
 
+        {/* Tour đang diễn ra */}
         <Card className="text-center">
           <div className="text-4xl mb-2">🚀</div>
           <div className="text-2xl font-bold text-[#02A0AA]">
@@ -98,6 +124,7 @@ const HomePage = () => {
           )}
         </Card>
 
+        {/* Tour sắp tới */}
         <Card className="text-center">
           <div className="text-4xl mb-2">📆</div>
           <div className="text-2xl font-bold text-gray-900">
@@ -106,6 +133,7 @@ const HomePage = () => {
           <div className="text-sm text-gray-500">Tour sắp tới</div>
         </Card>
 
+        {/* Doanh thu */}
         <Card className="text-center">
           <div className="text-4xl mb-2">💰</div>
           <div className="text-2xl font-bold text-[#02A0AA]">15.7M</div>
@@ -113,7 +141,7 @@ const HomePage = () => {
         </Card>
       </div>
 
-      {/* Ongoing Tour Alert */}
+      {/* Tour đang diễn ra */}
       {ongoingTours.length > 0 && (
         <Card className="border-gray-200 bg-white">
           <div className="flex items-center justify-between">
@@ -139,10 +167,10 @@ const HomePage = () => {
         </Card>
       )}
 
-      {/* Upcoming Tours */}
+      {/* Tour sắp tới */}
       <UpcomingTourList tours={upcomingTours} />
 
-      {/* Blog notification - dismissible modal with X button & overlay click */}
+      {/* Modal thông báo mới */}
       <AnimatePresence>
         {showBlogNotification && newRequests.length > 0 && (
           <motion.div
@@ -159,7 +187,7 @@ const HomePage = () => {
               onClick={(e) => e.stopPropagation()}
               className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative"
             >
-              {/* Close button */}
+              {/* Nút đóng */}
               <button
                 onClick={handleCloseBlogNotification}
                 className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
@@ -179,7 +207,7 @@ const HomePage = () => {
                 </svg>
               </button>
 
-              {/* Icon & Title */}
+              {/* Nội dung modal */}
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 bg-[#02A0AA] text-white rounded-full flex items-center justify-center">
                   <span className="text-2xl">📬</span>
@@ -194,7 +222,6 @@ const HomePage = () => {
                 </div>
               </div>
 
-              {/* Content */}
               <div className="bg-gray-50 rounded-xl p-4 mb-4">
                 <p className="text-gray-700 text-sm mb-2">
                   Bạn có{" "}
@@ -208,13 +235,12 @@ const HomePage = () => {
                 </p>
               </div>
 
-              {/* Action button */}
               <Button
                 variant="primary"
                 fullWidth
                 onClick={() => {
                   handleCloseBlogNotification();
-                  navigate("/guide/requests");
+                  handleViewRequests();
                 }}
               >
                 Xem chi tiết
@@ -223,15 +249,6 @@ const HomePage = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* New Tour Popup */}
-      {/* <NewTourPopup
-        isOpen={showNewTourPopup}
-        onClose={() => setShowNewTourPopup(false)}
-        tourRequest={currentRequest}
-        onAccept={handleAccept}
-        onDecline={handleDecline}
-      /> */}
     </div>
   );
 };

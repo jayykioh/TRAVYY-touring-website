@@ -86,5 +86,27 @@ export const mockNotifications = [
     read: false,
     icon: "📬",
     priority: "high"
+  },
+  {
+    id: "notif-009",
+    type: "new_request",
+    title: "New Tour Request!",
+    message: "Emma Wilson requested Mekong Delta Discovery tour",
+    tourId: "req-004",
+    timestamp: "2025-10-27T10:45:00",
+    read: false,
+    icon: "📬",
+    priority: "high"
+  },
+  {
+    id: "notif-010",
+    type: "new_request",
+    title: "New Tour Request!",
+    message: "Emma Wilson requested Mekong Delta Discovery tour",
+    tourId: "req-004",
+    timestamp: "2025-10-27T10:45:00",
+    read: false,
+    icon: "📬",
+    priority: "high"
   }
 ];

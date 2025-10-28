@@ -1,34 +1,68 @@
 import React, { useState, useEffect } from "react";
-import { NavLink, useLocation, Link } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { Award } from "lucide-react";
-import { mockGuide } from "../../data/mockGuide"; // 👈 import mock data
-import GuideProfileModal from "./GuideProfileModal"; // 👈 import modal component
+import { mockGuide } from "../../data/mockGuide";
+import { mockRequests } from "../../data/mockRequests";
+import GuideProfileModal from "./GuideProfileModal";
 
 const Sidebar = ({ className = "" }) => {
   const location = useLocation();
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showBadge, setShowBadge] = useState(() => {
-    return localStorage.getItem("hasViewedGuideRequests") !== "true";
+
+  // 🟢 Số yêu cầu chưa xem
+  const [unreadRequests, setUnreadRequests] = useState(0);
+
+  // 🟢 Danh sách ID yêu cầu đã xem (lưu trong localStorage)
+  const [viewedRequestIds, setViewedRequestIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("viewedGuideRequests") || "[]");
+    } catch {
+      return [];
+    }
   });
 
-  // Lắng nghe thay đổi localStorage
+  // 🟢 Khi mockRequests thay đổi, tính lại số lượng chưa xem
   useEffect(() => {
-    const checkBadge = () => {
-      setShowBadge(localStorage.getItem("hasViewedGuideRequests") !== "true");
-    };
-    window.addEventListener("storage", checkBadge);
-    // Kiểm tra lại mỗi khi location thay đổi
-    checkBadge();
-    return () => window.removeEventListener("storage", checkBadge);
-  }, [location]);
+    const allRequestIds = mockRequests.map((r) => r.id);
+    const unseen = allRequestIds.filter((id) => !viewedRequestIds.includes(id));
+    setUnreadRequests(unseen.length);
+  }, [mockRequests, viewedRequestIds]);
 
+  // 🟢 Lắng nghe thay đổi khi user xem trang /guide/requests
+  useEffect(() => {
+    if (location.pathname === "/guide/requests") {
+      // Khi mở trang Requests => đánh dấu tất cả là đã xem
+      const allIds = mockRequests.map((r) => r.id);
+      localStorage.setItem("viewedGuideRequests", JSON.stringify(allIds));
+      setViewedRequestIds(allIds);
+      setUnreadRequests(0);
+    }
+  }, [location.pathname]);
+
+  // 🟢 Lắng nghe thay đổi từ tab khác (nếu có)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const updated = JSON.parse(
+          localStorage.getItem("viewedGuideRequests") || "[]"
+        );
+        setViewedRequestIds(updated);
+      } catch {
+        setViewedRequestIds([]);
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  // 🧭 Menu
   const menuItems = [
     { path: "/guide", icon: "🏠", label: "Home", exact: true },
     {
       path: "/guide/requests",
       icon: "📬",
       label: "Requests",
-      badge: showBadge ? 4 : null,
+      badge: unreadRequests > 0 ? unreadRequests : null,
     },
     { path: "/guide/tours", icon: "📆", label: "My Tours" },
     { path: "/guide/earnings", icon: "💰", label: "Earnings" },
@@ -43,12 +77,11 @@ const Sidebar = ({ className = "" }) => {
         className={`fixed lg:relative top-0 left-0 bg-white shadow-sm border-r border-gray-200 z-40 transition-transform duration-300 rounded-lg lg:translate-x-0 w-60 flex flex-col`}
         style={{ position: "fixed", top: 88, left: 35 }}
       >
-        {/* Guide Info Card */}
+        {/* Guide Info */}
         <div
           className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => setShowProfileModal(true)}
         >
-          {/* Avatar with verified badge */}
           <div className="flex justify-center mb-2">
             <div className="relative">
               <img
@@ -72,7 +105,6 @@ const Sidebar = ({ className = "" }) => {
             </div>
           </div>
 
-          {/* Name and Role */}
           <div className="text-center mb-2">
             <h3 className="text-base font-semibold text-gray-900 mb-0.5">
               {mockGuide.name}
@@ -83,7 +115,6 @@ const Sidebar = ({ className = "" }) => {
             </p>
           </div>
 
-          {/* Stats Grid */}
           <div className="grid grid-cols-3 gap-1 text-center">
             <div>
               <div className="text-sm font-semibold text-gray-900">
@@ -124,7 +155,7 @@ const Sidebar = ({ className = "" }) => {
                   <span className="text-lg">{item.icon}</span>
                   <span className="text-[13px]">{item.label}</span>
                   {item.badge && (
-                    <span className="ml-auto text-xs bg-red-600 text-white rounded-full px-2">
+                    <span className="ml-auto text-xs bg-red-600 text-white rounded-full px-2 animate-bounce">
                       {item.badge}
                     </span>
                   )}
@@ -135,7 +166,7 @@ const Sidebar = ({ className = "" }) => {
         </nav>
       </aside>
 
-      {/* Profile Modal (để sau khi cần) */}
+      {/* Profile Modal */}
       <GuideProfileModal
         show={showProfileModal}
         onClose={() => setShowProfileModal(false)}

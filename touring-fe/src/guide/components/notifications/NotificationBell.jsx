@@ -1,26 +1,44 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { mockNotifications } from "../../data/mockNotifications";
 
 const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-  const [showBadge, setShowBadge] = useState(() => {
-    return localStorage.getItem("hasViewedGuideNotifications") !== "true";
-  });
 
+  // Kiểm tra xem user đã từng mở thông báo chưa
+  const [hasViewed, setHasViewed] = useState(
+    localStorage.getItem("hasViewedGuideNotifications") === "true"
+  );
+
+  // Đếm số thông báo chưa đọc
   const unreadCount = mockNotifications.filter((n) => !n.read).length;
+
+  // Hiện chấm đỏ nếu có thông báo chưa đọc
+  const showBadge = unreadCount > 0 && !hasViewed;
+
   const recentNotifications = mockNotifications.slice(0, 5);
 
   const handleNotificationClick = () => {
-    setIsOpen(false);
+    // Khi người dùng xem thông báo → đánh dấu đã xem
     localStorage.setItem("hasViewedGuideNotifications", "true");
-    setShowBadge(false);
+    setHasViewed(true);
+    setIsOpen(false);
     navigate("/guide/notifications");
   };
 
+  useEffect(() => {
+    // Nếu mockNotifications thay đổi (giả lập có thông báo mới)
+    // thì reset trạng thái đã xem để hiển thị lại chấm đỏ
+    if (unreadCount > 0) {
+      setHasViewed(false);
+      localStorage.setItem("hasViewedGuideNotifications", "false");
+    }
+  }, [unreadCount]);
+
   return (
     <div className="relative">
+      {/* Nút chuông */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -39,14 +57,16 @@ const NotificationBell = () => {
           />
         </svg>
 
-        {showBadge && unreadCount > 0 && (
-          <span className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-            {unreadCount}
-          </span>
+        {/* 🔴 Dấu chấm đỏ khi có thông báo mới chưa đọc */}
+        {showBadge && (
+          <>
+            <span className="absolute top-0 right-0 block w-2.5 h-2.5 bg-red-600 rounded-full ring-2 ring-white animate-ping" />
+            <span className="absolute top-0 right-0 block w-2.5 h-2.5 bg-red-600 rounded-full ring-2 ring-white" />
+          </>
         )}
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown danh sách thông báo */}
       {isOpen && (
         <>
           <div
@@ -64,7 +84,7 @@ const NotificationBell = () => {
               )}
             </div>
 
-            {/* Notifications List */}
+            {/* Danh sách thông báo */}
             <div className="overflow-y-auto flex-1">
               {recentNotifications.map((notif) => (
                 <div
