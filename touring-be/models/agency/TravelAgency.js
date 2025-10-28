@@ -102,11 +102,13 @@ const TravelAgencySchema = new mongoose.Schema(
       default: [],
     },
   },
-  { timestamps: true, collection: "travel_agency" }
+  { timestamps: true, collection: "travel_agency" } // chỉ rõ collection trong MongoDB
 );
 
-// Index for better query performance
-TravelAgencySchema.index({ name: 1 });
-TravelAgencySchema.index({ "employees.employeeId": 1 });
+// Register trên agencyConn (primary)
+const TravelAgency = agencyConn.model("TravelAgency", TravelAgencySchema);
 
-module.exports = agencyConn.model("TravelAgency", TravelAgencySchema);
+// IMPORTANT: Override global models cache để populate hoạt động đúng
+mongoose.models.TravelAgency = TravelAgency;
+
+module.exports = TravelAgency;

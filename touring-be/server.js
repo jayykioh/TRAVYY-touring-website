@@ -120,11 +120,7 @@ app.use("/api/promotions", promotionRoutes);
 app.use("/api/help", helpRoutes);
 
 // Debug routes (remove in production)
-if (process.env.NODE_ENV !== "production") {
-  const debugRoutes = require("./routes/debug.routes");
-  app.use("/api/debug", debugRoutes);
-  console.log("🐛 Debug routes enabled at /api/debug");
-}
+
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -146,11 +142,13 @@ app.get("/api/paypal/ping", (_req, res) => {
 
 // --- Global error handler ---
 app.use((err, _req, res, _next) => {
-  console.error(err);
-  res.status(500).json({
+  console.error(err && err.stack ? err.stack : err);
+  const payload = {
     error: "INTERNAL_ERROR",
     message: err.message || "Server error",
-  });
+  };
+  if (!isProd && err && err.stack) payload.stack = err.stack;
+  res.status(500).json(payload);
 });
 
 // --- Connect Mongo + Start server ---

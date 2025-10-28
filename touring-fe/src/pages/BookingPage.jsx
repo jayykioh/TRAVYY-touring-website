@@ -12,6 +12,29 @@ export default function BookingPage() {
   const { withAuth } = useAuth();
   const { items, loading } = useCart();
 
+  // Check for retry payment data
+  const [retryPaymentItems, setRetryPaymentItems] = useState(null);
+  const [retryBookingId, setRetryBookingId] = useState(null);
+
+  useEffect(() => {
+    const retryCart = sessionStorage.getItem('retryPaymentCart');
+    const retryBooking = sessionStorage.getItem('retryBookingId');
+    
+    if (retryCart) {
+      try {
+        const parsedItems = JSON.parse(retryCart);
+        setRetryPaymentItems(parsedItems);
+        setRetryBookingId(retryBooking);
+        
+        // Clear sessionStorage after loading
+        sessionStorage.removeItem('retryPaymentCart');
+        sessionStorage.removeItem('retryBookingId');
+      } catch (error) {
+        console.error('Error parsing retry payment data:', error);
+      }
+    }
+  }, []);
+
   // Voucher state - lifted to BookingPage to share between CheckoutForm and PaymentSummary
   const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [voucherCode, setVoucherCode] = useState(null);
@@ -61,6 +84,27 @@ export default function BookingPage() {
 
   // Dữ liệu hiển thị tóm tắt
   const summaryItems = useMemo(() => {
+    // ✅ Luồng RETRY PAYMENT từ booking history
+    if (retryPaymentItems) {
+      return retryPaymentItems.map((it) => {
+        const a = safeNum(it.adults);
+        const c = safeNum(it.children);
+        
+        const unitA = safeNum(it.unitPriceAdult);
+        const unitC = safeNum(it.unitPriceChild);
+        
+        const price = unitA * a + unitC * c;
+        
+        return {
+          id: `${it.tourId}-${it.date}`,
+          name: `${it.name} • ${formatDateVN(it.date)} • NL ${a}${c ? `, TE ${c}` : ""}`,
+          image: it.image,
+          price,
+          originalPrice: price, // No discount for retry
+        };
+      });
+    }
+
     // ✅ Luồng BUY-NOW
     if (buyNowItem) {
       if (!quote) return []; // đợi quote xong
@@ -109,7 +153,7 @@ export default function BookingPage() {
       originalPrice,
     };
   });
-}, [buyNowItem, quote, items]);
+}, [buyNowItem, quote, items, retryPaymentItems]);
 
   // Loading
   if (buyNowItem && quoteLoading) {
@@ -142,8 +186,10 @@ export default function BookingPage() {
            * This fixes previous mismatch where MoMo used a hardcoded fallback 100000 VND.
            */}
           <CheckoutForm
-            mode={buyNowItem ? "buy-now" : "cart"}
+            mode={retryPaymentItems ? "retry-payment" : (buyNowItem ? "buy-now" : "cart")}
             buyNowItem={buyNowItem}
+            retryPaymentItems={retryPaymentItems}
+            retryBookingId={retryBookingId}
             quote={quote}
             summaryItems={summaryItems}
             totalAmount={summaryItems.reduce((s,it)=> s + (it.price||0), 0)}

@@ -3,6 +3,7 @@ const { sendMail } = require("../utils/emailService");
 const Notification = require("../models/Notification");
 const User = require("../models/Users");
 
+
 // 1. Booking thành công
 const notifyBookingSuccess = async (req, res) => {
   try {
@@ -24,11 +25,9 @@ const notifyBookingSuccess = async (req, res) => {
   }
 };
 
-// 2. Payment thành công
-const notifyPaymentSuccess = async (req, res) => {
+// Helper function to send payment success notification (can be called internally)
+const sendPaymentSuccessNotification = async ({ email, amount, bookingCode, tourTitle, bookingId }) => {
   try {
-    const { email, amount, bookingCode, tourTitle, bookingId } = req.body;
-    
     // Tìm user để lưu notification
     const user = await User.findOne({ email });
     
@@ -94,16 +93,26 @@ const notifyPaymentSuccess = async (req, res) => {
       await notification.markAsSent(emailResult.messageId);
       
       console.log(`📧 Payment notification sent to ${email} - Notification ID: ${notification._id}`);
+      return { success: true, notificationId: notification._id };
     } catch (emailErr) {
       // Cập nhật notification thất bại
       await notification.markAsFailed(emailErr.message);
       throw emailErr;
     }
+  } catch (err) {
+    console.error("sendPaymentSuccessNotification error:", err);
+    throw err;
+  }
+};
 
-    res.json({ 
-      success: true, 
-      notificationId: notification._id 
-    });
+// 2. Payment thành công
+const notifyPaymentSuccess = async (req, res) => {
+  try {
+    const { email, amount, bookingCode, tourTitle, bookingId } = req.body;
+    
+    const result = await sendPaymentSuccessNotification({ email, amount, bookingCode, tourTitle, bookingId });
+    
+    res.json(result);
   } catch (err) {
     console.error("notifyPaymentSuccess error:", err);
     res.status(500).json({ success: false, message: err.message });
@@ -504,6 +513,7 @@ const notifyPasswordResetSuccess = async (req, res) => {
 module.exports = {
   notifyBookingSuccess,
   notifyPaymentSuccess,
+  sendPaymentSuccessNotification,
   notifyNewTour,
   notifyRegister,
   getUserNotifications,

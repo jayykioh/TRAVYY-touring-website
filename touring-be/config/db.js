@@ -26,6 +26,10 @@ if (typeof MAIN_URI !== "string" || !MAIN_URI) {
 // Optional: reduce deprecation warnings
 mongoose.set("strictQuery", true);
 
+// Connect default mongoose to main DB for models that don't specify connection
+
+
+
 const mainConn = mongoose.createConnection(MAIN_URI);
 mainConn.once("open", () => console.log("✅ Connected to main DB"));
 

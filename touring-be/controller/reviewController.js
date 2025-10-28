@@ -123,7 +123,7 @@ const createReview = async (req, res) => {
       isAnonymous: isAnonymous || false,
       tourDate: tourDate || tourInBooking.date,
       isVerified: true, // Auto verify vì đã có booking
-      status: "approved", // Auto approve vì đã verify booking
+      status: 'approved' // Auto approve vì đã verify booking
     });
 
     console.log('✅ Review created successfully:', {
@@ -135,9 +135,9 @@ const createReview = async (req, res) => {
     });
 
     const populatedReview = await Review.findById(review._id)
-      .populate("userId", "name avatar")
-      .populate("tourId", "title imageItems")
-      .populate("bookingId", "bookingCode");
+      .populate('userId', 'name avatar')
+      .populate('tourId', 'title imageItems')
+      .populate('bookingId', 'bookingCode');
 
     console.log('📤 Sending review response:', {
       reviewId: populatedReview._id,

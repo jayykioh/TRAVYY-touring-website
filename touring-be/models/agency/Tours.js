@@ -74,4 +74,10 @@ const TourSchema = new mongoose.Schema(
 TourSchema.index({ "departures.date": 1 });
 TourSchema.index({ agencyId: 1 });
 
-module.exports = agencyConn.model("Tour", TourSchema);
+// Register trên agencyConn (primary)
+const Tour = agencyConn.model("Tour", TourSchema);
+
+// IMPORTANT: Override global models cache để populate hoạt động đúng
+mongoose.models.Tour = Tour;
+
+module.exports = Tour;

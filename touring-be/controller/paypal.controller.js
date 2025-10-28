@@ -8,6 +8,9 @@ const PaymentSession = require("../models/PaymentSession");
 // Import unified helpers
 const { createBookingFromSession, clearCartAfterPayment, markBookingAsPaid, markBookingAsFailed, FX_VND_USD } = require("../utils/paymentHelpers");
 
+// Import cart restore helper from payment controller
+const { restoreCartFromPaymentSession } = require("./payment.controller");
+
 const FX = FX_VND_USD; // Use shared FX rate
 const PAYPAL_BASE = process.env.PAYPAL_MODE === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
 const isProd = process.env.NODE_ENV === 'production';
@@ -144,6 +147,41 @@ async function buildChargeForUser(userId, body) {
     };
   }
 
+  if (mode === "retry-payment") {
+    const retryItems = body?.retryItems || [];
+    if (!retryItems.length) throw Object.assign(new Error("NO_RETRY_ITEMS"), { status: 400 });
+
+    const items = [];
+    let totalVND = 0;
+
+    for (const item of retryItems) {
+      const tourId = item.tourId;
+      const date = normDate(item.date);
+      const a = clamp0(item.adults);
+      const c = clamp0(item.children);
+      const unitPriceAdult = Number(item.unitPriceAdult) || 0;
+      const unitPriceChild = Number(item.unitPriceChild) || 0;
+      const amt = unitPriceAdult * a + unitPriceChild * c;
+      totalVND += amt;
+
+      items.push({
+        sku: `${tourId}-${date}`,
+        name: `${item.name} • ${date}`,
+        quantity: 1,
+        unit_amount_vnd: amt,
+        image: item.image,
+      });
+    }
+
+    return {
+      currency: "USD",
+      items,
+      totalVND,
+      cartItems: retryItems, // Use retry items as cart items
+      retryBookingId: body?.retryBookingId
+    };
+  }
+
   throw Object.assign(new Error("UNSUPPORTED_MODE"), { status: 400 });
 }
 
@@ -233,17 +271,12 @@ exports.createOrder = async (req, res) => {
         amount: {
           currency_code: currency,
           value: finalAmountUSD,
-          breakdown: breakdown,
+          breakdown: breakdown
         },
-        items: items.map(i => ({
-          name: i.name.substring(0, 127), // PayPal limit 127 chars
-          quantity: String(i.quantity || 1),
-          unit_amount: { currency_code: currency, value: toUSD(i.unit_amount_vnd) },
-        })),
       }],
       application_context: {
-        return_url: `${CLIENT_URL}/payment/callback`,
-        cancel_url: `${CLIENT_URL}/shoppingcarts`,
+  return_url: `${CLIENT_URL}/payment/callback`,
+  cancel_url: `${CLIENT_URL}/shoppingcarts`,
         brand_name: "Travyy Tour",
         shipping_preference: "NO_SHIPPING",
       },
@@ -261,10 +294,20 @@ exports.createOrder = async (req, res) => {
       },
       body: JSON.stringify(orderBody),
     });
-    const data = await resp.json();
-    
+
+    // PayPal may sometimes return non-JSON on errors; read text first and try to parse.
+    const respText = await resp.text();
+    let data;
+    try {
+      data = respText ? JSON.parse(respText) : {};
+    } catch (parseErr) {
+      // Keep the raw text for debugging rather than throwing
+      data = respText;
+      console.warn("Warning: failed to parse PayPal response as JSON, storing raw text for debug");
+    }
+
     if (!resp.ok) {
-      console.error("PayPal create order failed:", JSON.stringify(data, null, 2));
+      console.error("PayPal create order failed:", typeof data === 'string' ? data : JSON.stringify(data, null, 2));
       return res.status(resp.status).json({
         error: 'PAYPAL_CREATE_FAILED',
         ...(isProd ? {} : { debug: { stage, status: resp.status, data, hint: 'Check credentials, amount/item_total match, currency format' } })
@@ -272,8 +315,9 @@ exports.createOrder = async (req, res) => {
     }
 
     // ⬇️ LƯU VÀO PaymentSession (thay vì req.session)
+    let paymentSession;
     try {
-      await PaymentSession.create({
+      paymentSession = await PaymentSession.create({
         userId,
         provider: "paypal",
         orderId: data.id,
@@ -281,11 +325,12 @@ exports.createOrder = async (req, res) => {
         amount: finalTotalVND,
         status: "pending",
         mode: mode || 'cart',
+  retryBookingId: req.body?.retryBookingId, // For retry payments
         items: items.map((i, idx) => {
           const tourId = i.sku?.split('-')[0];
           const date = _buyNowMeta?.date || i.sku?.substring(tourId?.length + 1);
           
-          // ✅ Use cartItems for cart mode, _buyNowMeta for buy-now mode
+          // ✅ Use cartItems for cart mode, _buyNowMeta for buy-now mode, retryItems for retry mode
           const cartItem = cartItems?.[idx];
           const adults = cartItem?.adults ?? _buyNowMeta?.adults ?? 0;
           const children = cartItem?.children ?? _buyNowMeta?.children ?? 0;
@@ -312,6 +357,11 @@ exports.createOrder = async (req, res) => {
         discountAmount: discountAmount,
         rawCreateResponse: data,
       });
+      
+      // Hold seats temporarily for 1 minute
+      const { holdSeatsForPayment } = require("../controller/payment.controller");
+      await holdSeatsForPayment(paymentSession);
+      
       console.log(`[PayPal] Payment session created for orderId: ${data.id}`);
       console.log(`[PayPal] Session items with passenger data:`, JSON.stringify(items.map((_, idx) => ({
         adults: cartItems?.[idx]?.adults ?? _buyNowMeta?.adults ?? 0,
@@ -321,14 +371,17 @@ exports.createOrder = async (req, res) => {
       })), null, 2));
     } catch (dbErr) {
       console.error("Failed to persist PayPal payment session", dbErr);
+      // Do not return an orderID to the client if we couldn't persist the session.
+      return res.status(500).json({ error: "SESSION_PERSIST_FAILED", detail: dbErr.message });
     }
 
+    // Only return orderID after session successfully persisted
     res.json({ orderID: data.id });
   } catch (e) {
-    console.error("createOrder error", e);
+    console.error("createOrder error", e && e.stack ? e.stack : e);
     res.status(e.status || 500).json({
       error: "CREATE_ORDER_FAILED",
-      ...(isProd ? {} : { debug: { message: e.message, code: e.code, stage, detail: e.detail, raw: e.raw } })
+      ...(isProd ? {} : { debug: { message: e.message, code: e.code, stage, detail: e.detail, raw: e.raw, stack: e.stack } })
     });
   }
 };
@@ -338,7 +391,7 @@ exports.captureOrder = async (req, res) => {
 
   try {
     const userId = req.user.sub;
-    orderID = req.body.orderID; // Assign without const/let
+    const orderID = req.body.orderID; // properly declare variable
 
     console.log("\n🔍 ===== PAYPAL CAPTURE ORDER START =====");
     console.log("userId:", userId);
@@ -352,9 +405,50 @@ exports.captureOrder = async (req, res) => {
     }
 
     // ⬇️ LẤY METADATA TỪ PaymentSession (thay vì req.session)
-    const paymentSession = await PaymentSession.findOne({ orderId: orderID, provider: 'paypal' });
+    let paymentSession = await PaymentSession.findOne({ orderId: orderID, provider: 'paypal' });
+
+    // Fallbacks: try to locate by nested rawCreateResponse.id or by recent pending session for this user
     if (!paymentSession) {
-      console.log("❌ [PayPal] Payment session not found");
+      console.warn(`⚠️ [PayPal] PaymentSession not found by orderId=${orderID}. Trying fallbacks...`);
+
+      // Try matching rawCreateResponse.id if stored
+      try {
+        paymentSession = await PaymentSession.findOne({ 'rawCreateResponse.id': orderID, provider: 'paypal' });
+        if (paymentSession) console.log(`ℹ️ [PayPal] Found session by rawCreateResponse.id: ${paymentSession._id}`);
+      } catch (e) {
+        console.warn('[PayPal] rawCreateResponse lookup failed', e && e.message);
+      }
+    }
+
+    if (!paymentSession) {
+      // Last-ditch: find most recent pending PayPal session for this user (created within last 10 minutes)
+      try {
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+        paymentSession = await PaymentSession.findOne({
+          provider: 'paypal',
+          userId: userId,
+          status: { $in: ['pending'] },
+          createdAt: { $gte: tenMinutesAgo }
+        }).sort({ createdAt: -1 });
+
+        if (paymentSession) {
+          console.log(`ℹ️ [PayPal] Found recent pending session for user ${userId}: ${paymentSession._id} (orderId=${paymentSession.orderId})`);
+        }
+      } catch (e) {
+        console.warn('[PayPal] recent session lookup failed', e && e.message);
+      }
+    }
+
+    if (!paymentSession) {
+      console.error("❌ [PayPal] Payment session not found after fallbacks. orderID=", orderID, "userId=", userId);
+      // Helpful debug: list up to 5 recent PayPal sessions in DB for this user
+      try {
+        const recent = await PaymentSession.find({ provider: 'paypal', userId }).sort({ createdAt: -1 }).limit(5).lean();
+        console.error("[PayPal] Recent sessions for user:", recent.map(r => ({ id: r._id, orderId: r.orderId, status: r.status, createdAt: r.createdAt })));
+      } catch (listErr) {
+        console.error('[PayPal] Failed to list recent payment sessions for diagnostics', listErr && listErr.message);
+      }
+
       throw Object.assign(new Error("PAYMENT_SESSION_NOT_FOUND"), { status: 400 });
     }
 
@@ -385,10 +479,12 @@ exports.captureOrder = async (req, res) => {
       console.log("✅ PayPal capture successful:", captureData.id);
 
       // 2) Update payment session status
-      paymentSession.status = 'paid';
-      paymentSession.paidAt = new Date();
-      paymentSession.rawCreateResponse = { ...paymentSession.rawCreateResponse, capture: captureData };
-      await paymentSession.save();
+     paymentSession.status = 'paid';
+paymentSession.paymentStatus = 'completed'; // ✅ thêm dòng này
+paymentSession.paidAt = new Date();
+paymentSession.rawCreateResponse = { ...paymentSession.rawCreateResponse, capture: captureData };
+await paymentSession.save();
+
 
       // 2.5) Mark voucher as used if stored in session
       if (paymentSession.voucherCode && paymentSession.userId) {
@@ -445,82 +541,46 @@ exports.captureOrder = async (req, res) => {
         }
       }
 
-      // 3) Get booked items from payment session
-      const bookedItems = paymentSession.items.map(it => ({
-        tourId: it.tourId,
-        date: it.meta?.date || '',
-        name: it.name,
-        image: it.meta?.image || '',
-        adults: it.meta?.adults || 0,
-        children: it.meta?.children || 0,
-        unitPriceAdult: it.meta?.unitPriceAdult || 0,
-        unitPriceChild: it.meta?.unitPriceChild || 0,
-      }));
+      // 4) Confirm held seats permanently (seats were already held during order creation)
+      console.log("\n🎫 Confirming held seats...");
+      const { confirmSeatsForPayment } = require("../controller/payment.controller");
+      await confirmSeatsForPayment(paymentSession);
+
+      // 5) Create or update booking using unified helper
+      console.log("\n💾 Creating/updating booking using unified helper...");
       
-      console.log(`\n📦 Found ${bookedItems.length} items to book`);
-
-      // 4) Kiểm tra và giảm seats
-      console.log("\n🎫 Checking and reducing seats...");
-      
-      for (const bk of bookedItems) {
-        if (!bk.tourId) continue; // Skip if no tourId
-        
-        console.log(`\n   Processing: ${bk.name}`);
-        console.log(`   tourId: ${bk.tourId}`);
-        console.log(`   date: ${bk.date}`);
-        console.log(`   adults: ${bk.adults}, children: ${bk.children}`);
-
-        const tour = await Tour.findById(bk.tourId).session(mongoSession);
-        if (!tour) {
-          console.log(`   ⚠️ Tour not found, skipping`);
-          continue;
+      let booking;
+      if (paymentSession.retryBookingId) {
+        // For retry payments, update the existing failed booking
+        console.log(`🔄 Updating existing booking ${paymentSession.retryBookingId} for retry payment`);
+        booking = await Booking.findById(paymentSession.retryBookingId);
+        if (booking) {
+          booking.status = 'paid';
+          booking.payment.status = 'completed';
+          booking.payment.paidAt = new Date();
+          booking.payment.transactionId = captureData.id;
+          booking.payment.paypalData = {
+            captureId: captureData.id,
+            payerId: captureData.payer?.payer_id,
+            payerEmail: captureData.payer?.email_address,
+            raw: captureData
+          };
+          await booking.save();
+          console.log(`✅ Updated existing booking ${booking._id} to paid status`);
+        } else {
+          console.warn(`⚠️ Retry booking ${paymentSession.retryBookingId} not found, creating new booking`);
+          booking = await createBookingFromSession(paymentSession, { 
+            capture: captureData,
+            sessionId: paymentSession._id 
+          });
         }
-
-        const dep = tour.departures.find(d => normDate(d.date) === bk.date);
-        if (!dep) {
-          console.log(`   ⚠️ Departure not found, skipping`);
-          continue;
-        }
-
-        console.log(`   📊 Current seats: left=${dep.seatsLeft}, total=${dep.seatsTotal}`);
-
-        const seatsLeft = Number(dep.seatsLeft);
-        
-        if (dep.seatsLeft == null || isNaN(seatsLeft)) {
-          console.log(`   ✅ Unlimited seats, skip reduction`);
-          continue;
-        }
-
-        const needed = clamp0(bk.adults) + clamp0(bk.children);
-        console.log(`   🔢 Need ${needed} seats, available: ${seatsLeft}`);
-
-        if (seatsLeft < needed) {
-          console.log(`   ❌ NOT ENOUGH SEATS!`);
-          throw Object.assign(
-            new Error("INSUFFICIENT_SEATS_DURING_BOOKING"),
-            { status: 409, tourId: String(tour._id), date: bk.date }
-          );
-        }
-
-        console.log(`   🔄 Reducing ${needed} seats...`);
-
-        const updateResult = await Tour.updateOne(
-          { _id: tour._id, "departures.date": bk.date },
-          { $inc: { "departures.$.seatsLeft": -needed } },
-          { session: mongoSession }
-        );
-
-        console.log(`   ✅ Update result:`, updateResult);
-        console.log(`   ✅ Successfully reduced ${needed} seats`);
+      } else {
+        // Normal payment flow
+        booking = await createBookingFromSession(paymentSession, { 
+          capture: captureData,
+          sessionId: paymentSession._id 
+        });
       }
-
-      // 5) Create booking using unified helper
-      console.log("\n💾 Creating booking using unified helper...");
-      
-      const booking = await createBookingFromSession(paymentSession, { 
-        capture: captureData,
-        sessionId: paymentSession._id 
-      });
 
       console.log("✅ Booking created:", booking._id);
 
@@ -563,6 +623,15 @@ exports.captureOrder = async (req, res) => {
         console.log(`✅ [PayPal] Session marked as failed for orderId: ${orderID}`);
         console.log(`⚠️ [PayPal] Session status set to 'failed'`);
         console.log(`💾 [PayPal] Session saved: status="${paymentSession.status}"`);
+        
+        // Restore cart items when payment fails
+        console.log(`[PayPal] Payment failed, restoring cart items...`);
+        await restoreCartFromPaymentSession(paymentSession);
+        
+        // Release held seats back to availability
+        console.log(`[PayPal] Payment failed, releasing held seats...`);
+        const { releaseSeatsForPayment } = require("../controller/payment.controller");
+        await releaseSeatsForPayment(paymentSession);
         
         // Create failed booking for user's booking history
         await markBookingAsFailed(orderID, {

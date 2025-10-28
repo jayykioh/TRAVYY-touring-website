@@ -16,25 +16,7 @@ export default function PaymentCallback() {
   const [bookingId, setBookingId] = useState(null);
   const [provider, setProvider] = useState(null);
   const [orderRef, setOrderRef] = useState(null);
-  const [countdown, setCountdown] = useState(3); // Countdown for redirect
   const hasProcessed = useRef(false); // ⬅️ THÊM GUARD
-
-  // ✅ Auto-redirect after success with countdown
-  useEffect(() => {
-    if (status === 'success') {
-      const timer = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            navigate('/profile/booking-history');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000); // Update countdown every second
-      return () => clearInterval(timer);
-    }
-  }, [status, navigate]);
 
   useEffect(() => {
     if (hasProcessed.current) return;
@@ -73,8 +55,6 @@ export default function PaymentCallback() {
             setBookingId(data.bookingId);
             // ✅ Refresh cart to remove purchased items
             await refreshCart();
-            // ✅ Dispatch custom event thay vì context
-            window.dispatchEvent(new Event('promotion-changed'));
           } else {
             throw new Error('Không thể hoàn tất thanh toán');
           }
@@ -118,8 +98,6 @@ export default function PaymentCallback() {
                 setBookingId(markData.bookingId);
                 // ✅ Refresh cart to remove purchased items
                 await refreshCart();
-                // ✅ Dispatch custom event
-                window.dispatchEvent(new Event('promotion-changed'));
                 return;
               }
             } else {
@@ -133,9 +111,6 @@ export default function PaymentCallback() {
           let attempts = 0;
           const poll = async () => {
             attempts++;
-            // ✅ Update message to show polling progress
-            setMessage(`Đang xác nhận thanh toán MoMo... (${attempts}/15)`);
-            
             try {
               console.log(`[MoMo Callback] Polling attempt ${attempts} for orderId: ${momoOrderId}`);
               const r = await fetch(`${API_BASE}/api/bookings/by-payment/momo/${momoOrderId}`, {
@@ -156,8 +131,6 @@ export default function PaymentCallback() {
                   setBookingId(d.booking._id);
                   // ✅ Refresh cart to remove purchased items
                   await refreshCart();
-                  // ✅ Dispatch custom event
-                  window.dispatchEvent(new Event('promotion-changed'));
                   return;
                 }
               } else if (r.status === 202) {
@@ -170,39 +143,16 @@ export default function PaymentCallback() {
             } catch (e) { 
               console.error('[MoMo Callback] Poll error:', e);
             }
-            if (attempts < 15) {
-              setTimeout(poll, 2000);
-            } else {
-              // After 15 attempts, stop polling and show success message
-              console.warn('[MoMo Callback] Polling timeout after 15 attempts');
-              setStatus('success');
-              setMessage('Thanh toán MoMo thành công! Vui lòng kiểm tra lịch sử đặt chỗ.');
-              // Set a dummy bookingId to trigger redirect
-              setBookingId('pending-creation');
+            if (attempts < 15) setTimeout(poll, 2000);
+            else {
+              setStatus('success'); // Payment success but booking not found yet
+              setMessage('Thanh toán MoMo thành công (đang cập nhật booking...)');
             }
           };
           poll();
         } else {
-          // Payment failed - still call backend to record failed booking
-          console.log('[MoMo Callback] Payment failed, recording failed booking...');
           setStatus('error');
           setMessage(decodeURIComponent(momoMessage || 'Thanh toán MoMo thất bại'));
-          
-          try {
-            // Call mark-paid with failed resultCode to create failed booking
-            await fetch(`${API_BASE}/api/payments/momo/mark-paid`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${user?.token}`
-              },
-              credentials: 'include',
-              body: JSON.stringify({ orderId: momoOrderId, resultCode: momoResultCode })
-            });
-            console.log('[MoMo Callback] Failed booking recorded');
-          } catch (e) {
-            console.error('[MoMo Callback] Failed to record failed booking:', e);
-          }
         }
         return;
       }
@@ -231,14 +181,11 @@ export default function PaymentCallback() {
               <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Thanh toán thành công!</h2>
               <p className="text-gray-600 mb-4">{message}</p>
-              <p className="text-sm text-blue-600 font-semibold mb-4">
-                Tự động chuyển trang trong {countdown} giây...
-              </p>
               <div className="mb-4 text-xs text-gray-500 space-y-1">
                 {provider && <div><strong>Provider:</strong> {provider}</div>}
                 {orderRef && <div><strong>Order ID:</strong> {orderRef}</div>}
               </div>
-              {bookingId && bookingId !== 'pending-creation' && (
+              {bookingId && (
                 <p className="text-sm text-gray-500 mb-6">Mã đặt chỗ: {bookingId}</p>
               )}
               <div className="mt-6 space-y-3">

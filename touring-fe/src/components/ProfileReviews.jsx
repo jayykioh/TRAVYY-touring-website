@@ -635,15 +635,27 @@ export default function ProfileReviews() {
         ]);
         
         const reviews = reviewsData.reviews || [];
-        const reviewableTours = reviewableData.tours || [];
-        
+        // Backend returns { bookings: [...] }
+        const reviewableBookings = reviewableData.bookings || [];
+
         console.log('✅ Fetched reviews:', reviews.length);
-        console.log('⏳ Reviewable tours:', reviewableTours.length);
-        console.log('📋 Reviewable tours data:', reviewableTours);
+        console.log('⏳ Reviewable bookings:', reviewableBookings.length);
+        console.log('📋 Reviewable bookings data:', reviewableBookings);
         console.log('📊 Total reviews in pagination:', reviewsData.pagination?.totalReviews);
-        
+
+        // Map backend Booking docs into the compact shape the component expects
+        const mapped = reviewableBookings.map((booking) => {
+          const firstItem = (booking.items && booking.items[0]) || {};
+          return {
+            bookingId: booking._id,
+            tourId: firstItem.tourId?._id || firstItem.tourId,
+            tourInfo: firstItem.tourId || {},
+            bookingDate: firstItem.date || booking.createdAt,
+          };
+        });
+
         setUserReviews(reviews);
-        setPendingBookings(reviewableTours);
+        setPendingBookings(mapped);
       } catch (error) {
         console.error('Error fetching data:', error);
         toast.error('Không thể tải dữ liệu đánh giá');
@@ -736,54 +748,67 @@ export default function ProfileReviews() {
         ) : (
           <div className="space-y-4">{userReviews.map((review) => (
             <div key={review._id} className="border rounded-lg p-4 bg-white">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                 <h3
-                  onClick={() => {
-                    if (review.tourId?._id) {
-                      navigate(`/tours/${review.tourId._id}`);
-                      // Scroll to reviews section after navigation
-                      setTimeout(() => {
-                        const reviewsSection = document.getElementById('reviews');
-                        if (reviewsSection) {
-                          reviewsSection.scrollIntoView({ behavior: 'smooth' });
+              <div className="flex items-start gap-4 mb-3">
+                {/* Tour Image */}
+                {review.tourId?.imageItems && review.tourId.imageItems.length > 0 && (
+                  <img
+                    src={review.tourId.imageItems[0].imageUrl}
+                    alt={review.tourId.title}
+                    className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                  />
+                )}
+                
+                <div className="flex-1">
+                  <div className="flex items-start justify-between">
+                    <div>
+                     <h3
+                      onClick={() => {
+                        if (review.tourId?._id) {
+                          navigate(`/tours/${review.tourId._id}`);
+                          // Scroll to reviews section after navigation
+                          setTimeout(() => {
+                            const reviewsSection = document.getElementById('reviews');
+                            if (reviewsSection) {
+                              reviewsSection.scrollIntoView({ behavior: 'smooth' });
+                            }
+                          }, 100);
                         }
-                      }, 100);
-                    }
-                  }}
-                  className="font-semibold text-gray-900 hover:text-blue-600 cursor-pointer transition-colors"
-                >
-                  {review.tourId?.title || "Tour đã bị xóa"}
-                </h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }, (_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-4 h-4 ${
-                            i < review.rating 
-                              ? 'text-yellow-400 fill-current' 
-                              : 'text-gray-300'
-                          }`}
-                        />
-                      ))}
+                      }}
+                      className="font-semibold text-gray-900 hover:text-blue-600 cursor-pointer transition-colors"
+                    >
+                      {review.tourId?.title || "Tour đã bị xóa"}
+                    </h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${
+                                i < review.rating 
+                                  ? 'text-yellow-400 fill-current' 
+                                  : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm text-gray-500">
+                          {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-sm text-gray-500">
-                      {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      review.status === 'approved' 
+                        ? 'bg-green-100 text-green-700' 
+                        : review.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-red-100 text-red-700'
+                    }`}>
+                      {review.status === 'approved' && 'Đã duyệt'}
+                      {review.status === 'pending' && 'Chờ duyệt'}
+                      {review.status === 'rejected' && 'Từ chối'}
                     </span>
                   </div>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  review.status === 'approved' 
-                    ? 'bg-green-100 text-green-700' 
-                    : review.status === 'pending'
-                    ? 'bg-yellow-100 text-yellow-700'
-                    : 'bg-red-100 text-red-700'
-                }`}>
-                  {review.status === 'approved' && 'Đã duyệt'}
-                  {review.status === 'pending' && 'Chờ duyệt'}
-                  {review.status === 'rejected' && 'Từ chối'}
-                </span>
               </div>
               
               <h4 className="font-medium mb-2">{review.title}</h4>
@@ -895,13 +920,19 @@ export default function ProfileReviews() {
                   <div className="p-4">
                     <div className="flex gap-3">
                       {/* Tour image */}
-                      {tourImage && (
-                        <img
-                          src={tourImage}
-                          alt={tourInfo.title}
-                          className="w-20 h-20 object-cover rounded-lg border border-gray-200 flex-shrink-0"
-                        />
-                      )}
+                      <div className="w-20 h-20 rounded-lg border border-gray-200 flex-shrink-0 overflow-hidden">
+                        {tourImage ? (
+                          <img
+                            src={tourImage}
+                            alt={tourInfo.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                            <Camera className="w-8 h-8 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
                       
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-gray-900 mb-2">
@@ -979,21 +1010,35 @@ export default function ProfileReviews() {
               ]);
               
               const reviews = reviewsData.reviews || [];
-              const reviewableTours = reviewableData.tours || [];
-              
+              const reviewableBookings = reviewableData.bookings || [];
+
               console.log('✅ Updated reviews count:', reviews.length);
-              console.log('⏳ Updated reviewable count:', reviewableTours.length);
+              console.log('⏳ Updated reviewable count:', reviewableBookings.length);
               console.log('📊 New reviews:', reviews.map(r => r._id));
-              console.log('📋 New reviewable:', reviewableTours.map(t => t.tourId));
+              console.log('📋 New reviewable bookings:', reviewableBookings.map(b => b._id));
               console.log('📈 Total reviews in DB:', reviewsData.pagination?.totalReviews);
+                console.log('📊 New reviews:', reviews.map(r => r._id));
+                console.log('📋 New reviewable bookings:', reviewableBookings.map(b => b._id));
+                console.log('📈 Total reviews in DB:', reviewsData.pagination?.totalReviews);
+
+                // Map bookings -> compact pending items
+                const mapped = reviewableBookings.map((booking) => {
+                  const firstItem = (booking.items && booking.items[0]) || {};
+                  return {
+                    bookingId: booking._id,
+                    tourId: firstItem.tourId?._id || firstItem.tourId,
+                    tourInfo: firstItem.tourId || {},
+                    bookingDate: firstItem.date || booking.createdAt,
+                  };
+                });
+
+                // ✅ Force state update with new array references
+                console.log('🔄 Before setState - userReviews:', userReviews.length, 'pendingBookings:', pendingBookings.length);
+
+                setUserReviews([...reviews]); // Create new array reference
+                setPendingBookings([...mapped]); // Create new array reference
               
-              // ✅ Force state update with new array references
-              console.log('🔄 Before setState - userReviews:', userReviews.length, 'pendingBookings:', pendingBookings.length);
-              
-              setUserReviews([...reviews]); // Create new array reference
-              setPendingBookings([...reviewableTours]); // Create new array reference
-              
-              console.log('✅ After setState - should be:', reviews.length, reviewableTours.length);
+              console.log('✅ After setState - should be:', reviews.length, mapped ? mapped.length : reviewableBookings.length);
               
               // Wait a tick for state to propagate
               await new Promise(resolve => setTimeout(resolve, 100));

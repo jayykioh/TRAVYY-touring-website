@@ -11,6 +11,8 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 export default function CheckoutForm({ 
   mode: modeProp, 
   buyNowItem: buyNowItemProp, 
+  retryPaymentItems: retryPaymentItemsProp,
+  retryBookingId: retryBookingIdProp,
   summaryItems = [], 
   totalAmount,
   onVoucherChange 
@@ -29,6 +31,8 @@ export default function CheckoutForm({
   // Prefer props (BookingPage passes them); fall back to location.state for backward compatibility.
   const mode = modeProp || location.state?.mode || "cart";
   const buyNowItem = mode === "buy-now" ? (buyNowItemProp || location.state?.item) : null;
+  const retryPaymentItems = mode === "retry-payment" ? retryPaymentItemsProp : null;
+  const retryBookingId = mode === "retry-payment" ? retryBookingIdProp : null;
 
   console.log("🔍 CheckoutForm loaded:");
   console.log("   location.state:", location.state);
@@ -204,6 +208,10 @@ export default function CheckoutForm({
         const payload = {
           mode,
           ...(mode === "buy-now" && { item: buyNowItem }),
+          ...(mode === "retry-payment" && { 
+            retryItems: retryPaymentItems,
+            retryBookingId: retryBookingId 
+          }),
           // Include voucher information
           ...(appliedVoucher && {
             promotionCode: appliedVoucher.code,
@@ -285,6 +293,11 @@ export default function CheckoutForm({
             mode,
             // For buy-now, also send the single item detail (backend can choose to persist)
             ...(mode === 'buy-now' && buyNowItem ? { item: buyNowItem } : {}),
+            // For retry-payment, send retry items and booking ID
+            ...(mode === 'retry-payment' && retryPaymentItems ? { 
+              retryItems: retryPaymentItems,
+              retryBookingId: retryBookingId 
+            } : {}),
             items: itemsSnapshot,
             // Include voucher information
             ...(appliedVoucher && {
