@@ -1,25 +1,308 @@
-# Ignore node_modules của touring-fe
+# ============================================
+# Node.js Dependencies
+# ============================================
+node_modules/
 touring-fe/node_modules/
+touring-be/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
-# Ignore build/dist
+# ============================================
+# Build Outputs
+# ============================================
+# Frontend (Vite/React)
 touring-fe/dist/
 touring-fe/build/
+touring-fe/.vite/
+touring-fe/.turbo/
+touring-fe/.vercel/
+touring-fe/.next/
 
-# Ignore file môi trường
-touring-fe/.env
-
-# Ignore node_modules của touring-be
-touring-be/node_modules/
-
-# Ignore build/dist
+# Backend (Node.js)
 touring-be/dist/
 touring-be/build/
+touring-be/out/
 
-# Ignore file môi trường
+# ============================================
+# Environment Variables
+# ============================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.backup
+touring-fe/.env
+touring-fe/.env.local
 touring-be/.env
+touring-be/.env.local
+ai/.env
 
-# IDE và OS files
+# ============================================
+# Python (AI Service)
+# ============================================
+# Virtual environments
+ai/.venv/
+ai/venv/
+ai/ENV/
+ai/env/
+ai/.python-version
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+ai/dist/
+ai/build/
+ai/*.egg-info/
+ai/.eggs/
+ai/.pytest_cache/
+ai/.mypy_cache/
+ai/.ruff_cache/
+ai/.coverage
+ai/htmlcov/
+
+# Jupyter Notebook
+ai/.ipynb_checkpoints/
+ai/*.ipynb
+
+# FAISS Index Files
+ai/index/
+ai/*.index
+ai/*.faiss
+ai/*.pkl
+ai/*.pickle
+ai/embeddings/
+ai/vectors/
+
+# Model files (if cached locally)
+ai/models/
+ai/*.bin
+ai/*.pt
+ai/*.pth
+ai/*.onnx
+ai/*.safetensors
+
+# ============================================
+# IDEs & Editors
+# ============================================
+# VS Code
 .vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains IDEs
 .idea/
+.idea/*
+*.iml
+*.ipr
+*.iws
+out/
+
+# Vim
+*.swp
+*.swo
+*~
+.vim/
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ============================================
+# Operating System
+# ============================================
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
 Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# ============================================
+# Logs
+# ============================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+combined.log
+error.log
+access.log
+
+# ============================================
+# Testing
+# ============================================
+coverage/
+*.lcov
+.nyc_output/
+test-results/
+playwright-report/
+touring-fe/coverage/
+touring-be/coverage/
+ai/tests/__pycache__/
+
+# ============================================
+# Temporary Files
+# ============================================
+*.tmp
+*.temp
+*.bak
+*.cache
+.cache/
+.temp/
+.tmp/
+*.pid
+*.seed
+*.pid.lock
+
+# ============================================
+# Database
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+touring-be/data/*.db
+touring-be/uploads/
+
+# ============================================
+# Static Assets (if generated)
+# ============================================
+touring-fe/public/uploads/
+touring-be/public/uploads/
+touring-be/uploads/
+
+# ============================================
+# Documentation (Generated)
+# ============================================
+docs/build/
+docs/_build/
+docs/.doctrees/
+site/
+
+# ============================================
+# Certificates & Keys
+# ============================================
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+.ssh/
+secrets/
+credentials/
+
+# ============================================
+# Miscellaneous
+# ============================================
+# Storybook
+storybook-static/
+.storybook-out/
+
+# Sentry
+.sentryclirc
+
+# TypeScript
+*.tsbuildinfo
+
+# ESLint
+.eslintcache
+
+# Prettier
+.prettiercache
+
+# Turbo
+.turbo/
+
+# Vercel
+.vercel/
+
+# Next.js
+.next/
+
+# Nuxt.js
+.nuxt/
+
+# Gatsby
+.cache/
+public/
+
+# Svelte
+.svelte-kit/
+
+# Docker
+.dockerignore
+
+# ============================================
+# Project-Specific
+# ============================================
+# Zone images (if cached locally)
+touring-be/public/zones/
+touring-be/data/zones/
+
+# GPX files (if temporary)
+touring-be/data/gpx/temp/
+
+# AI service logs
+ai/logs/
+ai/*.log
+
+# Backup files
+*.backup
+*.old
+*.orig
+
+# Mock data (if generated)
+touring-be/data/mock/generated/
+
+# ============================================
+# Keep These Files
+# ============================================
+!.gitignore
+!.gitattributes
+!.editorconfig
+!.prettierrc
+!.eslintrc.json
+!touring-fe/.eslintrc.cjs
+!touring-be/.eslintrc.js
+!ai/requirements.txt
+!ai/pyproject.toml

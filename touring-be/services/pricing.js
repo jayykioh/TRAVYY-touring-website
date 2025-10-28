@@ -1,4 +1,4 @@
-// services/pricing.js
+
 const Tour = require("../models/Tour");
 
 async function getPricesFor(tourId, date) {

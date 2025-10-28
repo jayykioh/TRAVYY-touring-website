@@ -27,6 +27,10 @@ const app = express();
 const isProd = process.env.NODE_ENV === "production";
 const notifyRoutes = require("./routes/notifyRoutes");
 const paymentRoutes = require("./routes/payment.routes");
+const discoverRoutes = require("./routes/discover.routes");
+const zoneRoutes = require('./routes/zone.routes'); 
+const itineraryRoutes = require('./routes/itinerary.routes');
+
 // Quick visibility of PayPal env presence (not actual secrets)
 console.log("[Boot] PayPal env present:", {
   hasClient: !!process.env.PAYPAL_CLIENT_ID,
@@ -103,9 +107,15 @@ app.use("/api/payments", paymentRoutes);
 
 app.use("/api/locations", locationRoutes);
 app.use("/api/notify", notifyRoutes);
+app.use("/api/discover", discoverRoutes);
+app.use('/api/zones', zoneRoutes);
+app.use('/api/itinerary', itineraryRoutes);
 
 
-
+console.log('   ✅ /api/zones');
+console.log('      → GET /api/zones');
+console.log('      → GET /api/zones/:zoneId');
+console.log('      → GET /api/zones/:zoneId/pois');
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 app.use("/api/paypal", paypalRoutes);
@@ -144,3 +154,65 @@ mongoose
   });
 
 module.exports = app;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// ✅ Check services on startup
+const { health, isAvailable } = require('./services/ai/libs/embedding-client');
+
+async function checkServices() {
+  console.log('\n🔍 Checking services...');
+  
+  // MongoDB
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log('✅ MongoDB connected');
+  } catch (error) {
+    console.error('❌ MongoDB failed:', error.message);
+    process.exit(1);
+  }
+  
+  // Embedding service
+  try {
+    const available = await isAvailable();
+    if (available) {
+      const healthData = await health();
+      console.log('✅ Embedding service OK:', {
+        model: healthData.model,
+        vectors: healthData.vectors,
+        url: process.env.EMBED_SERVICE_URL || 'http://localhost:8088'
+      });
+    } else {
+      console.warn('⚠️ Embedding service not available');
+      console.warn('   URL:', process.env.EMBED_SERVICE_URL || 'http://localhost:8088');
+      console.warn('   Will use keyword fallback for zone matching');
+    }
+  } catch (error) {
+    console.warn('⚠️ Embedding check failed:', error.message);
+  }
+}
+
+checkServices().then(() => {
+  // Routes
+  app.use('/api/auth', require('./routes/auth.routes'));
+  app.use('/api/discover', require('./routes/discover.routes'));
+  app.use('/api/zones', require('./routes/zone.routes'));
+  app.use('/api/itinerary', require('./routes/itinerary.routes'));
+  
+  // Health endpoint
+  app.get('/api/health', async (req, res) => {
+    const embedHealth = await health();
+    res.json({
+      backend: 'ok',
+      mongo: mongoose.connection.readyState === 1 ? 'ok' : 'error',
+      embedding: embedHealth
+    });
+  });
+  
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`\n🚀 Backend running on port ${PORT}`);
+  });
+});
