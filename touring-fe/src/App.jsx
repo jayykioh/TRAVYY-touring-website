@@ -17,7 +17,6 @@ import ProfileInfo from "./components/ProfileInfo";
 import ProfileReviews from "./components/ProfileReviews";
 import RolePopup from "./components/RolePopUp";
 import OAuthCallback from "./pages/OAuthCallback";
-
 import Cart from "./pages/Cart";
 import WishlistPage from "./pages/WishlistPage";
 import LoadingScreen from "./components/LoadingScreen";
@@ -27,6 +26,12 @@ import BookingHistory from "./pages/BookingHistory";
 import AvailableToursPage from "./pages/AvailableToursPage";
 import AITourCreator from "./pages/AITourCreator";
 import PaymentCallback from "./pages/PaymentCallback";
+import PreferencesPage from "./pages/ViDoi";
+import DiscoverResults from "./pages/DiscoverResults";
+import ZoneDetail from "./pages/ZoneDetail";
+import ItineraryView  from "./pages/ItineraryView";
+import ItineraryResult from "./pages/ItineraryResult"; // ✅ ADD THIS IMPORT
+// import ItineraryView from "./pages/ItineraryView";
 // Route guard
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
@@ -67,10 +72,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
-         
-
-
           <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
           {/* ✅ THÊM ROUTE NÀY */}
           <Route path="/shoppingcarts" element={<Cart />} />
@@ -85,14 +86,6 @@ export default function App() {
             }
           />
           <Route
-            path="/ai-tour-creator"
-            element={
-              <ProtectedRoute>
-                <AITourCreator />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/profile"
             element={
               <ProtectedRoute>
@@ -100,6 +93,8 @@ export default function App() {
               </ProtectedRoute>
             }
           >
+            {/* <Route path="/itinerary" element={<ItineraryView />} /> */}
+
             {/* /profile -> /profile/info */}
             <Route index element={<Navigate to="info" replace />} />
             <Route path="info" element={<ProfileInfo />} />
@@ -108,20 +103,74 @@ export default function App() {
             <Route path="booking-history" element={<BookingHistory />} />
           </Route>
         </Route>
+        <Route
+          path="/ai-tour-creator"
+          element={
+            <ProtectedRoute>
+              <AITourCreator />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/intinerary-creator"
+          element={
+            <ProtectedRoute>
+              <PreferencesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/itinerary" element={
+          <ProtectedRoute>  
+          <ItineraryView />
+          </ProtectedRoute>} />
+        <Route
+          path="/discover/results"
+          element={
+            <ProtectedRoute>
+              <DiscoverResults />
+            </ProtectedRoute>
+          }
+        />
+        
+<Route
+  path="/zone/:zoneId"
+  element={
+      <ZoneDetail />
+  }
+/>
+        {/* ✅ ADD: Itinerary routes */}
+        <Route
+          path="/itinerary"
+          element={
+            <ProtectedRoute>
+              <ItineraryView />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* ✅ ADD: Result page route */}
+        <Route
+          path="/itinerary/result/:id"
+          element={
+            <ProtectedRoute>
+              <ItineraryResult />
+            </ProtectedRoute>
+          }
+        />
 
         {/* ----- Auth routes (public) ----- */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
-        
+
         {/* ----- Payment callback ----- */}
-        <Route 
-          path="/payment/callback" 
+        <Route
+          path="/payment/callback"
           element={
             <ProtectedRoute>
               <PaymentCallback />
             </ProtectedRoute>
-          } 
+          }
         />
 
         {/* ----- 404 ----- */}

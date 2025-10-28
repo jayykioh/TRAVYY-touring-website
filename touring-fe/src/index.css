@@ -118,4 +118,94 @@
     @apply bg-background text-foreground;
   }
 }
+/* Base marker */
+.poi-marker {
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  background: white;
+  border: 2px solid #0ea5e9;              /* sky-500 */
+  box-shadow: 0 6px 18px rgba(2,160,170,.18);
+  cursor: pointer;
+  transition:
+    transform 160ms cubic-bezier(.22,.61,.36,1),
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    border-width 160ms ease;
+  will-change: transform;                  /* mượt khi map di chuyển */
+}
+
+/* subtle inertia khi map move/zoom (Mapbox/Goong translate marker => có transform) */
+.mapboxgl-marker, .goongjs-marker, .goong-mapboxgl-marker, .mapboxgl-marker-anchor-center {
+  transition: transform 140ms cubic-bezier(.22,.61,.36,1);
+  will-change: transform;
+}
+
+/* core dot */
+.poi-marker__dot {
+  width: 10px; height: 10px; border-radius: 999px;
+  background: #0ea5e9;
+}
+
+/* halo/glow */
+.poi-marker__halo {
+  position: absolute;
+  width: 34px; height: 34px; border-radius: 999px;
+  box-shadow: 0 0 0 0 rgba(14,165,233,.25);
+  transition: box-shadow 200ms ease;
+  pointer-events: none;
+}
+
+/* ripple khi hover */
+.poi-marker__ripple {
+  position: absolute;
+  width: 34px; height: 34px; border-radius: 999px;
+  border: 2px solid rgba(14,165,233,.25);
+  transform: scale(.9);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Hover state */
+.poi-marker:hover {
+  transform: scale(1.12);
+  border-color: #02A0AA;
+  box-shadow: 0 10px 24px rgba(2,160,170,.30);
+}
+.poi-marker:hover .poi-marker__halo {
+  box-shadow: 0 0 0 8px rgba(14,165,233,.12);
+}
+.poi-marker:hover .poi-marker__ripple {
+  animation: poi-ripple 900ms ease-out forwards;
+}
+
+/* Selected state */
+.poi-marker--selected {
+  transform: scale(1.24);
+  border-color: #02A0AA;
+  border-width: 3px;
+  box-shadow: 0 12px 30px rgba(2,160,170,.45);
+  z-index: 10;
+}
+.poi-marker--selected .poi-marker__halo {
+  box-shadow: 0 0 0 10px rgba(2,160,170,.18);
+}
+
+/* Pin variant */
+.poi-marker--pin {
+  width: 30px; height: 30px; border-radius: 12px 12px 12px 12px/18px 18px 12px 12px;
+  transform-origin: 50% 80%;
+}
+
+/* Emoji variant */
+.poi-marker--emoji {
+  font-size: 18px; line-height: 1;
+}
+
+/* Ripple keyframes */
+@keyframes poi-ripple {
+  0%   { transform: scale(.9); opacity: .0; }
+  30%  { opacity: .35; }
+  100% { transform: scale(1.25); opacity: 0; }
+}
 
