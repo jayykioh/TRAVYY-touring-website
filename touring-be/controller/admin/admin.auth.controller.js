@@ -1,7 +1,7 @@
-// controller/admin/admin.auth.controller.js
 const bcrypt = require("bcryptjs");
 const User = require("../../models/Users");
 const { signAccess, signRefresh, newId } = require("../../utils/jwt");
+const { sendMail } = require("../../utils/emailService");
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -28,7 +28,22 @@ exports.adminLogin = async (req, res) => {
         .json({ success: false, message: "Mật khẩu không đúng" });
     }
 
-    // Tạo token + cookie
+    // ============================================
+    // Đăng nhập admin - không cần 2FA/Email verification
+    // ============================================
+
+    // Lưu thông tin session để tracking
+    if (req.session) {
+      req.session.admin = {
+        id: admin.id,
+        email: admin.email,
+        device: getDeviceType(req.get("user-agent") || ""),
+        browser: getBrowserName(req.get("user-agent") || ""),
+        location: req.get("cf-ipcountry") || "Unknown", // Cloudflare country code
+        ipAddress: req.ip || req.connection.remoteAddress || "Unknown",
+      };
+    }
+
     const jti = newId();
     const refresh = signRefresh({ jti, userId: admin.id });
     res.cookie("refresh_token", refresh, {
@@ -57,6 +72,34 @@ exports.adminLogin = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+/**
+ * Helper functions to parse user agent
+ */
+function getDeviceType(userAgent) {
+  const ua = userAgent.toLowerCase();
+  if (
+    ua.includes("mobile") ||
+    ua.includes("android") ||
+    ua.includes("iphone")
+  ) {
+    return "Mobile";
+  }
+  if (ua.includes("tablet") || ua.includes("ipad")) {
+    return "Tablet";
+  }
+  return "Desktop";
+}
+
+function getBrowserName(userAgent) {
+  const ua = userAgent.toLowerCase();
+  if (ua.includes("chrome") && !ua.includes("edg")) return "Chrome";
+  if (ua.includes("safari") && !ua.includes("chrome")) return "Safari";
+  if (ua.includes("firefox")) return "Firefox";
+  if (ua.includes("edg")) return "Edge";
+  if (ua.includes("opera") || ua.includes("opr")) return "Opera";
+  return "Unknown";
+}
 
 /**
  * Admin Logout (optional)

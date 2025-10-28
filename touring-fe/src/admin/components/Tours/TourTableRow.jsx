@@ -14,23 +14,22 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, tour, isHiding }) => {
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 flex items-center justify-center z-50 p-4"
       onClick={onClose}
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
+      style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
     >
-      <div 
+      <div
         className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-lg font-bold text-gray-900 mb-3">
-          {isHiding ? 'Xác nhận ẩn tour' : 'Xác nhận hiện tour'}
+          {isHiding ? "Xác nhận ẩn tour" : "Xác nhận hiện tour"}
         </h3>
         <p className="text-gray-600 mb-6">
-          {isHiding 
+          {isHiding
             ? `Bạn có chắc chắn muốn ẩn tour "${tour?.title}"? Tour sẽ không hiển thị với khách hàng.`
-            : `Bạn có chắc chắn muốn hiện tour "${tour?.title}"? Tour sẽ hiển thị trở lại với khách hàng.`
-          }
+            : `Bạn có chắc chắn muốn hiện tour "${tour?.title}"? Tour sẽ hiển thị trở lại với khách hàng.`}
         </p>
         <div className="flex gap-3 justify-end">
           <button
@@ -42,12 +41,12 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, tour, isHiding }) => {
           <button
             onClick={onConfirm}
             className={`px-5 py-2.5 text-sm font-medium text-white rounded-xl transition-colors ${
-              isHiding 
-                ? 'bg-orange-400 hover:bg-orange-500' 
-                : 'bg-green-400 hover:bg-green-500'
+              isHiding
+                ? "bg-orange-400 hover:bg-orange-500"
+                : "bg-green-400 hover:bg-green-500"
             }`}
           >
-            {isHiding ? 'Ẩn tour' : 'Hiện tour'}
+            {isHiding ? "Ẩn tour" : "Hiện tour"}
           </button>
         </div>
       </div>
@@ -60,17 +59,17 @@ const TourTableRow = ({ tour, onViewDetail, onToggleVisibility }) => {
 
   // Calculate total seats and seats booked across all departures
   const totalSeats =
-    tour.departures?.reduce((sum, dep) => sum + dep.seatsTotal, 0) || 0;
+    tour.departures?.reduce((sum, dep) => sum + (dep.seatsTotal || 0), 0) || 0;
   const bookedSeats =
     tour.departures?.reduce(
-      (sum, dep) => sum + (dep.seatsTotal - dep.seatsLeft),
+      (sum, dep) => sum + ((dep.seatsTotal || 0) - (dep.seatsLeft || 0)),
       0
     ) || 0;
 
   const bookingPercentage =
     totalSeats > 0 ? Math.round((bookedSeats / totalSeats) * 100) : 0;
   const availableSeats =
-    tour.departures?.reduce((sum, dep) => sum + dep.seatsLeft, 0) || 0;
+    tour.departures?.reduce((sum, dep) => sum + (dep.seatsLeft || 0), 0) || 0;
   const isFull = availableSeats === 0 && totalSeats > 0;
 
   // Determine tour status based on departures
@@ -98,7 +97,11 @@ const TourTableRow = ({ tour, onViewDetail, onToggleVisibility }) => {
 
   return (
     <>
-      <tr className={`hover:bg-gray-50 transition-colors ${isHidden ? 'opacity-40' : ''}`}>
+      <tr
+        className={`hover:bg-gray-50 transition-colors ${
+          isHidden ? "opacity-40" : ""
+        }`}
+      >
         <td className="px-6 py-4">
           <div className="font-medium text-gray-900">{tour.title}</div>
           <div className="text-sm text-gray-500 line-clamp-2">
@@ -131,7 +134,7 @@ const TourTableRow = ({ tour, onViewDetail, onToggleVisibility }) => {
               Đã đầy
             </span>
           )}
-          
+
           {isHidden && (
             <span className="inline-block mt-1 text-xs font-semibold text-gray-600 bg-gray-200 px-2 py-0.5 rounded ml-1">
               Đã ẩn
@@ -201,7 +204,11 @@ const TourTableRow = ({ tour, onViewDetail, onToggleVisibility }) => {
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
               }`}
               title={
-                !canHide ? "Không thể ẩn/hiện tour" : isHidden ? "Hiện tour" : "Ẩn tour"
+                !canHide
+                  ? "Không thể ẩn/hiện tour"
+                  : isHidden
+                  ? "Hiện tour"
+                  : "Ẩn tour"
               }
             >
               {isHidden ? "Hiện" : "Ẩn"}

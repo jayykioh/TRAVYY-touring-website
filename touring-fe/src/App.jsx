@@ -19,6 +19,9 @@ import ProfileLayout from "./pages/UserProfile";
 import ProfileInfo from "./components/ProfileInfo";
 import ProfileReviews from "./components/ProfileReviews";
 import ProfilePromotions from "./components/ProfilePromotions";
+import ProfileSecurity from "./pages/ProfileSecurity";
+import Confirm2FA from "./pages/Confirm2FA";
+import ConfirmEmailVerification from "./pages/ConfirmEmailVerification";
 import RolePopup from "./components/RolePopUp";
 import OAuthCallback from "./pages/OAuthCallback";
 import HelpCenter from "./components/HelpCenter";
@@ -55,9 +58,8 @@ export default function App() {
   return (
     <Fragment>
       <Routes>
-
-{/* ✅ CẬP NHẬT 2: Admin routes - AdminAuthProvider đã wrap BÊN TRONG AdminRoutes */}
-      <Route path="/admin/*" element={<AdminRoutes />} />
+        {/* ✅ CẬP NHẬT 2: Admin routes - AdminAuthProvider đã wrap BÊN TRONG AdminRoutes */}
+        <Route path="/admin/*" element={<AdminRoutes />} />
 
         {/* ----- Public + Main layout ----- */}
         <Route element={<MainLayout />}>
@@ -85,10 +87,12 @@ export default function App() {
           <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
           {/* ✅ THÊM ROUTE NÀY */}
           <Route path="/shoppingcarts" element={<Cart />} />
-          
           {/* Help Center routes */}
           <Route path="/help" element={<HelpCenter />} />
-          <Route path="/help/category/:category" element={<HelpCategoryView />} />
+          <Route
+            path="/help/category/:category"
+            element={<HelpCategoryView />}
+          />
           <Route path="/help/article/:slug" element={<HelpArticleView />} />
           {/* <Route path="/region/:slug" element={<RegionTours />} /> */}
           {/* ✅ BẢO VỆ 2 ROUTE NÀY */}
@@ -124,6 +128,7 @@ export default function App() {
             <Route path="favorites" element={<WishlistPage />} />
             <Route path="booking-history" element={<BookingHistory />} />
             <Route path="change-password" element={<ChangePassword />} />
+            <Route path="security" element={<ProfileSecurity />} />
           </Route>
         </Route>
 
@@ -133,6 +138,13 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
+
+        {/* ----- Security confirmation routes (public with token) ----- */}
+        <Route path="/confirm-2fa" element={<Confirm2FA />} />
+        <Route
+          path="/confirm-email-verification"
+          element={<ConfirmEmailVerification />}
+        />
 
         {/* ----- Payment callback ----- */}
         <Route
@@ -154,5 +166,4 @@ export default function App() {
       )}
     </Fragment>
   );
-
 }

@@ -159,11 +159,28 @@ exports.createMoMoPayment = async (req, res) => {
       item: buyNowItem,
     } = req.body || {};
 
+    console.log("📥 [MoMo] Received payment request:", {
+      mode,
+      buyNowItem,
+      frontendAmount: req.body.amount,
+      frontendItems: items,
+      userId: req.user?.sub || req.user?._id,
+    });
+
     // Authoritatively recompute amount from server-side state
     const userId = req.user?.sub || req.user?._id;
     const { items: serverItems, totalVND } = await buildMoMoCharge(userId, {
       mode,
       item: buyNowItem,
+    });
+
+    console.log("🧮 [MoMo] Server calculated:", {
+      totalVND,
+      serverItems: serverItems.map((it) => ({
+        name: it.name,
+        price: it.price,
+        meta: it.meta,
+      })),
     });
 
     // Apply discount from voucher/promotion
@@ -584,12 +601,10 @@ exports.getBookingByPayment = async (req, res) => {
 
     if (!session) {
       console.log(`[Payment] ❌ No payment session found`);
-      return res
-        .status(404)
-        .json({
-          error: "NOT_FOUND",
-          message: "No payment session or booking found",
-        });
+      return res.status(404).json({
+        error: "NOT_FOUND",
+        message: "No payment session or booking found",
+      });
     }
 
     console.log(`[Payment] Payment session status: ${session.status}`);

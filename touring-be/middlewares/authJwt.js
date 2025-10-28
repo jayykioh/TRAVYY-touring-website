@@ -42,6 +42,33 @@ const optionalAuth = (req, res, next) => {
   next();
 };
 
+// Admin auth - must have valid token with Admin role
+const verifyAdminToken = (req, res, next) => {
+  const h = req.headers.authorization || "";
+  const t = h.startsWith("Bearer ") ? h.slice(7) : null;
+
+  if (!t) return res.status(401).json({ message: "Missing token" });
+
+  try {
+    const decoded = jwt.verify(t, process.env.JWT_ACCESS_SECRET);
+
+    // Check if user has Admin role
+    if (decoded.role !== "Admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    req.admin = {
+      id: decoded.id || decoded.sub || decoded._id,
+      role: decoded.role,
+    };
+
+    return next();
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid/expired token" });
+  }
+};
+
 module.exports = verifyToken;
 module.exports.verifyToken = verifyToken;
 module.exports.optionalAuth = optionalAuth;
+module.exports.verifyAdminToken = verifyAdminToken;

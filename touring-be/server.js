@@ -110,6 +110,9 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/admin", adminRoutes); // Updated to use modular admin routes
 app.use("/api/payments", paymentRoutes);
 
+const securityRoutes = require("./routes/security.routes");
+app.use("/api/security", securityRoutes);
+
 app.use("/api/locations", locationRoutes);
 app.use("/api/notify", notifyRoutes);
 app.use("/api/reviews", reviewRoutes);
@@ -117,7 +120,7 @@ app.use("/api/promotions", promotionRoutes);
 app.use("/api/help", helpRoutes);
 
 // Debug routes (remove in production)
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   const debugRoutes = require("./routes/debug.routes");
   app.use("/api/debug", debugRoutes);
   console.log("🐛 Debug routes enabled at /api/debug");

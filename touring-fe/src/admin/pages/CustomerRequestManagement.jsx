@@ -1,93 +1,127 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  RefreshCw, 
-  Download, 
+import React, { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  RefreshCw,
+  Download,
   AlertCircle,
   Clock,
   CheckCircle,
-  XCircle
-} from 'lucide-react';
+  XCircle,
+} from "lucide-react";
+import { toast } from "sonner";
 
 // Components
-import StatCard from '../components/Dashboard/StatsCard';
-import RequestFilters from '../components/CustomerRequest/RequestFilters';
-import RequestTableRow from '../components/CustomerRequest/RequestTableRow';
-import Pagination from '../components/Common/Pagination';
+import StatCard from "../components/Dashboard/StatsCard";
+import RequestFilters from "../components/CustomerRequest/RequestFilters";
+import RequestTableRow from "../components/CustomerRequest/RequestTableRow";
+import Pagination from "../components/Common/Pagination";
 
-// Data
+// Services
+import * as customerRequestService from "../services/customerRequestService";
+
+// Data (fallback)
 import {
-  MOCK_CUSTOMER_REQUESTS,
   CUSTOMER_REQUEST_STATUS,
   REQUEST_PRIORITY,
   REQUEST_CHART_DATA,
-  getRequestStats
-} from '../data/customerRequestData';
+} from "../data/customerRequestData";
 
 const CustomerRequestManagement = () => {
   const navigate = useNavigate();
-  const [requests, setRequests] = useState(MOCK_CUSTOMER_REQUESTS);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [priorityFilter, setPriorityFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
+  // Fetch data on mount
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      const result = await customerRequestService.getCustomerRequests();
+
+      if (result.success) {
+        // Transform backend feedback to frontend request format
+        const transformedRequests = result.data.map(
+          customerRequestService.transformFeedbackToRequest
+        );
+        setRequests(transformedRequests);
+      } else {
+        toast.error(result.error || "Không thể tải dữ liệu");
+        setRequests([]);
+      }
+    } catch (error) {
+      console.error("❌ Fetch requests error:", error);
+      toast.error("Có lỗi xảy ra khi tải dữ liệu");
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Calculate statistics
-  const stats = useMemo(() => getRequestStats(requests), [requests]);
+  const stats = useMemo(
+    () => customerRequestService.getRequestStats(requests),
+    [requests]
+  );
 
   // Stats cards configuration
   const statsCards = [
     {
-      id: 'pending',
-      label: 'Chờ xử lý',
+      id: "pending",
+      label: "Chờ xử lý",
       value: stats.pending,
-      subtitle: 'Yêu cầu mới',
-      trend: 'up',
-      change: '+5',
+      subtitle: "Yêu cầu mới",
+      trend: "up",
+      change: "+5",
       icon: AlertCircle,
-      iconColor: 'text-yellow-600',
-      variant: 'yellow',
-      chartData: REQUEST_CHART_DATA.requests
+      iconColor: "text-yellow-600",
+      variant: "yellow",
+      chartData: REQUEST_CHART_DATA.requests,
     },
     {
-      id: 'inProgress',
-      label: 'Đang xử lý',
+      id: "inProgress",
+      label: "Đang xử lý",
       value: stats.inProgress,
-      subtitle: 'Đang được giải quyết',
-      trend: 'up',
-      change: '+3',
+      subtitle: "Đang được giải quyết",
+      trend: "up",
+      change: "+3",
       icon: Clock,
-      iconColor: 'text-blue-600',
-      variant: 'aqua',
-      chartData: REQUEST_CHART_DATA.requests
+      iconColor: "text-blue-600",
+      variant: "aqua",
+      chartData: REQUEST_CHART_DATA.requests,
     },
     {
-      id: 'completed',
-      label: 'Hoàn thành',
+      id: "completed",
+      label: "Hoàn thành",
       value: stats.completed,
-      subtitle: 'Đã giải quyết',
-      trend: 'up',
-      change: '+12',
+      subtitle: "Đã giải quyết",
+      trend: "up",
+      change: "+12",
       icon: CheckCircle,
-      iconColor: 'text-green-600',
-      variant: 'mint',
-      chartData: REQUEST_CHART_DATA.requests
+      iconColor: "text-green-600",
+      variant: "mint",
+      chartData: REQUEST_CHART_DATA.requests,
     },
     {
-      id: 'urgent',
-      label: 'Khẩn cấp',
+      id: "urgent",
+      label: "Khẩn cấp",
       value: stats.urgent,
-      subtitle: 'Cần xử lý ngay',
-      trend: 'down',
-      change: '-2',
+      subtitle: "Cần xử lý ngay",
+      trend: "down",
+      change: "-2",
       icon: XCircle,
-      iconColor: 'text-red-600',
-      variant: 'yellow',
-      chartData: []
-    }
+      iconColor: "text-red-600",
+      variant: "yellow",
+      chartData: [],
+    },
   ];
 
   // Filter requests
@@ -107,17 +141,17 @@ const CustomerRequestManagement = () => {
     }
 
     // Status filter
-    if (statusFilter !== 'all') {
+    if (statusFilter !== "all") {
       result = result.filter((req) => req.status === statusFilter);
     }
 
     // Priority filter
-    if (priorityFilter !== 'all') {
+    if (priorityFilter !== "all") {
       result = result.filter((req) => req.priority === priorityFilter);
     }
 
     // Type filter
-    if (typeFilter !== 'all') {
+    if (typeFilter !== "all") {
       result = result.filter((req) => req.type === typeFilter);
     }
 
@@ -141,37 +175,34 @@ const CustomerRequestManagement = () => {
   // Handle page change
   const handlePageChange = (page) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Handle refresh
-  const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setRequests(MOCK_CUSTOMER_REQUESTS);
-      setLoading(false);
-    }, 500);
+  const handleRefresh = async () => {
+    await fetchRequests();
+    toast.success("Đã làm mới dữ liệu");
   };
 
   // Handle export CSV
   const handleExport = () => {
     if (filteredRequests.length === 0) {
-      alert('Không có dữ liệu để export');
+      alert("Không có dữ liệu để export");
       return;
     }
 
     const csvHeaders = [
-      'Mã yêu cầu',
-      'Khách hàng',
-      'Email',
-      'Điện thoại',
-      'Loại',
-      'Mức độ',
-      'Trạng thái',
-      'Tiêu đề',
-      'Điểm đến',
-      'Số người',
-      'Ngày tạo'
+      "Mã yêu cầu",
+      "Khách hàng",
+      "Email",
+      "Điện thoại",
+      "Loại",
+      "Mức độ",
+      "Trạng thái",
+      "Tiêu đề",
+      "Điểm đến",
+      "Số người",
+      "Ngày tạo",
     ];
 
     const csvRows = filteredRequests.map((req) => [
@@ -183,22 +214,24 @@ const CustomerRequestManagement = () => {
       req.priority,
       req.status,
       `"${req.subject}"`,
-      req.destination || '',
-      req.numberOfPeople || '',
-      new Date(req.createdAt).toLocaleDateString('vi-VN')
+      req.destination || "",
+      req.numberOfPeople || "",
+      new Date(req.createdAt).toLocaleDateString("vi-VN"),
     ]);
 
     const csvContent = [
-      csvHeaders.join(','),
-      ...csvRows.map((row) => row.join(','))
-    ].join('\n');
+      csvHeaders.join(","),
+      ...csvRows.map((row) => row.join(",")),
+    ].join("\n");
 
-    const blob = new Blob(['\ufeff' + csvContent], {
-      type: 'text/csv;charset=utf-8;'
+    const blob = new Blob(["\ufeff" + csvContent], {
+      type: "text/csv;charset=utf-8;",
     });
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `customer-requests_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `customer-requests_${
+      new Date().toISOString().split("T")[0]
+    }.csv`;
     link.click();
   };
 
@@ -211,8 +244,6 @@ const CustomerRequestManagement = () => {
   const handleUpdateStatus = (request) => {
     navigate(`/admin/customer-requests/${request.requestId}/update`);
   };
-
-
 
   // Main list view
   if (loading) {
@@ -348,7 +379,9 @@ const CustomerRequestManagement = () => {
               )}
 
               <div className="text-center text-sm text-gray-500 mt-2 mb-4">
-                Hiển thị {startIndex + 1}-{Math.min(endIndex, filteredRequests.length)} trong tổng số {filteredRequests.length} yêu cầu
+                Hiển thị {startIndex + 1}-
+                {Math.min(endIndex, filteredRequests.length)} trong tổng số{" "}
+                {filteredRequests.length} yêu cầu
               </div>
             </>
           )}

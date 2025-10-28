@@ -12,24 +12,26 @@ const SearchFilterResults = () => {
   const { user, withAuth } = useAuth();
   // ✅ matchedTours truyền từ QuickBooking.jsx
   const matchedToursFromState = location.state?.matchedTours || [];
-  
+
   // ✅ Load wishlist từ server
   useEffect(() => {
     if (!user?.token) return;
-    
-    fetch('/api/wishlist', {
+
+    fetch("/api/wishlist", {
       headers: { Authorization: `Bearer ${user.token}` },
-      credentials: 'include',
+      credentials: "include",
     })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data.success) {
-          setFavorites(new Set(data.data.map(item => String(item.tourId._id))));
+          setFavorites(
+            new Set(data.data.map((item) => String(item.tourId._id)))
+          );
         }
       })
-      .catch(err => console.error('Error fetching wishlist:', err));
+      .catch((err) => console.error("Error fetching wishlist:", err));
   }, [user?.token]);
-  
+
   const handleFavoriteToggle = async (tourId) => {
     if (!user?.token) {
       toast.error("Bạn cần đăng nhập để dùng wishlist");
@@ -62,8 +64,6 @@ const SearchFilterResults = () => {
           data.isFav ? newSet.add(tourId) : newSet.delete(tourId);
           return newSet;
         });
-        
-      
       } else {
         // ❌ Nếu API fail, revert lại state cũ
         setFavorites((prev) => {
@@ -75,14 +75,14 @@ const SearchFilterResults = () => {
       }
     } catch (err) {
       console.error("❌ Wishlist toggle error:", err);
-      
+
       // ❌ Revert lại state cũ khi có lỗi
       setFavorites((prev) => {
         const newSet = new Set(prev);
         wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
         return newSet;
       });
-      
+
       toast.error("Không thể cập nhật danh sách yêu thích!");
     }
   };
@@ -155,12 +155,15 @@ const SearchFilterResults = () => {
 
       const res = await fetch(url);
       const data = await res.json();
-      setFilteredTours(data);
+      // Filter out hidden tours
+      const visibleTours = data.filter((tour) => !tour.isHidden);
+      setFilteredTours(visibleTours);
 
-      if (data.length === 0) {
+      if (visibleTours.length === 0) {
         const resAll = await fetch("http://localhost:4000/api/tours");
         const all = await resAll.json();
-        setSuggestedTours(all.slice(0, 8));
+        const visibleSuggested = all.filter((tour) => !tour.isHidden);
+        setSuggestedTours(visibleSuggested.slice(0, 8));
       }
     } catch (err) {
       console.error("❌ Lỗi khi fetch tour:", err);

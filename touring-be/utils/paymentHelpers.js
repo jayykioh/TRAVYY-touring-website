@@ -138,6 +138,51 @@ async function createBookingFromSession(session, additionalData = {}) {
       bookingDoc._id
     );
 
+    // ✅ Trừ số chỗ còn lại (seatsLeft) cho mỗi departure
+    for (const item of bookingItems) {
+      if (item.tourId && item.date) {
+        try {
+          const totalPeople = (item.adults || 0) + (item.children || 0);
+
+          // Normalize date to YYYY-MM-DD format to match DB
+          const dateStr = item.date.includes("T")
+            ? item.date.split("T")[0]
+            : item.date;
+
+          console.log(
+            `[Payment] 🔍 Looking for departure: tour=${item.tourId}, date=${dateStr}, people=${totalPeople}`
+          );
+
+          const result = await Tour.findOneAndUpdate(
+            {
+              _id: item.tourId,
+              "departures.date": dateStr,
+              "departures.seatsLeft": { $gte: totalPeople },
+            },
+            {
+              $inc: { "departures.$.seatsLeft": -totalPeople },
+            },
+            { new: true }
+          );
+
+          if (result) {
+            console.log(
+              `[Payment] ✅ Reduced ${totalPeople} seats for tour ${item.tourId} on ${dateStr}`
+            );
+          } else {
+            console.warn(
+              `[Payment] ⚠️ Could not reduce seats for tour ${item.tourId} on ${dateStr} - may be sold out or date not found`
+            );
+          }
+        } catch (seatErr) {
+          console.error(
+            `[Payment] ❌ Failed to reduce seats for tour ${item.tourId}:`,
+            seatErr
+          );
+        }
+      }
+    }
+
     // Gửi thông báo thanh toán thành công
     try {
       const user = await User.findById(session.userId).lean();

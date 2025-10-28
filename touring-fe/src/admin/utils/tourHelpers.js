@@ -26,13 +26,16 @@ export const searchTours = (tours, searchTerm) => {
 export const filterByStatus = (tours, status) => {
   if (status === "all") return tours;
 
-  return tours.filter((tour) => {
-    const hasOpenDepartures = tour.departures?.some(
-      (dep) => dep.status === "open"
-    );
-    const tourStatus = hasOpenDepartures ? "active" : "inactive";
-    return tourStatus === status;
-  });
+  // Filter theo isHidden field
+  if (status === "visible") {
+    return tours.filter((tour) => !tour.isHidden);
+  }
+
+  if (status === "hidden") {
+    return tours.filter((tour) => tour.isHidden === true);
+  }
+
+  return tours;
 };
 
 // Sort tours by field and order

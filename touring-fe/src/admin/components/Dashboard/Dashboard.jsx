@@ -53,8 +53,8 @@ const Dashboard = () => {
     setIsRefreshing(true);
     try {
       // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       // Update last refresh time
       setLastRefresh(new Date());
       setIsRefreshing(false);
@@ -408,7 +408,10 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Refresh Loading Modal */}
       {isRefreshing && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
+        >
           <div className="bg-white rounded-2xl p-8 shadow-2xl border border-gray-100 max-w-sm w-full mx-4">
             <div className="flex items-center justify-center mb-4">
               <svg
@@ -439,7 +442,10 @@ const Dashboard = () => {
               Vui lòng chờ trong khi chúng tôi cập nhật thông tin dashboard
             </p>
             <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
+              <div
+                className="bg-blue-600 h-2 rounded-full animate-pulse"
+                style={{ width: "70%" }}
+              ></div>
             </div>
           </div>
         </div>
@@ -466,8 +472,19 @@ const Dashboard = () => {
               onClick={handleRefresh}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
             >
-              <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              <svg
+                className="w-4 h-4"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
               </svg>
               Làm mới
             </button>

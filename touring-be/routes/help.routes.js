@@ -20,12 +20,21 @@ router.get("/category/:category", helpController.getArticlesByCategory);
 router.get("/article/:slug", helpController.getArticle);
 
 // === USER ROUTES (optional auth) ===
-router.post("/article/:articleId/feedback", optionalAuth, helpController.submitFeedback);
+router.post(
+  "/article/:articleId/feedback",
+  optionalAuth,
+  helpController.submitFeedback
+);
 
 // === ADMIN ROUTES ===
 router.use(verifyToken, isAdmin);
 router.post("/article", helpController.createArticle);
 router.put("/article/:id", helpController.updateArticle);
 router.delete("/article/:id", helpController.deleteArticle);
+
+// Feedback management (Admin only)
+router.get("/feedback", helpController.getAllFeedback);
+router.get("/feedback/:id", helpController.getFeedbackById);
+router.put("/feedback/:id/status", helpController.updateFeedbackStatus);
 
 module.exports = router;
