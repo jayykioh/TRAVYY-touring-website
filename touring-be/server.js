@@ -5,8 +5,6 @@ const PORT = process.env.PORT || 4000;
 const express = require("express");
 const mongoose = require("mongoose");
 const passport = require("passport");
-const session = require("express-session");
-const MongoStore = require("connect-mongo");
 const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
@@ -74,31 +72,9 @@ app.use(
 
 if (isProd) app.set("trust proxy", 1);
 
-// --- Session ---
-app.use(
-  session({
-    name: "sid",
-    secret: process.env.SESSION_SECRET || "secret",
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: MONGO_URI,
-      collectionName: "sessions",
-      ttl: 60 * 60 * 24 * 7,
-    }),
-    cookie: {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? "lax" : "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    },
-  })
-);
-
 // --- Routes ---
 app.use("/api/vn", vnAddrRoutes);
 app.use(passport.initialize());
-app.use(passport.session());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);

@@ -65,6 +65,26 @@ const userSchema = new mongoose.Schema(
         },
       },
     ],
+    // 🔐 Account status management
+    accountStatus: {
+      type: String,
+      enum: ["active", "banned", "inactive", "pending"],
+      default: "active",
+    },
+    statusReason: String, // Lý do khóa/cấm
+    statusUpdatedAt: Date,
+    statusUpdatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    // Lock history: track each lock/unlock action for audit
+    lockHistory: [
+      {
+        reason: String,
+        lockedAt: Date,
+        unlockedAt: Date,
+        lockedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        unlockedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      },
+    ],
+    lastLogin: Date, // Track last login time
   },
   { timestamps: true }
 );

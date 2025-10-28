@@ -75,13 +75,63 @@ export const getCustomerById = async (customerId) => {
 
     return {
       success: true,
-      data: data.data,
+      data: transformUserToCustomer(data.data),
     };
   } catch (error) {
     console.error("❌ Get customer error:", error);
     return {
       success: false,
       error: error.message || "Không thể tải dữ liệu",
+    };
+  }
+};
+
+/**
+ * Get customer bookings
+ */
+export const getCustomerBookings = async (customerId) => {
+  try {
+    const response = await fetchWithAuth(
+      `${API_URL}/admin/users/${customerId}/bookings`
+    );
+    const data = await response.json();
+
+    return {
+      success: true,
+      data: data.data || [],
+    };
+  } catch (error) {
+    console.error("❌ Get customer bookings error:", error);
+    return {
+      success: false,
+      error: error.message || "Không thể tải dữ liệu",
+      data: [],
+    };
+  }
+};
+
+/**
+ * Delete customer account
+ */
+export const deleteCustomer = async (customerId) => {
+  try {
+    const response = await fetchWithAuth(
+      `${API_URL}/admin/users/${customerId}`,
+      {
+        method: "DELETE",
+      }
+    );
+    const data = await response.json();
+
+    return {
+      success: true,
+      message: data.message || "Xóa tài khoản thành công",
+    };
+  } catch (error) {
+    console.error("❌ Delete customer error:", error);
+    return {
+      success: false,
+      error: error.message || "Xóa tài khoản thất bại",
     };
   }
 };
@@ -98,7 +148,15 @@ export const updateCustomerStatus = async (customerId, status, reason = "") => {
         body: JSON.stringify({ status, reason }),
       }
     );
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data?.message || "Cập nhật thất bại",
+        data: data?.data,
+      };
+    }
 
     return {
       success: true,
@@ -143,24 +201,36 @@ export const transformUserToCustomer = (user) => {
 
   const stats = user.stats || {};
 
+  // Generate avatar URL
+  const getAvatarUrl = () => {
+    if (user.avatar?.data) {
+      // If avatar data exists, use profile avatar endpoint
+      return `${API_URL}/profile/avatar/${user._id}`;
+    }
+    // Default UI Avatars
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      user.name || user.email || "User"
+    )}&background=007980&color=fff`;
+  };
+
   return {
-    id: user._id,
+    _id: user._id,
+    id: user._id, // For compatibility
+    fullName: user.name || "N/A",
     name: user.name || "N/A",
     email: user.email || "",
     phone: user.phone || "",
-    avatar: user.avatar?.data
-      ? `data:${user.avatar.contentType};base64,${user.avatar.data.toString(
-          "base64"
-        )}`
-      : `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          user.name || "User"
-        )}&background=007980&color=fff`,
+    avatar: getAvatarUrl(),
     location: user.location || {},
     totalBookings: stats.totalBookings || 0,
-    completedBookings: stats.completedBookings || 0,
-    totalSpent: stats.totalSpent || 0,
+    paidBookings: stats.paidBookings || 0,
+    pendingBookings: stats.pendingBookings || 0,
+    cancelledBookings: stats.cancelledBookings || 0,
+    totalSpent: stats.totalSpent || 0, // ✅ Total từ Bookings.totalVND
+    status: user.accountStatus || "active", // Map to 'status' for compatibility
     accountStatus: user.accountStatus || "active",
     statusReason: user.statusReason,
+    createdAt: user.createdAt,
     joinDate: user.createdAt,
     lastActive: user.lastLogin || user.updatedAt,
     isActive:
@@ -169,6 +239,15 @@ export const transformUserToCustomer = (user) => {
         new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
     twoFactorEnabled: user.twoFactorEnabled || false,
     emailVerificationEnabled: user.emailVerificationEnabled || false,
+    averageRating: 4.5, // TODO: Calculate from reviews
+    lockHistory: (user.lockHistory || []).map((entry, idx) => ({
+      id: entry._id || idx,
+      reason: entry.reason || "",
+      lockedAt: entry.lockedAt,
+      unlockedAt: entry.unlockedAt,
+      lockedBy: entry.lockedBy,
+      unlockedBy: entry.unlockedBy,
+    })),
   };
 };
 
@@ -181,28 +260,29 @@ export const calculateCustomerStats = (customers) => {
     active: 0,
     inactive: 0,
     banned: 0,
-    totalSpent: 0,
+    totalRevenue: 0,
     totalBookings: 0,
-    averageSpent: 0,
+    averageSpending: 0,
   };
 
   customers.forEach((customer) => {
-    // Count by status
-    if (customer.accountStatus === "banned") {
+    // Count by account status
+    const status = customer.status || customer.accountStatus;
+    if (status === "banned") {
       stats.banned++;
-    } else if (customer.isActive) {
+    } else if (status === "active") {
       stats.active++;
-    } else {
+    } else if (status === "inactive") {
       stats.inactive++;
     }
 
     // Sum totals
-    stats.totalSpent += customer.totalSpent || 0;
+    stats.totalRevenue += customer.totalSpent || 0;
     stats.totalBookings += customer.totalBookings || 0;
   });
 
-  stats.averageSpent =
-    stats.total > 0 ? Math.round(stats.totalSpent / stats.total) : 0;
+  stats.averageSpending =
+    stats.total > 0 ? Math.round(stats.totalRevenue / stats.total) : 0;
 
   return stats;
 };

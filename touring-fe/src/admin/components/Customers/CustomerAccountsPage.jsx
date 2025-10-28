@@ -5,7 +5,6 @@ import {
   Eye,
   Lock,
   Unlock,
-  Mail,
   Download,
   UserCheck,
   UserX,
@@ -208,13 +207,6 @@ export default function CustomerAccountsPage() {
         buttonText: "Mở khóa",
         buttonClass: "bg-green-600 hover:bg-green-700",
       },
-      email: {
-        title: "Gửi email",
-        icon: <Mail className="w-6 h-6 text-blue-600" />,
-        message: "Gửi email cho khách hàng.",
-        buttonText: "Gửi",
-        buttonClass: "bg-blue-600 hover:bg-blue-700",
-      },
     };
     return configs[actionType] || configs.lock;
   };
@@ -326,7 +318,6 @@ export default function CustomerAccountsPage() {
               <option value={CUSTOMER_STATUS.ACTIVE}>Hoạt động</option>
               <option value={CUSTOMER_STATUS.INACTIVE}>Không hoạt động</option>
               <option value={CUSTOMER_STATUS.BANNED}>Bị khóa</option>
-              <option value={CUSTOMER_STATUS.PENDING}>Chờ xác thực</option>
             </select>
           </div>
 
@@ -440,13 +431,6 @@ export default function CustomerAccountsPage() {
                         title="Xem chi tiết"
                       >
                         <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleAction("email", customer)}
-                        className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors"
-                        title="Gửi email"
-                      >
-                        <Mail className="w-4 h-4" />
                       </button>
                       {customer.status === CUSTOMER_STATUS.ACTIVE ? (
                         <button

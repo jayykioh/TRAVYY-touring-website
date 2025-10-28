@@ -48,6 +48,19 @@ async function api(input, init = {}) {
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(null); // ⬅️ giữ access in-memory
+  const [bannedInfo, setBannedInfo] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem("bannedInfo");
+      const parsed = raw ? JSON.parse(raw) : null;
+      console.log(
+        "🔧 AuthContext initial bannedInfo from sessionStorage:",
+        parsed
+      );
+      return parsed;
+    } catch {
+      return null;
+    }
+  }); // { message, reason }
   const [booting, setBooting] = useState(true);
 
   const login = useCallback(async (username, password) => {
@@ -135,15 +148,62 @@ export default function AuthProvider({ children }) {
         if (isLoggedOut || cancelled) return; // 👈 tránh auto refresh sau logout
 
         const r = await api(`${API_BASE}/api/auth/refresh`, { method: "POST" });
+        console.log("🔄 Refresh response:", {
+          accountStatus: r?.accountStatus,
+          statusReason: r?.statusReason,
+        });
+
+        // If backend returned accountStatus in refresh response, respect it immediately
+        if (r?.accountStatus) {
+          const status = String(r.accountStatus || "").toLowerCase();
+          const isLocked =
+            status === "banned" || status === "locked" || status === "lock";
+          console.log("🔒 Lock check:", { status, isLocked });
+
+          if (isLocked) {
+            const info = { message: r.statusReason || "Tài khoản bị khóa" };
+            console.log("❌ Setting bannedInfo:", info);
+            setBannedInfo(info);
+            try {
+              sessionStorage.setItem("bannedInfo", JSON.stringify(info));
+            } catch {}
+            // do not attempt to load /me for banned/locked accounts
+            setUser(null);
+            setBooting(false);
+            return;
+          } else {
+            // accountStatus present and not banned/locked -> clear any stale bannedInfo
+            console.log("✅ Active account, clearing banned info");
+            setBannedInfo(null);
+            try {
+              sessionStorage.removeItem("bannedInfo");
+            } catch {}
+          }
+        }
+
         if (r?.accessToken) {
           setAccessToken(r.accessToken);
-          const me = await api(`${API_BASE}/api/auth/me`, {
-            headers: { Authorization: `Bearer ${r.accessToken}` },
-          }).catch(() => null);
-          if (me) {
-            if (!me.role) me.role = null; // giữ logic role null như bạn cũ
-            setUser({ ...me, token: r.accessToken });
-          } else {
+          try {
+            const me = await api(`${API_BASE}/api/auth/me`, {
+              headers: { Authorization: `Bearer ${r.accessToken}` },
+            });
+            if (me) {
+              if (!me.role) me.role = null; // giữ logic role null như bạn cũ
+              setUser({ ...me, token: r.accessToken });
+              setBannedInfo(null);
+              sessionStorage.removeItem("bannedInfo");
+            }
+          } catch (err) {
+            // If backend returns 403 for banned accounts, capture and expose it
+            if (err?.status === 403) {
+              const info = err?.body || {
+                message: err.message || "Tài khoản bị khóa",
+              };
+              setBannedInfo(info);
+              try {
+                sessionStorage.setItem("bannedInfo", JSON.stringify(info));
+              } catch {}
+            }
             setUser(null);
           }
         } else {
@@ -160,6 +220,9 @@ export default function AuthProvider({ children }) {
       cancelled = true;
     };
   }, [isLoggedOut]); // 👈 thêm dependency để khi logout => dừng refresh
+
+  // expose a helper to clear banned info (e.g., after logout)
+  const clearBannedInfo = () => setBannedInfo(null);
 
   async function logout() {
     try {
@@ -199,6 +262,8 @@ export default function AuthProvider({ children }) {
     logout,
     accessToken,
     withAuth, // dùng cái này để call API bảo vệ
+    bannedInfo,
+    clearBannedInfo,
   };
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

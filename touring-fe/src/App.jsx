@@ -51,8 +51,8 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
-  const { booting, isAuth, user } = useAuth();
-  console.log("Auth state:", { isAuth, user });
+  const { booting, isAuth, user, bannedInfo } = useAuth();
+  console.log("Auth state:", { isAuth, user, bannedInfo });
   if (booting) return <LoadingScreen />;
 
   return (
@@ -63,8 +63,11 @@ export default function App() {
 
         {/* ----- Public + Main layout ----- */}
         <Route element={<MainLayout />}>
-          {/* Nếu muốn / tự động là Home khi chưa login, MainHome khi đã login */}
-          <Route path="/" element={isAuth ? <MainHome /> : <LandingPage />} />
+          {/* Nếu muốn / tự động là Home khi chưa login, MainHome khi đã login hoặc banned */}
+          <Route
+            path="/"
+            element={isAuth || bannedInfo ? <MainHome /> : <LandingPage />}
+          />
           <Route path="/home" element={<MainHome />} />
           <Route path="/destinations/:slug" element={<DestinationPage />} />
           {/* <Route path="/search-results" element={<SearchResults />} /> */}

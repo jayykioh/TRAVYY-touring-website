@@ -10,17 +10,12 @@ import {
   Save,
   AlertCircle,
   CheckCircle,
-  LogOut,
-  Calendar,
-  MapPin,
-  Chrome,
-  Smartphone as Phone,
   Trash2,
+  Phone,
   Download,
   Loader2,
 } from "lucide-react";
 import * as settingsService from "../services/settingsService";
-import sessionService from "../services/sessionService";
 import { toast } from "sonner";
 
 export default function Settings() {
@@ -65,13 +60,9 @@ export default function Settings() {
     systemUpdates: true,
   });
 
-  const [activeSessions, setActiveSessions] = useState([]);
-  const [sessionsLoading, setSessionsLoading] = useState(false);
-
   const tabs = [
     { id: "profile", label: "Profile", icon: User },
     { id: "security", label: "Security", icon: Lock },
-    { id: "sessions", label: "Sessions", icon: Chrome },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "preferences", label: "Preferences", icon: Globe },
   ];
@@ -104,31 +95,6 @@ export default function Settings() {
 
     fetchProfile();
   }, []);
-
-  // ✅ Fetch sessions when Sessions tab is active
-  useEffect(() => {
-    if (activeTab === "sessions") {
-      fetchSessions();
-    }
-  }, [activeTab]);
-
-  const fetchSessions = async () => {
-    try {
-      setSessionsLoading(true);
-      const result = await sessionService.getSessions();
-
-      if (result.success) {
-        setActiveSessions(result.sessions);
-      } else {
-        toast.error(result.error || "Failed to load sessions");
-      }
-    } catch (error) {
-      console.error("Failed to fetch sessions:", error);
-      toast.error("Failed to load sessions");
-    } finally {
-      setSessionsLoading(false);
-    }
-  };
 
   const handleSave = (message = "Changes saved successfully!") => {
     setSaveSuccess(message);
@@ -187,61 +153,6 @@ export default function Settings() {
         setSaving(false);
       }
     }
-  };
-
-  const handleLogoutSession = async (sessionId) => {
-    try {
-      const result = await sessionService.logoutSession(sessionId);
-
-      if (result.success) {
-        toast.success("Session logged out successfully");
-        // Refresh sessions list
-        fetchSessions();
-      } else {
-        toast.error(result.error || "Failed to logout session");
-      }
-    } catch (error) {
-      console.error("Failed to logout session:", error);
-      toast.error("Failed to logout session");
-    }
-  };
-
-  const handleLogoutAllSessions = async () => {
-    if (
-      !window.confirm(
-        "Are you sure you want to logout all other devices? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const result = await sessionService.logoutAllOtherSessions();
-
-      if (result.success) {
-        toast.success(
-          `Logged out ${result.deletedCount} session(s) successfully`
-        );
-        // Refresh sessions list
-        fetchSessions();
-      } else {
-        toast.error(result.error || "Failed to logout all sessions");
-      }
-    } catch (error) {
-      console.error("Failed to logout all sessions:", error);
-      toast.error("Failed to logout all sessions");
-    }
-  };
-
-  const formatDateTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("vi-VN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   const validateProfileData = () => {
@@ -750,107 +661,6 @@ export default function Settings() {
                       )}
                       Cập nhật mật khẩu
                     </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Active Sessions Tab */}
-              {activeTab === "sessions" && (
-                <div className="p-6 space-y-6">
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                      Active Sessions
-                    </h2>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Manage all devices logged into your account
-                    </p>
-
-                    {sessionsLoading ? (
-                      <div className="flex items-center justify-center py-12">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                        <span className="ml-3 text-gray-600">
-                          Loading sessions...
-                        </span>
-                      </div>
-                    ) : activeSessions.length === 0 ? (
-                      <div className="text-center py-12 bg-gray-50 rounded-lg">
-                        <Chrome className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                        <p className="text-gray-600">
-                          No active sessions found
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {activeSessions.map((session) => (
-                          <div
-                            key={session.id}
-                            className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center mb-2">
-                                  {session.browser.includes("Chrome") ? (
-                                    <Chrome className="w-5 h-5 text-blue-500 mr-2" />
-                                  ) : (
-                                    <Chrome className="w-5 h-5 text-gray-500 mr-2" />
-                                  )}
-                                  <p className="font-medium text-gray-900">
-                                    {session.browser} on {session.device}
-                                  </p>
-                                  {session.isCurrent && (
-                                    <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                                      Current Device
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="space-y-1 text-sm text-gray-600">
-                                  <div className="flex items-center">
-                                    <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-                                    {session.location}
-                                  </div>
-                                  <div className="flex items-center">
-                                    <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                                    Last active:{" "}
-                                    {formatDateTime(session.lastActive)}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    IP: {session.ipAddress}
-                                  </div>
-                                </div>
-                              </div>
-                              {!session.isCurrent && (
-                                <button
-                                  onClick={() =>
-                                    handleLogoutSession(session.id)
-                                  }
-                                  className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition"
-                                >
-                                  <LogOut className="w-4 h-4 inline mr-1" />
-                                  Logout
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="pt-4 border-t border-gray-200">
-                    <h3 className="text-md font-semibold text-gray-900 mb-4">
-                      Session Security
-                    </h3>
-                    <button
-                      onClick={handleLogoutAllSessions}
-                      disabled={sessionsLoading || activeSessions.length <= 1}
-                      className="px-4 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition"
-                    >
-                      <LogOut className="w-4 h-4 inline mr-2" />
-                      Logout All Other Sessions
-                    </button>
-                    <p className="text-xs text-gray-500 mt-2">
-                      This will reset trust on all other devices
-                    </p>
                   </div>
                 </div>
               )}

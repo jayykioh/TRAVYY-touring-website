@@ -12,6 +12,8 @@ router.get("/", userController.getAllUsers);
 router.get("/stats", userController.getUserStats);
 router.get("/guides", userController.getTourGuides);
 router.get("/:id", userController.getUserById);
+router.get("/:id/bookings", userController.getUserBookings);
 router.put("/:id/status", userController.updateUserStatus);
+router.delete("/:id", userController.deleteUser);
 
 module.exports = router;

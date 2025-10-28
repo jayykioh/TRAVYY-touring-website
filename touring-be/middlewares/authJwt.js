@@ -1,8 +1,9 @@
 // middlewares/authJwt.js
 const jwt = require("jsonwebtoken");
+const User = require("../models/Users");
 
 // Required auth - must have valid token
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   const h = req.headers.authorization || "";
   console.log(
     "Auth header at",
@@ -18,6 +19,28 @@ const verifyToken = (req, res, next) => {
     // Extract userId and role from token payload
     req.userId = req.user.sub || req.user.id || req.user._id;
     req.userRole = req.user.role;
+
+    // Check account status (prevent banned users using existing tokens)
+    try {
+      const u = await User.findById(req.userId).select(
+        "accountStatus statusReason"
+      );
+      if (u && u.accountStatus === "banned") {
+        return res
+          .status(403)
+          .json({
+            message: "Tài khoản đã bị khóa",
+            reason: u.statusReason || "",
+          });
+      }
+    } catch (e) {
+      console.warn(
+        "verifyToken: failed to check account status",
+        e.message || e
+      );
+      // proceed if DB check fails (avoid locking out users due to transient DB issues)
+    }
+
     return next();
   } catch {
     return res.status(401).json({ message: "Invalid/expired token" });

@@ -17,18 +17,12 @@ exports.getAllUsers = async (req, res) => {
       filter.role = role;
     }
 
-    // Filter by status (active/inactive based on lastLogin)
-    if (status === "active") {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      filter.lastLogin = { $gte: thirtyDaysAgo };
-    } else if (status === "inactive") {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      filter.lastLogin = { $lt: thirtyDaysAgo };
+    // Filter by account status
+    if (status && status !== "all") {
+      filter.accountStatus = status;
     }
 
-    // Search by name, email
+    // Search by name, email, phone
     if (search) {
       filter.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -41,9 +35,47 @@ exports.getAllUsers = async (req, res) => {
       .select("-password -twoFactorSecret")
       .sort({ createdAt: -1 });
 
+    // Get booking stats for each user
+    const usersWithStats = await Promise.all(
+      users.map(async (user) => {
+        const bookingStats = await Bookings.aggregate([
+          { $match: { userId: user._id } },
+          {
+            $group: {
+              _id: null,
+              totalBookings: { $sum: 1 },
+              totalSpent: { $sum: "$totalVND" }, // ✅ Sử dụng totalVND từ Bookings
+              paidBookings: {
+                $sum: { $cond: [{ $eq: ["$status", "paid"] }, 1, 0] },
+              },
+              pendingBookings: {
+                $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
+              },
+              cancelledBookings: {
+                $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] },
+              },
+            },
+          },
+        ]);
+
+        const stats = bookingStats[0] || {
+          totalBookings: 0,
+          totalSpent: 0,
+          paidBookings: 0,
+          pendingBookings: 0,
+          cancelledBookings: 0,
+        };
+
+        return {
+          ...user.toObject(),
+          stats,
+        };
+      })
+    );
+
     res.json({
       success: true,
-      data: users,
+      data: usersWithStats,
     });
   } catch (error) {
     console.error("❌ Get all users error:", error);
@@ -77,9 +109,15 @@ exports.getUserById = async (req, res) => {
         $group: {
           _id: null,
           totalBookings: { $sum: 1 },
-          totalSpent: { $sum: "$totalPrice" },
-          completedBookings: {
-            $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+          totalSpent: { $sum: "$totalVND" }, // ✅ Sử dụng totalVND
+          paidBookings: {
+            $sum: { $cond: [{ $eq: ["$status", "paid"] }, 1, 0] },
+          },
+          pendingBookings: {
+            $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
+          },
+          cancelledBookings: {
+            $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] },
           },
         },
       },
@@ -88,7 +126,9 @@ exports.getUserById = async (req, res) => {
     const stats = bookingStats[0] || {
       totalBookings: 0,
       totalSpent: 0,
-      completedBookings: 0,
+      paidBookings: 0,
+      pendingBookings: 0,
+      cancelledBookings: 0,
     };
 
     res.json({
@@ -229,10 +269,38 @@ exports.updateUserStatus = async (req, res) => {
     }
 
     // Update user status
+    // Handle lock/unlock history
+    const prevStatus = user.accountStatus;
+
     user.accountStatus = status;
     user.statusReason = reason;
     user.statusUpdatedAt = new Date();
     user.statusUpdatedBy = req.userId;
+
+    // If banning/locking -> append a new lock entry
+    if (status === "banned" && prevStatus !== "banned") {
+      user.lockHistory = user.lockHistory || [];
+      user.lockHistory.push({
+        reason: reason || "",
+        lockedAt: new Date(),
+        lockedBy: req.userId,
+      });
+    }
+
+    // If activating/unlocking -> mark the most recent lock entry as unlocked
+    if (status === "active" && prevStatus === "banned") {
+      if (user.lockHistory && user.lockHistory.length > 0) {
+        // find last lock entry without unlockedAt
+        for (let i = user.lockHistory.length - 1; i >= 0; i--) {
+          const entry = user.lockHistory[i];
+          if (!entry.unlockedAt) {
+            entry.unlockedAt = new Date();
+            entry.unlockedBy = req.userId;
+            break;
+          }
+        }
+      }
+    }
 
     await user.save();
 
@@ -290,6 +358,63 @@ exports.getUserStats = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Get user stats error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * Get user bookings
+ */
+exports.getUserBookings = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const bookings = await Bookings.find({ userId: id })
+      .populate("items.tourId", "title images location")
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: bookings,
+    });
+  } catch (error) {
+    console.error("❌ Get user bookings error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * Delete user account
+ */
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Soft delete by setting account status to deleted
+    // Or hard delete if needed
+    await User.findByIdAndDelete(id);
+
+    res.json({
+      success: true,
+      message: "User deleted successfully",
+    });
+  } catch (error) {
+    console.error("❌ Delete user error:", error);
     res.status(500).json({
       success: false,
       message: error.message,
