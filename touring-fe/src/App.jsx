@@ -35,6 +35,8 @@ import PaymentCallback from "./pages/PaymentCallback";
 // import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
 import AdminRoutes from "./admin/routes/AdminRoutes";
 
+// Import Guide Routes
+import GuideRoutes from "./guide/routes/guideRoutes";
 
 // Route guard
 function ProtectedRoute({ children }) {
@@ -52,8 +54,7 @@ export default function App() {
   return (
     <>
       <Routes>
-
-{/* ✅ CẬP NHẬT 2: Admin routes - AdminAuthProvider đã wrap BÊN TRONG AdminRoutes */}
+        {/* ✅ CẬP NHẬT 2: Admin routes - AdminAuthProvider đã wrap BÊN TRONG AdminRoutes */}
         <Route path="/admin/*" element={<AdminRoutes />} />
 
         {/* ----- Public + Main layout ----- */}
@@ -80,10 +81,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
-         
-
-
           <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
           {/* ✅ THÊM ROUTE NÀY */}
           <Route path="/shoppingcarts" element={<Cart />} />
@@ -129,15 +126,25 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
-        
+
         {/* ----- Payment callback ----- */}
-        <Route 
-          path="/payment/callback" 
+        <Route
+          path="/payment/callback"
           element={
             <ProtectedRoute>
               <PaymentCallback />
             </ProtectedRoute>
-          } 
+          }
+        />
+
+        {/* ----- Tour Guide Routes (Protected) ----- */}
+        <Route
+          path="/guide/*"
+          element={
+            <ProtectedRoute>
+              <GuideRoutes />
+            </ProtectedRoute>
+          }
         />
 
         {/* ----- 404 ----- */}

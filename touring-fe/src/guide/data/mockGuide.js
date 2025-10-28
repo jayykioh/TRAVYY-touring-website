@@ -1,0 +1,14 @@
+export const mockGuide = {
+  id: "guide-001",
+  name: "Nguyễn Văn A",
+  avatar: "https://i.pravatar.cc/150?img=12",
+  email: "nguyenvana@travyy.com",
+  phone: "+84 912 345 678",
+  location: "Đà Nẵng, Việt Nam",
+  experience: "5 years",
+  languages: ["Tiếng Việt", "English", "日本語"],
+  rating: 4.8,
+  totalTours: 247,
+  specialties: ["Cultural Tours", "Adventure Tours", "Food Tours"],
+  joinedDate: "2020-01-15",
+  bio: "Hướng dẫn viên địa phương giàu kinh nghiệm, hơn 5 năm giới thiệu cho du khách những điểm đến tuyệt vời nhất của Đà Nẵng và khu vực lân cận. Tôi yêu thích việc chia sẻ văn hóa, lịch sử và những nét đẹp ẩn giấu của miền Trung Việt Nam."};
