@@ -1,23 +1,18 @@
 // components/GoongMapPanel.jsx
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import goongjs from "@goongmaps/goong-js";
 import "@goongmaps/goong-js/dist/goong-js.css";
 
 /**
- * GoongMapPanel — bản đầy đủ có SearchBox
- *
  * Props:
- * - center: {lng,lat} (default Hà Nội)
- * - zoom: number
- * - pois: [{ id|place_id, name, loc:{lng,lat}, ... }]
- * - selectedPoiId: string|null
- * - onPoiClick: (poi) => void
+ * - center {lng,lat}
+ * - zoom number
+ * - pois: [{ id|place_id, loc/location|lng/lat, name, ... }]
+ * - selectedPoiId
+ * - onPoiClick(poi)
  * - markerVariant: "dot" | "pin" | "emoji"
  * - emoji: string
- * - showSearch: boolean (default true)
- * - rsApiKey: string (REST key cho Autocomplete/Place Detail) — mặc định lấy VITE_GOONG_API_KEY
- * - mapTilesKey: string (MapTiles key cho style) — mặc định lấy VITE_GOONG_MAPTILES_KEY
  */
 export default function GoongMapPanel({
   center = { lng: 105.83991, lat: 21.028 },
@@ -27,32 +22,36 @@ export default function GoongMapPanel({
   onPoiClick,
   markerVariant = "dot",
   emoji = "📍",
-  showSearch = true,
-  rsApiKey = import.meta.env.VITE_GOONG_API_KEY,
-  mapTilesKey = import.meta.env.VITE_GOONG_MAPTILES_KEY,
 }) {
   const mapRef = useRef(null);
-  const map = useRef(null);
+  const mapInstance = useRef(null);
   const markersRef = useRef(new Map());
-  const searchMarkerRef = useRef(null);
 
-  const styleUrl = useMemo(
-    () =>
-      `https://tiles.goong.io/assets/goong_map_web.json?api_key=${mapTilesKey}`,
-    [mapTilesKey]
-  );
+  const getLngLat = (p) => {
+    const lng =
+      p?.loc?.lng ??
+      p?.location?.lng ??
+      p?.lng ??
+      p?.geometry?.location?.lng;
+    const lat =
+      p?.loc?.lat ??
+      p?.location?.lat ??
+      p?.lat ??
+      p?.geometry?.location?.lat;
+    return typeof lng === "number" && typeof lat === "number" ? [lng, lat] : null;
+  };
+  const getId = (p) => p?.place_id || p?.id || (getLngLat(p)?.join(",") ?? undefined);
 
-  const getId = (p) => p?.place_id || p?.id;
-
-  // --- init map ---
+  // Init
   useEffect(() => {
-    if (!mapRef.current || map.current) return;
+    if (!mapRef.current || mapInstance.current) return;
 
+    const mapTilesKey = import.meta.env.VITE_GOONG_MAPTILES_KEY;
     goongjs.accessToken = mapTilesKey;
 
-    const m = new goongjs.Map({
+    const map = new goongjs.Map({
       container: mapRef.current,
-      style: styleUrl,
+      style: `https://tiles.goong.io/assets/goong_map_web.json?api_key=${mapTilesKey}`,
       center: [center.lng, center.lat],
       zoom,
       attributionControl: false,
@@ -60,26 +59,50 @@ export default function GoongMapPanel({
       dragRotate: true,
     });
 
-    m.addControl(new goongjs.NavigationControl({ visualizePitch: true }), "top-right");
-    map.current = m;
+    map.addControl(new goongjs.NavigationControl({ visualizePitch: true }), "top-right");
+    mapInstance.current = map;
+
+    // CLICK Ở MAP → tìm POI gần nhất (24px)
+    const handleMapClick = (e) => {
+      if (!onPoiClick || !pois?.length) return;
+      const pt = e.point;
+      let best = null;
+      let bestDist = 1e9;
+
+      for (const p of pois) {
+        const lngLat = getLngLat(p);
+        if (!lngLat) continue;
+        const screen = map.project(lngLat);
+        const dx = screen.x - pt.x;
+        const dy = screen.y - pt.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < bestDist) {
+          bestDist = d2;
+          best = p;
+        }
+      }
+
+      const threshold = 24; // px
+      if (best && Math.sqrt(bestDist) <= threshold) {
+        onPoiClick(best);
+      }
+    };
+    map.on("click", handleMapClick);
 
     return () => {
-      // cleanup markers
-      markersRef.current.forEach((mrk) => mrk.remove());
+      map.off("click", handleMapClick);
+      markersRef.current.forEach((m) => m.remove());
       markersRef.current.clear();
-      if (searchMarkerRef.current) {
-        searchMarkerRef.current.remove();
-        searchMarkerRef.current = null;
-      }
-      m.remove();
-      map.current = null;
+      map.remove();
+      mapInstance.current = null;
     };
   }, []);
 
-  // --- smooth center/zoom when props changed ---
+  // Smooth center/zoom
   useEffect(() => {
-    if (!map.current) return;
-    map.current.easeTo({
+    const map = mapInstance.current;
+    if (!map) return;
+    map.easeTo({
       center: [center.lng, center.lat],
       zoom,
       duration: 500,
@@ -87,41 +110,33 @@ export default function GoongMapPanel({
     });
   }, [center.lng, center.lat, zoom]);
 
-  // --- create marker element ---
+  // Create marker element (pointer-events: none để pan/zoom mượt)
   const createMarkerEl = (poi) => {
     const el = document.createElement("div");
-    el.className = `poi-marker ${markerVariant === "pin" ? "poi-marker--pin" : ""} ${
-      markerVariant === "emoji" ? "poi-marker--emoji" : ""
-    }`;
+    el.className = `poi-marker ${
+      markerVariant === "pin" ? "poi-marker--pin" : ""
+    } ${markerVariant === "emoji" ? "poi-marker--emoji" : ""}`;
     el.dataset.id = getId(poi) ?? "";
 
     if (markerVariant === "emoji") {
       el.textContent = emoji;
     } else {
-      const halo = document.createElement("div");
-      halo.className = "poi-marker__halo";
-      const ripple = document.createElement("div");
-      ripple.className = "poi-marker__ripple";
       const core = document.createElement("div");
       core.className = "poi-marker__dot";
-      el.appendChild(halo);
-      el.appendChild(ripple);
       el.appendChild(core);
     }
 
-    el.addEventListener("click", (e) => {
-      e.stopPropagation();
-      onPoiClick?.(poi);
-    });
-
+    // KHÔNG addEventListener ở đây nữa → giảm hit-test khi pan/zoom
     return el;
   };
 
-  // --- mount/unmount markers from pois ---
+  // Mount/unmount markers
   useEffect(() => {
-    if (!map.current) return;
+    const map = mapInstance.current;
+    if (!map) return;
 
-    const currentIds = new Set(pois.map(getId));
+    const currentIds = new Set(pois.map(getId).filter(Boolean));
+
     // remove stale
     markersRef.current.forEach((marker, id) => {
       if (!currentIds.has(id)) {
@@ -132,21 +147,24 @@ export default function GoongMapPanel({
 
     // add new
     for (const poi of pois) {
-      if (!poi?.loc?.lat || !poi?.loc?.lng) continue;
       const id = getId(poi);
       if (!id || markersRef.current.has(id)) continue;
 
+      const pair = getLngLat(poi);
+      if (!pair) continue;
+
       const el = createMarkerEl(poi);
       const marker = new goongjs.Marker({ element: el, offset: [0, -16] })
-        .setLngLat([poi.loc.lng, poi.loc.lat])
-        .addTo(map.current);
+        .setLngLat(pair)
+        .addTo(map);
       markersRef.current.set(id, marker);
     }
-  }, [pois, markerVariant, emoji, onPoiClick]);
+  }, [pois, markerVariant, emoji]);
 
-  // --- highlight selected poi ---
+  // Highlight selected
   useEffect(() => {
-    if (!map.current) return;
+    const map = mapInstance.current;
+    if (!map) return;
 
     markersRef.current.forEach((marker, id) => {
       const el = marker.getElement();
@@ -156,203 +174,63 @@ export default function GoongMapPanel({
 
     if (selectedPoiId) {
       const sel = pois.find((p) => getId(p) === selectedPoiId);
-      if (sel?.loc?.lng && sel?.loc?.lat) {
-        map.current.easeTo({
-          center: [sel.loc.lng, sel.loc.lat],
-          zoom: Math.max(15, map.current.getZoom()),
-          duration: 600,
-          easing: (t) => 1 - Math.pow(1 - t, 3),
-        });
+      const pair = sel ? getLngLat(sel) : null;
+      if (pair) {
+        const targetZoom = Math.max(15, map.getZoom());
+        map.easeTo({ center: pair, zoom: targetZoom, duration: 600, easing: (t) => 1 - Math.pow(1 - t, 3) });
       }
     }
   }, [selectedPoiId, pois]);
 
-  // --- search handling (pin riêng) ---
-  const handleSearchPick = ({ lng, lat}) => {
-    if (!map.current) return;
-    // remove old search marker
-    if (searchMarkerRef.current) {
-      searchMarkerRef.current.remove();
-      searchMarkerRef.current = null;
-    }
-    // create search marker (green)
-    const el = document.createElement("div");
-    el.className = "poi-marker poi-marker--search";
-    const core = document.createElement("div");
-    core.className = "poi-marker__dot";
-    el.appendChild(core);
-
-    const marker = new goongjs.Marker({ element: el, offset: [0, -16] })
-      .setLngLat([lng, lat])
-      .addTo(map.current);
-    searchMarkerRef.current = marker;
-
-    map.current.easeTo({
-      center: [lng, lat],
-      zoom: Math.max(14, map.current.getZoom()),
-      duration: 500,
-    });
-  };
-
   return (
-    <div className="w-full h-full relative rounded-xl overflow-hidden">
-      {/* Map container */}
+    <div className="w-full h-full rounded-xl overflow-hidden relative">
       <div ref={mapRef} className="w-full h-full" />
-
-      {/* Search overlay */}
-      {showSearch && (
-        <div className="absolute top-3 left-3 w-[320px] z-20">
-          <GoongSearchBox
-            apiKey={rsApiKey}
-            onSelect={(p) => handleSearchPick(p)}
-            placeholder="Tìm địa điểm..."
-          />
-        </div>
-      )}
-
-      {/* Inline CSS for markers (dot style) */}
       <style>{`
-        .poi-marker{
-          position: relative;
-          width: 18px; height: 18px;
+        /* marker container: tắt pointer-events để không cản kéo/zoom */
+        .poi-marker {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
           transform: translate(-50%, -100%);
-          pointer-events: auto;
+          user-select: none;
+          -webkit-user-select: none;
+          -webkit-tap-highlight-color: transparent;
+          will-change: transform;
+          pointer-events: none;
           contain: layout paint size;
         }
-        .poi-marker__dot{
-          width: 18px; height: 18px;
-          border-radius: 9999px;
-          background: linear-gradient(135deg,#0ea5e9,#2563eb);
-          border: 2px solid #fff;
-          box-shadow: 0 2px 6px rgba(0,0,0,.18);
-        }
-        .poi-marker__halo{
-          position: absolute; inset: -6px;
-          border-radius: 9999px;
-          background: rgba(37,99,235,.15);
-        }
-        .poi-marker__ripple{
-          position: absolute; inset: -10px;
-          border-radius: 9999px;
-          border: 2px solid rgba(37,99,235,.2);
-          animation: ripple 1.8s infinite;
-        }
-        @keyframes ripple{
-          0%{ transform: scale(0.6); opacity: .6; }
-          100%{ transform: scale(1.6); opacity: 0; }
-        }
-        .poi-marker--selected .poi-marker__dot{
-          outline: 3px solid rgba(59,130,246,.5);
-          outline-offset: 2px;
-        }
-        .poi-marker--emoji{
+
+        /* emoji */
+        .poi-marker--emoji {
           font-size: 18px;
-          transform: translate(-50%,-100%);
+          line-height: 1;
         }
-        .poi-marker--search .poi-marker__dot{
-          background: linear-gradient(135deg,#22c55e,#16a34a);
+
+        /* dot */
+        .poi-marker__dot {
+          width: 18px;
+          height: 18px;
+          border-radius: 9999px;
+          background: #2563eb;
+          background-image: linear-gradient(135deg, #0ea5e9, #2563eb);
+          border: 2px solid #ffffff;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+        }
+
+        /* pin (đơn giản) */
+        .poi-marker--pin .poi-marker__dot {
+          width: 22px;
+          height: 22px;
+          border-radius: 11px 11px 11px 0;
+          transform: rotate(45deg);
+          box-shadow: 0 2px 7px rgba(0,0,0,0.22);
+        }
+
+        /* selected (dùng box-shadow thay vì outline để giảm layout) */
+        .poi-marker--selected .poi-marker__dot {
+          box-shadow: 0 0 0 2px #06b6d4, 0 2px 6px rgba(0,0,0,0.18);
         }
       `}</style>
-    </div>
-  );
-}
-
-/* ===========================================
-   GoongSearchBox (embedded)
-   - Autocomplete (rsapi.goong.io/Place/AutoComplete)
-   - Pick -> Place Detail -> emit onSelect({lng,lat,name,place_id})
-   =========================================== */
-function GoongSearchBox({
-  apiBase = "https://rsapi.goong.io",
-  apiKey,
-  onSelect,
-  minChars = 2,
-  delayMs = 350,
-  className = "",
-  placeholder = "Tìm địa điểm...",
-}) {
-  const [q, setQ] = useState("");
-  const [suggests, setSuggests] = useState([]);
-  const tRef = useRef(null);
-  const boxRef = useRef(null);
-
-  // debounce autocomplete
-  useEffect(() => {
-    if (!q || q.length < minChars) {
-      setSuggests([]);
-      return;
-    }
-    if (tRef.current) clearTimeout(tRef.current);
-    tRef.current = setTimeout(async () => {
-      try {
-        const url = `${apiBase}/Place/AutoComplete?api_key=${apiKey}&input=${encodeURIComponent(
-          q
-        )}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        setSuggests(data?.predictions || []);
-      } catch (e) {
-        console.error("AutoComplete error:", e);
-        setSuggests([]);
-      }
-    }, delayMs);
-    return () => {
-      if (tRef.current) clearTimeout(tRef.current);
-    };
-  }, [q, apiBase, apiKey, minChars, delayMs]);
-
-  // click outside to close
-  useEffect(() => {
-    const onDocClick = (e) => {
-      if (!boxRef.current) return;
-      if (!boxRef.current.contains(e.target)) setSuggests([]);
-    };
-    document.addEventListener("click", onDocClick);
-    return () => document.removeEventListener("click", onDocClick);
-  }, []);
-
-  const handlePick = async (sug) => {
-    setSuggests([]);
-    setQ(sug.description || "");
-    try {
-      const detailUrl = `${apiBase}/Place/Detail?api_key=${apiKey}&place_id=${sug.place_id}`;
-      const res = await fetch(detailUrl);
-      const data = await res.json();
-      const loc = data?.result?.geometry?.location;
-      if (loc?.lng && loc?.lat) {
-        onSelect?.({
-          place_id: sug.place_id,
-          name: data?.result?.name || sug.description,
-          lng: loc.lng,
-          lat: loc.lat,
-        });
-      }
-    } catch (e) {
-      console.error("PlaceDetail error:", e);
-    }
-  };
-
-  return (
-    <div ref={boxRef} className={`relative ${className}`}>
-      <input
-        className="w-full border rounded-lg px-3 py-2 text-sm bg-white/95 backdrop-blur"
-        placeholder={placeholder}
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-      />
-      {suggests.length > 0 && (
-        <div className="absolute z-20 top-full left-0 right-0 bg-white border rounded-lg shadow mt-1 max-h-64 overflow-auto">
-          {suggests.map((s) => (
-            <button
-              key={s.place_id}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50"
-              onClick={() => handlePick(s)}
-            >
-              {s.description}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
