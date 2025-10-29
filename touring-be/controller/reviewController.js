@@ -30,9 +30,6 @@ const createReview = async (req, res) => {
       });
     }
 
-    console.log("=== DEBUG REVIEW SUBMISSION ===");
-    console.log("Received data:", { tourId, bookingId, userId });
-
     // Kiểm tra booking có thuộc về user và đã completed
     const booking = await Booking.findOne({
       _id: bookingId,
@@ -126,13 +123,26 @@ const createReview = async (req, res) => {
       isAnonymous: isAnonymous || false,
       tourDate: tourDate || tourInBooking.date,
       isVerified: true, // Auto verify vì đã có booking
-      status: "approved", // Auto approve vì đã verify booking
+      status: 'approved' // Auto approve vì đã verify booking
+    });
+
+    console.log('✅ Review created successfully:', {
+      reviewId: review._id,
+      userId,
+      tourId,
+      bookingId,
+      rating: review.rating
     });
 
     const populatedReview = await Review.findById(review._id)
-      .populate("userId", "name avatar")
-      .populate("tourId", "title imageItems")
-      .populate("bookingId", "bookingCode");
+      .populate('userId', 'name avatar')
+      .populate('tourId', 'title imageItems')
+      .populate('bookingId', 'bookingCode');
+
+    console.log('📤 Sending review response:', {
+      reviewId: populatedReview._id,
+      status: populatedReview.status
+    });
 
     res.status(201).json({
       success: true,
@@ -219,12 +229,20 @@ const getUserReviews = async (req, res) => {
     const userId = req.user?.sub || req.user?._id;
     const { page = 1, limit = 10 } = req.query;
 
+    console.log('🔍 Fetching reviews for user:', userId);
+
     const reviews = await Review.getUserReviews(userId, {
       page: parseInt(page),
       limit: parseInt(limit),
     });
 
     const totalReviews = await Review.countDocuments({ userId });
+
+    console.log('✅ Found reviews:', {
+      count: reviews.length,
+      total: totalReviews,
+      reviewIds: reviews.map(r => r._id.toString())
+    });
 
     res.json({
       success: true,
@@ -417,7 +435,7 @@ const getReviewableBookings = async (req, res) => {
   try {
     const userId = req.user?.sub || req.user?._id;
 
-    // Lấy các booking đã hoàn thành nhưng chưa review
+    // Lấy các booking đã hoàn thành
     const bookings = await Booking.find({
       userId,
       status: "paid",

@@ -44,14 +44,46 @@ export default function BookingHistory() {
       minute: "2-digit",
     });
 
+  const handleRetryPayment = async (booking) => {
+    try {
+      // Recreate cart items from failed booking
+      const cartItems = booking.items?.map(item => ({
+        tourId: item.tourId,
+        name: item.name,
+        image: item.image,
+        date: item.date,
+        adults: item.adults || 0,
+        children: item.children || 0,
+        unitPriceAdult: item.unitPriceAdult || 0,
+        unitPriceChild: item.unitPriceChild || 0,
+        selected: true
+      })) || [];
+
+      // Navigate to checkout with the cart items
+      // Store cart items in sessionStorage for checkout page
+      sessionStorage.setItem('retryPaymentCart', JSON.stringify(cartItems));
+      sessionStorage.setItem('retryBookingId', booking._id);
+      
+      // Navigate to checkout
+      window.location.href = '/booking';
+    } catch (error) {
+      console.error('Error retrying payment:', error);
+      alert('Có lỗi xảy ra khi thử thanh toán lại. Vui lòng thử lại sau.');
+    }
+  };
+
   const statusUI = (status) => {
     switch (status) {
       case "paid":
         return { text: "Đã thanh toán", className: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200" };
       case "pending":
         return { text: "Chờ thanh toán", className: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200" };
+      case "cancelled":
+        return { text: "Thanh toán thất bại", className: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200" };
+      case "refunded":
+        return { text: "Đã hoàn tiền", className: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200" };
       default:
-        return { text: "Đã hủy", className: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200" };
+        return { text: "Đã hủy", className: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200" };
     }
   };
 
@@ -117,6 +149,14 @@ export default function BookingHistory() {
           ) : (
             <div className="space-y-4 pb-4">
               {bookings.map((booking) => {
+                const statusColor =
+              booking.payment?.status === "completed"
+                ? "text-green-600"
+                : booking.status === "paid"
+                ? "text-green-600"
+                : booking.status === "cancelled" || booking.status === "failed"
+                ? "text-red-500"
+                : "text-yellow-500";
                 const ui = statusUI(booking.status);
                 return (
                   <div key={booking._id} className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
@@ -127,7 +167,7 @@ export default function BookingHistory() {
                         <div className="leading-tight">
                           <p className="text-[11px] text-neutral-500">Mã đặt chỗ</p>
                           <p className="text-sm font-medium">
-                            {booking.bookingCode || booking._id.substring(0, 8).toUpperCase()}
+                            {booking.orderRef || booking._id.substring(0, 8).toUpperCase()}
                           </p>
                         </div>
                       </div>
@@ -194,39 +234,53 @@ export default function BookingHistory() {
                           <CreditCard className="w-4 h-4" />
                           <div className="text-sm">
                             <span className="text-neutral-500">Thanh toán:&nbsp;</span>
-                            <span className="font-medium text-neutral-900 uppercase">
+                            <span className="font-semibold text-neutral-900">
                               {booking.payment?.provider || "N/A"}
                             </span>
-                            {booking.payment?.orderID && (
-                              <span className="ml-2 text-[12px] text-neutral-500">(ID: {booking.payment.orderID})</span>
+                            {booking.payment?.orderId && (
+                              <span className="ml-2 text-[12px] text-neutral-500">(ID: {booking.payment.orderId})</span>
                             )}
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          {/* Hiển thị giá gốc và discount nếu có */}
-                          {booking.discountAmount > 0 && (
-                            <div className="mb-1 space-y-0.5">
-                              <div className="flex items-center justify-end gap-2 text-xs text-neutral-500">
-                                <span>Tổng tiền:</span>
-                                <span className="line-through">
-                                  {formatCurrency(booking.originalAmount || 0, booking.currency || 'VND')}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-end gap-2 text-xs font-medium" style={{ color: "#02A0AA" }}>
-                                <span className="bg-teal-50 px-2 py-0.5 rounded text-[11px] uppercase font-semibold">
-                                  {booking.voucherCode || 'VOUCHER'}
-                                </span>
-                                <span>-{formatCurrency(booking.discountAmount || 0, booking.currency || 'VND')}</span>
-                              </div>
-                            </div>
+                        <div className="flex items-center gap-3">
+                          {/* Retry Payment Button for Failed Bookings */}
+                          {booking.status === 'cancelled' && (
+                            <button
+                              onClick={() => handleRetryPayment(booking)}
+                              className="px-3 py-1.5 rounded-md text-white text-xs font-medium transition-colors hover:opacity-90"
+                              style={{ backgroundColor: "#02A0AA" }}
+                              title="Thanh toán lại"
+                            >
+                              Thanh toán lại
+                            </button>
                           )}
-                          <p className="text-base font-semibold tracking-tight" style={{ color: "#02A0AA" }}>
-                            {formatCurrency(
-                              booking.totalVND || booking.totalUSD || 0, 
-                              booking.currency || 'VND'
+
+                          <div className="text-right">
+                            {/* Hiển thị giá gốc và discount nếu có */}
+                            {booking.discountAmount > 0 && (
+                              <div className="mb-1 space-y-0.5">
+                                <div className="flex items-center justify-end gap-2 text-xs text-neutral-500">
+                                  <span>Tổng tiền:</span>
+                                  <span className="line-through">
+                                    {formatCurrency(booking.originalAmount || 0, booking.currency || 'VND')}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-end gap-2 text-xs font-medium" style={{ color: "#02A0AA" }}>
+                                  <span className="bg-teal-50 px-2 py-0.5 rounded text-[11px] uppercase font-semibold">
+                                    {booking.voucherCode || 'VOUCHER'}
+                                  </span>
+                                  <span>-{formatCurrency(booking.discountAmount || 0, booking.currency || 'VND')}</span>
+                                </div>
+                              </div>
                             )}
-                          </p>
+                            <p className="text-base font-semibold tracking-tight" style={{ color: "#02A0AA" }}>
+                              {formatCurrency(
+                                booking.totalVND || booking.totalUSD || 0, 
+                                booking.currency || 'VND'
+                              )}
+                            </p>
+                          </div>
                         </div>
                       </div>
 

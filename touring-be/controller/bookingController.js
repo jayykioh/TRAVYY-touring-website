@@ -106,8 +106,11 @@ exports.getUserBookings = async (req, res) => {
 
     console.log("📚 Fetching bookings for userId:", userId);
 
-    // 1️⃣ Lấy danh sách booking từ travelApp
-    const bookings = await Booking.find({ userId })
+    // 1️⃣ Lấy danh sách booking từ travelApp (bao gồm cả cancelled để hiển thị failed bookings)
+    const bookings = await Booking.find({ 
+      userId,
+      status: { $in: ["pending", "confirmed", "paid", "cancelled"] } // Include cancelled for failed bookings
+    })
       .sort({ createdAt: -1 })
       .lean();
 

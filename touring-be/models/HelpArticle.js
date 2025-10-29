@@ -95,6 +95,6 @@ helpArticleSchema.virtual('helpfulnessRate').get(function() {
 // Index for search
 helpArticleSchema.index({ title: 'text', content: 'text', tags: 'text' });
 helpArticleSchema.index({ category: 1, order: 1 });
-// Note: `slug` already has `unique: true` which creates an index. Avoid duplicate index definitions.
+// slug already has unique index in schema definition
 
 module.exports = mongoose.model("HelpArticle", helpArticleSchema);

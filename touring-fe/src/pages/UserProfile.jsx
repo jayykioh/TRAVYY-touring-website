@@ -14,7 +14,11 @@ export default function ProfileLayout() {
   // Nếu chưa có => hiển thị avatar Discord-style (chữ cái đầu + màu ngẫu nhiên)
   const getAvatarUrl = (user) => {
     if (!user) return "https://i.pravatar.cc/100";
-    if (user.avatar) return `/api/profile/avatar/${user._id}`;
+    if (user.avatar) {
+      // ✅ Thêm timestamp để force reload khi avatar thay đổi
+      const timestamp = user.updatedAt || Date.now();
+      return `/api/profile/avatar/${user._id}?v=${timestamp}`;
+    }
 
     const initial = (user.name || user.email || "?").charAt(0).toUpperCase();
     const colors = ["5865F2", "43B581", "FAA61A", "F04747", "7289DA"];

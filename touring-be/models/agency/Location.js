@@ -16,4 +16,10 @@ const LocationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = agencyConn.model("Location", LocationSchema);
+// Register trên agencyConn (primary)
+const Location = agencyConn.model("Location", LocationSchema);
+
+// IMPORTANT: Cũng register trên default connection để populate hoạt động
+mongoose.model("Location", LocationSchema);
+
+module.exports = Location;
