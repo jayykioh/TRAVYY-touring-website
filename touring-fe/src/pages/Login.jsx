@@ -9,6 +9,8 @@ import {
   Plane,
   Mountain,
   Compass,
+  Shield,
+  User,
   Star,
   Sparkles,
 } from "lucide-react";
@@ -20,7 +22,7 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, adminLogin } = useAuth();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -30,9 +32,35 @@ function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await login(form.username, form.password);
-      toast.success("Đăng nhập thành công");
-      navigate("/home", { replace: true });
+      // Check if there's a saved redirect URL
+      const redirectUrl = sessionStorage.getItem("redirect_after_login");
+
+      if (form.username.includes("@") && form.username.includes("travyy.com")) {
+        // Admin login
+        await adminLogin(form.username, form.password);
+        toast.success("Đăng nhập admin thành công");
+
+        // Clear redirect URL and navigate
+        if (redirectUrl) {
+          sessionStorage.removeItem("redirect_after_login");
+          window.location.href = redirectUrl; // Use window.location to ensure full reload
+        } else {
+          navigate("/admin/dashboard", { replace: true });
+        }
+      } else {
+        await login(form.username, form.password);
+        toast.success(
+          `Chào mừng ${form.username} đã trở lại. Khám phá những chuyến đi tuyệt vời!`
+        );
+
+        // Clear redirect URL and navigate
+        if (redirectUrl) {
+          sessionStorage.removeItem("redirect_after_login");
+          window.location.href = redirectUrl; // Use window.location to ensure full reload
+        } else {
+          navigate("/home", { replace: true });
+        }
+      }
     } catch (err) {
       toast.error(err?.body?.message || "Login failed");
     } finally {
@@ -45,7 +73,7 @@ function Login() {
   };
 
   const facebookLogin = () => {
-  window.location.href = `${API}/api/auth/facebook`;
+    window.location.href = `${API}/api/auth/facebook`;
   };
 
   return (
@@ -183,20 +211,18 @@ function Login() {
                 {/* Forgot Password and Register Link*/}
                 <div className="flex flex-row justify-between items-center">
                   <a
-                    href="#"
+                    href="/forgot-password"
                     className="text-sm text-white/90 hover:text-white transition-colors font-medium"
                   >
                     Forgot Password?
                   </a>
-                   <a
-                    href="register"
+                  <a
+                    href="/register"
                     className="text-sm text-white/90 hover:text-white transition-colors font-medium"
                   >
-                    Register 
+                    Register
                   </a>
                 </div>
-
-            
 
                 {/* Login Button */}
                 <button

@@ -1,4 +1,5 @@
 // App.jsx
+import { Fragment } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./auth/context";
 import MainLayout from "./layout/MainLayout";
@@ -8,15 +9,24 @@ import DestinationPage from "./pages/Blogs";
 import RegionTours from "./pages/RegionTours";
 import SearchFilterResults from "./pages/SearchFilterResults";
 import TourDetailPage from "./pages/TourDetailPage";
-import DiscountCodesPage from "./pages/DiscountCodesPage";
 import BlogDetailPage from "./pages/BlogDetailPage"; // ✅ THÊM IMPORT NÀY
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import ChangePassword from "./pages/ChangePassword";
 import ProfileLayout from "./pages/UserProfile";
 import ProfileInfo from "./components/ProfileInfo";
 import ProfileReviews from "./components/ProfileReviews";
+import ProfilePromotions from "./components/ProfilePromotions";
+import ProfileSecurity from "./pages/ProfileSecurity";
+import Confirm2FA from "./pages/Confirm2FA";
+import ConfirmEmailVerification from "./pages/ConfirmEmailVerification";
 import RolePopup from "./components/RolePopUp";
 import OAuthCallback from "./pages/OAuthCallback";
+import HelpCenter from "./components/HelpCenter";
+import HelpCategoryView from "./components/HelpCategoryView";
+import HelpArticleView from "./components/HelpArticleView";
 import Cart from "./pages/Cart";
 import WishlistPage from "./pages/WishlistPage";
 import LoadingScreen from "./components/LoadingScreen";
@@ -32,6 +42,11 @@ import ZoneDetail from "./pages/ZoneDetail";
 import ItineraryView  from "./pages/ItineraryView";
 import ItineraryResult from "./pages/ItineraryResult"; // ✅ ADD THIS IMPORT
 // import ItineraryView from "./pages/ItineraryView";
+
+// ✅ THÊM: Import Admin components
+// import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
+import AdminRoutes from "./admin/routes/AdminRoutes";
+
 // Route guard
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
@@ -41,17 +56,23 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
-  const { booting, isAuth, user } = useAuth();
-  console.log("Auth state:", { isAuth, user });
+  const { booting, isAuth, user, bannedInfo } = useAuth();
+  console.log("Auth state:", { isAuth, user, bannedInfo });
   if (booting) return <LoadingScreen />;
 
   return (
-    <>
+    <Fragment>
       <Routes>
+        {/* ✅ CẬP NHẬT 2: Admin routes - AdminAuthProvider đã wrap BÊN TRONG AdminRoutes */}
+        <Route path="/admin/*" element={<AdminRoutes />} />
+
         {/* ----- Public + Main layout ----- */}
         <Route element={<MainLayout />}>
-          {/* Nếu muốn / tự động là Home khi chưa login, MainHome khi đã login */}
-          <Route path="/" element={isAuth ? <MainHome /> : <LandingPage />} />
+          {/* Nếu muốn / tự động là Home khi chưa login, MainHome khi đã login hoặc banned */}
+          <Route
+            path="/"
+            element={isAuth || bannedInfo ? <MainHome /> : <LandingPage />}
+          />
           <Route path="/home" element={<MainHome />} />
           <Route path="/destinations/:slug" element={<DestinationPage />} />
           {/* <Route path="/search-results" element={<SearchResults />} /> */}
@@ -59,7 +80,6 @@ export default function App() {
             path="/search-filter-results"
             element={<SearchFilterResults />}
           />
-          <Route path="/discount-codes" element={<DiscountCodesPage />} />
           <Route path="/tours/:id" element={<TourDetailPage />} />
           <Route path="/region/:slug" element={<RegionTours />} />
           {/* <Route path="/region/:slug/detail" element={<RegionDetailPage />} /> */}
@@ -75,6 +95,13 @@ export default function App() {
           <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
           {/* ✅ THÊM ROUTE NÀY */}
           <Route path="/shoppingcarts" element={<Cart />} />
+          {/* Help Center routes */}
+          <Route path="/help" element={<HelpCenter />} />
+          <Route
+            path="/help/category/:category"
+            element={<HelpCategoryView />}
+          />
+          <Route path="/help/article/:slug" element={<HelpArticleView />} />
           {/* <Route path="/region/:slug" element={<RegionTours />} /> */}
           {/* ✅ BẢO VỆ 2 ROUTE NÀY */}
           <Route
@@ -99,8 +126,11 @@ export default function App() {
             <Route index element={<Navigate to="info" replace />} />
             <Route path="info" element={<ProfileInfo />} />
             <Route path="reviews" element={<ProfileReviews />} />
+            <Route path="vouchers" element={<ProfilePromotions />} />
             <Route path="favorites" element={<WishlistPage />} />
             <Route path="booking-history" element={<BookingHistory />} />
+            <Route path="change-password" element={<ChangePassword />} />
+            <Route path="security" element={<ProfileSecurity />} />
           </Route>
         </Route>
         <Route
@@ -161,7 +191,16 @@ export default function App() {
         {/* ----- Auth routes (public) ----- */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/oauth/callback" element={<OAuthCallback />} />
+
+        {/* ----- Security confirmation routes (public with token) ----- */}
+        <Route path="/confirm-2fa" element={<Confirm2FA />} />
+        <Route
+          path="/confirm-email-verification"
+          element={<ConfirmEmailVerification />}
+        />
 
         {/* ----- Payment callback ----- */}
         <Route
@@ -181,6 +220,6 @@ export default function App() {
       {isAuth && (!user?.role || user.role === "uninitialized") && (
         <RolePopup />
       )}
-    </>
+    </Fragment>
   );
 }

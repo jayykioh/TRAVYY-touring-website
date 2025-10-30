@@ -551,7 +551,7 @@ const bestTimeLabel = (time) => {
             pois={allPOIs}
             selectedPoiId={selectedPoiId}
             onPoiClick={(poi) => setSelectedPoiId(poi.place_id || poi.id)}
-            polygon={zone?.polygon}
+            polygon={zone?.polyComputed || zone?.poly}
           />
         </div>
       </div>

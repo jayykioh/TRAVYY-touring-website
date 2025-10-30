@@ -92,36 +92,67 @@ passport.use(
 );
 
 // =========================
-// Facebook Strategy (đang tắt, giữ nguyên)
+// Facebook Strategy
 // =========================
-// passport.use(
-//   new FacebookStrategy(
-//     {
-//       clientID: process.env.FACEBOOK_APP_ID,
-//       clientSecret: process.env.FACEBOOK_APP_SECRET,
-//       callbackURL: process.env.FACEBOOK_CALLBACK_URL,
-//       profileFields: ["id", "displayName", "emails"],
-//     },
-//     async (accessToken, refreshToken, profile, done) => {
-//       try {
-//         let user = await User.findOne({ facebookId: profile.id });
+passport.use(
+  new FacebookStrategy(
+    {
+      clientID: process.env.FACEBOOK_APP_ID,
+      clientSecret: process.env.FACEBOOK_APP_SECRET,
+      callbackURL: process.env.FACEBOOK_CALLBACK_URL,
+      profileFields: ["id", "displayName", "emails"],
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        let user = await User.findOne({ 
+          $or: [
+            { facebookId: profile.id },
+            { email: profile.emails?.[0]?.value }
+          ]
+        });
+        let isNewUser = false;
 
-//         if (!user) {
-//           user = new User({
-//             facebookId: profile.id,
-//             name: profile.displayName,
-//             email: profile.emails?.[0]?.value || "",
-//           });
-//           await user.save();
-//         }
+        if (!user) {
+          // Tạo user mới
+          user = new User({
+            facebookId: profile.id,
+            name: profile.displayName,
+            email: profile.emails?.[0]?.value || "",
+            role: "Traveler",
+          });
+          await user.save();
+          isNewUser = true;
+          console.log(`🆕 New Facebook user created: ${user.email}`);
+        } else if (!user.facebookId) {
+          // User đã tồn tại với email nhưng chưa có facebookId
+          user.facebookId = profile.id;
+          await user.save();
+          console.log(`🔗 Linked existing user with Facebook: ${user.email}`);
+        } else {
+          console.log(`🔄 Existing Facebook user login: ${user.email}`);
+        }
 
-//         return done(null, user);
-//       } catch (err) {
-//         return done(err, false);
-//       }
-//     }
-//   )
-// );
+        // 📨 Gửi email chào mừng khi user mới
+        if (isNewUser && user.email) {
+          try {
+            await axios.post(`http://localhost:${process.env.PORT || 4000}/api/notify/register`, {
+              email: user.email,
+              fullName: user.name || 'Bạn'
+            });
+            console.log(`✅ Sent welcome email to new Facebook user: ${user.email}`);
+          } catch (mailErr) {
+            console.error("❌ Failed to send welcome email for Facebook signup:", mailErr.message);
+          }
+        }
+
+        return done(null, user);
+      } catch (err) {
+        console.error("Facebook OAuth error:", err);
+        return done(err, false);
+      }
+    }
+  )
+);
 
 // =========================
 // Serialize & Deserialize

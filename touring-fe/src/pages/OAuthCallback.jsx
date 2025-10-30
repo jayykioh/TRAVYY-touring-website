@@ -1,5 +1,6 @@
 // src/pages/OAuthCallback.jsx
 import { useEffect } from "react";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 import { useNavigate } from "react-router-dom";
 
 export default function OAuthCallback() {
@@ -8,20 +9,78 @@ export default function OAuthCallback() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch("/api/auth/refresh", {
+        const r = await fetch(`${API_BASE}/api/auth/refresh`, {
           method: "POST",
           credentials: "include",
           headers: { Accept: "application/json" },
         });
-        if (r.ok) {
-        //   const { accessToken } = await r.json();
-          // Lưu token vào context/global state nếu bạn có
-          // ví dụ: window.__access = accessToken; (tạm)
-          // hoặc gọi context.setAccessToken(accessToken)
-          nav("/", { replace: true }); // về trang chính (hoặc /profile)
-        } else {
+
+        if (!r.ok) {
           nav("/login", { replace: true });
+          return;
         }
+
+        // parse refresh response to get accessToken and account status
+        const body = await r.json().catch(() => ({}));
+        const accessToken = body?.accessToken;
+
+        console.log("🔐 OAuth refresh response:", {
+          accountStatus: body?.accountStatus,
+          statusReason: body?.statusReason,
+        });
+
+        // If backend included accountStatus in refresh response, use it immediately
+        if (body?.accountStatus) {
+          const status = String(body.accountStatus || "").toLowerCase();
+          const isLocked =
+            status === "banned" || status === "locked" || status === "lock";
+          console.log("🔒 OAuth lock check:", { status, isLocked });
+
+          if (isLocked) {
+            const info = { message: body?.statusReason || "Tài khoản bị khóa" };
+            console.log("❌ OAuth setting bannedInfo:", info);
+            try {
+              sessionStorage.setItem("bannedInfo", JSON.stringify(info));
+            } catch (e) {}
+          } else {
+            console.log("✅ OAuth active account");
+            try {
+              sessionStorage.removeItem("bannedInfo");
+            } catch (e) {}
+          }
+        }
+
+        // If we received an access token and accountStatus wasn't returned, fall back to /me
+        if (accessToken && !body?.accountStatus) {
+          try {
+            const meRes = await fetch(`${API_BASE}/api/auth/me`, {
+              method: "GET",
+              headers: {
+                Accept: "application/json",
+                Authorization: `Bearer ${accessToken}`,
+              },
+            });
+
+            if (!meRes.ok) {
+              const meBody = await meRes.json().catch(() => null);
+              // If banned (403), persist info so app can show immediate message
+              if (meRes.status === 403) {
+                sessionStorage.setItem(
+                  "bannedInfo",
+                  JSON.stringify(meBody || { message: "Tài khoản bị khóa" })
+                );
+              } else {
+                sessionStorage.removeItem("bannedInfo");
+              }
+            } else {
+              sessionStorage.removeItem("bannedInfo");
+            }
+          } catch (err) {
+            // ignore me errors, AuthContext will re-check on boot
+          }
+        }
+
+        nav("/", { replace: true });
       } catch {
         nav("/login", { replace: true });
       }

@@ -306,3 +306,6 @@ touring-be/data/mock/generated/
 !touring-be/.eslintrc.js
 !ai/requirements.txt
 !ai/pyproject.toml
+
+# Ignore node modules
+node_modules/

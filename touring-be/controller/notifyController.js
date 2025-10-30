@@ -3,6 +3,7 @@ const { sendMail } = require("../utils/emailService");
 const Notification = require("../models/Notification");
 const User = require("../models/Users");
 
+
 // 1. Booking thành công
 const notifyBookingSuccess = async (req, res) => {
   try {
@@ -24,11 +25,9 @@ const notifyBookingSuccess = async (req, res) => {
   }
 };
 
-// 2. Payment thành công
-const notifyPaymentSuccess = async (req, res) => {
+// Helper function to send payment success notification (can be called internally)
+const sendPaymentSuccessNotification = async ({ email, amount, bookingCode, tourTitle, bookingId }) => {
   try {
-    const { email, amount, bookingCode, tourTitle, bookingId } = req.body;
-    
     // Tìm user để lưu notification
     const user = await User.findOne({ email });
     
@@ -94,16 +93,26 @@ const notifyPaymentSuccess = async (req, res) => {
       await notification.markAsSent(emailResult.messageId);
       
       console.log(`📧 Payment notification sent to ${email} - Notification ID: ${notification._id}`);
+      return { success: true, notificationId: notification._id };
     } catch (emailErr) {
       // Cập nhật notification thất bại
       await notification.markAsFailed(emailErr.message);
       throw emailErr;
     }
+  } catch (err) {
+    console.error("sendPaymentSuccessNotification error:", err);
+    throw err;
+  }
+};
 
-    res.json({ 
-      success: true, 
-      notificationId: notification._id 
-    });
+// 2. Payment thành công
+const notifyPaymentSuccess = async (req, res) => {
+  try {
+    const { email, amount, bookingCode, tourTitle, bookingId } = req.body;
+    
+    const result = await sendPaymentSuccessNotification({ email, amount, bookingCode, tourTitle, bookingId });
+    
+    res.json(result);
   } catch (err) {
     console.error("notifyPaymentSuccess error:", err);
     res.status(500).json({ success: false, message: err.message });
@@ -144,7 +153,7 @@ const notifyRegister = async (req, res) => {
       <div style="text-align: center;">
         <img src="https://res.cloudinary.com/dzyq1kp4u/image/upload/v1759849958/logo_wvrds5.png" 
              alt="Travyy Banner" 
-             style="max-width: 100%; border-radius: 12px; margin-bottom: 20px;" />
+             style="max-width: 50%; border-radius: 12px; margin-bottom: 20px;" />
       </div>
 
       <h2 style="color: #2563eb;">👋 Xin chào ${fullName},</h2>
@@ -280,12 +289,237 @@ const getNotificationStats = async (req, res) => {
   }
 };
 
+// 8. Email cảnh báo đổi mật khẩu
+const notifyPasswordChanged = async (req, res) => {
+  try {
+    const { email, name, ipAddress, userAgent } = req.body;
+    
+    const user = await User.findOne({ email });
+    
+    const subject = "🔒 Mật khẩu của bạn đã được thay đổi - Travyy";
+    const htmlContent = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; background: #f9fafb; padding: 20px; border-radius: 12px; color: #333;">
+      <div style="text-align: center;">
+        <img src="https://res.cloudinary.com/dzyq1kp4u/image/upload/v1759849958/logo_wvrds5.png" 
+             alt="Travyy Banner" 
+             style="max-width: 50%; border-radius: 12px; margin-bottom: 20px;" />
+      </div>
+
+      <h2 style="color: #dc2626;">🔒 Thông báo bảo mật</h2>
+      <p>Xin chào <b>${name || 'bạn'}</b>,</p>
+      <p>Mật khẩu tài khoản Travyy của bạn vừa được thay đổi thành công.</p>
+      
+      <div style="background: #fff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+        <p><strong>⏰ Thời gian:</strong> ${new Date().toLocaleString('vi-VN')}</p>
+        <p><strong>🌐 IP Address:</strong> ${ipAddress || 'N/A'}</p>
+        <p><strong>💻 Thiết bị:</strong> ${userAgent || 'N/A'}</p>
+      </div>
+
+      <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0; color: #dc2626;"><strong>⚠️ Không phải bạn?</strong></p>
+        <p style="margin: 10px 0 0 0;">Nếu bạn không thực hiện thay đổi này, vui lòng liên hệ ngay với chúng tôi để bảo vệ tài khoản.</p>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://travyy-touring-website-u3p3.vercel.app/support" 
+           style="display: inline-block; padding: 14px 28px; background: #dc2626; color: #fff; 
+                  font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 16px;">
+          🆘 Liên hệ hỗ trợ
+        </a>
+      </div>
+
+      <p style="font-size: 14px; color: #666; text-align: center; margin-top: 30px;">
+        🔐 Travyy luôn bảo vệ an toàn cho tài khoản của bạn.
+      </p>
+    </div>
+    `;
+
+    const notification = await Notification.create({
+      userId: user?._id,
+      recipientEmail: email,
+      recipientName: name,
+      type: "security_alert",
+      title: "Mật khẩu đã được thay đổi",
+      message: `Mật khẩu của bạn đã được thay đổi vào lúc ${new Date().toLocaleString('vi-VN')}`,
+      emailSubject: subject,
+      emailHtml: htmlContent,
+      data: { ipAddress, userAgent },
+      status: "pending"
+    });
+
+    try {
+      const emailResult = await sendMail(email, subject, htmlContent);
+      await notification.markAsSent(emailResult.messageId);
+      console.log(`📧 Password change notification sent to ${email}`);
+    } catch (emailErr) {
+      await notification.markAsFailed(emailErr.message);
+      throw emailErr;
+    }
+
+    res.json({ success: true, notificationId: notification._id });
+  } catch (err) {
+    console.error("notifyPasswordChanged error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// 9. Email gửi link reset password
+const notifyPasswordReset = async (req, res) => {
+  try {
+    const { email, name, resetLink, resetToken } = req.body;
+    
+    const user = await User.findOne({ email });
+    
+    const subject = "🔑 Yêu cầu đặt lại mật khẩu - Travyy";
+    const htmlContent = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; background: #f9fafb; padding: 20px; border-radius: 12px; color: #333;">
+      <div style="text-align: center;">
+        <img src="https://res.cloudinary.com/dzyq1kp4u/image/upload/v1759849958/logo_wvrds5.png" 
+             alt="Travyy Banner" 
+             style="max-width: 50%; border-radius: 12px; margin-bottom: 20px;" />
+      </div>
+
+      <h2 style="color: #2563eb;">🔑 Đặt lại mật khẩu</h2>
+      <p>Xin chào <b>${name || 'bạn'}</b>,</p>
+      <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản Travyy của bạn.</p>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${resetLink}" 
+           style="display: inline-block; padding: 14px 28px; background: #2563eb; color: #fff; 
+                  font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 16px;">
+          🔓 Đặt lại mật khẩu
+        </a>
+      </div>
+
+      <div style="background: #fff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+        <p style="margin: 0;"><strong>⏰ Link có hiệu lực trong 15 phút</strong></p>
+        <p style="margin: 10px 0 0 0; font-size: 14px; color: #666;">Nếu link hết hạn, vui lòng yêu cầu đặt lại mật khẩu mới.</p>
+      </div>
+
+      <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0; color: #dc2626;"><strong>⚠️ Không phải bạn?</strong></p>
+        <p style="margin: 10px 0 0 0;">Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này. Mật khẩu của bạn sẽ không thay đổi.</p>
+      </div>
+
+      <p style="font-size: 14px; color: #666; text-align: center; margin-top: 30px;">
+        🔐 Travyy luôn bảo vệ an toàn cho tài khoản của bạn.
+      </p>
+    </div>
+    `;
+
+    const notification = await Notification.create({
+      userId: user?._id,
+      recipientEmail: email,
+      recipientName: name,
+      type: "password_reset",
+      title: "Yêu cầu đặt lại mật khẩu",
+      message: `Link đặt lại mật khẩu đã được gửi đến email ${email}`,
+      emailSubject: subject,
+      emailHtml: htmlContent,
+      data: { resetToken },
+      status: "pending"
+    });
+
+    try {
+      const emailResult = await sendMail(email, subject, htmlContent);
+      await notification.markAsSent(emailResult.messageId);
+      console.log(`📧 Password reset email sent to ${email}`);
+    } catch (emailErr) {
+      await notification.markAsFailed(emailErr.message);
+      throw emailErr;
+    }
+
+    res.json({ success: true, notificationId: notification._id });
+  } catch (err) {
+    console.error("notifyPasswordReset error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// 10. Email xác nhận password đã reset thành công
+const notifyPasswordResetSuccess = async (req, res) => {
+  try {
+    const { email, name, ipAddress, userAgent } = req.body;
+    
+    const user = await User.findOne({ email });
+    
+    const subject = "✅ Mật khẩu đã được đặt lại thành công - Travyy";
+    const htmlContent = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; background: #f9fafb; padding: 20px; border-radius: 12px; color: #333;">
+      <div style="text-align: center;">
+        <img src="https://res.cloudinary.com/dzyq1kp4u/image/upload/v1759849958/logo_wvrds5.png" 
+             alt="Travyy Banner" 
+             style="max-width: 50%; border-radius: 12px; margin-bottom: 20px;" />
+      </div>
+
+      <h2 style="color: #16a34a;">✅ Đặt lại mật khẩu thành công</h2>
+      <p>Xin chào <b>${name || 'bạn'}</b>,</p>
+      <p>Mật khẩu tài khoản Travyy của bạn đã được đặt lại thành công.</p>
+      
+      <div style="background: #fff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
+        <p><strong>⏰ Thời gian:</strong> ${new Date().toLocaleString('vi-VN')}</p>
+        
+        <p><strong>💻 Thiết bị:</strong> ${userAgent || 'N/A'}</p>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://travyy-touring-website-u3p3.vercel.app/login" 
+           style="display: inline-block; padding: 14px 28px; background: #16a34a; color: #fff; 
+                  font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 16px;">
+          🔐 Đăng nhập ngay
+        </a>
+      </div>
+
+      <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0; color: #dc2626;"><strong>⚠️ Không phải bạn?</strong></p>
+        <p style="margin: 10px 0 0 0;">Nếu bạn không thực hiện thay đổi này, vui lòng liên hệ ngay với chúng tôi.</p>
+      </div>
+
+      <p style="font-size: 14px; color: #666; text-align: center; margin-top: 30px;">
+        🔐 Travyy luôn bảo vệ an toàn cho tài khoản của bạn.
+      </p>
+    </div>
+    `;
+
+    const notification = await Notification.create({
+      userId: user?._id,
+      recipientEmail: email,
+      recipientName: name,
+      type: "security_alert",
+      title: "Mật khẩu đã được đặt lại",
+      message: `Mật khẩu của bạn đã được đặt lại thành công vào lúc ${new Date().toLocaleString('vi-VN')}`,
+      emailSubject: subject,
+      emailHtml: htmlContent,
+      data: { ipAddress, userAgent },
+      status: "pending"
+    });
+
+    try {
+      const emailResult = await sendMail(email, subject, htmlContent);
+      await notification.markAsSent(emailResult.messageId);
+      console.log(`📧 Password reset success notification sent to ${email}`);
+    } catch (emailErr) {
+      await notification.markAsFailed(emailErr.message);
+      throw emailErr;
+    }
+
+    res.json({ success: true, notificationId: notification._id });
+  } catch (err) {
+    console.error("notifyPasswordResetSuccess error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   notifyBookingSuccess,
   notifyPaymentSuccess,
+  sendPaymentSuccessNotification,
   notifyNewTour,
   notifyRegister,
   getUserNotifications,
   markNotificationsAsRead,
   getNotificationStats,
+  notifyPasswordChanged,
+  notifyPasswordReset,
+  notifyPasswordResetSuccess,
 };

@@ -6,7 +6,8 @@ const {
   handleMoMoIPN, 
   markMoMoPaid, 
   getMoMoSessionStatus,
-  getBookingByPayment 
+  getBookingByPayment,
+  retryPaymentForBooking
 } = require("../controller/payment.controller");
 
 const router = express.Router();
@@ -26,5 +27,8 @@ router.get("/momo/session/:orderId", authJwt, getMoMoSessionStatus);
 // UNIFIED: Get booking by payment provider and orderId
 // This handles both MoMo and PayPal
 router.get("/booking/:provider/:orderId", authJwt, getBookingByPayment);
+
+// Retry payment for failed booking
+router.post("/retry/:bookingId", authJwt, retryPaymentForBooking);
 
 module.exports = router;

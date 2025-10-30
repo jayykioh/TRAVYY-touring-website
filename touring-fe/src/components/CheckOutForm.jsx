@@ -1,14 +1,23 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Lock, CreditCard, Wallet, MapPin, User, Phone, Mail } from "lucide-react";
+import { Lock, CreditCard, Wallet, MapPin, User, Phone, Mail, Tag } from "lucide-react";
 import { useAuth } from "@/auth/context";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import useLocationOptions from "../hooks/useLocation";
 import { useLocation } from "react-router-dom";
+import VoucherSelector from "./VoucherSelector";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
-export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemProp, summaryItems = [], totalAmount }) {
-  const { user } = useAuth() || {};
+export default function CheckoutForm({ 
+  mode: modeProp, 
+  buyNowItem: buyNowItemProp, 
+  retryPaymentItems: retryPaymentItemsProp,
+  retryBookingId: retryBookingIdProp,
+  summaryItems = [], 
+  totalAmount,
+  onVoucherChange 
+}) {
+  const { user, withAuth } = useAuth() || {};
   const accessToken = user?.token; // hoặc user?.accessToken
 
   const [selectedPayment, setSelectedPayment] = useState("");
@@ -22,6 +31,8 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
   // Prefer props (BookingPage passes them); fall back to location.state for backward compatibility.
   const mode = modeProp || location.state?.mode || "cart";
   const buyNowItem = mode === "buy-now" ? (buyNowItemProp || location.state?.item) : null;
+  const retryPaymentItems = mode === "retry-payment" ? retryPaymentItemsProp : null;
+  const retryBookingId = mode === "retry-payment" ? retryBookingIdProp : null;
 
   console.log("🔍 CheckoutForm loaded:");
   console.log("   location.state:", location.state);
@@ -39,6 +50,11 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
     wardName: "",
     addressLine: "",
   });
+
+  // Voucher state
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [finalTotal, setFinalTotal] = useState(totalAmount);
 
   const { provinces, wards, loadingProvince, loadingWard } = useLocationOptions(userInfo.provinceId);
 
@@ -65,39 +81,24 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
         setIsLoadingProfile(true);
         
         // Gọi endpoint /api/profile để lấy thông tin user
-        const r = await fetch(`${API_BASE}/api/profile`, {
-          headers: { 
-            Accept: "application/json", 
-            Authorization: `Bearer ${accessToken}` 
-          },
-          credentials: "include",
-        });
-        
-        if (r.ok) {
-          const data = await r.json();
-          setUserInfo((prev) => ({
-            ...prev,
-            name: data?.name || "",
-            email: data?.email || "",
-            phone: data?.phone || "",
-            provinceId: data?.location?.provinceId || "",
-            wardId: data?.location?.wardId || "",
-            addressLine: data?.location?.addressLine || "",
-          }));
-          didPrefetchRef.current = true;
-        } else {
-          console.error("Failed to fetch profile:", r.status, r.statusText);
-          if (r.status === 401) {
-            console.warn("Token expired or invalid. Please login again.");
-          }
-        }
+        const data = await withAuth("/api/profile");
+        setUserInfo((prev) => ({
+          ...prev,
+          name: data?.name || "",
+          email: data?.email || "",
+          phone: data?.phone || "",
+          provinceId: data?.location?.provinceId || "",
+          wardId: data?.location?.wardId || "",
+          addressLine: data?.location?.addressLine || "",
+        }));
+        didPrefetchRef.current = true;
       } catch (e) {
         console.error("Prefill profile failed:", e);
       } finally { 
         setIsLoadingProfile(false); 
       }
     })();
-  }, [isDialogOpen, accessToken]);
+  }, [isDialogOpen, accessToken, withAuth]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -136,30 +137,23 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
           addressLine: userInfo.addressLine || "",
         },
       };
-      const r = await fetch(`${API_BASE}/api/profile/info`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        credentials: "include",
+      const updated = await withAuth('/api/profile/info', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        console.warn("Update failed:", err);
-      } else {
-        const updated = await r.json();
-        const provinceId = updated?.location?.provinceId || userInfo.provinceId;
-        const wardId = updated?.location?.wardId || userInfo.wardId;
-        setUserInfo((prev) => ({
-          ...prev,
-          name: updated?.name ?? prev.name,
-          phone: updated?.phone ?? prev.phone,
-          provinceId,
-          provinceName: provinces.find((p) => p.id === provinceId)?.name || prev.provinceName,
-          wardId,
-          wardName: wards.find((w) => w.id === wardId)?.name || prev.wardName,
-          addressLine: updated?.location?.addressLine ?? prev.addressLine,
-        }));
-      }
+      const provinceId = updated?.location?.provinceId || userInfo.provinceId;
+      const wardId = updated?.location?.wardId || userInfo.wardId;
+      setUserInfo((prev) => ({
+        ...prev,
+        name: updated?.name ?? prev.name,
+        phone: updated?.phone ?? prev.phone,
+        provinceId,
+        provinceName: provinces.find((p) => p.id === provinceId)?.name || prev.provinceName,
+        wardId,
+        wardName: wards.find((w) => w.id === wardId)?.name || prev.wardName,
+        addressLine: updated?.location?.addressLine ?? prev.addressLine,
+      }));
       setIsDialogOpen(false);
     } catch (e) {
       console.error("Update profile error:", e);
@@ -169,6 +163,21 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
   const isFormValid =
     userInfo.name && userInfo.email && userInfo.phone &&
     userInfo.provinceId && userInfo.wardId && userInfo.addressLine;
+
+  // Update finalTotal when voucher or totalAmount changes
+  useEffect(() => {
+    setFinalTotal(totalAmount - discountAmount);
+  }, [totalAmount, discountAmount]);
+
+  // Handle voucher apply
+  const handleVoucherApply = (voucher, discount) => {
+    setAppliedVoucher(voucher);
+    setDiscountAmount(discount);
+    // Notify parent component if callback provided
+    if (onVoucherChange) {
+      onVoucherChange(voucher, discount);
+    }
+  };
 
   const handlePayment = async () => {
     // ⬇️ NGĂN CHẶN MULTIPLE CLICKS
@@ -198,31 +207,29 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
 
         const payload = {
           mode,
-          ...(mode === "buy-now" && { item: buyNowItem })
+          ...(mode === "buy-now" && { item: buyNowItem }),
+          ...(mode === "retry-payment" && { 
+            retryItems: retryPaymentItems,
+            retryBookingId: retryBookingId 
+          }),
+          // Include voucher information
+          ...(appliedVoucher && {
+            promotionCode: appliedVoucher.code,
+            discountAmount: discountAmount,
+            finalAmount: finalTotal,
+          }),
         };
 
         console.log("📦 Sending payment request:", JSON.stringify(payload, null, 2));
         
-        const response = await fetch(`${API_BASE}/api/paypal/create-order`, {
-          method: "POST",
+        const respJson = await withAuth('/api/paypal/create-order', {
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
           },
-          credentials: "include",
           body: JSON.stringify(payload),
         });
 
-        let respJson = null;
-        if (!response.ok) {
-          respJson = await response.json().catch(()=>({}));
-          console.error("🚫 PayPal create-order failed", respJson);
-          // Hiển thị chi tiết debug nếu backend gửi
-          const reason = respJson?.error || respJson?.name || 'Tạo đơn hàng thất bại';
-          throw new Error(reason);
-        }
-
-        respJson = await response.json();
         const { orderID } = respJson || {};
 
         if (!orderID) {
@@ -244,13 +251,13 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
     } else if (selectedPayment === "momo") {
       try {
         setIsProcessingPayment(true);
-        // Use authoritative total from props; fallback to recompute from summaryItems; final fallback: location.state.totalAmount
-        let amount = Number(totalAmount);
+        // Use finalTotal (after voucher discount) instead of totalAmount
+        let amount = Number(finalTotal);
         if (!Number.isFinite(amount) || amount <= 0) {
-          amount = summaryItems.reduce((s,it)=> s + (Number(it.price)||0), 0);
+          amount = summaryItems.reduce((s,it)=> s + (Number(it.price)||0), 0) - discountAmount;
         }
         if (!Number.isFinite(amount) || amount <= 0) {
-          amount = Number(location.state?.totalAmount);
+          amount = Number(location.state?.totalAmount) - discountAmount;
         }
 
         if (!Number.isFinite(amount) || amount <= 0) {
@@ -266,30 +273,43 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
             originalPrice: Number(it.originalPrice)||undefined,
         }));
 
-        console.log("🚀 Creating MoMo payment", { amount, itemsSnapshot });
-        const res = await fetch(`${API_BASE}/api/payments/momo`, {
-          method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-            },
-            credentials: "include",
-            body: JSON.stringify({
-              amount,
-              orderInfo: "Thanh toán đơn tour Travyy",
-              // Unified callback page for both PayPal & MoMo
-              redirectUrl: `${window.location.origin}/payment/callback`,
-              // Persist mode so backend knows whether to clear selected cart items
-              mode,
-              // For buy-now, also send the single item detail (backend can choose to persist)
-              ...(mode === "buy-now" && buyNowItem ? { item: buyNowItem } : {}),
-              items: itemsSnapshot,
-            }),
+        console.log("🚀 Creating MoMo payment", { 
+          amount, 
+          itemsSnapshot, 
+          voucherCode: appliedVoucher?.code,
+          discountAmount 
         });
-        const data = await res.json().catch(() => ({}));
-        console.log("MoMo response:", data);
-        if (!res.ok || !data?.payUrl) {
-          alert("Tạo phiên thanh toán MoMo thất bại");
+        const data = await withAuth('/api/payments/momo', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            amount,
+            orderInfo: 'Thanh toán đơn tour Travyy',
+            // Unified callback page for both PayPal & MoMo
+            redirectUrl: `${window.location.origin}/payment/callback`,
+            // Persist mode so backend knows whether to clear selected cart items
+            mode,
+            // For buy-now, also send the single item detail (backend can choose to persist)
+            ...(mode === 'buy-now' && buyNowItem ? { item: buyNowItem } : {}),
+            // For retry-payment, send retry items and booking ID
+            ...(mode === 'retry-payment' && retryPaymentItems ? { 
+              retryItems: retryPaymentItems,
+              retryBookingId: retryBookingId 
+            } : {}),
+            items: itemsSnapshot,
+            // Include voucher information
+            ...(appliedVoucher && {
+              promotionCode: appliedVoucher.code,
+              discountAmount: discountAmount,
+            }),
+          }),
+        });
+
+        console.log('MoMo response:', data);
+        if (!data?.payUrl) {
+          alert('Tạo phiên thanh toán MoMo thất bại');
           setIsProcessingPayment(false);
           return;
         }
@@ -432,6 +452,46 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
         )}
       </div>
 
+      {/* Voucher Section - Shopee Style */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <Tag className="w-5 h-5 text-orange-500" />
+            Ưu đãi của bạn
+          </h2>
+        </div>
+
+        <VoucherSelector
+          totalAmount={totalAmount}
+          tourId={buyNowItem?.tourId || summaryItems[0]?.tourId}
+          onVoucherApply={handleVoucherApply}
+        />
+
+        {/* Applied voucher display */}
+        {appliedVoucher && (
+          <div className="mt-4 p-4 bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-orange-800">
+                  Mã: {appliedVoucher.code}
+                </p>
+                <p className="text-xs text-orange-600 mt-1">
+                  Giảm {appliedVoucher.type === 'percentage' 
+                    ? `${appliedVoucher.value}%` 
+                    : `${discountAmount.toLocaleString('vi-VN')}₫`}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Tiết kiệm</p>
+                <p className="text-lg font-bold text-green-600">
+                  -{discountAmount.toLocaleString('vi-VN')}₫
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* payment methods */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -483,6 +543,22 @@ export default function CheckoutForm({ mode: modeProp, buyNowItem: buyNowItemPro
                 <img src="https://res.cloudinary.com/dzjm0cviz/image/upload/v1759928578/Logo-MoMo-Square_mti9wm.webp"/>
               </div>
             </div>
+            
+            {/* ⚠️ Test Environment Warning */}
+            {selectedPayment === "momo" && import.meta.env.DEV && totalAmount > 10000000 && (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex gap-2 text-sm text-yellow-800">
+                  <span>⚠️</span>
+                  <div>
+                    <strong>Lưu ý môi trường test:</strong>
+                    <p className="mt-1">
+                      MoMo test chỉ hỗ trợ tối đa <strong>10,000,000 VNĐ</strong>/giao dịch.
+                      Đơn hàng của bạn ({(totalAmount).toLocaleString('vi-VN')} VNĐ) sẽ được tự động điều chỉnh về 10 triệu để test.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

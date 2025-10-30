@@ -8,7 +8,7 @@ import {
   Menu,
   X,
   Search,
-  ShoppingCart,
+  ShoppingCart, HelpCircle,
 } from "lucide-react";
 import { useAuth } from "../auth/context";
 import provinces from "@/mockdata/header_bestspot";
@@ -239,6 +239,17 @@ export default function Header() {
 
           {/* Actions + Mobile toggle */}
           <div className="flex items-center justify-end gap-2 sm:gap-3">
+            {/* Help Link - Always visible */}
+            <Link
+              to="/help"
+              className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-sm font-medium text-gray-700 bg-white/30 backdrop-blur-md border border-white/40 hover:bg-white/50 transition"
+              aria-label="Trợ giúp"
+              title="Trung tâm trợ giúp"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span className="hidden lg:inline">Trợ giúp</span>
+            </Link>
+
             {isAuth ? (
               <div className="flex items-center gap-2 sm:gap-3">
                 <Link
@@ -336,6 +347,15 @@ export default function Header() {
                 className="py-2 text-gray-700 hover:text-blue-600"
               >
                 About
+              </Link>
+
+              <Link 
+                to="/help" 
+                className="flex items-center gap-2 py-2 text-gray-800 hover:text-blue-600" 
+                onClick={onNavigate}
+              >
+                <HelpCircle className="w-4 h-4" />
+                Trợ giúp
               </Link>
 
               <Link
