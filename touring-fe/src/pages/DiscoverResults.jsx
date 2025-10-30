@@ -1,58 +1,99 @@
 // pages/DiscoverResults.jsx
 import React, { useEffect, useState, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
-import { Globe, MapPin, Compass } from "lucide-react";
+import { Globe, MapPin, Compass, ArrowLeft } from "lucide-react";
 
 import PreferencesSummary from "../components/ZonePreferences";
 import ZonePreview from "../components/ZonePreview";
 import ZonesGrid from "../components/ZoneGrid";
 import ProvinceFilter from "../components/ProvinceFilter";
-import FloatingCartWidget from "@/components/FloatingCartWidget"; // ✅ Floating cart widget
+import FloatingCartWidget from "@/components/FloatingCartWidget";
+
 export default function DiscoverResults() {
   const location = useLocation();
   const navigate = useNavigate();
+
   const [data, setData] = useState(null);
   const [selectedZone, setSelectedZone] = useState(null);
   const [selectedProvince, setSelectedProvince] = useState("all");
 
+  // Lưu selectedProvince vào sessionStorage mỗi khi đổi
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(
+        "discover_selected_province",
+        selectedProvince
+      );
+    } catch {}
+  }, [selectedProvince]);
+
+  // Khởi tạo từ state hoặc fallback sessionStorage
   useEffect(() => {
     const navigationData = location.state?.data;
     if (navigationData) {
       setData(navigationData);
-      
-      // ✅ DEBUG: Check if zones have finalScore
-      console.log('[DiscoverResults] Received data:', {
+
+      console.log("[DiscoverResults] Received data:", {
         zonesCount: navigationData.zones?.length,
         firstZone: navigationData.zones?.[0],
         hasFinalScore: !!navigationData.zones?.[0]?.finalScore,
-        finalScore: navigationData.zones?.[0]?.finalScore
+        finalScore: navigationData.zones?.[0]?.finalScore,
       });
-      
+
       if (navigationData.zones?.length > 0) {
         setSelectedZone(navigationData.zones[0]);
       }
+
+      // Ghi nhớ data mới lên sessionStorage
+      try {
+        window.sessionStorage.setItem(
+          "discover_result",
+          JSON.stringify(navigationData)
+        );
+      } catch {}
+    } else {
+      // Fallback: đọc lại từ sessionStorage
+      try {
+        const raw = window.sessionStorage.getItem("discover_result");
+        if (raw) {
+          const saved = JSON.parse(raw);
+          setData(saved);
+
+          // Khôi phục province + zone đã chọn nếu có
+          const savedProvince =
+            window.sessionStorage.getItem("discover_selected_province") ||
+            "all";
+          setSelectedProvince(savedProvince);
+
+          if (saved?.zones?.length > 0) {
+            const savedZoneId =
+              window.sessionStorage.getItem("discover_selected_zone_id") || "";
+            const found =
+              saved.zones.find((z) => z.id === savedZoneId) || saved.zones[0];
+            setSelectedZone(found);
+          }
+        }
+      } catch {}
     }
   }, [location.state]);
 
+  // Lọc theo province
   const zones = useMemo(() => {
     if (!data?.zones) return [];
     if (selectedProvince === "all") return data.zones;
     return data.zones.filter((z) => z.province === selectedProvince);
   }, [data, selectedProvince]);
 
+  // Click "Khám phá zone" → vào ZoneDetail và mang theo state để quay lại
   const handleExploreZone = () => {
     if (!selectedZone) return;
 
-    // ✅ DEBUG: Log zone object
     console.log("[DEBUG] selectedZone:", selectedZone);
     console.log("[DEBUG] selectedZone.id:", selectedZone.id);
     console.log("[DEBUG] selectedZone.name:", selectedZone.name);
 
-    // Ensure we use 'id' field (slug), not '_id' or 'name'
     const zoneSlug = selectedZone.id;
-
     if (!zoneSlug) {
       console.error("[ERROR] Zone has no id field!", selectedZone);
       alert("Zone ID không hợp lệ");
@@ -65,7 +106,7 @@ export default function DiscoverResults() {
       state: {
         zone: selectedZone,
         prefs: data?.prefs,
-        data, // ✅ thêm dòng này để ZoneDetail biết dữ liệu cũ
+        data, // Giữ full data để quay lại không mất
       },
     });
   };
@@ -85,7 +126,7 @@ export default function DiscoverResults() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => navigate("/discover")}
+            onClick={() => navigate("/intinerary-creator")}
             className="px-6 py-3 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition-colors"
           >
             Quay lại tìm kiếm
@@ -105,6 +146,21 @@ export default function DiscoverResults() {
           className="mb-6"
         >
           <div className="flex items-center gap-3 mb-3">
+            {/* Nút Quay lại */}
+            <button
+              onClick={() => {
+                // Quay về form discover, truyền lại data để form có thể hồi phục
+                navigate("/intinerary-creator", {
+                  state: { from: "results", data },
+                });
+              }}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-white hover:bg-slate-50 text-slate-700"
+              aria-label="Quay lại"
+            >
+              <ArrowLeft className="w-4 h-4 shadow-sm hover:scale-105 transform ease-in-out duration-200" />
+              Quay lại
+            </button>
+
             <div className="p-2 bg-white rounded-xl shadow-sm">
               <Globe className="w-6 h-6 text-slate-700" />
             </div>
@@ -112,7 +168,7 @@ export default function DiscoverResults() {
           </div>
         </motion.div>
 
-        <div className="w-full  mx-auto">
+        <div className="w-full mx-auto">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
             {/* Left 30% */}
             <div className="lg:basis-[30%] lg:shrink-0">
@@ -120,8 +176,8 @@ export default function DiscoverResults() {
                 <PreferencesSummary
                   prefs={data.prefs}
                   compact
-                  onEdit={() => navigate("/discover")}
-                  maxVibes={6} // 👈 giới hạn chip để panel ngắn
+                  onEdit={() => navigate("/intinerary-creator", { state: { data } })}
+                  maxVibes={6}
                   maxAvoid={4}
                 />
               </div>
@@ -157,15 +213,25 @@ export default function DiscoverResults() {
             <MapPin className="w-4 h-4" />
             <span className="font-medium">{zones.length} zones khả dụng</span>
           </div>
+
           <ZonesGrid
             zones={zones}
             selectedZoneId={selectedZone?.id}
-            onSelectZone={setSelectedZone}
+            onSelectZone={(z) => {
+              setSelectedZone(z);
+              try {
+                window.sessionStorage.setItem(
+                  "discover_selected_zone_id",
+                  z?.id || ""
+                );
+              } catch {}
+            }}
             onHoverZone={() => {}}
           />
         </div>
       </div>
-      <FloatingCartWidget /> {/* ✅ Floating cart widget */}
+
+      <FloatingCartWidget />
     </div>
   );
 }

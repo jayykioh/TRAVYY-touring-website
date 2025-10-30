@@ -1,6 +1,6 @@
+/* eslint-disable no-empty */
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
-// pages/ZoneDetail.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,59 +9,23 @@ import {
   ArrowLeft,
   MapPin,
   Star,
-  Image as ImageIcon,
-  Sparkles,
   Plus,
   Check,
-  Clock,
-  Sun,
-  CloudSun,
-  Sunset,
-  Moon,
-  Cloud,
-  Camera,
-  ThumbsUp,
+  Lightbulb,
   AlertTriangle,
+  Sun,
+  Sunset,
+  CloudSun,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-import GoongMapPanel from "../components/GoongMapPanel";
 import { useItinerary } from "../hooks/useIntinerary";
 import { useAuth } from "@/auth/context";
 import FloatingCartWidget from "@/components/FloatingCartWidget";
 import { toast } from "sonner";
-
-/* Helpers: bestTime */
-const bestTimeIcon = (time) => {
-  switch (time) {
-    case "morning":
-      return <Sun className="w-3.5 h-3.5 text-amber-400" />;
-    case "afternoon":
-      return <CloudSun className="w-3.5 h-3.5 text-orange-400" />;
-    case "evening":
-      return <Sunset className="w-3.5 h-3.5 text-pink-500" />;
-    case "night":
-      return <Moon className="w-3.5 h-3.5 text-indigo-400" />;
-    case "anytime":
-      return <Cloud className="w-3.5 h-3.5 text-slate-400" />;
-    default:
-      return <Clock className="w-3.5 h-3.5 text-slate-400" />;
-  }
-};
-const bestTimeLabel = (time) => {
-  switch (time) {
-    case "morning":
-      return "Buổi sáng";
-    case "afternoon":
-      return "Buổi chiều";
-    case "evening":
-      return "Hoàng hôn";
-    case "night":
-      return "Ban đêm";
-    case "anytime":
-      return "Bất kỳ thời điểm nào";
-    default:
-      return "";
-  }
-};
+import Map4DPanel from "@/components/Map4DPanel";
+import POISearch from "@/components/POISearch";
+import POICategoryTabs from "@/components/POICategoryTabs";
 
 /* MiniPOICard */
 function MiniPOICard({ poi, active, onClick, isAdded, onToggleAdd }) {
@@ -100,16 +64,16 @@ function MiniPOICard({ poi, active, onClick, isAdded, onToggleAdd }) {
         </div>
       </button>
 
-      <div className="mt-2 flex gap-2">
+      <div className="mt-2">
         <button
           onClick={(e) => {
             e.stopPropagation();
             onToggleAdd(poi);
           }}
-          className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-semibold transition-all ${
+          className={`w-full inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-semibold transition-all ${
             isAdded
               ? "bg-[#02A0AA] text-white"
-              : "bg-white border border-slate-300 text-slate-700 hover:border-[#02A0AA] hover:text-[#02A0AA]"
+              : "bg-white border border-slate-300 text-slate-700 hover:border-[#02A0AA]"
           }`}
         >
           {isAdded ? (
@@ -129,21 +93,18 @@ function MiniPOICard({ poi, active, onClick, isAdded, onToggleAdd }) {
   );
 }
 
-/* SkeletonPOICard (shadcn) */
+/* Skeleton */
 function SkeletonPOICard() {
   return (
-    <div className="group w-full rounded-lg border px-3 py-2 bg-white/70">
+    <div className="rounded-lg border px-3 py-2 bg-white/70">
       <div className="flex gap-3">
         <Skeleton className="w-10 h-10 rounded-md" />
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex-1 space-y-1">
           <Skeleton className="h-4 w-3/4" />
           <Skeleton className="h-3 w-2/3" />
         </div>
-        <Skeleton className="h-4 w-10" />
       </div>
-      <div className="mt-2 flex gap-2">
-        <Skeleton className="h-8 w-full rounded-md" />
-      </div>
+      <Skeleton className="h-8 w-full mt-2 rounded-md" />
     </div>
   );
 }
@@ -152,213 +113,227 @@ export default function ZoneDetail() {
   const { zoneId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-
-  const [pois, setPOIs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
   const { isAuth } = useAuth();
 
   const [zone, setZone] = useState(location.state?.zone || null);
+  const [loading, setLoading] = useState(true);
+  const [showZoneInfo, setShowZoneInfo] = useState(false);
+
+  // State theo category (kèm recent)
+  const [poisByCategory, setPoisByCategory] = useState({
+    views: [],
+    beach: [],
+    nature: [],
+    food: [],
+    culture: [],
+    shopping: [],
+    nightlife: [],
+    recent: [],
+  });
+  const [activeCategory, setActiveCategory] = useState("views");
   const [selectedPoiId, setSelectedPoiId] = useState(null);
+  const [loadingCategories, setLoadingCategories] = useState(new Set());
 
-  // Itinerary context
-  const {
-    setCurrentItinerary,
-    currentItinerary,
-    isPOIInCart,
-    addPOI,
-    removePOI,
-    openCart,
-    loadCurrentItinerary,
-  } = useItinerary();
+  const { currentItinerary, isPOIInCart, addPOI, removePOI, openCart } =
+    useItinerary();
 
-  // Load itinerary on mount (if logged in)
+  // Load recent từ localStorage khi đổi zone
   useEffect(() => {
-    if (isAuth) {
-      loadCurrentItinerary();
+    if (!zoneId) return;
+    try {
+      const raw = localStorage.getItem(`recent:${zoneId}`);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) {
+          setPoisByCategory((prev) => ({ ...prev, recent: arr }));
+        }
+      } else {
+        setPoisByCategory((prev) => ({ ...prev, recent: [] }));
+      }
+    } catch {
+      setPoisByCategory((prev) => ({ ...prev, recent: [] }));
     }
-  }, [isAuth, zoneId]);
+  }, [zoneId]);
 
-  // Load zone detail
+  // Fetch zone
   useEffect(() => {
     let ignore = false;
-    async function run() {
+    async function fetchZone() {
       try {
         setLoading(true);
-        if (!zone) {
-          const res = await fetch(`/api/zones/${zoneId}`);
-          const json = await res.json();
-          if (!ignore && json?.ok) setZone(json.zone);
+        const timestamp = Date.now();
+        const res = await fetch(`/api/zones/${zoneId}?_t=${timestamp}`, {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+        });
+        const json = await res.json();
+        if (json?.ok && json.zone && !ignore) {
+          setZone(json.zone);
         }
       } catch (e) {
-        toast.error(e);
+        console.error("❌ Zone fetch error:", e);
       } finally {
         if (!ignore) setLoading(false);
       }
     }
-    run();
+    fetchZone();
     return () => {
       ignore = true;
     };
   }, [zoneId]);
 
-  // Load or reuse itinerary for this zone
+  // Priority: views + beach + nature (server tổng hợp) — hạn chế request
   useEffect(() => {
-    async function loadItinerary() {
+    async function loadPriorityPOIs() {
       try {
-        const res = await fetch("/api/itinerary", {
-          credentials: "include",
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          const existing = data.itineraries.find(
-            (it) => it.zoneId === zoneId && it.status === "draft"
-          );
-
-          if (existing) {
-            setCurrentItinerary(existing);
-          }
+        const res = await fetch(`/api/zones/${zoneId}/pois-priority?limit=7`);
+        const json = await res.json();
+        if (json.ok) {
+          setPoisByCategory((prev) => ({
+            ...prev,
+            ...json.data, // { views, beach, nature }
+          }));
         }
-      } catch (error) {
-        console.error("Error loading itinerary:", error);
+      } catch (err) {
+        console.error("❌ Error loading priority POIs:", err);
       }
     }
-
-    loadItinerary();
+    if (zoneId) loadPriorityPOIs();
   }, [zoneId]);
 
-  // Toggle POI in cart
-  const toggleAddPoi = async (poi) => {
-    if (!isAuth) {
-      alert("Vui lòng đăng nhập để thêm vào hành trình");
-      navigate("/login");
+  // Persist recent
+  const persistRecent = (list) => {
+    try {
+      localStorage.setItem(`recent:${zoneId}`, JSON.stringify(list));
+    } catch {}
+  };
+
+  // Lazy load category khác khi người dùng bấm tab (trừ recent/priority)
+  const loadCategory = async (categoryKey) => {
+    if (
+      ["recent", "views", "beach", "nature"].includes(categoryKey) ||
+      (poisByCategory[categoryKey]?.length ?? 0) > 0
+    ) {
       return;
     }
 
-    const id = poi.place_id || poi.id;
+    setLoadingCategories((prev) => new Set(prev).add(categoryKey));
+    try {
+      const res = await fetch(
+        `/api/zones/${zoneId}/pois/${categoryKey}?limit=7`
+      );
+      const json = await res.json();
+      if (json.ok) {
+        setPoisByCategory((prev) => ({
+          ...prev,
+          [categoryKey]: json.pois || [],
+        }));
+      }
+    } catch (err) {
+      console.error(`❌ Error loading ${categoryKey}:`, err);
+    } finally {
+      setLoadingCategories((prev) => {
+        const next = new Set(prev);
+        next.delete(categoryKey);
+        return next;
+      });
+    }
+  };
 
+  const handleCategoryChange = (categoryKey) => {
+    setActiveCategory(categoryKey);
+    loadCategory(categoryKey);
+  };
+
+  // Khi user chọn từ POISearch → lưu vào recent (dedupe + giới hạn 12)
+  const handleSearchSelect = (poi) => {
+    const id = poi.place_id || poi.id;
+    setSelectedPoiId(id);
+    setPoisByCategory((prev) => {
+      const curr = prev.recent || [];
+      const dedup = [poi, ...curr.filter((p) => (p.place_id || p.id) !== id)];
+      const limited = dedup.slice(0, 12);
+      persistRecent(limited);
+      return { ...prev, recent: limited };
+    });
+    setActiveCategory("recent");
+  };
+
+  // Add/Remove vào hành trình
+  const toggleAddPoi = async (poi) => {
+    if (!isAuth) {
+      toast.error("Vui lòng đăng nhập");
+      navigate("/login");
+      return;
+    }
+    const id = poi.place_id || poi.id;
     try {
       if (isPOIInCart(id)) {
         await removePOI(id);
       } else {
-        await addPOI(
-          poi,
-          zoneId,
-          zone?.name || "Unknown",
-          location.state?.prefs
-        );
+        await addPOI(poi, zoneId, zone?.name || "Unknown");
         openCart();
       }
     } catch (error) {
-      console.error("Error toggling POI:", error);
       toast.error(error.message || "Có lỗi xảy ra");
     }
   };
 
-  const handlePoiClick = (poi) => {
-    const id = poi.place_id || poi.id;
-    setSelectedPoiId(id);
-  };
+  // POIs đang hiển thị theo tab
+  const currentPOIs = useMemo(() => {
+    return poisByCategory[activeCategory] || [];
+  }, [poisByCategory, activeCategory]);
 
+  // Center map
   const center = useMemo(() => {
     if (zone?.center) return zone.center;
-    if (zone?.loc) return zone.loc;
     return { lat: 16.047, lng: 108.206 };
   }, [zone]);
 
-  // Fetch POIs
-  useEffect(() => {
-    const fetchPOIs = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  // Tất cả POIs để render map (gộp mọi tab)
+  const allPOIs = useMemo(() => {
+    return Object.values(poisByCategory).flat();
+  }, [poisByCategory]);
 
-        const vibes = location.state?.prefs?.vibes || [];
-        const vibesParam = vibes.length > 0 ? vibes.join(",") : "";
-
-        const url = `/api/zones/${zoneId}/pois?vibes=${vibesParam}&limit=10`;
-        console.log("📤 [ZoneDetail] Fetching POIs from:", url);
-
-        const response = await fetch(url, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-
-        console.log("📥 [ZoneDetail] Response status:", response.status);
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        console.log("📥 [ZoneDetail] Response data:", data);
-
-        if (!data.pois || !Array.isArray(data.pois)) {
-          console.error("❌ [ZoneDetail] Invalid response format:", data);
-          throw new Error("Invalid POI data format");
-        }
-
-        if (data.pois.length > 0) {
-          console.log("📥 [ZoneDetail] First POI received:", {
-            name: data.pois[0].name,
-            lat: data.pois[0].lat,
-            lng: data.pois[0].lng,
-            loc: data.pois[0].loc,
-            location: data.pois[0].location,
-            address: data.pois[0].address,
-            keys: Object.keys(data.pois[0]),
-          });
-        }
-
-        console.log(
-          `✅ [ZoneDetail] Setting ${data.pois.length} POIs to state`
-        );
-        setPOIs(data.pois);
-      } catch (err) {
-        console.error("❌ [ZoneDetail] Fetch error:", err);
-        setError(err.message);
-        setPOIs([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (zoneId) {
-      fetchPOIs();
-    }
-  }, [zoneId, location.state?.prefs?.vibes]);
-
-  useEffect(() => {
-    console.log("🔄 [ZoneDetail] POIs state updated:", {
-      count: pois.length,
-      pois: pois.map((p) => ({ name: p.name, lat: p.lat, lng: p.lng })),
-    });
-  }, [pois]);
-
-  // Error page (optional — keep for debugging)
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">❌ Lỗi: {error}</p>
-          <button
-            onClick={() => navigate(-1)}
-            className="px-4 py-2 bg-slate-200 rounded-lg hover:bg-slate-300"
-          >
-            Quay lại
-          </button>
-        </div>
-      </div>
-    );
+  // Best time badge (tránh Tailwind purge bằng map class cố định)
+const bestTimeIcon = (time) => {
+  switch (time) {
+    case "morning":
+      return <Sun className="w-3.5 h-3.5 text-amber-400" />;
+    case "afternoon":
+      return <CloudSun className="w-3.5 h-3.5 text-orange-400" />;
+    case "evening":
+      return <Sunset className="w-3.5 h-3.5 text-pink-500" />;
+    case "night":
+      return <Moon className="w-3.5 h-3.5 text-indigo-400" />;
+    case "anytime":
+      return <Cloud className="w-3.5 h-3.5 text-slate-400" />;
+    default:
+      return <Clock className="w-3.5 h-3.5 text-slate-400" />;
   }
+};
+const bestTimeLabel = (time) => {
+  switch (time) {
+    case "morning":
+      return "Buổi sáng";
+    case "afternoon":
+      return "Buổi chiều";
+    case "evening":
+      return "Hoàng hôn";
+    case "night":
+      return "Ban đêm";
+    case "anytime":
+      return "Bất kỳ thời điểm nào";
+    default:
+      return "";
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
       <FloatingCartWidget />
 
+      {/* Banner */}
       {/* ================= Banner ================= */}
       {zone && (
         <section className="relative">
@@ -442,104 +417,117 @@ export default function ZoneDetail() {
         </section>
       )}
 
-      {/* ================= Main 2-columns ================= */}
+      {/* Main */}
       <div className="max-w-7xl mx-auto px-4 py-6 grid lg:grid-cols-[420px_1fr] gap-5">
-        {/* Left: Zone info + POI list */}
+        {/* Left */}
         <div className="space-y-4">
+          {/* Zone Info */}
           {zone && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl bg-white/80 backdrop-blur-xl border border-white/20 p-4 shadow-sm"
-            >
-              <div className="flex flex-wrap items-center gap-3 text-[12px] text-slate-600">
-                {zone.mustSee?.length > 0 && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Camera className="w-3.5 h-3.5 text-purple-500" />
-                    Điểm nổi bật:{" "}
-                    <span className="font-medium">{zone.mustSee[0]}</span>
-                  </span>
+            <div className="rounded-xl bg-white/80 backdrop-blur-sm border shadow-sm overflow-hidden">
+              <button
+                onClick={() => setShowZoneInfo(!showZoneInfo)}
+                className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/60 transition"
+              >
+                <h3 className="font-semibold text-slate-900">
+                  Thông tin khu vực
+                </h3>
+                {showZoneInfo ? (
+                  <ChevronUp className="w-5 h-5 text-slate-600" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-slate-600" />
                 )}
-              </div>
+              </button>
 
-              {zone.desc && (
-                <p className="mt-2 text-sm text-slate-700 leading-relaxed">
-                  {zone.desc}
-                </p>
-              )}
+              {showZoneInfo && (
+                <div className="px-4 pb-4 space-y-3 text-sm">
+                  {zone.desc && (
+                    <p className="text-slate-700 leading-relaxed">
+                      {zone.desc}
+                    </p>
+                  )}
 
-              {zone.whyChoose?.length > 0 && (
-                <div className="mt-3">
-                  <h4 className="text-sm font-semibold text-slate-900 mb-1.5">
-                    Lý do nên chọn
-                  </h4>
-                  <ul className="space-y-1.5">
-                    {zone.whyChoose.slice(0, 3).map((r, i) => (
-                      <li key={i} className="text-sm text-slate-700">
-                        • {r}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {(zone.tips?.length > 0 || zone.donts?.length > 0) && (
-                <div className="mt-3 grid grid-cols-1 gap-2">
                   {zone.tips?.length > 0 && (
-                    <div className="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                      <ThumbsUp className="w-4 h-4 text-green-600 mt-0.5" />
-                      <div className="text-sm text-slate-700">
-                        {zone.tips[0]}
-                        {zone.tips[1] && (
-                          <div className="mt-1">{zone.tips[1]}</div>
-                        )}
-                      </div>
+                    <div>
+                      <h4 className="font-semibold text-slate-900 flex items-center gap-1.5 mb-2">
+                        <Lightbulb className="w-4 h-4 text-amber-500" />
+                        Mẹo du lịch
+                      </h4>
+                      <ul className="space-y-1.5 text-slate-700">
+                        {zone.tips.slice(0, 3).map((tip, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="text-[#02A0AA] mt-0.5">•</span>
+                            <span>{tip}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
+
                   {zone.donts?.length > 0 && (
-                    <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                      <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5" />
-                      <div className="text-sm text-slate-700">
-                        {zone.donts[0]}
-                        {zone.donts[1] && (
-                          <div className="mt-1">{zone.donts[1]}</div>
-                        )}
-                      </div>
+                    <div>
+                      <h4 className="font-semibold text-slate-900 flex items-center gap-1.5 mb-2">
+                        <AlertTriangle className="w-4 h-4 text-red-500" />
+                        Lưu ý
+                      </h4>
+                      <ul className="space-y-1.5 text-slate-700">
+                        {zone.donts.slice(0, 3).map((dont, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="text-red-500 mt-0.5">⚠</span>
+                            <span>{dont}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                 </div>
               )}
-            </motion.div>
+            </div>
           )}
 
-          {/* POI list with Skeleton */}
-          <section className="rounded-xl bg-white/80 backdrop-blur-xl border border-white/20 p-3 shadow-sm">
+          {/* Search */}
+          <POISearch zoneId={zoneId} onSelectPOI={handleSearchSelect} />
+
+          {/* Category Tabs (đã tối giản prop) */}
+          <POICategoryTabs
+            activeCategory={activeCategory}
+            onSelectCategory={handleCategoryChange}
+          />
+
+          {/* POI List */}
+          <div className="rounded-xl bg-white/80 border p-3">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-sm font-semibold text-slate-900">
-                Địa điểm gợi ý ({loading ? "Đang tải..." : pois.length})
+                {loadingCategories.has(activeCategory)
+                  ? "Đang tải..."
+                  : `${currentPOIs.length} địa điểm`}
               </h2>
-              <span className="text-[11px] text-[#02A0AA] font-semibold">
+              <span className="text-xs text-[#02A0AA] font-semibold">
                 {currentItinerary?.items?.length || 0} đã thêm
               </span>
             </div>
 
-            <div className="max-h-[56vh] overflow-auto pr-1 space-y-2">
-              {loading || (!loading && pois.length === 0) ? (
-                <>
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <SkeletonPOICard key={i} />
-                  ))}
-                </>
+            <div className="max-h-[50vh] overflow-auto space-y-2">
+              {loadingCategories.has(activeCategory) ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <SkeletonPOICard key={i} />
+                ))
+              ) : currentPOIs.length === 0 ? (
+                <div className="text-center text-sm text-slate-600 py-8">
+                  <p>Chưa có địa điểm nào</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Thử chọn danh mục khác hoặc tìm kiếm
+                  </p>
+                </div>
               ) : (
-                <AnimatePresence initial={false}>
-                  {pois.map((poi) => {
+                <AnimatePresence>
+                  {currentPOIs.map((poi) => {
                     const id = poi.place_id || poi.id;
                     return (
                       <motion.div
                         key={id}
-                        layout
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
                       >
                         <MiniPOICard
                           poi={poi}
@@ -554,22 +542,19 @@ export default function ZoneDetail() {
                 </AnimatePresence>
               )}
             </div>
-          </section>
+          </div>
         </div>
 
-        {/* Right: Map */}
         <div className="h-[70vh] lg:h-[78vh]">
-          <GoongMapPanel
+          <Map4DPanel
             center={center}
-            pois={pois}
+            pois={allPOIs}
             selectedPoiId={selectedPoiId}
-            onPoiClick={handlePoiClick}
-            
+            onPoiClick={(poi) => setSelectedPoiId(poi.place_id || poi.id)}
+            polygon={zone?.polygon}
           />
         </div>
       </div>
-
-      <FloatingCartWidget />
     </div>
   );
 }

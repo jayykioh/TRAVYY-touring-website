@@ -1,118 +1,107 @@
+// models/Zones.js
 const mongoose = require("mongoose");
 
 const zoneSchema = new mongoose.Schema(
   {
-    id: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-      trim: true,
-    },
-    province: {
-      type: String,
-      required: true,
-      index: true,
-    },
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    slug: {
-      type: String,
-      trim: true,
-    },
+    /** ===== IDENTIFIERS ===== **/
+    id: { type: String, required: true, unique: true, index: true, trim: true },
+    province: { type: String, required: true, index: true },
+    name: { type: String, required: true, trim: true },
+    slug: { type: String, trim: true },
 
+    /** ===== LOCATION ===== **/
     center: {
       lat: { type: Number, required: true },
       lng: { type: Number, required: true },
     },
-    radiusM: {
-      type: Number,
-      default: 1500, // 1.5km
-      min: 100,
-    },
-    polygon: {
-      type: Object,
+    radiusM: { type: Number, default: 1500, min: 100 },
+
+    /**
+     * ✅ polygon chuẩn cho FE
+     * Cấu trúc: [[lat, lng], [lat, lng], ...]
+     */
+    poly: {
+      type: [[Number]],
       default: null,
-    },
-    /* ========== SEMANTIC TAGS ========== */
-    tags: {
-      type: [String],
-      default: [], // hard vibes
-    },
-    vibeKeywords: {
-      type: [String],
-      default: [], // soft match
-    },
-    avoidTags: {
-      type: [String],
-      default: [],
-    },
-    avoidKeywords: {
-      type: [String],
-      default: [],
+      validate: {
+        validator: function (arr) {
+          if (!arr) return true;
+          if (!Array.isArray(arr) || arr.length < 3) return false;
+          return arr.every(
+            (p) =>
+              Array.isArray(p) &&
+              p.length === 2 &&
+              typeof p[0] === "number" &&
+              typeof p[1] === "number"
+          );
+        },
+        message: "poly must be [[lat, lng], ...] with at least 3 points",
+      },
     },
 
-    /* ========== DESCRIPTION & INFO ========== */
-    desc: {
-      type: String,
-      trim: true,
-      maxlength: 1000,
+    /**
+     * ✅ GeoJSON version cho query không gian (optional)
+     * Cấu trúc: { type: 'Polygon', coordinates: [[[lng, lat], ...]] }
+     */
+    geometry: {
+      type: {
+        type: String,
+        enum: ["Polygon"],
+        default: "Polygon",
+      },
+      coordinates: {
+        type: [[[Number]]], // [[[lng, lat], ...]]
+        default: undefined,
+      },
     },
-    whyChoose: {
-      type: [String],
-      default: [],
-    },
-    funActivities: {
-      type: [String],
-      default: [],
-    },
-    mustSee: {
-      type: [String],
-      default: [],
-    },
+
+    /** ===== SEMANTIC TAGS ===== **/
+    tags: { type: [String], default: [] },
+    vibeKeywords: { type: [String], default: [] },
+    avoidTags: { type: [String], default: [] },
+    avoidKeywords: { type: [String], default: [] },
+
+    /** ===== DESCRIPTION ===== **/
+    desc: { type: String, trim: true, maxlength: 1000 },
+    whyChoose: { type: [String], default: [] },
+    funActivities: { type: [String], default: [] },
+    mustSee: { type: [String], default: [] },
     bestTime: {
       type: String,
       enum: ["morning", "afternoon", "evening", "night", "anytime"],
       default: "anytime",
     },
-    tips: {
-      type: [String],
-      default: [],
-    },
-    donts: {
-      type: [String],
-      default: [],
-    },
+    tips: { type: [String], default: [] },
+    donts: { type: [String], default: [] },
 
-    /* ========== MEDIA ========== */
-    heroImg: {
-      type: String,
-      trim: true,
-    },
-    gallery: {
-      type: [String],
-      default: [],
-    },
+    /** ===== MEDIA ===== **/
+    heroImg: { type: String, trim: true },
+    gallery: { type: [String], default: [] },
 
-    /* ========== SYSTEM META ========== */
-    scorePriority: {
-      type: Number,
-      default: 0.5,
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
+    /** ===== SYSTEM META ===== **/
+    scorePriority: { type: Number, default: 0.5 },
+    isActive: { type: Boolean, default: true },
   },
   {
-    timestamps: true, // createdAt & updatedAt
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// Index for faster zone lookup by province or tag
+// ✅ Virtual cho FE hiển thị polygon
+zoneSchema.virtual("polyComputed").get(function () {
+  if (Array.isArray(this.poly) && this.poly.length >= 3) return this.poly;
+
+  const g = this.geometry;
+  if (g?.type === "Polygon" && Array.isArray(g.coordinates?.[0])) {
+    return g.coordinates[0].map(([lng, lat]) => [lat, lng]);
+  }
+  return null;
+});
+
+// ✅ Geo index cho truy vấn không gian
+zoneSchema.index({ geometry: "2dsphere" });
 zoneSchema.index({ province: 1, tags: 1 });
 
 const Zone = mongoose.model("Zone", zoneSchema);
