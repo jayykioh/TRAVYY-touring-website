@@ -80,7 +80,8 @@ router.post("/parse", async (req, res) => {
         name: z.name,
         finalScore: z.finalScore,
         embedScore: z.embedScore,
-        ruleScore: z.ruleScore
+        ruleScore: z.ruleScore,
+        ruleReasons: z.ruleReasons // log chi tiết lý do chấm điểm
       }))
     });
 

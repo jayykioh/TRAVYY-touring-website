@@ -55,11 +55,17 @@ const zoneSchema = new mongoose.Schema(
       },
     },
 
-    /** ===== SEMANTIC TAGS ===== **/
-    tags: { type: [String], default: [] },
-    vibeKeywords: { type: [String], default: [] },
-    avoidTags: { type: [String], default: [] },
-    avoidKeywords: { type: [String], default: [] },
+  /** ===== SEMANTIC TAGS ===== **/
+  tags: { type: [String], default: [] },
+  vibeKeywords: { type: [String], default: [] },
+  avoidTags: { type: [String], default: [] },
+  avoidKeywords: { type: [String], default: [] },
+
+  /** ===== USER MATCH METADATA ===== **/
+  pace: { type: String, enum: ["light", "medium", "intense"], default: null },
+  durationDays: { type: Number, min: 1, max: 30, default: null },
+  budget: { type: String, enum: ["budget", "mid", "luxury"], default: null },
+  groupType: { type: String, enum: ["solo", "couple", "family", "friends"], default: null },
 
     /** ===== DESCRIPTION ===== **/
     desc: { type: String, trim: true, maxlength: 1000 },
