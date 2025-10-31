@@ -8,7 +8,38 @@ app.use(express.json());
 app.use('/api/blogs', require('../../routes/blogs'));
 
 // Mock the Blog model
-jest.mock('../../models/Blogs');
+jest.mock('../../models/Blogs', () => ({
+  findOne: jest.fn().mockImplementation(({ slug }) => {
+    if (slug === 'test-blog') {
+      return Promise.resolve({
+        _id: 'blog123',
+        title: 'Test Blog',
+        slug: 'test-blog',
+        description: 'Test description',
+        banner: 'test.jpg',
+        region: 'Vietnam',
+        location: {
+          lat: 10.7769,
+          lng: 106.7009,
+          address: 'Ho Chi Minh City'
+        },
+        activities: [{ name: 'Sightseeing' }],
+        sightseeing: [{ name: 'Ben Thanh Market' }],
+        transport: [{ name: 'Taxi' }],
+        hotels: [{ name: 'Hotel A', price: '$100' }],
+        quickInfo: {
+          weather: 'Tropical',
+          bestSeason: 'Dry season',
+          duration: '3 days',
+          language: 'Vietnamese',
+          distance: '1000km'
+        },
+        faq: [{ q: 'Question?', a: 'Answer' }]
+      });
+    }
+    return Promise.resolve(null);
+  })
+}));
 
 describe('Blogs Routes Integration Tests', () => {
   beforeEach(() => {

@@ -4,14 +4,49 @@ jest.mock('../../middlewares/authJwt', () => jest.fn((req, res, next) => {
   next();
 }));
 
-jest.mock('../../controller/payment.controller', () => ({
-  createMoMoPayment: jest.fn(),
-  handleMoMoIPN: jest.fn(),
-  markMoMoPaid: jest.fn(),
-  getMoMoSessionStatus: jest.fn(),
-  getBookingByPayment: jest.fn(),
-  retryPaymentForBooking: jest.fn(),
-}));
+
+jest.mock('../../controller/payment.controller', () => {
+  return {
+    createMoMoPayment: jest.fn((req, res) => {
+      if (req.body.bookingId === '507f1f77bcf86cd799439011' && req.body.amount === 1000000) {
+        res.json({ payUrl: 'https://test-payment.momo.vn/pay', orderId: 'ORDER123456', amount: 1000000 });
+      } else {
+        res.status(400).json({ error: 'Invalid booking or amount' });
+      }
+    }),
+    handleMoMoIPN: jest.fn((req, res) => {
+      if (req.body.resultCode === 0) {
+        res.status(204).send();
+      } else {
+        res.status(400).json({ error: 'Payment failed' });
+      }
+    }),
+    markMoMoPaid: jest.fn((req, res) => {
+      res.json({ success: true, bookingId: '507f1f77bcf86cd799439011' });
+    }),
+    getMoMoSessionStatus: jest.fn((req, res) => {
+      if (req.params.orderId === 'ORDER123456') {
+        res.json({ orderId: 'ORDER123456', status: 'paid', amount: 1000000 });
+      } else {
+        res.status(404).json({ error: 'Session not found' });
+      }
+    }),
+    getBookingByPayment: jest.fn((req, res) => {
+      if (req.params.provider === 'momo') {
+        res.json({ _id: '507f1f77bcf86cd799439011', paymentProvider: 'momo', orderId: 'ORDER123456', status: 'paid' });
+      } else {
+        res.json({ _id: '507f1f77bcf86cd799439012', paymentProvider: 'paypal', orderId: 'PAYPAL123456', status: 'paid' });
+      }
+    }),
+    retryPaymentForBooking: jest.fn((req, res) => {
+      if (req.method === 'POST' && req.params.bookingId === '507f1f77bcf86cd799439011') {
+        res.json({ success: true, newPaymentUrl: 'https://test-payment.momo.vn/retry', orderId: 'RETRY123456' });
+      } else {
+        res.status(400).json({ error: 'Retry payment failed' });
+      }
+    })
+  };
+});
 
 const request = require('supertest');
 const express = require('express');

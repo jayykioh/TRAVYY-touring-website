@@ -15,10 +15,31 @@ const { Cart, CartItem } = require('../../models/Carts');
 const User = require('../../models/Users');
 
 // Mock dependencies
-jest.mock('../../models/Bookings');
-jest.mock('../../models/agency/Tours');
-jest.mock('../../models/Carts');
-jest.mock('../../models/Users');
+
+jest.mock('../../models/Bookings', () => ({
+  findById: jest.fn().mockResolvedValue({ _id: 'booking123', userId: 'user123', status: 'pending' }),
+  findOne: jest.fn().mockResolvedValue({ _id: 'booking123', userId: 'user123', status: 'pending' }),
+  create: jest.fn().mockResolvedValue({ _id: 'booking123', userId: 'user123', status: 'pending' }),
+  findByIdAndUpdate: jest.fn().mockResolvedValue({ _id: 'booking123', userId: 'user123', status: 'paid' })
+}));
+
+jest.mock('../../models/agency/Tours', () => ({
+  findById: jest.fn().mockResolvedValue({ _id: 'tour123', title: 'Tour 123', imageItems: [{ imageUrl: 'test.jpg' }], departures: [{ date: '2024-01-15', priceAdult: 100, priceChild: 50 }] })
+}));
+
+jest.mock('../../models/Carts', () => ({
+  Cart: {
+    findOne: jest.fn().mockResolvedValue({ _id: 'cart123', userId: 'user123' }),
+    findById: jest.fn().mockResolvedValue({ _id: 'cart123', userId: 'user123' })
+  },
+  CartItem: {
+    find: jest.fn().mockResolvedValue([])
+  }
+}));
+
+jest.mock('../../models/Users', () => ({
+  findById: jest.fn().mockResolvedValue({ _id: 'user123', name: 'User 123', email: 'user@example.com' })
+}));
 
 describe('Payment Helpers', () => {
   beforeEach(() => {

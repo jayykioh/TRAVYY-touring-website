@@ -269,40 +269,45 @@ touring-be/
 
 ## 📊 Coverage Report
 
-### Overall Coverage: 4.15%
+### Overall Coverage: 49.89%
 
 #### File-by-file Breakdown:
 
 | File | Statements | Branches | Functions | Lines |
 |------|------------|----------|-----------|-------|
-| `controller/` | 6.31% | 5.99% | 6.79% | 6.52% |
+| `controller/` | 52.10% | 42.52% | 61.24% | 52.75% |
 | `controller/admin/` | 0% | 0% | 0% | 0% |
-| `models/` | 0% | 0% | 0% | 0% |
+| `models/` | 44.31% | 0% | 0% | 48.05% |
 | `models/agency/` | 0% | 0% | 0% | 0% |
-| `routes/` | 0% | 0% | 0% | 0% |
+| `routes/` | 46.40% | 3.38% | 3.84% | 49.65% |
 | `routes/admin/` | 0% | 0% | 0% | 0% |
-| `utils/` | 6.21% | 3.97% | 33.33% | 6.36% |
-| **Total** | **4.15%** | **4.42%** | **5.42%** | **4.27%** |
+| `utils/` | 39.02% | 18.75% | 80% | 39.50% |
+| **Total** | **49.89%** | **36.29%** | **46.56%** | **51.22%** |
 
 #### Uncovered Lines:
 
 **Lý do chính:**
-- **Chỉ test 3 file cụ thể**: `auth.controller.js`, `Users.js`, `jwt.js` - các file khác chưa có unit tests
-- **Integration tests fail**: Do vấn đề mocking phức tạp với mongoose Schema và server initialization
-- **Edge cases**: Một số error handling paths khó test trong isolated unit tests (database connection failures, OAuth callbacks)
-- **External dependencies**: Email sending, PayPal webhooks, file uploads cần mock phức tạp
+- **Đã có tiến bộ đáng kể**: Coverage tăng từ 4.15% lên 49.89% với nhiều controllers và models được test
+- **34 tests đang fail**: Cần fix các test failures để cải thiện coverage
+- **Admin và agency modules**: Vẫn chưa có tests (0% coverage)
+- **Một số controllers partial**: PayPal, Review, Notify controllers cần test thêm
+- **Model methods**: Một số models chỉ có schema, chưa test methods
 
 **Chi tiết uncovered:**
-- **controller/**: 1869 statements chưa test - bao gồm booking, payment, cart, review controllers
-- **models/**: 196 statements - tất cả Mongoose models chưa test
-- **routes/**: 343 statements - tất cả API routes chưa test integration
-- **utils/**: 151 statements - chỉ test jwt.js, các utils khác (emailService, paymentHelpers) chưa test đầy đủ
+- **controller/admin/**: 407 statements - tất cả admin controllers chưa test
+- **models/agency/**: 24 statements - agency models chưa test
+- **routes/admin/**: 77 statements - admin routes chưa test integration
+- **paypal.controller.js**: 284 statements - PayPal webhook handling
+- **reviewController.js**: 320 statements - getReviews, getReviewStats functions
+- **notifyController.js**: 426 statements - email sending và notification creation
+- **paymentHelpers.js**: 121 statements - complex payment logic
 
 **Giải pháp cải thiện:**
-- Viết thêm unit tests cho từng controller riêng lẻ
-- Tạo integration tests với proper mocking strategy
-- Test models với mock database
-- Tăng coverage dần dần theo từng module
+- Fix 34 failing tests để stabilize coverage hiện tại
+- Viết thêm unit tests cho admin controllers và agency models
+- Hoàn thiện tests cho PayPal, Review, Notify controllers
+- Thêm integration tests cho admin routes
+- Test methods của models thay vì chỉ schema
 
 ### 📄 Coverage Report Files
 - **HTML Report**: `touring-be/coverage/index.html` - Interactive coverage browser

@@ -2,21 +2,29 @@
 const wishlistController = require('../../controller/wishlistController');
 
 // Mock dependencies
-jest.mock('../../models/Wishlist', () => ({
-  find: jest.fn(() => ({
-    populate: jest.fn().mockReturnThis(),
-    lean: jest.fn().mockResolvedValue([])
-  })),
-  findOne: jest.fn(),
-  create: jest.fn(),
-  findOneAndDelete: jest.fn()
-}));
 
-jest.mock('../../models/Tours', () => ({
-  findById: jest.fn()
-}));
+jest.mock('../../models/Wishlist', () => {
+  // Default mock for all test cases
+  return {
+    find: jest.fn(() => ({
+      populate: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue([])
+    })),
+    findOne: jest.fn().mockResolvedValue(null),
+    create: jest.fn().mockResolvedValue({ _id: 'mockWishlistId' }),
+    findOneAndDelete: jest.fn().mockResolvedValue({ _id: 'mockWishlistId' })
+  };
+});
 
-jest.mock('../../models/Location', () => ({}));
+jest.mock('../../models/Tours', () => {
+  return {
+    findById: jest.fn().mockResolvedValue({ _id: 'tour123', title: 'Tour 123' })
+  };
+});
+
+jest.mock('../../models/Location', () => ({
+  findById: jest.fn().mockResolvedValue({ _id: 'location123', name: 'Location 123' })
+}));
 
 const Wishlist = require('../../models/Wishlist');
 const Tour = require('../../models/Tours');

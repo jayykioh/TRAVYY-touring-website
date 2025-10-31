@@ -2,34 +2,43 @@
 const reviewController = require('../../controller/reviewController');
 
 // Mock dependencies
-jest.mock('../../models/Review', () => ({
-  create: jest.fn(),
-  find: jest.fn(() => ({
-    sort: jest.fn().mockReturnThis(),
-    populate: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-    skip: jest.fn().mockReturnThis(),
-    exec: jest.fn().mockResolvedValue([])
-  })),
-  findOne: jest.fn(),
-  findById: jest.fn(),
-  findByIdAndUpdate: jest.fn(),
-  findByIdAndDelete: jest.fn(),
-  countDocuments: jest.fn().mockResolvedValue(0)
-}));
 
-jest.mock('../../models/Bookings', () => ({
-  findOne: jest.fn(),
-  findById: jest.fn()
-}));
+jest.mock('../../models/Review', () => {
+  return {
+    create: jest.fn().mockResolvedValue({ _id: 'review123', rating: 5 }),
+    find: jest.fn(() => ({
+      sort: jest.fn().mockReturnThis(),
+      populate: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([{ _id: 'review123', rating: 5 }])
+    })),
+    findOne: jest.fn().mockResolvedValue({ _id: 'review123', rating: 5 }),
+    findById: jest.fn().mockResolvedValue({ _id: 'review123', rating: 5 }),
+    findByIdAndUpdate: jest.fn().mockResolvedValue({ _id: 'review123', rating: 5 }),
+    findByIdAndDelete: jest.fn().mockResolvedValue({ _id: 'review123', rating: 5 }),
+    countDocuments: jest.fn().mockResolvedValue(1)
+  };
+});
 
-jest.mock('../../models/Tours', () => ({
-  findById: jest.fn()
-}));
+jest.mock('../../models/Bookings', () => {
+  return {
+    findOne: jest.fn().mockResolvedValue({ _id: 'booking123', userId: 'user123', tourId: 'tour123' }),
+    findById: jest.fn().mockResolvedValue({ _id: 'booking123', userId: 'user123', tourId: 'tour123' })
+  };
+});
 
-jest.mock('../../models/Users', () => ({
-  findById: jest.fn()
-}));
+jest.mock('../../models/Tours', () => {
+  return {
+    findById: jest.fn().mockResolvedValue({ _id: 'tour123', title: 'Tour 123' })
+  };
+});
+
+jest.mock('../../models/Users', () => {
+  return {
+    findById: jest.fn().mockResolvedValue({ _id: 'user123', name: 'User 123' })
+  };
+});
 
 const Review = require('../../models/Review');
 const Booking = require('../../models/Bookings');

@@ -4,41 +4,43 @@ const HelpCategory = require('../../models/HelpCategory');
 const HelpFeedback = require('../../models/HelpFeedback');
 
 // Mock dependencies
+
 jest.mock('../../models/HelpArticle', () => ({
   find: jest.fn(() => ({
-    populate: jest.fn(() => ({
-      populate: jest.fn(() => ({
-        limit: jest.fn(() => ({
-          sort: jest.fn()
-        }))
-      }))
-    }))
+    populate: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    sort: jest.fn().mockReturnThis(),
+    exec: jest.fn().mockResolvedValue([{ _id: 'article123', title: 'Help Article' }])
   })),
   findOne: jest.fn(() => ({
-    populate: jest.fn(() => ({
-      populate: jest.fn()
-    }))
+    populate: jest.fn().mockReturnThis(),
+    exec: jest.fn().mockResolvedValue({ _id: 'article123', title: 'Help Article' })
   })),
-  create: jest.fn(),
-  findByIdAndUpdate: jest.fn(),
-  findByIdAndDelete: jest.fn(),
+  create: jest.fn().mockResolvedValue({ _id: 'article123', title: 'Help Article' }),
+  findByIdAndUpdate: jest.fn().mockResolvedValue({ _id: 'article123', title: 'Help Article Updated' }),
+  findByIdAndDelete: jest.fn().mockResolvedValue({ _id: 'article123', title: 'Help Article Deleted' })
 }));
+
 jest.mock('../../models/HelpCategory', () => ({
   find: jest.fn(() => ({
-    populate: jest.fn()
+    populate: jest.fn().mockReturnThis(),
+    exec: jest.fn().mockResolvedValue([{ _id: 'cat123', name: 'Category' }])
   })),
-  findOne: jest.fn(),
-  create: jest.fn(),
+  findOne: jest.fn().mockResolvedValue({ _id: 'cat123', name: 'Category' }),
+  create: jest.fn().mockResolvedValue({ _id: 'cat123', name: 'Category' })
 }));
+
 jest.mock('../../models/HelpFeedback', () => ({
   find: jest.fn(() => ({
-    populate: jest.fn()
+    populate: jest.fn().mockReturnThis(),
+    exec: jest.fn().mockResolvedValue([{ _id: 'fb123', content: 'Feedback' }])
   })),
   findById: jest.fn(() => ({
-    populate: jest.fn()
+    populate: jest.fn().mockReturnThis(),
+    exec: jest.fn().mockResolvedValue({ _id: 'fb123', content: 'Feedback' })
   })),
-  create: jest.fn(),
-  findByIdAndUpdate: jest.fn(),
+  create: jest.fn().mockResolvedValue({ _id: 'fb123', content: 'Feedback' }),
+  findByIdAndUpdate: jest.fn().mockResolvedValue({ _id: 'fb123', content: 'Feedback Updated' })
 }));
 
 describe('Help Controller', () => {

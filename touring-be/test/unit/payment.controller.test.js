@@ -6,6 +6,7 @@ const { Cart, CartItem } = require('../../models/Carts');
 const Tour = require('../../models/Tours');
 const User = require('../../models/Users');
 
+
 // Mock crypto
 jest.mock('crypto', () => ({
   createHmac: jest.fn(() => ({
@@ -17,6 +18,43 @@ jest.mock('crypto', () => ({
 // Mock fetch
 const fetchMock = jest.fn();
 global.fetch = fetchMock;
+
+// Mock PaymentSession
+jest.mock('../../models/PaymentSession', () => ({
+  create: jest.fn().mockResolvedValue({ _id: 'session123', status: 'pending' }),
+  findOne: jest.fn().mockResolvedValue({ _id: 'session123', status: 'pending' }),
+  findById: jest.fn().mockResolvedValue({ _id: 'session123', status: 'pending' }),
+  findByIdAndUpdate: jest.fn().mockResolvedValue({ _id: 'session123', status: 'paid' })
+}));
+
+// Mock Bookings
+jest.mock('../../models/Bookings', () => ({
+  findById: jest.fn().mockResolvedValue({ _id: 'booking123', userId: 'user123', status: 'pending' }),
+  findOne: jest.fn().mockResolvedValue({ _id: 'booking123', userId: 'user123', status: 'pending' }),
+  create: jest.fn().mockResolvedValue({ _id: 'booking123', userId: 'user123', status: 'pending' }),
+  findByIdAndUpdate: jest.fn().mockResolvedValue({ _id: 'booking123', userId: 'user123', status: 'paid' })
+}));
+
+// Mock Cart
+jest.mock('../../models/Carts', () => ({
+  Cart: {
+    findOne: jest.fn().mockResolvedValue({ _id: 'cart123', userId: 'user123' }),
+    findById: jest.fn().mockResolvedValue({ _id: 'cart123', userId: 'user123' })
+  },
+  CartItem: {
+    find: jest.fn().mockResolvedValue([])
+  }
+}));
+
+// Mock Tour
+jest.mock('../../models/Tours', () => ({
+  findById: jest.fn().mockResolvedValue({ _id: 'tour123', title: 'Tour 123', imageItems: [{ imageUrl: 'test.jpg' }], departures: [{ date: '2024-01-15', priceAdult: 100, priceChild: 50 }] })
+}));
+
+// Mock User
+jest.mock('../../models/Users', () => ({
+  findById: jest.fn().mockResolvedValue({ _id: 'user123', name: 'User 123', email: 'user@example.com' })
+}));
 
 describe('Payment Controller', () => {
   let req, res;

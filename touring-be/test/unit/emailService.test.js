@@ -2,9 +2,20 @@ const { sendMail } = require('../../utils/emailService');
 const nodemailer = require('nodemailer');
 
 // Mock nodemailer
-jest.mock('nodemailer', () => ({
-  createTransport: jest.fn()
-}));
+
+jest.mock('nodemailer', () => {
+  const mockSendMail = jest.fn().mockResolvedValue({
+    messageId: 'msg123',
+    accepted: ['test@example.com'],
+    rejected: []
+  });
+  return {
+    createTransport: jest.fn(() => ({
+      sendMail: mockSendMail,
+      verify: jest.fn().mockResolvedValue(true)
+    }))
+  };
+});
 
 describe('Email Service', () => {
   let mockTransporter;

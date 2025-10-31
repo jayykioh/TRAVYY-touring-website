@@ -2,21 +2,22 @@
 const notifyController = require('../../controller/notifyController');
 
 // Mock dependencies
+
 jest.mock('../../utils/emailService', () => ({
-  sendMail: jest.fn()
+  sendMail: jest.fn().mockResolvedValue({ messageId: 'mockMsgId' })
 }));
 
 jest.mock('../../models/Notification', () => ({
-  create: jest.fn(),
+  create: jest.fn().mockResolvedValue({ _id: 'notif123', message: 'Test notification' }),
   find: jest.fn(() => ({
     sort: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
-    exec: jest.fn().mockResolvedValue([])
+    exec: jest.fn().mockResolvedValue([{ _id: 'notif123', message: 'Test notification' }])
   }))
 }));
 
 jest.mock('../../models/Users', () => ({
-  findOne: jest.fn()
+  findOne: jest.fn().mockResolvedValue({ _id: 'user123', email: 'test@example.com' })
 }));
 
 const { sendMail } = require('../../utils/emailService');
