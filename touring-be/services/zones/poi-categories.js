@@ -10,31 +10,23 @@ const POI_CATEGORIES = {
   },
   
   beach: {
-    label: 'Biển & Đảo',
-    labelEn: 'Beach & Island',
+    label: 'Biển, Đảo & Thiên nhiên',
+    labelEn: 'Beach, Island & Nature',
     icon: '🏖️',
-    query: 'bãi biển',
-    vibes: ['beach', 'island', 'relaxation'],
+    queries: ['bãi biển', 'thiên nhiên'],
+    vibes: ['beach', 'island', 'relaxation', 'nature', 'adventure', 'hiking'],
     priority: 2,
-  },
-  
-  nature: {
-    label: 'Thiên nhiên',
-    labelEn: 'Nature & Outdoor',
-    icon: '🌳',
-    query: 'thiên nhiên',
-    vibes: ['nature', 'adventure', 'hiking'],
-    priority: 3,
   },
 
   food: {
-    label: 'Ẩm thực',
-    labelEn: 'Food & Dining',
+    label: 'Ẩm thực & Cafe',
+    labelEn: 'Food, Dining & Cafe',
     icon: '🍜',
-    query: 'nhà hàng',
-    vibes: ['food', 'local'],
+      queries: ['cafe', 'nhà hàng'], // Ưu tiên cafe trước, sau đó nhà hàng
+    vibes: ['food', 'local', 'cafe', 'coffee', 'drink','cà phê'],
     priority: 4,
     lazy: true,
+      queryLimit: [4, 3], // Lấy 4 cafe, 3 nhà hàng (tổng 7)
   },
   
   culture: {
@@ -64,6 +56,15 @@ const POI_CATEGORIES = {
     query: 'bar',
     vibes: ['nightlife', 'party'],
     priority: 7,
+    lazy: true,
+  },
+  tour: {
+    label: 'Tour',
+    labelEn: 'Tours',
+    icon: '🚌',
+    query: 'tour du lịch',
+    vibes: ['tour', 'travel', 'package'],
+    priority: 8,
     lazy: true,
   },
 };

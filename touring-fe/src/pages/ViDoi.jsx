@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 // VibeSelectPage.fx.jsx — Animated restyle (logic preserved)
 import React, { useMemo, useState } from "react";
-import { Sparkles, MapPin, X, ChevronLeft } from "lucide-react";
+import { Sparkles, MapPin, X, ChevronLeft, Waves, Mountain, Utensils, Landmark, Leaf, Sofa, Heart, Compass, Camera, Sunset as SunsetIcon, Music2, ShoppingBag, Home} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,6 +27,46 @@ const vibeOptions = [
 
 const ALL_VIBES = vibeOptions.map((v) => v.id);
 const MAX = 3;
+
+// 🎨 Subtle accent colors per vibe (used only for styling, logic unchanged)
+const VIBE_ACCENTS = {
+  beach: { hex: "#6366F1", rgba: "rgba(99,102,241,0.35)" },
+  mountain: { hex: "#10B981", rgba: "rgba(16,185,129,0.35)" },
+  food: { hex: "#F59E0B", rgba: "rgba(245,158,11,0.35)" },
+  culture: { hex: "#8B5CF6", rgba: "rgba(139,92,246,0.35)" },
+  nature: { hex: "#22C55E", rgba: "rgba(34,197,94,0.35)" },
+  relax: { hex: "#14B8A6", rgba: "rgba(20,184,166,0.35)" },
+  romantic: { hex: "#EC4899", rgba: "rgba(236,72,153,0.35)" },
+  adventure: { hex: "#EF4444", rgba: "rgba(239,68,68,0.35)" },
+  photo: { hex: "#EAB308", rgba: "rgba(234,179,8,0.35)" },
+  sunset: { hex: "#FB923C", rgba: "rgba(251,146,60,0.35)" },
+  nightlife: { hex: "#7C3AED", rgba: "rgba(124,58,237,0.35)" },
+  shopping: { hex: "#F472B6", rgba: "rgba(244,114,182,0.35)" },
+  temple: { hex: "#FB7185", rgba: "rgba(251,113,133,0.35)" },
+  local: { hex: "#64748B", rgba: "rgba(100,116,139,0.35)" },
+  island: { hex: "#06B6D4", rgba: "rgba(6,182,212,0.35)" },
+};
+
+const getAccent = (v) => VIBE_ACCENTS[v] || { hex: "#6366F1", rgba: "rgba(99,102,241,0.35)" };
+
+// 🔣 Icon map for vibes (visual hint only)
+const VIBE_ICONS = {
+  beach: Waves,
+  mountain: Mountain,
+  food: Utensils,
+  culture: Landmark,
+  nature: Leaf,
+  relax: Sofa,
+  romantic: Heart,
+  adventure: Compass,
+  photo: Camera,
+  sunset: SunsetIcon,
+  nightlife: Music2,
+  shopping: ShoppingBag,
+  temple: Landmark,
+  local: Home,
+  island: Waves,
+};
 
 export default function VibeSelectPage() {
   const navigate = useNavigate();
@@ -218,11 +258,20 @@ export default function VibeSelectPage() {
         />
       </div>
 
+      {/* Subtle animated grid overlay */}
+      <motion.div
+        className="absolute inset-0 -z-10 opacity-[0.04]"
+        style={{ backgroundImage: "radial-gradient(circle at 1px 1px, #000 1px, transparent 1px)", backgroundSize: "24px 24px" }}
+        initial={{ backgroundPosition: "0px 0px" }}
+        animate={{ backgroundPosition: ["0px 0px", "20px 20px", "0px 0px"] }}
+        transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+      />
+
       {/* Header with back button */}
       <div className="max-w-3xl mx-auto px-4 pt-6">
         <motion.button
           {...fadeInUp}
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/ai-tour-creator')}
           className="inline-flex items-center gap-2 text-slate-700 hover:text-slate-900 bg-white/80 backdrop-blur px-3 py-1.5 rounded-full border border-slate-200 shadow-sm"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -251,10 +300,12 @@ export default function VibeSelectPage() {
           transition={{ ...fadeInUp.transition, delay: 0.1 }}
           className="bg-white/90 rounded-2xl shadow-lg ring-1 ring-slate-200/60 p-5"
         >
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             {vibes.map((v, i) => {
               const active = selected.includes(v);
               const disabled = !active && selected.length >= MAX;
+              const { hex, rgba } = getAccent(v);
+              const Icon = VIBE_ICONS[v];
               return (
                 <motion.button
                   key={v}
@@ -262,19 +313,34 @@ export default function VibeSelectPage() {
                   variants={chipVariants}
                   initial="initial"
                   animate="animate"
-                  whileHover="whileHover"
-                  whileTap="whileTap"
+                  whileHover={ active ? { y: -2, boxShadow: `0 12px 28px ${rgba}`, scale: 1.01 } : { y: -2, boxShadow: `0 12px 28px ${rgba}`, backgroundColor: rgba } }
+                  whileTap={{ scale: 0.97 }}
                   onClick={() => toggleVibe(v)}
                   disabled={disabled}
                   className={[
-                    "px-3 py-2 rounded-full text-sm font-medium border transition focus:outline-none focus:ring-2 focus:ring-offset-2",
+                    'group relative inline-flex items-center gap-2 px-4 py-3 rounded-2xl text-base font-semibold border transition focus:outline-none focus:ring-2 focus:ring-offset-2',
                     active
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200",
-                    disabled ? "opacity-50 cursor-not-allowed" : "",
-                  ].join(" ")}
+                      ? 'text-white border-transparent'
+                      : 'text-slate-800 bg-white border-slate-200',
+                    disabled ? 'opacity-50 cursor-not-allowed' : ''
+                  ].join(' ')}
+                  style={{
+                    borderColor: active ? 'transparent' : hex,
+                    background: undefined,
+                    backgroundColor: active ? rgba : 'white',
+                    boxShadow: active ? `0 8px 26px ${rgba}` : undefined
+                  }}
                 >
-                  {v}
+                  {/* Accent dot */}
+                  <span
+                    aria-hidden
+                    className="inline-block w-2 h-2 rounded-full"
+                    style={{ backgroundColor: hex }}
+                  />
+                  {/* Optional icon */}
+                  {Icon ? <Icon className="w-4.5 h-4.5 text-current" /> : null}
+                  {/* Label */}
+                  <span className={active ? 'text-white' : 'text-slate-800'}>{v}</span>
                 </motion.button>
               );
             })}
@@ -286,19 +352,22 @@ export default function VibeSelectPage() {
             transition={{ delay: 0.2 }}
             className="flex items-center justify-between mt-4 text-sm"
           >
-            <span className="text-slate-500">
-              Đã chọn: <strong>{selected.length}</strong> / {MAX}
-            </span>
-            <motion.button
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={openModal}
-              disabled={!canContinue}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed shadow"
-            >
-              <Sparkles className="w-4 h-4" />
-              Tiếp tục
-            </motion.button>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-2">
+              <span className="text-slate-600">
+                Đã chọn: <strong>{selected.length}</strong> / {MAX}
+              </span>
+              <div className="text-xs text-slate-500 sm:order-2">AI sẽ phân tích & gợi ý khu vực phù hợp</div>
+              <motion.button
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={openModal}
+                disabled={!canContinue}
+                className="sm:order-3 inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed shadow"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="tracking-wide">Tiếp tục</span>
+              </motion.button>
+            </div>
           </motion.div>
         </motion.div>
 
@@ -360,17 +429,42 @@ export default function VibeSelectPage() {
               </div>
 
               <div className="space-y-3">
-                <p className="text-sm text-slate-600">
-                  Viết ngắn gọn: ví dụ “2–3 ngày, thích street food rẻ, đi nhẹ, tránh đi bộ xa, muốn gần biển”
-                </p>
-                <motion.textarea
-                  value={freeText}
-                  onChange={(e) => setFreeText(e.target.value)}
-                  rows={4}
-                  placeholder="Mô tả tự do của bạn…"
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  whileFocus={{ boxShadow: "0 0 0 2px rgba(99,102,241,0.4)" }}
-                />
+                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-slate-700">
+                      Viết ngắn gọn mong muốn của bạn
+                    </p>
+                    <span className="text-[11px] text-slate-500">{freeText.length}/240</span>
+                  </div>
+
+                  {/* Selected vibes preview */}
+                  {selected.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {selected.map((sv) => {
+                        const { hex, rgba } = getAccent(sv);
+                        return (
+                          <span
+                            key={sv}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium"
+                            style={{ color: hex, backgroundColor: 'white', border: `1px solid ${hex}20` }}
+                          >
+                            <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ backgroundColor: hex }} />
+                            {sv}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <motion.textarea
+                    value={freeText}
+                    onChange={(e) => setFreeText(e.target.value.slice(0,240))}
+                    rows={5}
+                    placeholder="Ví dụ: 2–3 ngày, thích street food rẻ, đi nhẹ, tránh đi bộ xa, muốn gần biển"
+                    className="w-full px-4 py-3 rounded-xl bg-white/95 border border-slate-300 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
+                    whileFocus={{ boxShadow: "0 0 0 2px rgba(99,102,241,0.25)" }}
+                  />
+                </div>
 
                 {/* Preview parse */}
                 <motion.button

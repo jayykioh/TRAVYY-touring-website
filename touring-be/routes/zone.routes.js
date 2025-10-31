@@ -1,5 +1,77 @@
+
+
 const express = require('express');
 const router = express.Router();
+// --- Tours by Zone ---
+const Tour = require("../models/agency/Tours");
+require("../models/agency/Location");
+require("../models/agency/TravelAgency");
+
+/**
+ * GET /api/zones/:zoneId/tours
+ * Params:
+ *  - :zoneId   (string, ví dụ "hue-thien-mu")
+ * Query:
+ *  - categories=views,food  (map sang tags)
+ *  - limit=12
+ */
+router.get("/:zoneId/tours", async (req, res) => {
+  try {
+    const { zoneId } = req.params;
+    const { categories, limit = 12 } = req.query;
+
+    if (!zoneId) return res.status(400).json({ ok: false, error: "Missing zoneId" });
+
+    // ensure zone tồn tại (Zone có trường id dạng string) 
+    const zone = await zoneService.getZoneById(zoneId);
+    if (!zone || zone.isActive === false) return res.status(404).json({ ok: false, error: "Zone not found" });
+
+  // build filter theo field "zoneIds" (mảng ObjectId zone._id) trên Tour
+const filter = {
+  isHidden: { $ne: true },       // ⬅️ thay vì isHidden: false
+  zoneIds: zone._id,
+};
+    // Bỏ lọc theo category/tags, chỉ lấy tất cả tour thuộc zone này
+    console.log('[ZoneTours] Query filter:', filter);
+    const tours = await Tour.find(filter)
+      .populate("agencyId", "name phone image address")
+      .populate("locations", "name coordinates")
+      .sort({ usageCount: -1, createdAt: -1 })
+      .limit(parseInt(limit, 10) || 12)
+      .lean();
+    console.log(`[ZoneTours] Found ${tours.length} tours for zoneId=${zoneId}`);
+
+    const data = tours.map(t => {
+      const firstLoc = Array.isArray(t.locations) && t.locations[0] ? t.locations[0] : null;
+      const lat = firstLoc?.coordinates?.lat ?? null;
+      const lng = firstLoc?.coordinates?.lng ?? null;
+
+      return {
+        id: String(t._id),
+        title: t.title,
+        description: t.description,
+        basePrice: t.basePrice,
+        currency: t.currency || "VND",
+        durationDays: t?.duration?.days ?? null,
+        durationNights: t?.duration?.nights ?? null,
+        schedule: t?.schedule || null,
+        image: t?.imageItems?.[0]?.imageUrl || null,
+        tags: Array.isArray(t.tags) ? t.tags : [],
+        agency: t.agencyId
+          ? { id: String(t.agencyId._id), name: t.agencyId.name, phone: t.agencyId.phone }
+          : null,
+        location: (typeof lat === "number" && typeof lng === "number") ? { lat, lng } : null,
+        externalUrl: `/tours/${t._id}`,
+      };
+    });
+
+    res.set({ "Cache-Control": "public, max-age=120" });
+    return res.json({ ok: true, zoneId, total: data.length, tours: data });
+  } catch (err) {
+    console.error("❌ GET /api/zones/:zoneId/tours error:", err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
 const { findPOIsByCategory, loadPriorityPOIs } = require('../services/zones/poi-finder');
 const { getPlaceDetails, autocompletePlaces } = require('../services/ai/libs/map4d');
 

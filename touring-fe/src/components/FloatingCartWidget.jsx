@@ -85,15 +85,14 @@ function SortableItem({ item, index, onRemove }) {
   const photoUrl = getPhotoUrl(firstPhoto);
   const primaryType = item.types?.[0]?.replace(/_/g, ' ') || '';
 
+  const isTour = item.itemType === 'tour';
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white rounded-lg border overflow-hidden transition ${
-        isDragging 
-          ? 'border-[#02A0AA] shadow-lg scale-105' 
-          : 'border-slate-200 hover:border-slate-300'
-      }`}
+      className={`rounded-lg border overflow-hidden transition ${
+        isTour ? 'bg-[#e6f7fa] border-[#02A0AA]' : 'bg-white border-slate-200 hover:border-slate-300'
+      } ${isDragging ? 'shadow-lg scale-105' : ''}`}
     >
       <div className="flex gap-3 p-3">
         {/* ✅ Drag Handle */}
@@ -125,10 +124,14 @@ function SortableItem({ item, index, onRemove }) {
 
         {/* ✅ Info Section */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-sm text-slate-900 line-clamp-1">
-            {item.name}
-          </h3>
-          
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-sm text-slate-900 line-clamp-1">
+              {item.name}
+            </h3>
+            {isTour && (
+              <span className="ml-1 px-2 py-0.5 text-[10px] rounded-full bg-[#02A0AA] text-white font-semibold uppercase">TOUR</span>
+            )}
+          </div>
           {/* ✅ Address - ALWAYS SHOW */}
           <p className="text-xs text-slate-600 mt-0.5 flex items-center gap-1 line-clamp-1">
             <PinMini className="text-slate-500 flex-shrink-0" />
@@ -136,17 +139,15 @@ function SortableItem({ item, index, onRemove }) {
               {item.address || 'Địa chỉ không xác định'}
             </span>
           </p>
-
           {/* ✅ Location Coordinates (for debugging) */}
           {item.location && (
             <p className="text-[10px] text-slate-400 mt-0.5">
               📍 {item.location.lat?.toFixed(4)}, {item.location.lng?.toFixed(4)}
             </p>
           )}
-
           {/* ✅ Type & Rating */}
           <div className="flex items-center gap-2 mt-1">
-            {primaryType && (
+            {primaryType && !isTour && (
               <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full capitalize">
                 {primaryType}
               </span>
@@ -244,6 +245,9 @@ export default function ItineraryCart() {
     try { await removePOI(poiId); } catch (e) { /* show toast if cần */ }
   };
 
+  // Banner for custom tour/tour guide request
+  const isCustomTour = currentItinerary?.isCustomTour;
+  const tourGuideRequest = currentItinerary?.tourGuideRequest;
   return (
     <>
       {/* Floating button — bottom-right */}

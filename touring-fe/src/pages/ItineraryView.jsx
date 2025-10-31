@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Clock, Sparkles, Navigation, ExternalLink, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Sparkles, Navigation, ExternalLink, ShoppingCart, Building2 } from 'lucide-react';
 import { useItinerary } from '@/hooks/useIntinerary';
 import { useAuth } from '@/auth/context';
 import { toast } from 'sonner';
@@ -81,9 +81,12 @@ export default function ItineraryView() {
 
   // Chỉ dùng để back an toàn (fallback -1)
   const handleBack = () => {
-    navigate(-1);
-    // Nếu muốn cứng về DiscoverResults, đổi thành:
-
+    // Always go back to ZoneDetail for the current itinerary's zone
+    if (itinerary?.zoneId) {
+      navigate(`/zone/${itinerary.zoneId}`);
+    } else {
+      navigate('/'); // fallback
+    }
   };
 
   const handleOptimizeClick = () => {
@@ -204,9 +207,11 @@ export default function ItineraryView() {
     );
   }
 
-  /* ============ NORMAL STATE: có POI ============ */
+  // Custom tour mode: visually distinguish tours, show banner, and use different style
+  const isCustomTour = itinerary.isCustomTour;
+
   return (
-    <div className="min-h-screen bg-[#f6f9fb]">
+    <div className={isCustomTour ? "min-h-screen bg-gradient-to-br from-cyan-50 to-white" : "min-h-screen bg-[#f6f9fb]"}>
       <div className="max-w-[900px] mx-auto px-5 py-6">
         {/* Top bar */}
         <div className="flex items-center justify-between">
@@ -219,7 +224,7 @@ export default function ItineraryView() {
           </button>
 
           <button
-            className="inline-flex items-center gap-2 rounded-full bg-[#02A0AA] text-white px-5 py-2.5 text-[15px] font-medium hover:bg-[#028a94] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[15px] font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${isCustomTour ? 'bg-[#02A0AA] text-white hover:bg-[#028a94]' : 'bg-[#02A0AA] text-white hover:bg-[#028a94]'}`}
             onClick={handleOptimizeClick}
             disabled={totalItems < 2 || isOptimizing}
           >
@@ -237,11 +242,22 @@ export default function ItineraryView() {
           </button>
         </div>
 
+        {/* Custom tour banner */}
+        {isCustomTour && (
+          <div className="mt-5 mb-3 rounded-xl bg-[#e6f7fa] border-l-4 border-[#02A0AA] text-[#026c74] px-5 py-3 flex items-center gap-3 animate-fade-in">
+            <Sparkles className="w-5 h-5 text-[#02A0AA]" />
+            <span>
+              <b>Chế độ Tour tùy chỉnh</b> đang bật. Một số điểm trong hành trình là tour trọn gói.<br />
+              Thông tin tour sẽ hiển thị nổi bật bên dưới.
+            </span>
+          </div>
+        )}
+
         {/* Title / Stats card */}
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-5 rounded-2xl bg-white/80 backdrop-blur border border-slate-200 p-5"
+          className={`mt-5 rounded-2xl ${isCustomTour ? 'bg-white/90 border-cyan-200' : 'bg-white/80 border-slate-200'} backdrop-blur border p-5`}
         >
           <div className="flex items-center justify-between gap-4">
             <h1 className="text-[26px] font-semibold text-slate-900 leading-tight">
@@ -272,11 +288,12 @@ export default function ItineraryView() {
 
         {/* POI timeline (single column) */}
         <section className="mt-5">
-          <ol className="relative border-l-2 border-slate-200/80 pl-4">
+          <ol className={`relative border-l-2 ${isCustomTour ? 'border-cyan-200' : 'border-slate-200/80'} pl-4`}>
             {items.map((item, idx) => {
               const coords = getCoordinates(item);
               const hasCoords = hasValidCoordinates(item);
               const gmapsUrl = hasCoords ? `https://www.google.com/maps?q=${coords.lat},${coords.lng}` : null;
+              const isTour = item.itemType === 'tour';
 
               return (
                 <motion.li
@@ -284,28 +301,36 @@ export default function ItineraryView() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.02 }}
-                  className="mb-4 last:mb-0"
+                  className={`mb-4 last:mb-0 ${isTour ? 'bg-[#e6f7fa]/60 border-[#02A0AA]' : ''}`}
                 >
                   {/* node */}
-                  <div className="absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-white border-2 border-[#02A0AA] grid place-items-center">
+                  <div className={`absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-white border-2 ${isTour ? 'border-[#02A0AA]' : 'border-[#02A0AA]' } grid place-items-center`}>
                     <span className="text-[10px] font-bold text-[#02A0AA] leading-none">{idx + 1}</span>
                   </div>
 
                   {/* card */}
-                  <div className={`rounded-xl border p-3 bg-white/80 backdrop-blur transition hover:bg-white ${
-                    !hasCoords ? 'border-amber-300 bg-amber-50/60' : 'border-slate-200'
-                  }`}>
+                  <div className={`rounded-xl border p-3 ${isTour ? 'bg-[#e6f7fa] border-[#02A0AA]' : 'bg-white/80 border-slate-200'} backdrop-blur transition hover:bg-white`}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="text-[15px] font-semibold text-slate-900 truncate">
-                          {item.name}
-                        </h3>
-                        <p className="text-[13px] text-slate-600 mt-0.5 line-clamp-2">
+                        <h3 className={`text-[15px] font-semibold truncate ${isTour ? 'text-[#026c74]' : 'text-slate-900'}`}>{item.name}</h3>
+                        <p className={`text-[13px] mt-0.5 line-clamp-2 ${isTour ? 'text-[#028a94]' : 'text-slate-600'}`}>
                           <span className="inline-flex items-center gap-1">
                             <MapPin className="w-3.5 h-3.5" />
                             {item.address || 'Địa chỉ không xác định'}
                           </span>
                         </p>
+
+                        {isTour && item.agency && (
+                          <div className="flex items-center gap-2 mt-1 text-xs text-[#02A0AA]">
+                            <Building2 className="w-4 h-4" />
+                            <span className="font-semibold">{item.agency.name}</span>
+                          </div>
+                        )}
+                        {isTour && item.photos?.[0] && (
+                          <div className="mt-2 w-32 h-20 rounded-lg overflow-hidden border border-[#02A0AA] bg-white">
+                            <img src={item.photos[0]} alt={item.name} className="w-full h-full object-cover" />
+                          </div>
+                        )}
 
                         {item.duration && (
                           <p className="text-[12px] text-slate-500 mt-1 inline-flex items-center gap-1">

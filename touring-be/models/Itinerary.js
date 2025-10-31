@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const ItineraryItemSchema = new mongoose.Schema({
-  poiId: { type: String, required: true },
+  poiId: { type: String }, // POI or tour id
   name: { type: String, required: true },
   address: String,
   location: {
@@ -10,20 +10,28 @@ const ItineraryItemSchema = new mongoose.Schema({
   },
   types: [String],
   rating: Number,
-  photos: [String], // ✅ Add photos field
+  photos: [String],
   day: { type: Number, default: 1 },
   timeSlot: String,
   duration: { type: Number, default: 60 },
   startTime: String,
-  endTime: String, // ✅ Add endTime
-  
+  endTime: String,
+  // New: distinguish between POI and tour
+  itemType: { type: String, enum: ['poi', 'tour'], required: true },
+  tourInfo: {
+    tourId: String,
+    agency: Object,
+    basePrice: Number,
+    currency: String,
+    itinerary: Array,
+    // ...other tour fields as needed
+  },
   // AI optimization fields
   travelFromPrevious: {
     distance: Number,
     duration: Number,
     mode: String
   },
-  
   distanceFromOrigin: Number,
   addedAt: { type: Date, default: Date.now }
 });
@@ -47,6 +55,15 @@ const ItinerarySchema = new mongoose.Schema({
   },
   
   items: [ItineraryItemSchema],
+  // New: flag for custom tour
+  isCustomTour: { type: Boolean, default: false },
+  // New: tour guide request status
+  tourGuideRequest: {
+    status: { type: String, enum: ['pending', 'accepted', 'rejected', 'none'], default: 'none' },
+    guideId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    requestedAt: Date,
+    respondedAt: Date
+  },
   
   status: {
     type: String,

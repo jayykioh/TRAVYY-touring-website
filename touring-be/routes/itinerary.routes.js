@@ -1,3 +1,9 @@
+/**
+ * POST /api/itinerary/:id/request-tour-guide
+ * Send a request to a tour guide for a custom tour itinerary
+ * Only allowed if itinerary has at least one tour (isCustomTour)
+ */
+
 const express = require("express");
 const router = express.Router();
 const Itinerary = require("../models/Itinerary");
@@ -109,17 +115,18 @@ router.post("/", authJwt, async (req, res) => {
  */
 router.post("/:id/items", authJwt, async (req, res) => {
   try {
-    const { poi } = req.body;
+  const { poi } = req.body;
     const userId = getUserId(req.user);
 
     const itinerary = await Itinerary.findOne({ _id: req.params.id, userId });
     if (!itinerary) return res.status(404).json({ success: false, error: "Itinerary not found" });
 
-    const poiId = poi.place_id || poi.id || poi.poiId;
-    if (!poiId) return res.status(400).json({ success: false, error: "POI must have place_id, id, or poiId" });
+    const isTour = poi.itemType === 'tour' || !!poi.tourId;
+    const poiId = isTour ? (poi.tourId || poi.id || poi.poiId) : (poi.place_id || poi.id || poi.poiId);
+    if (!poiId) return res.status(400).json({ success: false, error: "POI/tour must have id" });
 
     if (itinerary.items.some((item) => item.poiId === poiId)) {
-      return res.status(400).json({ success: false, error: "POI already in itinerary" });
+      return res.status(400).json({ success: false, error: "Item already in itinerary" });
     }
 
     const location = {
@@ -132,7 +139,7 @@ router.post("/:id/items", authJwt, async (req, res) => {
       ? poi.photos.map((p) => (typeof p === "string" ? p : (p.photo_reference || p.url || ""))).filter(Boolean).slice(0, 5)
       : [];
 
-    const newItem = {
+    let newItem = {
       poiId,
       name: poi.name || "Unknown Place",
       address,
@@ -140,13 +147,54 @@ router.post("/:id/items", authJwt, async (req, res) => {
       types: Array.isArray(poi.types) ? poi.types : [],
       rating: typeof poi.rating === "number" ? poi.rating : 0,
       photos,
+      itemType: isTour ? 'tour' : 'poi',
     };
+    if (isTour) {
+      newItem.tourInfo = {
+        tourId: poi.tourId || poi.id,
+        agency: poi.agency || null,
+        basePrice: poi.basePrice,
+        currency: poi.currency,
+        itinerary: poi.itinerary,
+        // ...add more tour fields as needed
+      };
+    }
 
     if (!location.lat || !location.lng) {
-      console.warn("⚠️ POI missing location coordinates:", newItem.name);
+      console.warn("⚠️ Item missing location coordinates:", newItem.name);
     }
 
     itinerary.items.push(newItem);
+
+    // If any item is a tour, mark as custom tour (do NOT auto request)
+    const hasTour = itinerary.items.some((item) => item.itemType === 'tour');
+    itinerary.isCustomTour = hasTour;
+    // luôn reset trạng thái về 'none' cho rõ ràng
+    itinerary.tourGuideRequest = {
+      status: 'none',
+      guideId: null,
+      requestedAt: null,
+      respondedAt: null,
+    };
+
+    // Logging for debug
+    const poiCount = itinerary.items.filter(i => i.itemType === 'poi').length;
+    const tourCount = itinerary.items.filter(i => i.itemType === 'tour').length;
+    console.log('[Itinerary ADD ITEM]', {
+      itineraryId: itinerary._id.toString(),
+      isCustomTour: itinerary.isCustomTour,
+      tourGuideRequest: itinerary.tourGuideRequest,
+      totalItems: itinerary.items.length,
+      poiCount,
+      tourCount,
+      items: itinerary.items.map(i => ({ name: i.name, type: i.itemType }))
+    });
+
+    // Warn if too many POIs with a tour
+    if (hasTour && poiCount > 3) {
+      console.warn('[Itinerary WARNING] Too many POIs with a tour:', { itineraryId: itinerary._id.toString(), poiCount });
+    }
+
     itinerary.isOptimized = false;
     await itinerary.save();
 
@@ -169,6 +217,17 @@ router.delete("/:id/items/:poiId", authJwt, async (req, res) => {
 
     itinerary.items = itinerary.items.filter((item) => item.poiId !== req.params.poiId);
     itinerary.isOptimized = false;
+    // Recompute custom-tour flags after removal
+    const hasTour = itinerary.items.some((i) => i.itemType === 'tour');
+    itinerary.isCustomTour = hasTour;
+    if (!hasTour) {
+      itinerary.tourGuideRequest = {
+        status: 'none',
+        guideId: null,
+        requestedAt: null,
+        respondedAt: null,
+      };
+    }
     await itinerary.save();
 
     res.json({ success: true, itinerary });
@@ -348,21 +407,26 @@ router.get('/:id', authJwt, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Not found' });
     }
 
-    // ✅ CRITICAL: Log what we're sending to FE
-    console.log('\n📤 [GET /api/itinerary/:id] Response:', {
-      id: itinerary._id.toString(),
-      name: itinerary.zoneName,
-      aiProcessing: itinerary.aiProcessing,
-      aiProcessingType: typeof itinerary.aiProcessing,
-      hasAiInsights: !!itinerary.aiInsights,
-      aiInsightsSummary: itinerary.aiInsights?.summary?.substring(0, 60) + '...',
-      aiInsightsTipsCount: itinerary.aiInsights?.tips?.length,
-      firstTip: itinerary.aiInsights?.tips?.[0],
-      
-      // Raw check
-      rawAiProcessing: itinerary.toObject().aiProcessing,
-      rawAiInsights: itinerary.toObject().aiInsights,
-    });
+    // Ensure isCustomTour is always correct (has at least one tour)
+    const hasTour = itinerary.items.some((item) => item.itemType === 'tour');
+    if (itinerary.isCustomTour !== hasTour) {
+      itinerary.isCustomTour = hasTour;
+      await itinerary.save();
+    }
+
+    // If isCustomTour but status is not 'pending' or 'accepted', always set to 'none'
+    if (itinerary.isCustomTour && (!itinerary.tourGuideRequest || !['pending','accepted'].includes(itinerary.tourGuideRequest.status))) {
+      itinerary.tourGuideRequest = {
+        status: 'none',
+        guideId: null,
+        requestedAt: null,
+        respondedAt: null,
+      };
+      await itinerary.save();
+    }
+
+    // Log full itinerary for debugging and tour guide integration
+    console.log('\n📤 [GET /api/itinerary/:id] FULL RESPONSE:', JSON.stringify(itinerary, null, 2));
 
     res.json({
       success: true,
@@ -432,5 +496,54 @@ router.get('/:id/export.gpx', authJwt, async (req, res) => {
     return res.status(500).json({ success: false, message: 'Export failed' });
   }
 });
+
+
+router.post('/:id/request-tour-guide', authJwt, async (req, res) => {
+  try {
+    const userId = getUserId(req.user);
+    const itinerary = await Itinerary.findOne({ _id: req.params.id, userId });
+    if (!itinerary) return res.status(404).json({ success: false, error: 'Itinerary not found' });
+    if (!itinerary.isCustomTour) {
+      return res.status(400).json({ success: false, error: 'Itinerary is not a custom tour (no tour present)' });
+    }
+    // Only allow if not already requested or status is none/rejected
+    if (itinerary.tourGuideRequest && ['pending','accepted'].includes(itinerary.tourGuideRequest.status)) {
+      return res.status(400).json({ success: false, error: 'Tour guide request already sent or accepted' });
+    }
+    // Save request info
+    const now = new Date();
+    itinerary.tourGuideRequest = {
+      status: 'pending',
+      requestedAt: now,
+      respondedAt: null,
+      guideId: null
+    };
+    await itinerary.save();
+    // Log full itinerary for tour guide integration
+    console.log('[TourGuideRequest][BACKEND] Đã gửi yêu cầu tour guide:', {
+      itineraryId: itinerary._id.toString(),
+      userId,
+      requestedAt: now,
+      status: 'pending',
+      name: itinerary.name,
+      zoneName: itinerary.zoneName,
+      items: itinerary.items.map(item => ({
+        poiId: item.poiId,
+        name: item.name,
+        address: item.address,
+        location: item.location,
+        itemType: item.itemType,
+        tourInfo: item.tourInfo || undefined
+      })),
+      preferences: itinerary.preferences,
+    });
+    // TODO: Send notification to tour guide system here if needed
+    res.json({ success: true, itinerary, message: 'Tour guide request sent' });
+  } catch (error) {
+    console.error('Error sending tour guide request:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 
 module.exports = router;
