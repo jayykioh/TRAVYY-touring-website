@@ -31,6 +31,8 @@ const MONGO_URI =
   "mongodb://127.0.0.1:27017/travelApp";
 const notifyRoutes = require("./routes/notifyRoutes");
 const paymentRoutes = require("./routes/payment.routes");
+const reviewRoutes = require("./routes/reviewRoutes");
+const promotionRoutes = require("./routes/promotion.routes");
 // Quick visibility of PayPal env presence (not actual secrets)
 console.log("[Boot] PayPal env present:", {
   hasClient: !!process.env.PAYPAL_CLIENT_ID,
@@ -82,6 +84,8 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/admin", adminRoutes); // Updated to use modular admin routes
 app.use("/api/payments", paymentRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/promotions", promotionRoutes);
 const securityRoutes = require("./routes/security.routes");
 app.use("/api/security", securityRoutes);
 app.use("/api/locations", locationRoutes);
