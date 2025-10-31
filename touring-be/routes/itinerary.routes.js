@@ -1,8 +1,3 @@
-/**
- * POST /api/itinerary/:id/request-tour-guide
- * Send a request to a tour guide for a custom tour itinerary
- * Only allowed if itinerary has at least one tour (isCustomTour)
- */
 
 const express = require("express");
 const router = express.Router();
@@ -496,6 +491,33 @@ router.get('/:id/export.gpx', authJwt, async (req, res) => {
     return res.status(500).json({ success: false, message: 'Export failed' });
   }
 });
+
+// Guide API: Get all pending tour guide requests
+// Guide API: Only allow TourGuide role, only return custom tours
+router.get('/guide/requests', authJwt, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'TourGuide') {
+      return res.status(403).json({ success: false, error: 'Permission denied: Only TourGuide can access.' });
+    }
+    // Only show requests for custom tours (isCustomTour = true)
+    const requests = await Itinerary.find({
+      isCustomTour: true,
+      'tourGuideRequest.status': 'pending'
+    })
+      .sort({ 'tourGuideRequest.requestedAt': -1 })
+      .populate({ path: 'userId', select: 'name email phone avatar' });
+    res.json({ success: true, requests });
+  } catch (error) {
+    console.error('[GuideAPI] Error fetching requests:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+/**
+ * POST /api/itinerary/:id/request-tour-guide
+ * Send a request to a tour guide for a custom tour itinerary
+ * Only allowed if itinerary has at least one tour (isCustomTour)
+ */
+
 
 
 router.post('/:id/request-tour-guide', authJwt, async (req, res) => {
