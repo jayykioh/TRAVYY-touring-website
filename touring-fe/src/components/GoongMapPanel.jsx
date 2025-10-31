@@ -1,4 +1,3 @@
-// components/GoongMapPanel.jsx
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useRef } from "react";
 import goongjs from "@goongmaps/goong-js";
@@ -13,6 +12,7 @@ import "@goongmaps/goong-js/dist/goong-js.css";
  * - onPoiClick(poi)
  * - markerVariant: "dot" | "pin" | "emoji"
  * - emoji: string
+ * - zones: [{ id, name, geometry: {type:"Polygon", coordinates:[ [ [lng,lat], ... ] ]}}]
  */
 export default function GoongMapPanel({
   center = { lng: 105.83991, lat: 21.028 },
@@ -22,27 +22,36 @@ export default function GoongMapPanel({
   onPoiClick,
   markerVariant = "dot",
   emoji = "📍",
+  zones = [], // ✅ thêm prop zones
 }) {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersRef = useRef(new Map());
 
+  // Helper: lấy tọa độ POI
   const getLngLat = (p) => {
     const lng =
-      p?.loc?.lng ??
-      p?.location?.lng ??
-      p?.lng ??
-      p?.geometry?.location?.lng;
+      p?.loc?.lng ||
+      p?.location?.lng ||
+      p?.lng ||
+      (p?.geometry && p.geometry.location?.lng);
     const lat =
-      p?.loc?.lat ??
-      p?.location?.lat ??
-      p?.lat ??
-      p?.geometry?.location?.lat;
-    return typeof lng === "number" && typeof lat === "number" ? [lng, lat] : null;
+      p?.loc?.lat ||
+      p?.location?.lat ||
+      p?.lat ||
+      (p?.geometry && p.geometry.location?.lat);
+    return typeof lng === "number" && typeof lat === "number"
+      ? [lng, lat]
+      : null;
   };
-  const getId = (p) => p?.place_id || p?.id || (getLngLat(p)?.join(",") ?? undefined);
 
-  // Init
+  // Fix lỗi Babel ?? + ||
+  const getId = (p) => {
+    const loc = getLngLat(p);
+    return p?.place_id || p?.id || (loc ? loc.join(",") : undefined);
+  };
+
+  // ===== 1️⃣ INIT MAP =====
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
 
@@ -59,10 +68,14 @@ export default function GoongMapPanel({
       dragRotate: true,
     });
 
-    map.addControl(new goongjs.NavigationControl({ visualizePitch: true }), "top-right");
+    map.addControl(
+      new goongjs.NavigationControl({ visualizePitch: true }),
+      "top-right"
+    );
+
     mapInstance.current = map;
 
-    // CLICK Ở MAP → tìm POI gần nhất (24px)
+    // click chọn POI gần nhất
     const handleMapClick = (e) => {
       if (!onPoiClick || !pois?.length) return;
       const pt = e.point;
@@ -82,7 +95,7 @@ export default function GoongMapPanel({
         }
       }
 
-      const threshold = 24; // px
+      const threshold = 24;
       if (best && Math.sqrt(bestDist) <= threshold) {
         onPoiClick(best);
       }
@@ -98,7 +111,7 @@ export default function GoongMapPanel({
     };
   }, []);
 
-  // Smooth center/zoom
+  // ===== 2️⃣ SMOOTH CENTER / ZOOM =====
   useEffect(() => {
     const map = mapInstance.current;
     if (!map) return;
@@ -110,13 +123,13 @@ export default function GoongMapPanel({
     });
   }, [center.lng, center.lat, zoom]);
 
-  // Create marker element (pointer-events: none để pan/zoom mượt)
+  // ===== 3️⃣ MARKERS =====
   const createMarkerEl = (poi) => {
     const el = document.createElement("div");
     el.className = `poi-marker ${
       markerVariant === "pin" ? "poi-marker--pin" : ""
     } ${markerVariant === "emoji" ? "poi-marker--emoji" : ""}`;
-    el.dataset.id = getId(poi) ?? "";
+    el.dataset.id = getId(poi) || "";
 
     if (markerVariant === "emoji") {
       el.textContent = emoji;
@@ -125,12 +138,9 @@ export default function GoongMapPanel({
       core.className = "poi-marker__dot";
       el.appendChild(core);
     }
-
-    // KHÔNG addEventListener ở đây nữa → giảm hit-test khi pan/zoom
     return el;
   };
 
-  // Mount/unmount markers
   useEffect(() => {
     const map = mapInstance.current;
     if (!map) return;
@@ -161,7 +171,7 @@ export default function GoongMapPanel({
     }
   }, [pois, markerVariant, emoji]);
 
-  // Highlight selected
+  // ===== 4️⃣ HIGHLIGHT SELECTED MARKER =====
   useEffect(() => {
     const map = mapInstance.current;
     if (!map) return;
@@ -177,36 +187,111 @@ export default function GoongMapPanel({
       const pair = sel ? getLngLat(sel) : null;
       if (pair) {
         const targetZoom = Math.max(15, map.getZoom());
-        map.easeTo({ center: pair, zoom: targetZoom, duration: 600, easing: (t) => 1 - Math.pow(1 - t, 3) });
+        map.easeTo({
+          center: pair,
+          zoom: targetZoom,
+          duration: 600,
+          easing: (t) => 1 - Math.pow(1 - t, 3),
+        });
       }
     }
   }, [selectedPoiId, pois]);
 
+  // ===== 5️⃣ ADD POLYGON (ZONES) - STABLE VERSION =====
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map) return;
+    if (!zones || zones.length === 0) return;
+
+    const SRC = "zones-src";
+    const FILL = "zones-fill";
+    const OUT = "zones-outline";
+
+    const applyZones = () => {
+      try {
+        if (map.getLayer(OUT)) map.removeLayer(OUT);
+        if (map.getLayer(FILL)) map.removeLayer(FILL);
+        if (map.getSource(SRC)) map.removeSource(SRC);
+
+        const features = zones
+          .filter(
+            (z) =>
+              z?.geometry?.type === "Polygon" &&
+              Array.isArray(z.geometry.coordinates)
+          )
+          .map((z) => ({
+            type: "Feature",
+            properties: { id: z.id, name: z.name },
+            geometry: z.geometry,
+          }));
+
+        if (!features.length) return;
+
+        map.addSource(SRC, {
+          type: "geojson",
+          data: { type: "FeatureCollection", features },
+        });
+
+        map.addLayer({
+          id: FILL,
+          type: "fill",
+          source: SRC,
+          paint: {
+            "fill-color": "#00AEEF",
+            "fill-opacity": 0.25,
+            "fill-outline-color": "#0077BE",
+          },
+        });
+
+        map.addLayer({
+          id: OUT,
+          type: "line",
+          source: SRC,
+          paint: {
+            "line-color": "#0077BE",
+            "line-width": 2,
+            "line-dasharray": [4, 3],
+          },
+        });
+      } catch (err) {
+        console.warn("Polygon render failed:", err);
+      }
+    };
+
+    const ensureApply = () => {
+      if (!map.isStyleLoaded()) map.once("load", applyZones);
+      else applyZones();
+    };
+
+    ensureApply();
+
+    const handleStyle = () => {
+      if (map.isStyleLoaded()) applyZones();
+    };
+    map.on("styledata", handleStyle);
+
+    return () => {
+      map.off("styledata", handleStyle);
+    };
+  }, [zones]);
+
+  // ===== RETURN MAP UI =====
   return (
     <div className="w-full h-full rounded-xl overflow-hidden relative">
       <div ref={mapRef} className="w-full h-full" />
       <style>{`
-        /* marker container: tắt pointer-events để không cản kéo/zoom */
         .poi-marker {
           display: inline-flex;
           align-items: center;
           justify-content: center;
           transform: translate(-50%, -100%);
           user-select: none;
-          -webkit-user-select: none;
-          -webkit-tap-highlight-color: transparent;
-          will-change: transform;
           pointer-events: none;
           contain: layout paint size;
         }
-
-        /* emoji */
         .poi-marker--emoji {
           font-size: 18px;
-          line-height: 1;
         }
-
-        /* dot */
         .poi-marker__dot {
           width: 18px;
           height: 18px;
@@ -216,17 +301,12 @@ export default function GoongMapPanel({
           border: 2px solid #ffffff;
           box-shadow: 0 2px 6px rgba(0,0,0,0.18);
         }
-
-        /* pin (đơn giản) */
         .poi-marker--pin .poi-marker__dot {
           width: 22px;
           height: 22px;
           border-radius: 11px 11px 11px 0;
           transform: rotate(45deg);
-          box-shadow: 0 2px 7px rgba(0,0,0,0.22);
         }
-
-        /* selected (dùng box-shadow thay vì outline để giảm layout) */
         .poi-marker--selected .poi-marker__dot {
           box-shadow: 0 0 0 2px #06b6d4, 0 2px 6px rgba(0,0,0,0.18);
         }
