@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>11/11</span>
+                <span class='fraction'>0/11</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>11/11</span>
+                <span class='fraction'>0/11</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -89,8 +89,8 @@
 <a name='L24'></a><a href='#L24'>24</a>
 <a name='L25'></a><a href='#L25'>25</a>
 <a name='L26'></a><a href='#L26'>26</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -99,23 +99,23 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// routes/carts.routes.js (CommonJS)
-const express = require("express");
-const authJwt = require("../middlewares/authJwt"); 
+const express = <span class="cstat-no" title="statement not covered" >require("express");</span>
+const authJwt = <span class="cstat-no" title="statement not covered" >require("../middlewares/authJwt"); </span>
 &nbsp;
 const {
   getCart,
@@ -124,20 +124,20 @@ const {
   updateCartItem,
   deleteCartItem,
   clearCart,
-} = require("../controller/cart.controller");
+} = <span class="cstat-no" title="statement not covered" >require("../controller/cart.controller");</span>
 &nbsp;
-const router = express.Router();
+const router = <span class="cstat-no" title="statement not covered" >express.Router();</span>
 &nbsp;
-router.get("/", authJwt, getCart);
-router.post("/sync", authJwt, syncCart);
-router.post("/", authJwt, addToCart);
-router.put("/:itemId", authJwt, updateCartItem);
-router.delete("/:itemId", authJwt, deleteCartItem);
-router.delete("/", authJwt, clearCart);
+<span class="cstat-no" title="statement not covered" >router.get("/", authJwt, getCart);</span>
+<span class="cstat-no" title="statement not covered" >router.post("/sync", authJwt, syncCart);</span>
+<span class="cstat-no" title="statement not covered" >router.post("/", authJwt, addToCart);</span>
+<span class="cstat-no" title="statement not covered" >router.put("/:itemId", authJwt, updateCartItem);</span>
+<span class="cstat-no" title="statement not covered" >router.delete("/:itemId", authJwt, deleteCartItem);</span>
+<span class="cstat-no" title="statement not covered" >router.delete("/", authJwt, clearCart);</span>
 // router.post("/coupon", authJwt, applyCartCoupon);
 // router.delete("/coupon", authJwt, clearCartCoupon);
 &nbsp;
-module.exports = router;
+<span class="cstat-no" title="statement not covered" >module.exports = router;</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -145,7 +145,7 @@ module.exports = router;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-30T17:08:39.769Z
+                at 2025-10-31T09:06:14.470Z
             </div>
         <script src="../prettify.js"></script>
         <script>

@@ -4,9 +4,42 @@ const HelpCategory = require('../../models/HelpCategory');
 const HelpFeedback = require('../../models/HelpFeedback');
 
 // Mock dependencies
-jest.mock('../../models/HelpArticle');
-jest.mock('../../models/HelpCategory');
-jest.mock('../../models/HelpFeedback');
+jest.mock('../../models/HelpArticle', () => ({
+  find: jest.fn(() => ({
+    populate: jest.fn(() => ({
+      populate: jest.fn(() => ({
+        limit: jest.fn(() => ({
+          sort: jest.fn()
+        }))
+      }))
+    }))
+  })),
+  findOne: jest.fn(() => ({
+    populate: jest.fn(() => ({
+      populate: jest.fn()
+    }))
+  })),
+  create: jest.fn(),
+  findByIdAndUpdate: jest.fn(),
+  findByIdAndDelete: jest.fn(),
+}));
+jest.mock('../../models/HelpCategory', () => ({
+  find: jest.fn(() => ({
+    populate: jest.fn()
+  })),
+  findOne: jest.fn(),
+  create: jest.fn(),
+}));
+jest.mock('../../models/HelpFeedback', () => ({
+  find: jest.fn(() => ({
+    populate: jest.fn()
+  })),
+  findById: jest.fn(() => ({
+    populate: jest.fn()
+  })),
+  create: jest.fn(),
+  findByIdAndUpdate: jest.fn(),
+}));
 
 describe('Help Controller', () => {
   let req, res;

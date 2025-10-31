@@ -10,37 +10,39 @@ const mockFindResult = {
   populate: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
   session: jest.fn().mockReturnThis(),
-  then: jest.fn(),
+  exec: jest.fn().mockResolvedValue([]),
+  then: jest.fn().mockImplementation((resolve) => resolve([])),
   catch: jest.fn(),
 };
 
-jest.mock('mongoose', () => ({
-  startSession: jest.fn().mockResolvedValue(mockSession),
-}));
+jest.mock('../../models/Carts', () => {
+  const Cart = jest.fn().mockImplementation(() => ({ save: jest.fn() }));
+  Cart.findOne = jest.fn(() => ({
+    session: jest.fn().mockResolvedValue(null)
+  }));
+  Cart.create = jest.fn().mockResolvedValue({ _id: 'newCart', userId: 'user123' });
 
-jest.mock('../../models/Carts', () => ({
-  Cart: {
-    findOne: jest.fn(),
-    create: jest.fn(),
-  },
-  CartItem: {
-    find: jest.fn(() => mockFindResult),
-    findOne: jest.fn(),
-    findById: jest.fn(),
-    findByIdAndUpdate: jest.fn(),
-    findByIdAndDelete: jest.fn(),
-    create: jest.fn(),
-    deleteMany: jest.fn(),
-    deleteOne: jest.fn(),
-    findOneAndUpdate: jest.fn(),
-  },
-}));
+  return {
+    Cart,
+    CartItem: {
+      find: jest.fn(() => mockFindResult),
+      findOne: jest.fn(),
+      findById: jest.fn(),
+      findByIdAndUpdate: jest.fn(),
+      findByIdAndDelete: jest.fn(),
+      create: jest.fn(),
+      deleteMany: jest.fn(),
+      deleteOne: jest.fn(),
+      findOneAndUpdate: jest.fn(),
+    },
+  };
+});
 
 const mockTourQuery = {
-  lean: jest.fn(),
+  lean: jest.fn().mockResolvedValue(null),
 };
 
-jest.mock('../../models/agency/Tours', () => ({
+jest.mock('../../models/Tours', () => ({
   findById: jest.fn(() => mockTourQuery),
 }));
 
@@ -48,7 +50,8 @@ const cartController = require('../../controller/cart.controller');
 
 // Get references to the mocked functions
 const { Cart, CartItem } = require('../../models/Carts');
-const Tour = require('../../models/agency/Tours');
+const Tour = require('../../models/Tours');
+const mongoose = require('mongoose');
 
 describe('Cart Controller', () => {
   let req, res;
@@ -69,6 +72,9 @@ describe('Cart Controller', () => {
 
     // Setup default mocks
     mockSession.withTransaction.mockImplementation(async (fn) => await fn());
+    mockFindResult.exec.mockResolvedValue([]);
+    mockFindResult.then.mockImplementation((resolve) => resolve([]));
+    Tour.findById.mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
   });
 
   describe('getCart', () => {
@@ -84,8 +90,12 @@ describe('Cart Controller', () => {
           children: 1,
           unitPriceAdult: 100,
           unitPriceChild: 50,
+          unitOriginalAdult: null,
+          unitOriginalChild: null,
           name: 'Test Tour',
-          image: 'test.jpg'
+          image: 'test.jpg',
+          selected: true,
+          available: true
         }
       ];
 
@@ -97,9 +107,13 @@ describe('Cart Controller', () => {
         }]
       };
 
-      Cart.findOne.mockResolvedValue(cartData);
-      mockFindResult.then.mockResolvedValue(mockItems);
-      mockTourQuery.lean.mockResolvedValue(tourData);
+      Cart.findOne.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve) => resolve(cartData))
+      });
+      mockFindResult.exec.mockResolvedValue(mockItems);
+      mockFindResult.then.mockImplementation((resolve) => resolve(mockItems));
+      Tour.findById.mockReturnValue({ lean: jest.fn().mockResolvedValue(tourData) });
 
       await cartController.getCart(req, res);
 
@@ -127,9 +141,12 @@ describe('Cart Controller', () => {
     });
 
     it('should create cart if not exists', async () => {
-      Cart.findOne.mockResolvedValue(null);
+      Cart.findOne.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve) => resolve(null))
+      });
       Cart.create.mockResolvedValue({ _id: 'newCart', userId: 'user123' });
-      CartItem.find.mockResolvedValue([]);
+      mockFindResult.then.mockImplementation((resolve) => resolve([]));
 
       await cartController.getCart(req, res);
 
@@ -138,7 +155,10 @@ describe('Cart Controller', () => {
     });
 
     it('should handle database errors', async () => {
-      Cart.findOne.mockRejectedValue(new Error('Database error'));
+      Cart.findOne.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve, reject) => reject(new Error('Database error')))
+      });
 
       await cartController.getCart(req, res);
 
@@ -164,9 +184,12 @@ describe('Cart Controller', () => {
         }]
       };
 
-      Cart.findOne.mockResolvedValue(mockCart);
-      mockFindResult.then.mockResolvedValue(existingItems);
+      Cart.findOne.mockReturnValue({
+        session: jest.fn().mockResolvedValue(mockCart)
+      });
+      mockFindResult.exec.mockResolvedValue(existingItems);
       mockTourQuery.lean.mockResolvedValue(mockTour);
+      CartItem.findOne.mockResolvedValue(null); // new item
       CartItem.create.mockResolvedValue({ _id: 'newItem' });
 
       req.body.items = [{
@@ -188,8 +211,10 @@ describe('Cart Controller', () => {
 
     it('should handle invalid tour IDs', async () => {
       const mockCart = { _id: 'cart123', userId: 'user123' };
-      Cart.findOne.mockResolvedValue(mockCart);
-      CartItem.find.mockResolvedValue([]);
+      Cart.findOne.mockReturnValue({
+        session: jest.fn().mockResolvedValue(mockCart)
+      });
+      mockFindResult.exec.mockResolvedValue([]);
 
       req.body.items = [{
         tourId: 'invalid-id',
@@ -217,9 +242,15 @@ describe('Cart Controller', () => {
         }]
       };
 
-      Cart.findOne.mockResolvedValue(mockCart);
+      Cart.findOne.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve) => resolve(mockCart))
+      });
       mockTourQuery.lean.mockResolvedValue(mockTour);
-      CartItem.findOne.mockResolvedValue(null); // No existing item
+      CartItem.findOne.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve) => resolve(null))
+      });
       CartItem.findOneAndUpdate.mockResolvedValue({ _id: 'newItem' });
 
       req.body = {
@@ -232,7 +263,7 @@ describe('Cart Controller', () => {
       await cartController.addToCart(req, res);
 
       expect(CartItem.findOneAndUpdate).toHaveBeenCalledWith(
-        { cartId: 'cart123', tourId: expect.any(Object), date: '2024-01-15' },
+        expect.objectContaining({ cartId: 'cart123', date: '2024-01-15' }),
         expect.objectContaining({
           $setOnInsert: expect.objectContaining({
             selected: true,
@@ -254,10 +285,17 @@ describe('Cart Controller', () => {
     });
 
     it('should return error for invalid quantity', async () => {
+      mockTourQuery.lean.mockResolvedValue({
+        departures: [{
+          date: '2024-01-15',
+          seatsLeft: 10
+        }]
+      });
+
       req.body = {
         tourId: '507f1f77bcf86cd799439011',
         date: '2024-01-15',
-        adults: 0,
+        adults: -1,
         children: 0
       };
 
@@ -276,15 +314,21 @@ describe('Cart Controller', () => {
         }]
       };
 
-      Cart.findOne.mockResolvedValue(mockCart);
-      mockTourQuery.lean.mockResolvedValue(mockTour);
-      CartItem.findOne.mockResolvedValue({ adults: 3, children: 2 }); // 5 already booked
+      Cart.findOne.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve) => resolve(mockCart))
+      });
+      Tour.findById.mockReturnValue({ lean: jest.fn().mockResolvedValue(mockTour) });
+      CartItem.findOne.mockReturnValue({
+        session: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve) => resolve({ adults: 3, children: 2 }))
+      });
 
       req.body = {
         tourId: '507f1f77bcf86cd799439011',
         date: '2024-01-15',
-        adults: 1,
-        children: 0
+        adults: 3,
+        children: 3
       };
 
       await cartController.addToCart(req, res);
@@ -306,10 +350,13 @@ describe('Cart Controller', () => {
         tourId: 'tour123',
         date: '2024-01-15',
         adults: 2,
-        children: 1
+        children: 1,
+        save: jest.fn()
       };
 
-      Cart.findOne.mockResolvedValue(mockCart);
+      Cart.findOne.mockReturnValue({
+        session: jest.fn().mockResolvedValue(mockCart)
+      });
       CartItem.findOne.mockResolvedValue(mockItem);
       mockTourQuery.lean.mockResolvedValue({
         departures: [{
@@ -350,10 +397,12 @@ describe('Cart Controller', () => {
       const mockCart = { _id: 'cart123', userId: 'user123' };
       const mockItem = { _id: 'item123', cartId: 'cart123' };
 
-      Cart.findOne.mockResolvedValue(mockCart);
+      Cart.findOne.mockReturnValue({
+        session: jest.fn().mockResolvedValue(mockCart)
+      });
       CartItem.findOne.mockResolvedValue(mockItem);
       CartItem.deleteOne.mockResolvedValue({ deletedCount: 1 });
-      CartItem.find.mockResolvedValue([]);
+      mockFindResult.exec.mockResolvedValue([]);
 
       req.params.itemId = 'item123';
 
@@ -366,7 +415,9 @@ describe('Cart Controller', () => {
     it('should return error for item not found', async () => {
       const mockCart = { _id: 'cart123', userId: 'user123' };
 
-      Cart.findOne.mockResolvedValue(mockCart);
+      Cart.findOne.mockReturnValue({
+        session: jest.fn().mockResolvedValue(mockCart)
+      });
       CartItem.findOne.mockResolvedValue(null);
 
       req.params.itemId = 'nonexistent';

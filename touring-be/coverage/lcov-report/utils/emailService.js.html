@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">72.72% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>8/11</span>
+                <span class='fraction'>0/11</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">25% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/4</span>
+                <span class='fraction'>0/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">50% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/2</span>
+                <span class='fraction'>0/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">72.72% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>8/11</span>
+                <span class='fraction'>0/11</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line medium'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -97,41 +97,41 @@
 <a name='L32'></a><a href='#L32'>32</a>
 <a name='L33'></a><a href='#L33'>33</a>
 <a name='L34'></a><a href='#L34'>34</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// utils/emailService.js
-const nodemailer = require("nodemailer");
-const transporter = nodemailer.createTransport({
+const nodemailer = <span class="cstat-no" title="statement not covered" >require("nodemailer");</span>
+const transporter = <span class="cstat-no" title="statement not covered" >nodemailer.createTransport({</span>
   host: process.env.SMTP_HOST,
   port: process.env.SMTP_PORT,
   secure: false, // dùng TLS
@@ -141,7 +141,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 // kiểm tra kết nối SMTP khi start
-transporter.verify(<span class="fstat-no" title="function not covered" >(e</span>rror, success) =&gt; {
+<span class="cstat-no" title="statement not covered" >transporter.verify(<span class="fstat-no" title="function not covered" >(e</span>rror, success) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  if (error) {</span>
 <span class="cstat-no" title="statement not covered" >    console.error("❌ SMTP error:", error);</span>
   } else {
@@ -150,18 +150,18 @@ transporter.verify(<span class="fstat-no" title="function not covered" >(e</span
 });
 &nbsp;
 &nbsp;
-const sendMail = async (to, subject, html) =&gt; {
-  const info = await transporter.sendMail({
-    from: process.env.MAIL_FROM || <span class="branch-1 cbranch-no" title="branch not covered" >`"Travyy Touring" &lt;${process.env.SMTP_USER}&gt;`,</span>
+const sendMail = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >as</span>ync (to, subject, html) =&gt; {</span>
+  const info = <span class="cstat-no" title="statement not covered" >await transporter.sendMail({</span>
+    from: process.env.MAIL_FROM || `"Travyy Touring" &lt;${process.env.SMTP_USER}&gt;`,
     to,
     subject,
     html,
   });
-  console.log("📧 Mail sent:", info.messageId, "to:", to);
-  return info;
+<span class="cstat-no" title="statement not covered" >  console.log("📧 Mail sent:", info.messageId, "to:", to);</span>
+<span class="cstat-no" title="statement not covered" >  return info;</span>
 };
 &nbsp;
-module.exports = { sendMail };
+<span class="cstat-no" title="statement not covered" >module.exports = { sendMail };</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -169,7 +169,7 @@ module.exports = { sendMail };
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-30T17:08:39.659Z
+                at 2025-10-31T09:06:14.323Z
             </div>
         <script src="../prettify.js"></script>
         <script>

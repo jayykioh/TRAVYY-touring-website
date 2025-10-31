@@ -19,10 +19,53 @@ jest.mock('mongoose', () => {
   };
 
   MockSchema.Types = {
-    ObjectId: jest.fn(),
+    ObjectId: jest.fn(() => 'mockObjectId'),
+    String: String,
+    Number: Number,
+    Date: Date,
+    Boolean: Boolean,
   };
 
+  MockSchema.prototype.startSession = jest.fn().mockReturnValue({
+    withTransaction: jest.fn((fn) => fn()),
+    endSession: jest.fn(),
+  });
+
+  const mockModel = jest.fn().mockImplementation((name, schema) => {
+    const Model = jest.fn();
+    Model.find = jest.fn(() => ({
+      sort: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockReturnThis(),
+      populate: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      session: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([])
+    }));
+    Model.findOne = jest.fn(() => ({
+      populate: jest.fn().mockReturnThis(),
+      session: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue(null)
+    }));
+    Model.findById = jest.fn(() => ({
+      populate: jest.fn().mockReturnThis(),
+      session: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue(null)
+    }));
+    Model.create = jest.fn();
+    Model.findByIdAndUpdate = jest.fn();
+    Model.findByIdAndDelete = jest.fn();
+    Model.exists = jest.fn();
+    Model.deleteOne = jest.fn();
+    return Model;
+  });
+
   return {
+    Schema: MockSchema,
+    Types: MockSchema.Types,
+    model: mockModel,
     connect: jest.fn().mockResolvedValue({}),
     set: jest.fn(),
     createConnection: jest.fn(() => ({
@@ -35,8 +78,12 @@ jest.mock('mongoose', () => {
       on: jest.fn(),
       once: jest.fn(),
     },
+    startSession: jest.fn().mockReturnValue({
+      withTransaction: jest.fn((fn) => fn()),
+      endSession: jest.fn(),
+    }),
     Schema: MockSchema,
-    model: jest.fn(),
+    model: mockModel,
   };
 });
 

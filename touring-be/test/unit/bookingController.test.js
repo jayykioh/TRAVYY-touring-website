@@ -10,14 +10,14 @@ const mockQuery = {
 jest.mock('../../models/Bookings', () => ({
   find: jest.fn(() => mockQuery),
 }));
-jest.mock('../../models/agency/Tours', () => ({
+jest.mock('../../models/Tours', () => ({
   findById: jest.fn(() => mockQuery),
   find: jest.fn(() => mockQuery)
 }));
 
 const bookingController = require('../../controller/bookingController');
 const Booking = require('../../models/Bookings');
-const Tour = require('../../models/agency/Tours');
+const Tour = require('../../models/Tours');
 
 describe('Booking Controller', () => {
   let req, res;
@@ -192,43 +192,36 @@ describe('Booking Controller', () => {
           _id: 'booking1',
           userId: 'user123',
           items: [{
-            tourId: 'tour123',
-            name: 'Existing Name',
-            image: 'existing.jpg'
+            tourId: {
+              title: 'Tour 1',
+              imageItems: [{ imageUrl: 'tour1.jpg' }]
+            },
+            date: '2024-01-15',
+            adults: 2,
+            children: 1,
+            unitPriceAdult: 150,
+            unitPriceChild: 75,
+            name: 'Tour 1',
+            image: 'tour1.jpg'
           }],
-          status: 'confirmed'
+          currency: 'VND',
+          totalVND: 375,
+          payment: { provider: 'momo', status: 'paid' },
+          status: 'paid',
+          createdAt: new Date('2024-01-10')
         }
       ];
 
-      const mockTours = [{
-        _id: 'tour123',
-        title: 'Updated Tour Name',
-        imageItems: [{ imageUrl: 'updated.jpg' }]
-      }];
-
-      mockQuery.lean.mockResolvedValueOnce(mockBookings);
-      Tour.find().select().lean.mockResolvedValueOnce(mockTours);
+      mockQuery.lean.mockResolvedValue(mockBookings);
 
       await bookingController.getUserBookings(req, res);
 
-      expect(Booking.find).toHaveBeenCalledWith({
-        userId: 'user123',
-        status: { $in: ['pending', 'confirmed', 'paid', 'cancelled'] }
-      });
+      expect(Booking.find).toHaveBeenCalledWith({ userId: 'user123' });
+      expect(mockQuery.populate).toHaveBeenCalledWith('items.tourId', 'title imageItems');
       expect(mockQuery.sort).toHaveBeenCalledWith({ createdAt: -1 });
-      expect(Tour.find).toHaveBeenCalledWith({ _id: { $in: ['tour123'] } });
       expect(res.json).toHaveBeenCalledWith({
         success: true,
-        bookings: [{
-          _id: 'booking1',
-          userId: 'user123',
-          items: [{
-            tourId: 'tour123',
-            name: 'Existing Name', // Should keep existing name if present
-            image: 'existing.jpg'  // Should keep existing image if present
-          }],
-          status: 'confirmed'
-        }],
+        bookings: mockBookings,
         count: 1
       });
     });
@@ -243,8 +236,7 @@ describe('Booking Controller', () => {
     });
 
     it('should handle empty bookings list', async () => {
-      mockQuery.lean.mockResolvedValueOnce([]);
-      Tour.find().select().lean.mockResolvedValueOnce([]);
+      mockQuery.lean.mockResolvedValue([]);
 
       await bookingController.getUserBookings(req, res);
 
@@ -255,49 +247,54 @@ describe('Booking Controller', () => {
       });
     });
 
-    it('should merge tour data when booking items lack name/image', async () => {
+    it('should enrich booking items with tour data when populate works', async () => {
       const mockBookings = [
         {
           _id: 'booking1',
           userId: 'user123',
           items: [{
-            tourId: 'tour123',
-            name: '', // Empty name
-            image: '' // Empty image
+            tourId: {
+              title: 'Tour Title',
+              imageItems: [{ imageUrl: 'tour.jpg' }]
+            },
+            date: '2024-01-15',
+            adults: 1,
+            children: 0,
+            unitPriceAdult: 100,
+            unitPriceChild: 50,
+            name: '', // Empty name, should use tour title
+            image: '' // Empty image, should use tour image
           }],
-          status: 'paid'
+          currency: 'VND',
+          totalVND: 100,
+          payment: { provider: 'momo', status: 'paid' },
+          status: 'paid',
+          createdAt: new Date('2024-01-10')
         }
       ];
 
-      const mockTours = [{
-        _id: 'tour123',
-        title: 'Tour From DB',
-        imageItems: [{ imageUrl: 'db-image.jpg' }]
-      }];
-
-      mockQuery.lean.mockResolvedValueOnce(mockBookings);
-      Tour.find().select().lean.mockResolvedValueOnce(mockTours);
+      mockQuery.lean.mockResolvedValue(mockBookings);
 
       await bookingController.getUserBookings(req, res);
 
+      const expectedBookings = [{
+        ...mockBookings[0],
+        items: [{
+          ...mockBookings[0].items[0],
+          name: 'Tour Title',
+          image: 'tour.jpg'
+        }]
+      }];
+
       expect(res.json).toHaveBeenCalledWith({
         success: true,
-        bookings: [{
-          _id: 'booking1',
-          userId: 'user123',
-          items: [{
-            tourId: 'tour123',
-            name: 'Tour From DB', // Should use tour title
-            image: 'db-image.jpg' // Should use tour image
-          }],
-          status: 'paid'
-        }],
+        bookings: expectedBookings,
         count: 1
       });
     });
 
     it('should handle database errors', async () => {
-      mockQuery.lean.mockRejectedValueOnce(new Error('Database error'));
+      mockQuery.lean.mockRejectedValue(new Error('Database error'));
 
       await bookingController.getUserBookings(req, res);
 

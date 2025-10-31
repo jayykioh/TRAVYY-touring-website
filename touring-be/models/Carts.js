@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 // ==================== CART ====================
 const CartSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -56,6 +56,8 @@ const OrderSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // ==================== EXPORT ====================
-export const Cart = mongoose.model("Cart", CartSchema);
-export const CartItem = mongoose.model("CartItem", CartItemSchema);
-export const Order = mongoose.model("Order", OrderSchema);
+const Cart = mongoose.model("Cart", CartSchema);
+const CartItem = mongoose.model("CartItem", CartItemSchema);
+const Order = mongoose.model("Order", OrderSchema);
+
+module.exports = { Cart, CartItem, Order };

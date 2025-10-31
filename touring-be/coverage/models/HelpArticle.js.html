@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>6/6</span>
+                <span class='fraction'>0/6</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>6/6</span>
+                <span class='fraction'>0/6</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -120,11 +120,9 @@
 <a name='L55'></a><a href='#L55'>55</a>
 <a name='L56'></a><a href='#L56'>56</a>
 <a name='L57'></a><a href='#L57'>57</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -151,7 +149,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -159,7 +159,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -168,17 +168,17 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// models/HelpArticle.js
-const mongoose = require("mongoose");
+const mongoose = <span class="cstat-no" title="statement not covered" >require("mongoose");</span>
 &nbsp;
-const articleSchema = new mongoose.Schema(
+const articleSchema = <span class="cstat-no" title="statement not covered" >new mongoose.Schema(</span>
   {
     title: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
@@ -207,7 +207,7 @@ const articleSchema = new mongoose.Schema(
 );
 &nbsp;
 // Virtual fields cho feedback
-articleSchema.virtual("helpfulCount", {
+<span class="cstat-no" title="statement not covered" >articleSchema.virtual("helpfulCount", {</span>
   ref: "HelpFeedback",
   localField: "_id",
   foreignField: "articleId",
@@ -215,7 +215,7 @@ articleSchema.virtual("helpfulCount", {
   match: { helpful: true },
 });
 &nbsp;
-articleSchema.virtual("notHelpfulCount", {
+<span class="cstat-no" title="statement not covered" >articleSchema.virtual("notHelpfulCount", {</span>
   ref: "HelpFeedback",
   localField: "_id",
   foreignField: "articleId",
@@ -224,13 +224,13 @@ articleSchema.virtual("notHelpfulCount", {
 });
 &nbsp;
 // Text index phục vụ tìm kiếm
-articleSchema.index({
+<span class="cstat-no" title="statement not covered" >articleSchema.index({</span>
   title: "text",
   excerpt: "text",
   content: "text",
 });
 &nbsp;
-module.exports = mongoose.model("HelpArticle", articleSchema, "helparticles");
+<span class="cstat-no" title="statement not covered" >module.exports = mongoose.model("HelpArticle", articleSchema, "helparticles");</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -238,7 +238,7 @@ module.exports = mongoose.model("HelpArticle", articleSchema, "helparticles");
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-30T17:08:39.769Z
+                at 2025-10-31T09:06:14.470Z
             </div>
         <script src="../prettify.js"></script>
         <script>

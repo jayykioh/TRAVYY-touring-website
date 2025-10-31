@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>10/10</span>
+                <span class='fraction'>0/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>6/6</span>
+                <span class='fraction'>0/6</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>5/5</span>
+                <span class='fraction'>0/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>10/10</span>
+                <span class='fraction'>0/10</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -92,61 +92,61 @@
 <a name='L27'></a><a href='#L27'>27</a>
 <a name='L28'></a><a href='#L28'>28</a>
 <a name='L29'></a><a href='#L29'>29</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// src/utils/jwt.js
-const jwt = require("jsonwebtoken");
-const { randomUUID } = require("crypto");
+const jwt = <span class="cstat-no" title="statement not covered" >require("jsonwebtoken");</span>
+const { randomUUID } = <span class="cstat-no" title="statement not covered" >require("crypto");</span>
 &nbsp;
-const ACCESS_TTL  = process.env.ACCESS_TTL  || "10m";
-const REFRESH_TTL = process.env.REFRESH_TTL || "30d";
+const ACCESS_TTL  = <span class="cstat-no" title="statement not covered" >process.env.ACCESS_TTL  || "10m";</span>
+const REFRESH_TTL = <span class="cstat-no" title="statement not covered" >process.env.REFRESH_TTL || "30d";</span>
 &nbsp;
-function signAccess(user) {
-  return jwt.sign(
+function <span class="fstat-no" title="function not covered" >signAccess(</span>user) {
+<span class="cstat-no" title="statement not covered" >  return jwt.sign(</span>
     { sub: user.id, role: user.role || "Traveler" },
     process.env.JWT_ACCESS_SECRET,
     { expiresIn: ACCESS_TTL }
   );
 }
 &nbsp;
-function signRefresh({ jti, userId }) {
-  return jwt.sign(
+function <span class="fstat-no" title="function not covered" >signRefresh(</span>{ jti, userId }) {
+<span class="cstat-no" title="statement not covered" >  return jwt.sign(</span>
     { sid: jti, sub: userId },
     process.env.JWT_REFRESH_SECRET,
     { expiresIn: REFRESH_TTL, jwtid: jti }
   );
 }
 &nbsp;
-function verifyAccess(t)  { return jwt.verify(t, process.env.JWT_ACCESS_SECRET); }
-function verifyRefresh(t) { return jwt.verify(t, process.env.JWT_REFRESH_SECRET); }
-function newId()          { return randomUUID(); }
+function <span class="fstat-no" title="function not covered" >verifyAccess(</span>t)  { <span class="cstat-no" title="statement not covered" >return jwt.verify(t, process.env.JWT_ACCESS_SECRET); </span>}
+function <span class="fstat-no" title="function not covered" >verifyRefresh(</span>t) { <span class="cstat-no" title="statement not covered" >return jwt.verify(t, process.env.JWT_REFRESH_SECRET); </span>}
+function <span class="fstat-no" title="function not covered" >newId(</span>)          { <span class="cstat-no" title="statement not covered" >return randomUUID(); </span>}
 &nbsp;
-module.exports = { signAccess, signRefresh, verifyAccess, verifyRefresh, newId };
+<span class="cstat-no" title="statement not covered" >module.exports = { signAccess, signRefresh, verifyAccess, verifyRefresh, newId };</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -154,7 +154,7 @@ module.exports = { signAccess, signRefresh, verifyAccess, verifyRefresh, newId }
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-30T17:08:39.769Z
+                at 2025-10-31T09:06:14.470Z
             </div>
         <script src="../prettify.js"></script>
         <script>

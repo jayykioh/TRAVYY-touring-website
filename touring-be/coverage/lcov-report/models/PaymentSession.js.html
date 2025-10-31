@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">85.71% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>6/7</span>
+                <span class='fraction'>4/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">42.85% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>3/7</span>
+                <span class='fraction'>0/0</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">85.71% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>6/7</span>
+                <span class='fraction'>4/4</span>
             </div>
         
             
@@ -97,26 +97,7 @@
 <a name='L32'></a><a href='#L32'>32</a>
 <a name='L33'></a><a href='#L33'>33</a>
 <a name='L34'></a><a href='#L34'>34</a>
-<a name='L35'></a><a href='#L35'>35</a>
-<a name='L36'></a><a href='#L36'>36</a>
-<a name='L37'></a><a href='#L37'>37</a>
-<a name='L38'></a><a href='#L38'>38</a>
-<a name='L39'></a><a href='#L39'>39</a>
-<a name='L40'></a><a href='#L40'>40</a>
-<a name='L41'></a><a href='#L41'>41</a>
-<a name='L42'></a><a href='#L42'>42</a>
-<a name='L43'></a><a href='#L43'>43</a>
-<a name='L44'></a><a href='#L44'>44</a>
-<a name='L45'></a><a href='#L45'>45</a>
-<a name='L46'></a><a href='#L46'>46</a>
-<a name='L47'></a><a href='#L47'>47</a>
-<a name='L48'></a><a href='#L48'>48</a>
-<a name='L49'></a><a href='#L49'>49</a>
-<a name='L50'></a><a href='#L50'>50</a>
-<a name='L51'></a><a href='#L51'>51</a>
-<a name='L52'></a><a href='#L52'>52</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<a name='L35'></a><a href='#L35'>35</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -149,25 +130,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const mongoose = require("mongoose");
-// Use the explicit main connection so the model is created on the intended DB
-const { mainConn } = require("../config/db");
 &nbsp;
 const paymentItemSchema = new mongoose.Schema(
   {
@@ -187,14 +151,9 @@ const paymentSessionSchema = new mongoose.Schema(
     orderId: { type: String, unique: true, required: true },
     requestId: { type: String, required: true },
     amount: { type: Number, required: true },
-  // Session lifecycle: pending -&gt; paid | failed. Allow 'expired' for timeouts.
-  status: { type: String, enum: ["pending", "paid", "failed","cancelled", "expired"], default: "pending" },
-  // mode indicates the origin of the payment intent. Allow 'retry-payment'
-  // for retrying previously failed payments (frontend may pass this value).
-  mode: { type: String, enum: ["cart", "buy-now", "retry-payment"], default: "cart" },
+    status: { type: String, enum: ["pending", "paid", "failed"], default: "pending" },
+    mode: { type: String, enum: ["cart", "buy-now"], default: "cart" },
     items: [paymentItemSchema],
-    voucherCode: String, // Promotion/voucher code used
-    discountAmount: { type: Number, default: 0 }, // Discount amount applied
     rawCreateResponse: Object,
     paidAt: Date,
     transId: String,
@@ -205,17 +164,7 @@ const paymentSessionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 &nbsp;
-// Prefer registering the model on the explicit main connection to ensure
-// PaymentSession documents are written to the main DB (MONGO_URI).
-// Fall back to default mongoose model if mainConn is not available.
-try {
-  module.exports = (mainConn &amp;&amp; mainConn.models &amp;&amp; <span class="branch-2 cbranch-no" title="branch not covered" >mainConn.models.PaymentSession)</span>
-    ? <span class="branch-0 cbranch-no" title="branch not covered" >mainConn.models.PaymentSession</span>
-    : mainConn.model("PaymentSession", paymentSessionSchema);
-} catch (e) {
-  // If something goes wrong (e.g., mainConn undefined), fallback to default
-<span class="cstat-no" title="statement not covered" >  module.exports = mongoose.models.PaymentSession || mongoose.model("PaymentSession", paymentSessionSchema);</span>
-}
+module.exports = mongoose.model("PaymentSession", paymentSessionSchema);
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -223,7 +172,7 @@ try {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-30T17:08:39.659Z
+                at 2025-10-31T09:06:14.323Z
             </div>
         <script src="../prettify.js"></script>
         <script>

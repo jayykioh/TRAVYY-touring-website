@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">87.5% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>14/16</span>
+                <span class='fraction'>0/14</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/2</span>
+                <span class='fraction'>0/0</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
-                <span class="quiet">Functions</span>
-                <span class='fraction'>0/1</span>
-            </div>
-        
-            
-            <div class='fl pad1y space-right2'>
-                <span class="strong">87.5% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>14/16</span>
+                <span class='fraction'>0/14</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -96,11 +96,8 @@
 <a name='L31'></a><a href='#L31'>31</a>
 <a name='L32'></a><a href='#L32'>32</a>
 <a name='L33'></a><a href='#L33'>33</a>
-<a name='L34'></a><a href='#L34'>34</a>
-<a name='L35'></a><a href='#L35'>35</a>
-<a name='L36'></a><a href='#L36'>36</a>
-<a name='L37'></a><a href='#L37'>37</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<a name='L34'></a><a href='#L34'>34</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -110,33 +107,30 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span></td><td class="text"><pre class="prettyprint lang-js">// routes/reviewRoutes.js
-const express = require("express");
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// routes/reviewRoutes.js
+const express = <span class="cstat-no" title="statement not covered" >require("express");</span>
 const {
   createReview,
   getTourReviews,
@@ -146,39 +140,36 @@ const {
   toggleReviewLike,
   responseToReview,
   getReviewableBookings
-} = require("../controller/reviewController");
-const authJwt = require("../middlewares/authJwt");
+} = <span class="cstat-no" title="statement not covered" >require("../controller/reviewController");</span>
+const authJwt = <span class="cstat-no" title="statement not covered" >require("../middlewares/authJwt");</span>
 &nbsp;
-const router = express.Router();
+const router = <span class="cstat-no" title="statement not covered" >express.Router();</span>
 &nbsp;
 // Public routes
-router.get("/tour/:tourId", getTourReviews); // Lấy reviews của tour (public)
+<span class="cstat-no" title="statement not covered" >router.get("/tour/:tourId", getTourReviews); </span>// Lấy reviews của tour (public)
 &nbsp;
 // Protected routes (yêu cầu đăng nhập)
-router.use(authJwt); // Apply middleware cho tất cả routes bên dưới
+<span class="cstat-no" title="statement not covered" >router.use(authJwt); </span>// Apply middleware cho tất cả routes bên dưới
 &nbsp;
 // User review management
-router.post("/", createReview); // Tạo review mới
-router.get("/my", <span class="fstat-no" title="function not covered" >(r</span>eq, res, next) =&gt; {
-<span class="cstat-no" title="statement not covered" >  console.log('📨 GET /api/reviews/my called by user:', req.user?.sub || req.user?._id);</span>
-<span class="cstat-no" title="statement not covered" >  next();</span>
-}, getUserReviews); // Lấy reviews của user hiện tại
-router.get("/reviewable-bookings", getReviewableBookings); // Lấy bookings có thể review
+<span class="cstat-no" title="statement not covered" >router.post("/", createReview); </span>// Tạo review mới
+<span class="cstat-no" title="statement not covered" >router.get("/my", getUserReviews); </span>// Lấy reviews của user hiện tại
+<span class="cstat-no" title="statement not covered" >router.get("/reviewable-bookings", getReviewableBookings); </span>// Lấy bookings có thể review
 &nbsp;
 // Review interactions
-router.put("/:reviewId", updateReview); // Cập nhật review
-router.delete("/:reviewId", deleteReview); // Xóa review
-router.post("/:reviewId/like", toggleReviewLike); // Like/unlike review
-router.post("/:reviewId/response", responseToReview); // Phản hồi review (tour operator)
+<span class="cstat-no" title="statement not covered" >router.put("/:reviewId", updateReview); </span>// Cập nhật review
+<span class="cstat-no" title="statement not covered" >router.delete("/:reviewId", deleteReview); </span>// Xóa review
+<span class="cstat-no" title="statement not covered" >router.post("/:reviewId/like", toggleReviewLike); </span>// Like/unlike review
+<span class="cstat-no" title="statement not covered" >router.post("/:reviewId/response", responseToReview); </span>// Phản hồi review (tour operator)
 &nbsp;
-module.exports = router;</pre></td></tr></table></pre>
+<span class="cstat-no" title="statement not covered" >module.exports = router;</span></pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-10-30T17:08:39.659Z
+                at 2025-10-31T09:06:14.323Z
             </div>
         <script src="../prettify.js"></script>
         <script>
