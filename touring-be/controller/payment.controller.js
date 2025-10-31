@@ -301,7 +301,108 @@ exports.handleMoMoIPN = async (req, res) => {
 
     // If newly paid -> create Booking (unified helper with idempotent check)
     if (justPaid) {
-      await createBookingFromSession(session, { ipn: body, sessionId: session._id });
+      // Mark voucher as used
+      if (session.voucherCode && session.userId) {
+        try {
+          const User = require("../models/Users");
+          const Promotion = require("../models/Promotion");
+
+          const promotion = await Promotion.findOne({
+            code: session.voucherCode.toUpperCase(),
+          });
+          if (promotion) {
+            // ✅ Tăng usageCount
+            await Promotion.findByIdAndUpdate(promotion._id, {
+              $inc: { usageCount: 1 },
+            });
+
+            // ✅ Đánh dấu user đã sử dụng
+            await User.findByIdAndUpdate(session.userId, {
+              $addToSet: {
+                usedPromotions: {
+                  promotionId: promotion._id,
+                  code: promotion.code,
+                  usedAt: new Date(),
+                },
+              },
+            });
+            console.log(
+              `✅ [MoMo IPN] Marked promotion ${session.voucherCode} as used for user ${session.userId} and incremented usageCount`
+            );
+          }
+        } catch (voucherError) {
+          console.error(
+            "[MoMo IPN] Error marking voucher as used:",
+            voucherError
+          );
+        }
+      }
+
+      // Create or update booking (unified helper with idempotent check)
+      let booking;
+      if (session.retryBookingId) {
+        // For retry payments, update the existing failed booking
+        console.log(`🔄 [MoMo IPN] Updating existing booking ${session.retryBookingId} for retry payment`);
+        booking = await Booking.findById(session.retryBookingId);
+        if (booking) {
+          booking.status = 'paid';
+          booking.payment.status = 'completed';
+          booking.payment.paidAt = new Date();
+          booking.payment.transactionId = body.transId;
+          booking.payment.momoData = {
+            partnerCode: body.partnerCode,
+            resultCode: body.resultCode,
+            message: body.message,
+            transId: body.transId,
+            raw: body
+          };
+          try {
+  await clearCartAfterPayment(session.userId);
+  console.log(`[MoMo IPN] ✅ Cleared cart after payment for user ${session.userId}`);
+} catch (clearErr) {
+  console.error(`[MoMo IPN] ⚠️ Failed to clear cart after payment:`, clearErr);
+}
+          await booking.save();
+          console.log(`✅ [MoMo IPN] Updated existing booking ${booking._id} to paid status`);
+        } else {
+          console.warn(`⚠️ [MoMo IPN] Retry booking ${session.retryBookingId} not found, creating new booking`);
+       booking = await createBookingFromSession(
+            session,{
+              ipn: body,
+            sessionId: session._id,
+              markPaid: true 
+          });
+        }
+      } else {
+        // Normal payment flow
+        booking = await createBookingFromSession(session, {
+          ipn: body,
+          sessionId: session._id,
+        });
+      }
+
+      // Send payment success notification
+      try {
+        const User = require("../models/Users");
+        const user = await User.findById(session.userId);
+        if (user && user.email && booking) {
+          const { sendPaymentSuccessNotification } = require("../controller/notifyController");
+          const tourTitle = booking.items?.[0]?.name || "Tour";
+          await sendPaymentSuccessNotification({
+            email: user.email,
+            amount: booking.totalAmount,
+            bookingCode: booking.bookingCode,
+            tourTitle: tourTitle,
+            bookingId: booking._id
+          });
+          console.log(`[MoMo IPN] ✅ Payment success notification sent for booking ${booking._id}`);
+        } else {
+          console.warn(`[MoMo IPN] ⚠️ User email not found for session ${session._id}, skipping notification`);
+        }
+      } catch (notifyError) {
+        console.error(`[MoMo IPN] ❌ Failed to send payment notification:`, notifyError);
+        // Don't fail the IPN if notification fails
+      }
     }
     
     // Important: MoMo expects 200/204 to stop retrying

@@ -32,10 +32,8 @@ exports.quote = async (req, res) => {
 
     for (const x of incItems) {
       // validate
-      let tourId;
-      try {
-        tourId = new mongoose.Types.ObjectId(x.tourId);
-      } catch {
+      let tourId = x.tourId;
+      if (!tourId || typeof tourId !== 'string' || tourId.length !== 24) {
         return res.status(400).json({ error: "INVALID_TOUR_ID" });
       }
       const date = normalizeDate(x.date);

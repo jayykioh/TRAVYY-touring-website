@@ -1,7 +1,7 @@
 // src/components/FAQ.jsx
 import React, { useState } from "react";
 import { ChevronDown, ChevronUp, MessageCircle, Globe, MapPin, Search, User, Users } from "lucide-react";
-import faqData from "../mockdata/faqs";
+import { faqs as faqData } from "../mockdata/helpData";
 
 export default function FAQ() {
   const [openItems, setOpenItems] = useState({});

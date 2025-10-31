@@ -338,10 +338,10 @@ exports.captureOrder = async (req, res) => {
       console.log("✅ PayPal capture successful:", captureData.id);
 
       // 2) Update payment session status
-      paymentSession.status = 'paid';
-      paymentSession.paidAt = new Date();
-      paymentSession.rawCreateResponse = { ...paymentSession.rawCreateResponse, capture: captureData };
-      await paymentSession.save();
+       paymentSession.status = 'paid';
+                  paymentSession.paidAt = new Date();
+            paymentSession.rawCreateResponse = { ...paymentSession.rawCreateResponse, capture: captureData };
+            await paymentSession.save();
 
       // 3) Get booked items from payment session
       const bookedItems = paymentSession.items.map(it => ({
@@ -422,8 +422,37 @@ exports.captureOrder = async (req, res) => {
 
       console.log("✅ Booking created:", booking._id);
 
+      // 6) Mark booking as paid
+      console.log("\n💳 Marking booking as paid...");
+      try {
+        await markBookingAsPaid(orderID, {
+          transactionId: captureData.id,
+          paypal: {
+            captureId: captureData.id,
+            status: captureData.status,
+            payer: captureData.payer
+          }
+          
+        });
+        console.log("✅ Booking marked as paid");
+      } catch (markError) {
+        console.error("❌ Failed to mark booking as paid:", markError);
+        // Booking exists but payment status update failed
+        // Return success anyway since payment was captured
+        console.log("⚠️ Payment captured but status update failed. Booking ID:", booking._id);
+      }
+
+      console.log("\n✅ ===== PAYPAL CAPTURE ORDER SUCCESS =====");
+      console.log(`✅ [PayPal] Final session status: "${paymentSession.status}"`);
+      console.log(`✅ [PayPal] Booking ID: ${booking._id}`);
       console.log("\n✅ ===== CAPTURE ORDER SUCCESS =====\n");
       res.json({ success: true, bookingId: booking._id });
+      try {
+  await clearCartAfterPayment(userId);
+  console.log(`[PayPal] ✅ Cleared cart after payment for user ${userId}`);
+} catch (clearErr) {
+  console.error(`[PayPal] ⚠️ Failed to clear cart after payment:`, clearErr);
+}
     });
 
   } catch (e) {
