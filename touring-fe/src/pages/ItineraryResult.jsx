@@ -2,7 +2,7 @@
 // pages/ItineraryResult.jsx
 // ✅ Clean, minimalist design with clear information hierarchy
 
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "@/auth/context";
 import {
@@ -34,6 +34,38 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 export default function ItineraryResult() {
+  // ========== Handle Send Tour Guide Request ========== 
+  async function handleSendGuideRequest() {
+    if (!itinerary?._id) return;
+    setGuideReqLoading(true);
+    setGuideReqMsg("");
+    try {
+      console.log("[TourGuideRequest] Bắt đầu gửi yêu cầu cho tour guide với itineraryId:", itinerary._id);
+      const res = await withAuth(`/api/itinerary/${itinerary._id}/request-tour-guide`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res?.success) {
+        setGuideReqMsg("Đã gửi yêu cầu tour guide thành công!");
+        // Reload itinerary to update status
+        const result = await withAuth(`/api/itinerary/${itinerary._id}`);
+        setItinerary(result.itinerary);
+        console.log("[TourGuideRequest] Thành công:", result.itinerary.tourGuideRequest);
+      } else {
+        setGuideReqMsg(res?.error || "Gửi yêu cầu thất bại");
+        console.warn("[TourGuideRequest] Thất bại:", res);
+      }
+    } catch (e) {
+      setGuideReqMsg("Gửi yêu cầu thất bại: " + (e?.message || e));
+      console.error("[TourGuideRequest] Lỗi:", e);
+    } finally {
+      setGuideReqLoading(false);
+    }
+  }
+  // ========== Tour Guide Request State ==========
+  const [guideReqLoading, setGuideReqLoading] = useState(false);
+  const [guideReqMsg, setGuideReqMsg] = useState("");
+
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
@@ -45,7 +77,7 @@ export default function ItineraryResult() {
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   const [mapError, setMapError] = useState(null);
 
-  // ========== Load itinerary ==========
+  // ========== Load itinerary ========== 
   useEffect(() => {
     const loadItinerary = async () => {
       try {
@@ -66,6 +98,8 @@ export default function ItineraryResult() {
           hasAiInsights: !!data.aiInsights,
           summaryPreview: data.aiInsights?.summary?.substring(0, 50),
           tipsCount: data.aiInsights?.tips?.length,
+          isCustomTour: data.isCustomTour,
+          tourGuideRequest: data.tourGuideRequest,
         });
 
         setItinerary(data);
@@ -76,7 +110,6 @@ export default function ItineraryResult() {
         setLoading(false);
       }
     };
-
     loadItinerary();
   }, [id, location.state, withAuth]);
 
@@ -155,7 +188,7 @@ export default function ItineraryResult() {
   }, [isAIProcessing, id, withAuth]);
 
   // ✅ Manual refresh
-  const handleRefresh = useCallback(async () => {
+  async function handleRefresh() {
     console.log("🔄 [Manual Refresh] Triggered");
     try {
       const result = await withAuth(`/api/itinerary/${id}`);
@@ -174,7 +207,7 @@ export default function ItineraryResult() {
     } catch (error) {
       console.error("❌ [Manual Refresh] Error:", error);
     }
-  }, [id, withAuth]);
+  }
 
   // ========== Derived data ==========
   const items = useMemo(() => {
@@ -216,7 +249,7 @@ export default function ItineraryResult() {
   const tips = Array.isArray(ai.tips) ? ai.tips : [];
 
   // ========== UI helpers ==========
-  const handleCopyLink = useCallback(async () => {
+  async function handleCopyLink() {
     try {
       const url = window.location.href;
       await navigator.clipboard.writeText(url);
@@ -224,9 +257,9 @@ export default function ItineraryResult() {
     } catch (e) {
       console.error(e);
     }
-  }, []);
+  }
 
-  const handleReOptimize = useCallback(async () => {
+  async function handleReOptimize() {
     try {
       if (!id) return;
       setIsAIProcessing(true);
@@ -239,9 +272,9 @@ export default function ItineraryResult() {
       console.error("❌ [FE] Re-optimize error:", e);
       setIsAIProcessing(false);
     }
-  }, [id, withAuth]);
+  }
 
-  const handleDownloadGpx = useCallback(async () => {
+  async function handleDownloadGpx() {
     try {
       const url = `/api/itinerary/${id}/export.gpx`;
 
@@ -299,7 +332,7 @@ export default function ItineraryResult() {
       console.error("GPX download error:", err);
       alert("Tải GPX thất bại. Vui lòng thử lại.");
     }
-  }, [id, itinerary?.zoneName, itinerary?.name, accessToken]);
+  }
 
   // ========== Loading state ==========
   if (loading) {
@@ -333,7 +366,7 @@ export default function ItineraryResult() {
 
   // ✅ MAIN RENDER - Same as before, just verify AI section logs data correctly
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* ===== Header ===== */}
       <div className="border-b bg-white sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
@@ -357,6 +390,8 @@ export default function ItineraryResult() {
                   </div>
                 )}
               </div>
+
+
 
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
                 <span className="flex items-center gap-1.5">
@@ -426,6 +461,7 @@ export default function ItineraryResult() {
       <span className="text-xs text-slate-500">
         {items.length} điểm • {totalDistanceText} km • {totalDurationText} phút
       </span>
+  
     </div>
 
     <div className="space-y-2">
@@ -771,8 +807,9 @@ export default function ItineraryResult() {
                     )}
                   </motion.div>
                 </AnimatePresence>
+                
               </div>
-
+                    
               <div className="border-t border-slate-200 bg-slate-50 px-4 py-3">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-600">
                   <span className="flex items-center gap-1.5">
@@ -838,7 +875,41 @@ export default function ItineraryResult() {
                 </div>
               </div>
             </div>
+                      {/* ===== Tour Guide Request Button at bottom ===== */}
+      {/* Tour Guide Request Button (active) at bottom */}
+      {itinerary.isCustomTour && (itinerary.tourGuideRequest?.status === 'none' || itinerary.tourGuideRequest?.status === 'rejected') && (
+        <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 mt-auto">
+          <div className="flex flex-col items-center justify-center">
+            <button
+              onClick={handleSendGuideRequest}
+              disabled={guideReqLoading}
+              className="px-4 py-3 rounded-lg bg-[#02A0AA] text-white hover:bg-[#018F99] text-base font-semibold flex items-center gap-2 disabled:opacity-60 shadow-md"
+            >
+              {guideReqLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Sparkles className="w-5 h-5" />
+              )}
+              Gửi yêu cầu tour guide
+            </button>
+            {guideReqMsg && (
+              <div className="mt-2 text-sm text-slate-700 font-medium">{guideReqMsg}</div>
+            )}
+          </div>
+        </div>
+      )}
 
+      {/* Tour Guide Request Pending Button below map */}
+      {itinerary.isCustomTour && itinerary.tourGuideRequest?.status === 'pending' && (
+        <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 mt-6">
+          <div className="flex flex-col items-center justify-center">
+            <div className="flex items-center gap-3 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl px-6 py-4 shadow-sm">
+              <Loader2 className="w-6 h-6 animate-spin text-[#02A0AA]" />
+              <span className="text-base font-semibold text-[#0F172A]">Đã gửi yêu cầu tour guide</span>
+            </div>
+          </div>
+        </div>
+      )}
             {/* Mobile Actions */}
             <div className="sm:hidden mt-4 flex flex-col gap-2">
               <button
@@ -906,8 +977,10 @@ export default function ItineraryResult() {
                 )}
                 Tối ưu lại với AI
               </button>
+              
             </div>
           </motion.div>
+          
         </div>
       </div>
     </div>

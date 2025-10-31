@@ -60,7 +60,7 @@ app.use(morgan(isProd ? "combined" : "dev"));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: isProd ? process.env.CLIENT_ORIGIN : "http://localhost:5173",
+    origin: "http://localhost:5173", // KHÔNG được để "*"
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -82,10 +82,8 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/admin", adminRoutes); // Updated to use modular admin routes
 app.use("/api/payments", paymentRoutes);
-
 const securityRoutes = require("./routes/security.routes");
 app.use("/api/security", securityRoutes);
-
 app.use("/api/locations", locationRoutes);
 app.use("/api/notify", notifyRoutes);
 
@@ -131,10 +129,6 @@ mongoose
   });
 
 module.exports = app;
-
-// Middleware
-// app.use(cors());
-app.use(express.json());
 
 // ✅ Check services on startup
 const { health, isAvailable } = require("./services/ai/libs/embedding-client");

@@ -11,14 +11,14 @@ import {
 } from "lucide-react";
 
 const CATEGORY_CONFIG = [
+  { key: "tour", label: "Tour", icon: Map },
   { key: "views", label: "Điểm tham quan", icon: Camera },
-  { key: "beach", label: "Biển & Đảo", icon: Map },
-  { key: "nature", label: "Thiên nhiên", icon: Mountain },
-  { key: "food", label: "Ẩm thực", icon: Utensils },
+  { key: "beach", label: "Biển, Đảo & Thiên nhiên", icon: Map },
+  { key: "food", label: "Ẩm thực & Cafe", icon: Utensils },
   { key: "culture", label: "Văn hóa", icon: Landmark },
   { key: "shopping", label: "Mua sắm", icon: ShoppingBag },
   { key: "nightlife", label: "Giải trí", icon: Moon },
-  { key: "recent", label: "Đã tìm gần đây", icon: Clock }, // ✅ NEW
+  { key: "recent", label: "Đã tìm gần đây", icon: Clock },
 ];
 
 export default function POICategoryTabs({ activeCategory, onSelectCategory }) {
@@ -45,7 +45,7 @@ export default function POICategoryTabs({ activeCategory, onSelectCategory }) {
               ].join(" ")}
             >
               <div className="flex flex-col items-center gap-1">
-                <Icon className={["w-5 h-5", isActive ? "text-white" : "text-slate-600"].join(" ")} />
+                {Icon && <Icon className={["w-5 h-5", isActive ? "text-white" : "text-slate-600"].join(" ")} />}
                 <span className={["text-[10px] font-semibold leading-none", isActive ? "text-white" : "text-slate-800"].join(" ")}>
                   {label}
                 </span>

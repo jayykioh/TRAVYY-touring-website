@@ -76,22 +76,25 @@ async function findPOIsByCategory(zoneId, categoryKey, options = {}) {
 
   // ✅ Handle multiple queries (if exists) or single query
   const queries = category.queries || [category.query];
+  const queryLimit = category.queryLimit || [];
   console.log(`   🔍 Queries (${queries.length}):`, queries);
 
   // ✅ Search with each query and merge results
   const allPOIs = [];
   const seenIds = new Set();
 
-  for (const query of queries) {
-    console.log(`   🎯 Searching: "${query}"`);
-    
+  for (let i = 0; i < queries.length; i++) {
+    const query = queries[i];
+    const limitForQuery = queryLimit[i] || Math.ceil(maxResults * 2 / queries.length);
+    console.log(`   🎯 Searching: "${query}" (limit ${limitForQuery})`);
+
     const pois = await searchPOIsByText(
       zone.center.lat,
       zone.center.lng,
       radiusM,
       {
         query: query,
-        limit: Math.ceil(maxResults * 2 / queries.length), // Split limit across queries
+        limit: limitForQuery,
       }
     );
 

@@ -47,6 +47,9 @@ import ItineraryResult from "./pages/ItineraryResult"; // ✅ ADD THIS IMPORT
 // import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
 import AdminRoutes from "./admin/routes/AdminRoutes";
 
+// Import Guide Routes
+import GuideRoutes from "./guide/routes/guideRoutes";
+
 // Route guard
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
@@ -55,8 +58,18 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+
 export default function App() {
   const { booting, isAuth, user, bannedInfo } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+           useEffect(() => {
+    if (isAuth && user?.role === "TourGuide" && !location.pathname.startsWith("/guide")) {
+      navigate("/guide", { replace: true });
+    }
+  }, [isAuth, user?.role, location.pathname, navigate]);
   console.log("Auth state:", { isAuth, user, bannedInfo });
   if (booting) return <LoadingScreen />;
 
@@ -208,6 +221,16 @@ export default function App() {
           element={
             <ProtectedRoute>
               <PaymentCallback />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ----- Tour Guide Routes (Protected) ----- */}
+        <Route
+          path="/guide/*"
+          element={
+            <ProtectedRoute>
+              <GuideRoutes />
             </ProtectedRoute>
           }
         />

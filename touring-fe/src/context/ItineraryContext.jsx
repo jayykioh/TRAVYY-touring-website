@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ItineraryContext } from "./itinerary-context";
 import { useAuth } from "@/auth/context";
 
@@ -10,6 +10,16 @@ export default function ItineraryProvider({ children }) {
 
   // Lấy withAuth từ AuthProvider: tự refresh khi 401 + retry
   const { withAuth, isAuth } = useAuth();
+
+  // Auto-load itinerary on mount (and when isAuth changes)
+  useEffect(() => {
+    if (isAuth) {
+      loadCurrentItinerary();
+    } else {
+      setCurrentItinerary(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuth]);
 
   // === Load current itinerary ===
   async function loadCurrentItinerary() {
@@ -60,6 +70,7 @@ export default function ItineraryProvider({ children }) {
     }
   }
 
+
   // === Add POI ===
   async function addPOI(poi, zoneId, zoneName, preferences) {
     try {
@@ -73,10 +84,11 @@ export default function ItineraryProvider({ children }) {
       const exists = itinerary.items?.some((item) => item.poiId === poiId);
       if (exists) throw new Error("POI already in itinerary");
 
+      // Always send itemType for backend
       const data = await withAuth(`/api/itinerary/${itinerary._id}/items`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ poi }),
+        body: JSON.stringify({ poi: { ...poi, itemType: 'poi' } }),
       });
 
       if (data?.success) {
@@ -91,6 +103,48 @@ export default function ItineraryProvider({ children }) {
     } catch (error) {
       if (process.env.NODE_ENV !== "production") {
         console.error("Error adding POI:", error);
+      }
+      throw error;
+    }
+  }
+
+  // === Add Tour ===
+  async function addTour(tour, zoneId, zoneName, preferences) {
+    try {
+      let itinerary = currentItinerary;
+      if (!itinerary || itinerary.zoneId !== zoneId) {
+        itinerary = await getOrCreateItinerary(zoneId, zoneName, preferences);
+      }
+      if (!itinerary) throw new Error("Failed to get itinerary");
+
+      const tourId = tour.tourId || tour.id;
+      const exists = itinerary.items?.some((item) => item.poiId === tourId);
+      if (exists) throw new Error("Tour already in itinerary");
+
+      // Send itemType and tourId for backend
+      const data = await withAuth(`/api/itinerary/${itinerary._id}/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          poi: {
+            ...tour,
+            itemType: 'tour',
+            tourId: tourId,
+          },
+        }),
+      });
+
+      if (data?.success) {
+        setCurrentItinerary(data.itinerary);
+        if (data.warnings?.length > 0) {
+          console.warn("⚠️ Warnings:", data.warnings);
+        }
+        return data.itinerary;
+      }
+      throw new Error(data?.message || "Failed to add tour");
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error adding tour:", error);
       }
       throw error;
     }
@@ -196,6 +250,7 @@ export default function ItineraryProvider({ children }) {
     isOpen,
     loading,
     addPOI,
+    addTour, // new
     removePOI,
     isPOIInCart,
     getCartCount,
@@ -204,7 +259,10 @@ export default function ItineraryProvider({ children }) {
     closeCart,
     loadCurrentItinerary,
     clearCart,
-    reorderPOIs, // ✅ Export
+    reorderPOIs,
+    // Helper: is custom tour
+    isCustomTour: currentItinerary?.isCustomTour,
+    tourGuideRequest: currentItinerary?.tourGuideRequest,
   };
 
   return (
