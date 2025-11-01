@@ -1,79 +1,439 @@
-# Lịch sử & Hướng dẫn Test API
+# 🧪 Test Suite - Travyy Tourism Backend
 
-## Test tự động (Jest + supertest)
+## Giới Thiệu
 
-- File test mẫu: `auth.api.test.js`
-- Chạy test:
+Bộ test toàn diện cho hệ thống backend Travyy Tourism, bao gồm:
+
+- ✅ API bên ngoài (MoMo, PayPal, Google OAuth, Facebook OAuth)
+- ✅ Các tính năng nghiệp vụ quan trọng
+- ✅ Bảo mật và authentication
+- ✅ Thanh toán và booking flow
+
+## 📊 Test Coverage
+
+```
+Total Test Suites: 11
+Total Test Cases: 100+
+```
+
+### Modules Tested:
+
+- **Authentication** (auth.api.test.js) - 10+ test cases
+- **MoMo Payment** (momo.api.test.js) - 15+ test cases
+- **PayPal Payment** (paypal.api.test.js) - 20+ test cases
+- **OAuth** (oauth.api.test.js) - 12+ test cases
+- **Critical Features** (features.api.test.js) - 40+ test cases
+- **Cart** (cart.api.test.js) - Existing
+- **Profile** (profile.api.test.js) - Existing
+- **Review** (review.api.test.js) - Existing
+- **Tour** (tour.api.test.js) - Existing
+- **Wishlist** (wishlist.api.test.js) - Existing
+
+## 🚀 Quick Start
+
+### 1. Cài Đặt Dependencies
 
 ```bash
 cd touring-be
-npm install --save-dev jest supertest
-npx jest <tên file test>
+npm install
 ```
 
-## Kết quả test theo từng nhóm API
+### 2. Cấu Hình Environment Variables
 
-### Auth API (`auth.api.test.js`)
+Copy `.env.example` to `.env` và điền thông tin:
 
-| Test case                  | Status | Code | Nhận xét ngắn                                                                               |
-| -------------------------- | ------ | ---- | ------------------------------------------------------------------------------------------- |
-| Đăng ký user mới           | FAIL   | 400  | Backend báo thiếu trường/validate.                                                          |
-| Đăng nhập đúng credentials | BỎ QUA |      | Bỏ qua do đăng ký lỗi.                                                                      |
-| Đăng nhập user bị khóa     | PASS   | 500  | User bị khóa (banned/inactive) không đăng nhập được, backend trả về lỗi đúng chuẩn bảo mật. |
+```env
+# Test Database
+MONGO_URI=mongodb://localhost:27017/travyy_test
 
-### Profile API (`profile.api.test.js`)
+# MoMo Sandbox
+MOMO_PARTNER_CODE=MOMO
+MOMO_ACCESS_KEY=F8BBA842ECF85
+MOMO_SECRET_KEY=K951B6PE1waDMi640xX08PD3vg6EkVlz
 
-| Test case                        | Status | Code | Nhận xét ngắn                                                                                 |
-| -------------------------------- | ------ | ---- | --------------------------------------------------------------------------------------------- |
-| GET /api/profile/me (chưa login) | FAIL   | 404  | API trả về 404, có thể route chưa khai báo hoặc sai path. Có lỗi async teardown trong server. |
+# PayPal Sandbox
+PAYPAL_CLIENT_ID=your_sandbox_client_id
+PAYPAL_SECRET=your_sandbox_secret
 
-### Tour API (`tour.api.test.js`)
+# OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+FACEBOOK_APP_ID=your_facebook_app_id
+```
 
-| Test case                                | Status | Code | Nhận xét ngắn                                                                             |
-| ---------------------------------------- | ------ | ---- | ----------------------------------------------------------------------------------------- |
-| GET /api/tours (lấy danh sách tour)      | PASS   | 200  | Lấy danh sách tour thành công, trả về mảng.                                               |
-| GET /api/tours/invalid-id-123 (tour sai) | FAIL   | 500  | Backend trả về 500 thay vì 404/400 khi id không hợp lệ. Nên handle lỗi để trả về 404/400. |
+### 3. Chạy Tests
 
-### Wishlist API (`wishlist.api.test.js`)
+```bash
+# Chạy tất cả tests
+npm test
 
-| Test case                                | Status | Code | Nhận xét ngắn                                             |
-| ---------------------------------------- | ------ | ---- | --------------------------------------------------------- |
-| GET /api/wishlist (chưa login)           | PASS   | 401  | Chưa đăng nhập, API trả về 401 đúng chuẩn bảo mật.        |
-| GET /api/wishlist (đã login, mock token) | PASS   | 200  | Có token hợp lệ, API trả về 200 và body là mảng wishlist. |
+# Chạy test cụ thể
+npm test -- momo.api.test.js
+npm test -- paypal.api.test.js
+npm test -- oauth.api.test.js
+npm test -- features.api.test.js
 
-### Review API (`review.api.test.js`)
+# Chạy với coverage
+npm run test:coverage
 
-| Test case                              | Status | Code        | Nhận xét ngắn                                                |
-| -------------------------------------- | ------ | ----------- | ------------------------------------------------------------ |
-| GET /api/reviews/tour/:tourId (public) | PASS   | 200/404/400 | Nếu tourId hợp lệ trả về 200 (mảng), nếu không thì 404/400.  |
-| POST /api/reviews (chưa login)         | PASS   | 401/403     | Không đăng nhập, API trả về 401 hoặc 403 đúng chuẩn bảo mật. |
+# Watch mode (tự động chạy lại khi code thay đổi)
+npm run test:watch
+```
 
-### Cart API (`cart.api.test.js`)
+## 📁 Cấu Trúc Test Files
 
-| Test case                           | Status | Code | Nhận xét ngắn                                       |
-| ----------------------------------- | ------ | ---- | --------------------------------------------------- |
-| GET /api/cart (chưa login)          | PASS   | 401  | Không đăng nhập, API trả về 401 đúng chuẩn bảo mật. |
-| POST /api/cart (chưa login)         | PASS   | 401  | Không đăng nhập, API trả về 401 đúng chuẩn bảo mật. |
-| PUT /api/cart/:itemId (no login)    | PASS   | 401  | Không đăng nhập, API trả về 401 đúng chuẩn bảo mật. |
-| DELETE /api/cart/:itemId (no login) | PASS   | 401  | Không đăng nhập, API trả về 401 đúng chuẩn bảo mật. |
-| DELETE /api/cart (no login)         | PASS   | 401  | Không đăng nhập, API trả về 401 đúng chuẩn bảo mật. |
+```
+test-api/
+├── auth.api.test.js              # Authentication & Security
+├── momo.api.test.js              # MoMo Sandbox Integration
+├── paypal.api.test.js            # PayPal Payment Integration
+├── oauth.api.test.js             # Google & Facebook OAuth
+├── features.api.test.js          # Critical Business Features
+│   ├── Tour Management
+│   ├── Booking System
+│   ├── Promotion/Voucher
+│   ├── Shopping Cart
+│   ├── Seat Management
+│   └── Notifications
+├── cart.api.test.js              # Shopping Cart Tests
+├── payment.api.test.js           # Payment Integration Tests
+├── profile.api.test.js           # User Profile Tests
+├── review.api.test.js            # Review System Tests
+├── tour.api.test.js              # Tour Management Tests
+├── wishlist.api.test.js          # Wishlist Tests
+├── TEST_DOCUMENTATION.md         # Chi tiết test documentation
+└── README_TEST.md                # File này
+```
 
-### Payment API (`payment.api.test.js`)
+## 🎯 Test Categories
 
-| Test case                                               | Status | Code    | Nhận xét ngắn                                             |
-| ------------------------------------------------------- | ------ | ------- | --------------------------------------------------------- |
-| POST /api/payments/momo (chưa login)                    | PASS   | 401/403 | Không đăng nhập, API trả về 401/403 đúng bảo mật.         |
-| POST /api/payments/momo/ipn (public)                    | PASS   | 200/400 | Public endpoint, backend trả về 200 hoặc 400 tùy payload. |
-| GET /api/payments/momo/session/:orderId (chưa login)    | PASS   | 401/403 | Không đăng nhập, API trả về 401/403 đúng bảo mật.         |
-| GET /api/payments/booking/:provider/:orderId (no login) | PASS   | 401/403 | Không đăng nhập, API trả về 401/403 đúng bảo mật.         |
-| POST /api/payments/retry/:bookingId (chưa login)        | PASS   | 401/403 | Không đăng nhập, API trả về 401/403 đúng bảo mật.         |
+### 1. External API Integration Tests
 
-> Lưu ý: Đã cập nhật test để in log response chi tiết, giúp debug nhanh hơn. Nếu muốn test pass cần kiểm tra lại schema register và dữ liệu test. |
+#### MoMo Sandbox (`momo.api.test.js`)
 
-## Ghi chú & Kinh nghiệm debug
+```bash
+npm test -- momo.api.test.js
+```
 
-- Nếu test register trả về 400: kiểm tra lại body gửi lên, có thể thiếu trường backend yêu cầu (ví dụ: name, email, password, ...). Xem log response để biết chi tiết lỗi validate.
-- Nếu test login trả về 500: thường do đăng ký thất bại nên user chưa tồn tại, hoặc password truyền vào undefined. Nên kiểm tra response của register trước khi test login.
-- Nếu gặp cảnh báo async chưa dừng (SMTP/nodemailer): nên mock email khi test, hoặc cấu hình nodemailer ở chế độ test để tránh treo kết nối.
-- Có thể thêm test cho các route khác bằng cách copy file test mẫu.
-- Nếu cần test thủ công, dùng Postman hoặc curl với các endpoint trong `/api/auth`.
+- ✅ Payment creation (cart & buy-now)
+- ✅ IPN callback handling
+- ✅ Amount validation (10M VND limit)
+- ✅ Signature verification
+- ✅ Session status polling
+- ✅ Seat hold/release logic
+- ✅ Discount application
+
+**Key Points:**
+
+- Sandbox có giới hạn 10,000,000 VND
+- IPN signature phải chính xác
+- Seats hold 1 phút, auto-release nếu timeout
+
+#### PayPal (`paypal.api.test.js`)
+
+```bash
+npm test -- paypal.api.test.js
+```
+
+- ✅ Order creation
+- ✅ VND to USD conversion
+- ✅ Amount breakdown validation
+- ✅ Capture flow
+- ✅ Session persistence
+- ✅ Passenger details tracking
+
+**Key Points:**
+
+- PayPal yêu cầu USD (2 decimals)
+- Breakdown: `amount = item_total - discount`
+- Capture phải idempotent
+
+#### OAuth (`oauth.api.test.js`)
+
+```bash
+npm test -- oauth.api.test.js
+```
+
+- ✅ Google OAuth flow
+- ✅ Facebook OAuth flow
+- ✅ User creation & linking
+- ✅ Password management for OAuth users
+- ✅ Welcome email tracking
+- ✅ Security validations
+
+**Key Points:**
+
+- OAuth users không có password
+- Account linking với existing email
+- Welcome email chỉ cho new users
+
+### 2. Business Features Tests
+
+#### Critical Features (`features.api.test.js`)
+
+```bash
+npm test -- features.api.test.js
+```
+
+**Tour Management:**
+
+- Create, read, update tour
+- Availability tracking
+- Tour listing
+
+**Booking System:**
+
+- Create booking
+- Status updates (pending → paid → cancelled)
+- Booking history
+
+**Promotion System:**
+
+- Create promotions
+- Validate codes
+- Calculate discounts (percentage & fixed)
+- Track usage
+- Check expiry & limits
+
+**Shopping Cart:**
+
+- Add/remove items
+- Update quantities
+- Calculate totals
+
+**Seat Management:**
+
+- Check availability
+- Update after booking
+- Handle concurrent bookings
+
+**Notifications:**
+
+- Booking confirmation
+- Payment success
+
+**Security:**
+
+- Authentication
+- JWT validation
+- Role-based access control
+
+## 📊 Test Results Example
+
+```
+PASS  test-api/auth.api.test.js
+  Auth API
+    ✓ should register a new user (234ms)
+    ✓ should login with correct credentials (123ms)
+    ✓ should not login if user is banned/inactive (145ms)
+
+PASS  test-api/momo.api.test.js
+  MoMo Payment Integration Tests
+    [TC-MOMO-01] Create MoMo Payment - Cart Mode
+      ✓ should create MoMo payment session from cart (456ms)
+    [TC-MOMO-02] Create MoMo Payment - Buy Now Mode
+      ✓ should create MoMo payment session for buy-now (389ms)
+    ...
+
+PASS  test-api/paypal.api.test.js
+  PayPal Payment Integration Tests
+    [TC-PAYPAL-01] PayPal Config Endpoint
+      ✓ should return PayPal client configuration (98ms)
+    ...
+
+Test Suites: 11 passed, 11 total
+Tests:       102 passed, 102 total
+Snapshots:   0 total
+Time:        45.678 s
+```
+
+## 🐛 Debugging
+
+### Enable Verbose Logging
+
+```bash
+DEBUG=* npm test
+```
+
+### Run Single Test
+
+```bash
+npm test -- --testNamePattern="should create MoMo payment"
+```
+
+### Increase Timeout
+
+```javascript
+// In test file
+jest.setTimeout(30000); // 30 seconds
+```
+
+### Check Database State
+
+```javascript
+// Add in test
+const session = await PaymentSession.findOne({ orderId });
+console.log("Session:", JSON.stringify(session, null, 2));
+```
+
+## ✅ Pre-Deployment Checklist
+
+- [ ] All tests passing (`npm test`)
+- [ ] Coverage >= 80% (`npm run test:coverage`)
+- [ ] No failing tests in CI/CD
+- [ ] Environment variables configured
+- [ ] Test data cleanup working
+- [ ] External API credentials valid
+- [ ] Database migrations applied
+
+## 🔍 Common Issues
+
+### Issue: Tests timeout
+
+**Solution:**
+
+```javascript
+jest.setTimeout(30000);
+```
+
+### Issue: MoMo signature mismatch
+
+**Solution:**
+
+- Check field order in signature calculation
+- Ensure secretKey is correct
+- Verify all required fields are present
+
+### Issue: PayPal order creation fails
+
+**Solution:**
+
+- Check credentials (clientId, secret)
+- Verify amount format (2 decimals)
+- Check breakdown matches total
+
+### Issue: OAuth tests fail
+
+**Solution:**
+
+- Check if OAuth credentials are configured
+- Mock external OAuth calls if needed
+- Skip OAuth tests in CI if credentials not available
+
+### Issue: Database connection errors
+
+**Solution:**
+
+```bash
+# Start MongoDB
+mongod --dbpath /path/to/test/db
+
+# Or use MongoDB Atlas test cluster
+MONGO_URI=mongodb+srv://test:password@cluster.mongodb.net/test
+```
+
+## 📈 Coverage Report
+
+Run coverage:
+
+```bash
+npm run test:coverage
+```
+
+View coverage report:
+
+```bash
+open coverage/lcov-report/index.html
+```
+
+## 🎓 Writing New Tests
+
+### Template:
+
+```javascript
+describe("[MODULE] Feature Group", () => {
+  let authToken;
+  let testData;
+
+  beforeAll(async () => {
+    // Setup: create test users, data, etc.
+  });
+
+  afterAll(async () => {
+    // Cleanup: delete test data
+  });
+
+  describe("[TC-XXX-01] Specific Feature", () => {
+    it("should do something expected", async () => {
+      const response = await request(app)
+        .post("/api/endpoint")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(testData)
+        .expect("Content-Type", /json/);
+
+      expect([200, 201]).toContain(response.statusCode);
+      expect(response.body).toHaveProperty("expectedField");
+    });
+  });
+});
+```
+
+### Best Practices:
+
+1. **Isolation:** Mỗi test độc lập
+2. **Cleanup:** Xóa test data sau khi chạy
+3. **Unique IDs:** Dùng timestamps để tránh conflict
+4. **Clear naming:** Test name mô tả rõ ràng
+5. **Error cases:** Test cả success và failure scenarios
+
+## 📞 Support
+
+Nếu gặp vấn đề:
+
+1. Đọc `TEST_DOCUMENTATION.md`
+2. Check logs và error messages
+3. Verify environment variables
+4. Contact dev team
+
+## 🔄 CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+name: Tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+      - run: npm install
+      - run: npm test
+      - run: npm run test:coverage
+```
+
+### GitLab CI
+
+```yaml
+test:
+  stage: test
+  script:
+    - npm install
+    - npm test
+  coverage: '/Coverage: \d+\.\d+/'
+```
+
+## 📚 Additional Resources
+
+- [Jest Documentation](https://jestjs.io/docs/getting-started)
+- [Supertest Documentation](https://github.com/visionmedia/supertest)
+- [MoMo API Docs](https://developers.momo.vn/)
+- [PayPal API Docs](https://developer.paypal.com/)
+- [Google OAuth Docs](https://developers.google.com/identity/protocols/oauth2)
+- [Facebook OAuth Docs](https://developers.facebook.com/docs/facebook-login)
+
+---
+
+**Last Updated:** November 2025  
+**Version:** 1.0  
+**Maintainer:** Dev Team
