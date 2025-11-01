@@ -10,7 +10,7 @@ const {
 } = require('../../utils/paymentHelpers');
 
 const Booking = require('../../models/Bookings');
-const Tour = require('../../models/agency/Tours');
+const Tour = require('../../models/Tours');
 const { Cart, CartItem } = require('../../models/Carts');
 const User = require('../../models/Users');
 
@@ -23,7 +23,7 @@ jest.mock('../../models/Bookings', () => ({
   findByIdAndUpdate: jest.fn().mockResolvedValue({ _id: 'booking123', userId: 'user123', status: 'paid' })
 }));
 
-jest.mock('../../models/agency/Tours', () => ({
+jest.mock('../../models/Tours', () => ({
   findById: jest.fn().mockResolvedValue({ _id: 'tour123', title: 'Tour 123', imageItems: [{ imageUrl: 'test.jpg' }], departures: [{ date: '2024-01-15', priceAdult: 100, priceChild: 50 }] })
 }));
 

@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
+    "test:unit": "jest test/unit --coverage",
+    "test:integration": "jest test/integration --coverage",
+    "test:no-coverage": "jest --coverage=false"
   },
   "keywords": [],
   "author": "",

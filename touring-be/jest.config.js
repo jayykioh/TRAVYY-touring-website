@@ -8,18 +8,32 @@ module.exports = {
     '**/test/ui/**/*.test.js',
     '**/test/ai-prompt/**/*.test.js'
   ],
+  collectCoverage: true,  // Enable coverage by default
   collectCoverageFrom: [
     'controller/**/*.js',
     'models/**/*.js',
     'utils/**/*.js',
     'routes/**/*.js',
-    '!node_modules/**'
+    'services/**/*.js',
+    'middlewares/**/*.js',
+    '!node_modules/**',
+    '!coverage/**',
+    '!test/**'
   ],
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html'],
+  coverageReporters: ['text', 'text-summary', 'lcov', 'html'],
+  coverageThreshold: {
+    global: {
+      branches: 30,
+      functions: 40,
+      lines: 45,
+      statements: 45
+    }
+  },
   testPathIgnorePatterns: [
     '<rootDir>/node_modules/',
     '<rootDir>/test/ui/',  // Skip UI tests if not implemented
     '<rootDir>/test/ai-prompt/'  // Skip AI prompt tests if not implemented
-  ]
+  ],
+  verbose: true
 };
