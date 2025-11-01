@@ -111,18 +111,15 @@ async function getMatchingZones(prefs, options = {}) {
   console.log(`📊 [Matcher] Re-ranking ${candidates.length} candidates...`);
   
   const scored = candidates.map(zone => {
-    const ruleResult = scoreZone(
-      zone, 
-      prefs.vibes || [], 
-      prefs._rawText || '', 
-      prefs.avoid || []
-    );
-    
+    // Pass full prefs object so scorer can use vibes, avoid, keywords, duration, rawText, etc.
+    const ruleResult = scoreZone(zone, prefs || {});
+
     return {
       ...zone,
       embedScore: zone.embedScore,
       ruleScore: ruleResult.score,
       ruleReasons: ruleResult.reasons,
+      ruleDetails: ruleResult.details || null,
       finalScore: (zone.embedScore || 0) * 0.6 + ruleResult.score * 0.4
     };
   });

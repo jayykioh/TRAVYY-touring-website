@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 import React, { useEffect, useMemo, useState, memo } from "react";
 import { MFMap, MFMarker, MFPolygon } from "react-map4d-map";
