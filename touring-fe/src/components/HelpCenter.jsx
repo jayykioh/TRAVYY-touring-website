@@ -1,58 +1,50 @@
-// components/HelpCenter.jsx - Main Help Center Component
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, ChevronRight, Eye, ThumbsUp } from 'lucide-react';
-import { toast } from 'sonner';
+// ✅ src/components/HelpCenter.jsx
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Search, ChevronRight, Eye, ThumbsUp } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+// ✅ Dữ liệu mock (offline, không phụ thuộc backend)
+import {
+  helpCategories,
+  helpFeaturedArticles,
+} from "@/mockdata/helpData";
 
 export default function HelpCenter() {
   const [categories, setCategories] = useState([]);
   const [featuredArticles, setFeaturedArticles] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // ✅ Load mockdata thay vì gọi API
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
     try {
       setLoading(true);
-      const [categoriesData, featuredData] = await Promise.all([
-        fetch(`${API_URL}/help/categories`).then(r => r.json()),
-        fetch(`${API_URL}/help/featured`).then(r => r.json())
-      ]);
-      
-      setCategories(categoriesData.data || []);
-      setFeaturedArticles(featuredData.data || []);
+      setCategories(helpCategories);
+      setFeaturedArticles(helpFeaturedArticles);
     } catch (error) {
-      console.error('Error loading help center:', error);
-      toast.error('Không thể tải dữ liệu trợ giúp');
+      console.error("Error loading help center:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleSearch = async (query) => {
+  // ✅ Tìm kiếm trực tiếp trong mockdata
+  const handleSearch = (query) => {
     setSearchQuery(query);
-    
-    if (query.trim().length < 2) {
+    if (!query.trim()) {
       setSearchResults([]);
       return;
     }
 
-    try {
-      setSearching(true);
-      const result = await fetch(`${API_URL}/help/search?q=${encodeURIComponent(query)}`).then(r => r.json());
-      setSearchResults(result.data || []);
-    } catch (error) {
-      console.error('Search error:', error);
-    } finally {
-      setSearching(false);
-    }
+    const lower = query.toLowerCase();
+    const allArticles = helpFeaturedArticles.flatMap((a) => a);
+    const results = allArticles.filter(
+      (a) =>
+        a.title.toLowerCase().includes(lower) ||
+        a.excerpt.toLowerCase().includes(lower)
+    );
+    setSearchResults(results);
   };
 
   if (loading) {
@@ -73,16 +65,14 @@ export default function HelpCenter() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Header */}
+      {/* ===== HEADER ===== */}
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          🆘 Trung tâm Trợ giúp
-        </h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">🆘 Trung tâm Trợ giúp</h1>
         <p className="text-lg text-gray-600 mb-8">
           Tìm câu trả lời cho các câu hỏi thường gặp
         </p>
 
-        {/* Search Bar */}
+        {/* 🔍 Thanh tìm kiếm */}
         <div className="relative max-w-2xl mx-auto">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -95,21 +85,21 @@ export default function HelpCenter() {
             />
           </div>
 
-          {/* Search Results Dropdown */}
+          {/* Kết quả tìm kiếm */}
           {searchQuery && searchResults.length > 0 && (
             <div className="absolute z-10 w-full mt-2 bg-white rounded-xl shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
               {searchResults.map((article) => (
                 <Link
                   key={article._id}
-                  to={`/profile/help/article/${article.slug}`}
+                  to={`/help/article/${article.slug}`}
                   className="block px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0"
                   onClick={() => {
-                    setSearchQuery('');
+                    setSearchQuery("");
                     setSearchResults([]);
                   }}
                 >
                   <div className="flex items-start gap-3">
-                    <span className="text-2xl">{article.icon || '📄'}</span>
+                    <span className="text-2xl">{article.icon || "📄"}</span>
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900">{article.title}</h4>
                       <p className="text-sm text-gray-500 line-clamp-1">{article.excerpt}</p>
@@ -120,7 +110,7 @@ export default function HelpCenter() {
             </div>
           )}
 
-          {searchQuery && !searching && searchResults.length === 0 && (
+          {searchQuery && searchResults.length === 0 && (
             <div className="absolute z-10 w-full mt-2 bg-white rounded-xl shadow-lg border border-gray-200 p-4 text-center text-gray-500">
               Không tìm thấy kết quả cho "{searchQuery}"
             </div>
@@ -128,17 +118,15 @@ export default function HelpCenter() {
         </div>
       </div>
 
-      {/* Categories Grid */}
+      {/* ===== DANH MỤC ===== */}
       <div className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
-          📚 Chọn chủ đề bạn quan tâm
-        </h2>
-        
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">📚 Chọn chủ đề bạn quan tâm</h2>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {categories.map((category) => (
             <Link
               key={category.slug}
-              to={`/profile/help/category/${category.slug}`}
+              to={`/help/category/${category.slug}`}
               className="group block p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all"
             >
               <div className="flex items-start gap-4">
@@ -147,9 +135,7 @@ export default function HelpCenter() {
                   <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
                     {category.name}
                   </h3>
-                  <p className="text-sm text-gray-500 mb-3">
-                    {category.description}
-                  </p>
+                  <p className="text-sm text-gray-500 mb-3">{category.description}</p>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-400">
                       {category.articleCount} bài viết
@@ -163,35 +149,30 @@ export default function HelpCenter() {
         </div>
       </div>
 
-      {/* Featured Articles */}
+      {/* ===== BÀI VIẾT NỔI BẬT ===== */}
       {featuredArticles.length > 0 && (
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            ⭐ Câu hỏi thường gặp
-          </h2>
-          
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">⭐ Câu hỏi thường gặp</h2>
           <div className="space-y-4">
             {featuredArticles.map((article) => (
               <Link
                 key={article._id}
-                to={`/profile/help/article/${article.slug}`}
+                to={`/help/article/${article.slug}`}
                 className="block p-6 bg-white rounded-xl border border-gray-200 hover:border-blue-500 hover:shadow-md transition-all"
               >
                 <div className="flex items-start gap-4">
-                  <span className="text-3xl">{article.icon || '📄'}</span>
+                  <span className="text-3xl">{article.icon || "📄"}</span>
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 mb-2 hover:text-blue-600">
                       {article.title}
                     </h3>
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                      {article.excerpt}
-                    </p>
+                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">{article.excerpt}</p>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
                       <div className="flex items-center gap-1">
                         <Eye className="w-4 h-4" />
                         <span>{article.views?.toLocaleString() || 0} lượt xem</span>
                       </div>
-                      {article.helpfulnessRate !== null && (
+                      {article.helpfulnessRate && (
                         <div className="flex items-center gap-1">
                           <ThumbsUp className="w-4 h-4" />
                           <span>{article.helpfulnessRate}% hữu ích</span>
@@ -207,14 +188,10 @@ export default function HelpCenter() {
         </div>
       )}
 
-      {/* Contact Support */}
+      {/* ===== LIÊN HỆ ===== */}
       <div className="mt-12 p-6 bg-blue-50 rounded-xl border border-blue-200">
-        <h3 className="font-semibold text-gray-900 mb-2">
-          ❓ Không tìm thấy câu trả lời?
-        </h3>
-        <p className="text-gray-600 mb-4">
-          Đội ngũ hỗ trợ của chúng tôi sẵn sàng giúp bạn!
-        </p>
+        <h3 className="font-semibold text-gray-900 mb-2">❓ Không tìm thấy câu trả lời?</h3>
+        <p className="text-gray-600 mb-4">Đội ngũ hỗ trợ của chúng tôi sẵn sàng giúp bạn!</p>
         <div className="flex flex-wrap gap-4">
           <a
             href="mailto:support@travyy.com"
@@ -226,7 +203,7 @@ export default function HelpCenter() {
             href="tel:1900-xxx-xxx"
             className="px-4 py-2 bg-white text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
           >
-            📞 Hotline: 1900-xxx-xxx
+            📞 Hotline: 1900-851-775
           </a>
         </div>
       </div>

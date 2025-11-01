@@ -1,10 +1,11 @@
 // components/HelpCategoryView.jsx - Category Articles List
-import { useState, useEffect } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ChevronRight, Home, Eye, ThumbsUp, Search } from 'lucide-react';
-import { toast } from 'sonner';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+import { useState, useEffect } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
+import { ChevronRight, Home, Eye, ThumbsUp, Search } from "lucide-react";
+import {
+  helpArticlesByCategory,
+  helpCategories
+} from "../mockdata/helpData";
 
 export default function HelpCategoryView() {
   const { category } = useParams();
@@ -12,32 +13,27 @@ export default function HelpCategoryView() {
   const [categoryData, setCategoryData] = useState(null);
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    loadCategory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const cat = helpCategories.find((c) => c.slug === category);
+    const data = helpArticlesByCategory[category] || [];
+
+    if (!cat) {
+      navigate("/profile/help");
+      return;
+    }
+
+    setCategoryData(cat);
+    setArticles(data);
+    setLoading(false);
   }, [category]);
 
-  const loadCategory = async () => {
-    try {
-      setLoading(true);
-      const result = await fetch(`${API_URL}/help/category/${category}`).then(r => r.json());
-      setCategoryData(result.category);
-      setArticles(result.data || []);
-    } catch (error) {
-      console.error('Error loading category:', error);
-      toast.error('Không thể tải danh mục');
-      navigate('/profile/help');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const filteredArticles = searchQuery
-    ? articles.filter(article =>
-        article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.excerpt.toLowerCase().includes(searchQuery.toLowerCase())
+    ? articles.filter(
+        (article) =>
+          article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          article.excerpt.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : articles;
 
@@ -59,7 +55,10 @@ export default function HelpCategoryView() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-        <Link to="/profile" className="hover:text-blue-600 flex items-center gap-1">
+        <Link
+          to="/profile"
+          className="hover:text-blue-600 flex items-center gap-1"
+        >
           <Home className="w-4 h-4" />
           Profile
         </Link>
@@ -101,10 +100,12 @@ export default function HelpCategoryView() {
         <div className="text-center py-12">
           <div className="text-6xl mb-4">📭</div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            {searchQuery ? 'Không tìm thấy kết quả' : 'Chưa có bài viết'}
+            {searchQuery ? "Không tìm thấy kết quả" : "Chưa có bài viết"}
           </h3>
           <p className="text-gray-600">
-            {searchQuery ? `Không có bài viết nào phù hợp với "${searchQuery}"` : 'Danh mục này chưa có bài viết nào.'}
+            {searchQuery
+              ? `Không có bài viết nào phù hợp với "${searchQuery}"`
+              : "Danh mục này chưa có bài viết nào."}
           </p>
         </div>
       ) : (
@@ -116,7 +117,9 @@ export default function HelpCategoryView() {
               className="block p-6 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all"
             >
               <div className="flex items-start gap-4">
-                <span className="text-3xl flex-shrink-0">{article.icon || '📄'}</span>
+                <span className="text-3xl flex-shrink-0">
+                  {article.icon || "📄"}
+                </span>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-600 transition-colors">
                     {article.title}

@@ -13,6 +13,7 @@ const cookieParser = require("cookie-parser");
 const tourRoutes = require("./routes/tour.routes");
 const profileRoutes = require("./routes/profile.routes");
 const authRoutes = require("./routes/auth.routes");
+
 // Admin Routes (modular structure)
 const adminRoutes = require("./routes/admin");
 const blogRoutes = require("./routes/blogs");
@@ -23,6 +24,8 @@ require("./middlewares/passport");
 const wishlistRoutes = require("./routes/wishlist.routes");
 const locationRoutes = require("./routes/location.routes");
 const bookingRoutes = require("./routes/bookingRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
+const promotionRoutes = require("./routes/promotion.routes");
 const app = express();
 const isProd = process.env.NODE_ENV === "production";
 const MONGO_URI =
@@ -90,7 +93,8 @@ const securityRoutes = require("./routes/security.routes");
 app.use("/api/security", securityRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api/notify", notifyRoutes);
-
+app.use("/api/promotions", promotionRoutes);
+app.use("/api/reviews", reviewRoutes);
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 app.use("/api/paypal", paypalRoutes);
