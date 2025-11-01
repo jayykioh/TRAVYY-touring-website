@@ -10,7 +10,8 @@
     "test:watch": "jest --watch",
     "test:unit": "jest test/unit --coverage",
     "test:integration": "jest test/integration --coverage",
-    "test:no-coverage": "jest --coverage=false"
+    "test:no-coverage": "jest --coverage=false",
+    "coverage:view": "start coverage/custom-index.html"
   },
   "keywords": [],
   "author": "",
