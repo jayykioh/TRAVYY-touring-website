@@ -34,8 +34,6 @@ const MONGO_URI =
   "mongodb://127.0.0.1:27017/travelApp";
 const notifyRoutes = require("./routes/notifyRoutes");
 const paymentRoutes = require("./routes/payment.routes");
-const reviewRoutes = require("./routes/reviewRoutes");
-const promotionRoutes = require("./routes/promotion.routes");
 // Quick visibility of PayPal env presence (not actual secrets)
 console.log("[Boot] PayPal env present:", {
   hasClient: !!process.env.PAYPAL_CLIENT_ID,
