@@ -1,6 +1,7 @@
 const { parsePrefsSmart } = require('./libs/llm');
 const Zone = require('../../models/Zones');
 const { matchZones } = require('../zones/matcher');
+
 async function parsePreferences(text) {
   try {
     // Parse with AI or heuristic
@@ -10,13 +11,16 @@ async function parsePreferences(text) {
     const normalized = {
       vibes: parsed.interests || [],
       avoid: parsed.avoid || [],
+      keywords: parsed.keywords || [], // include LLM/heuristic keywords when available
       pace: parsed.pace,
       budget: parsed.budget,
       durationDays: parsed.durationDays,
       _rawText: text // ✅ Pass raw text for semantic matching
     };
     
-    console.log(`   ✅ Parsed: ${normalized.vibes.length} vibes, ${normalized.avoid.length} avoid`);
+    console.log(`   ✅ Parsed: ${normalized.vibes.length} vibes, ${normalized.avoid.length} avoid, ${normalized.keywords.length} keywords`, {
+      sampleKeywords: normalized.keywords?.slice(0, 6)
+    });
     return normalized;
     
   } catch (error) {

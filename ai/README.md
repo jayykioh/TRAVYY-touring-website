@@ -60,6 +60,7 @@ A high-performance microservice for Vietnamese semantic search using **AITeamVN/
 ## Quick Start (Local)
 ```bash
 python -m venv .venv && source .venv/bin/activate
+( .venv\Scripts\activate )
 pip install -r requirements.txt
 cp .env.example .env
 uvicorn app:app --reload --port 8088

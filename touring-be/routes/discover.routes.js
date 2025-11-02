@@ -80,7 +80,9 @@ router.post("/parse", async (req, res) => {
         name: z.name,
         finalScore: z.finalScore,
         embedScore: z.embedScore,
-        ruleScore: z.ruleScore
+        ruleScore: z.ruleScore,
+        ruleReasons: z.ruleReasons,
+        ruleDetails: z.ruleDetails || z.ruleReasons?.details || null
       }))
     });
 

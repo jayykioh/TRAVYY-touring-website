@@ -200,6 +200,7 @@ function sanitizePrefs(parsed) {
   const out = {
     interests: Array.isArray(parsed.interests) ? parsed.interests : [],
     avoid: Array.isArray(parsed.avoid) ? parsed.avoid : [],
+    keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
     pace: parsed.pace ?? null,
     budget: parsed.budget ?? null,
     durationDays: parsed.durationDays ?? null
@@ -212,6 +213,7 @@ function sanitizePrefs(parsed) {
   // limit noise
   if (out.interests.length > 5) out.interests = out.interests.slice(0, 5);
   if (out.avoid.length > 5) out.avoid = out.avoid.slice(0, 5);
+  if (out.keywords.length > 10) out.keywords = out.keywords.slice(0, 10);
 
   if (out.pace && !["light", "medium", "intense"].includes(out.pace)) out.pace = null;
   if (out.budget && !["budget", "mid", "luxury"].includes(out.budget)) out.budget = null;
@@ -230,6 +232,7 @@ function mergePrefs(base, extra) {
   return sanitizePrefs({
     interests: uniq([...(base.interests || []), ...(extra.interests || [])]),
     avoid: uniq([...(base.avoid || []), ...(extra.avoid || [])]),
+    keywords: uniq([...(base.keywords || []), ...(extra.keywords || [])]),
     pace: base.pace || extra.pace || null,
     budget: base.budget || extra.budget || null,
     durationDays: base.durationDays || extra.durationDays || null
@@ -246,8 +249,9 @@ async function parsePrefsSmart(text) {
   // 1) Heuristics (song song VN/EN patterns)
   const h1 = heuristicExtractVibes(text);        // {vibes, avoid}
   const h2 = enrichFromVietnamese(text);         // {interests, avoid, pace, budget, durationDays}
+  // include heuristic keywords if available
   const seed = mergePrefs(
-    { interests: h1.vibes, avoid: h1.avoid, pace: null, budget: null, durationDays: null },
+    { interests: h1.vibes, avoid: h1.avoid, keywords: h1.keywords || [], pace: null, budget: null, durationDays: null },
     h2
   );
 

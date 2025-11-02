@@ -9,6 +9,6 @@ router.patch("/info", authJwt, updateProfile);
 
 router.post("/upload-avatar", authJwt, ...uploadAvatar);
 router.delete("/avatar", authJwt, deleteAvatar);
-router.get("/avatar/:userId", getAvatar); // ✅ lấy avatar theo userId
+router.get("/avatar/:userId", getAvatar); 
 
 module.exports = router;

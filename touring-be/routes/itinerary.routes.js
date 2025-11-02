@@ -492,8 +492,6 @@ router.get('/:id/export.gpx', authJwt, async (req, res) => {
   }
 });
 
-// Guide API: Get all pending tour guide requests
-// Guide API: Only allow TourGuide role, only return custom tours
 router.get('/guide/requests', authJwt, async (req, res) => {
   try {
     if (!req.user || req.user.role !== 'TourGuide') {
@@ -512,14 +510,6 @@ router.get('/guide/requests', authJwt, async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-/**
- * POST /api/itinerary/:id/request-tour-guide
- * Send a request to a tour guide for a custom tour itinerary
- * Only allowed if itinerary has at least one tour (isCustomTour)
- */
-
-
-
 router.post('/:id/request-tour-guide', authJwt, async (req, res) => {
   try {
     const userId = getUserId(req.user);
@@ -566,6 +556,4 @@ router.post('/:id/request-tour-guide', authJwt, async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
-
 module.exports = router;
