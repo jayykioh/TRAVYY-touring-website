@@ -15,7 +15,9 @@ export default function UserMenu() {
 
     // Nếu user đã có avatar trong MongoDB
     if (user.avatar) {
-      return `/api/profile/avatar/${user._id}`;
+      // ✅ Thêm timestamp để force reload khi avatar thay đổi
+      const timestamp = user.updatedAt || Date.now();
+      return `/api/profile/avatar/${user._id}?v=${timestamp}`;
     }
 
     // Nếu chưa có => sinh avatar Discord-style (chữ cái đầu + màu ngẫu nhiên)
@@ -77,20 +79,7 @@ export default function UserMenu() {
           >
             My Cart
           </Link>
-          <Link
-            to="/settings"
-            className="block px-4 py-2 text-sm hover:bg-gray-100"
-            onClick={() => setOpen(false)}
-          >
-            Settings
-          </Link>
-          <Link
-            to="/help"
-            className="block px-4 py-2 text-sm hover:bg-gray-100"
-            onClick={() => setOpen(false)}
-          >
-            Help
-          </Link>
+        
           <button
             onClick={() => {
               logout();

@@ -1,15 +1,20 @@
 // routes/auth.routes.js
 const router = require("express").Router();
 const passport = require("passport");
-const { signAccess, signRefresh, verifyRefresh, newId } = require("../utils/jwt");
+const {
+  signAccess,
+  signRefresh,
+  verifyRefresh,
+  newId,
+} = require("../utils/jwt");
 const authJwt = require("../middlewares/authJwt");
 const User = require("../models/Users");
-const { 
-  register, 
-  login, 
-  changePassword, 
-  forgotPassword, 
-  resetPassword 
+const {
+  register,
+  login,
+  changePassword,
+  forgotPassword,
+  resetPassword,
 } = require("../controller/auth.controller");
 
 const isProd = process.env.NODE_ENV === "production";
@@ -32,12 +37,18 @@ router.post("/reset-password", resetPassword);
    ========================= */
 router.get(
   "/google",
-  passport.authenticate("google", { scope: ["profile", "email"], session: false })
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    session: false,
+  })
 );
 
 router.get(
   "/google/callback",
-  passport.authenticate("google", { session: false, failureRedirect: "http://localhost:5173/login" }),
+  passport.authenticate("google", {
+    session: false,
+    failureRedirect: "http://localhost:5173/login",
+  }),
   async (req, res) => {
     try {
       // user đã được tạo / upsert trong passport strategy
@@ -50,7 +61,7 @@ router.get(
       // Set refresh cookie theo môi trường
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
-        secure: isProd,                    // dev: false, prod: true (HTTPS)
+        secure: isProd, // dev: false, prod: true (HTTPS)
         sameSite: isProd ? "none" : "lax", // dev: 'lax'
         path: "/api/auth",
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 ngày
@@ -75,7 +86,10 @@ router.get(
 
 router.get(
   "/facebook/callback",
-  passport.authenticate("facebook", { session: false, failureRedirect: "http://localhost:5173/login" }),
+  passport.authenticate("facebook", {
+    session: false,
+    failureRedirect: "http://localhost:5173/login",
+  }),
   async (req, res) => {
     try {
       const user = req.user;
@@ -110,11 +124,19 @@ router.post("/refresh", async (req, res) => {
     const p = verifyRefresh(t); // { sub: userId, jti, iat, exp, ... }
 
     // (khuyến nghị) Kiểm tra jti trong DB/Redis nếu có rotate/revoke
-    const user = await User.findById(p.sub).select("role");
+    const user = await User.findById(p.sub).select(
+      "role accountStatus statusReason"
+    );
     if (!user) return res.status(401).json({ message: "Invalid refresh" });
 
     const access = signAccess({ id: p.sub, role: user.role || "Traveler" });
-    return res.json({ accessToken: access });
+
+    // Return account status so clients (OAuth callback) can detect banned accounts immediately
+    return res.json({
+      accessToken: access,
+      accountStatus: user.accountStatus,
+      statusReason: user.statusReason,
+    });
   } catch {
     return res.status(401).json({ message: "Invalid refresh" });
   }
@@ -161,16 +183,19 @@ router.post("/set-role", authJwt, async (req, res) => {
 
 router.post("/logout", async (req, res) => {
   try {
+    // 🧹 Xoá cookie refresh_token triệt để
     res.clearCookie("refresh_token", {
       httpOnly: true,
-      secure: isProd,                    // prod: true (HTTPS)
-      sameSite: isProd ? "none" : "lax", // trùng với lúc set
-      path: "/api/auth",
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
+      path: "/", // 👈 QUAN TRỌNG: phải để "/" để xoá toàn bộ scope cookie
     });
+
+    // 🧠 Có thể trả thêm header cho FE confirm
     return res.status(200).json({ ok: true, message: "Logged out" });
   } catch (e) {
     console.error("logout error:", e);
-    return res.status(200).json({ ok: true }); 
+    return res.status(200).json({ ok: false, message: "Logout error" });
   }
 });
 

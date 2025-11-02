@@ -1,8 +1,8 @@
 const express = require("express");
-const Tour = require("../models/Tours");
+const Tour = require("../models/agency/Tours");
 const router = express.Router();
-const Location = require("../models/Location");
-require("../models/TravelAgency");
+const Location = require("../models/agency/Location");
+require("../models/agency/TravelAgency");
 
 // ==============================
 // [GET] /api/tours
@@ -87,7 +87,7 @@ router.get("/:id", async (req, res) => {
   try {
     const tour = await Tour.findById(req.params.id)
       .populate("locations", "name country coordinates")
-      .populate("agencyId", "name contact");
+      .populate("agencyId", "name image contact phone address");
     if (!tour) return res.status(404).json({ message: "Tour not found" });
     res.json(tour);
   } catch (err) {

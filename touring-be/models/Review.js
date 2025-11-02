@@ -112,8 +112,9 @@ reviewSchema.index({ userId: 1, createdAt: -1 });
 reviewSchema.index({ tourId: 1, status: 1, createdAt: -1 });
 reviewSchema.index({ rating: 1, createdAt: -1 });
 
-// Unique constraint: 1 user chỉ có thể review 1 booking 1 lần
-reviewSchema.index({ userId: 1, bookingId: 1 }, { unique: true });
+// ✅ Unique constraint: 1 user chỉ có thể review 1 tour trong 1 booking 1 lần
+// Cho phép đánh giá nhiều tours khác nhau trong cùng 1 booking
+reviewSchema.index({ userId: 1, tourId: 1, bookingId: 1 }, { unique: true });
 
 // Virtual fields
 reviewSchema.virtual('likesCount').get(function() {

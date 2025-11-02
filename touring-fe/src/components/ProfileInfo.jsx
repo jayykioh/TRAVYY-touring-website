@@ -47,7 +47,7 @@ function usePrevious(value) {
 
 /* ========== Component ========== */
 export default function ProfileInfo() {
-  const { user, setUser, withAuth } = useAuth();
+  const { user, setUser, withAuth, accessToken } = useAuth();
 
   const phoneInputRef = useRef(null);
   const usernameInputRef = useRef(null);
@@ -69,6 +69,7 @@ export default function ProfileInfo() {
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState(null);
+  const [avatarVersion, setAvatarVersion] = useState(Date.now()); // ✅ Track avatar changes
 
   // Baseline from user (for dirty check)
   const baseline = useMemo(
@@ -175,7 +176,9 @@ export default function ProfileInfo() {
         });
 
         const freshUser = await withAuth("/api/profile/info");
-        setUser(freshUser);
+        // ✅ Giữ lại token khi cập nhật user (lấy từ accessToken hoặc user.token)
+        const token = accessToken || user?.token;
+        setUser({ ...freshUser, token });
         setPhoneError("");
         setUsernameError("");
         toast.success("Profile saved successfully!");
@@ -200,7 +203,7 @@ export default function ProfileInfo() {
         setSaving(false);
       }
     },
-    [formData, phoneError, usernameError, withAuth, setUser]
+    [formData, phoneError, usernameError, withAuth, setUser, accessToken, user?.token]
   );
 
   // Handle avatar file selection
@@ -245,12 +248,18 @@ export default function ProfileInfo() {
           // Don't set Content-Type - browser will set it with boundary for FormData
         });
         
+        // ✅ Update avatar version TRƯỚC để force reload ngay
+        setAvatarVersion(Date.now());
+        
+        // ✅ Clear preview trước khi fetch user mới
+        setAvatarPreview(null);
+        
         // ✅ Cập nhật user với avatar mới ngay lập tức
         const freshUser = await withAuth("/api/profile/info");
-        setUser(freshUser);
-        
-        // ✅ Clear preview để hiển thị avatar mới từ server
-        setAvatarPreview(null);
+        // ✅ Giữ lại token khi cập nhật user (lấy từ accessToken hoặc user.token)
+        const token = accessToken || user?.token;
+        // ✅ Force updatedAt để các component khác reload avatar
+        setUser({ ...freshUser, token, updatedAt: new Date().toISOString() });
         
         toast.success("Avatar đã được cập nhật!");
       } catch (err) {
@@ -262,7 +271,7 @@ export default function ProfileInfo() {
         e.target.value = ""; // Reset input
       }
     },
-    [withAuth, setUser]
+    [withAuth, setUser, accessToken, user?.token]
   );
 
   // Handle remove avatar
@@ -276,12 +285,18 @@ export default function ProfileInfo() {
         method: "DELETE",
       });
 
-      // ✅ Cập nhật user ngay lập tức
-      const freshUser = await withAuth("/api/profile/info");
-      setUser(freshUser);
+      // ✅ Update avatar version TRƯỚC để force reload
+      setAvatarVersion(Date.now());
       
       // ✅ Clear preview
       setAvatarPreview(null);
+      
+      // ✅ Cập nhật user ngay lập tức
+      const freshUser = await withAuth("/api/profile/info");
+      // ✅ Giữ lại token khi cập nhật user (lấy từ accessToken hoặc user.token)
+      const token = accessToken || user?.token;
+      // ✅ Force updatedAt để các component khác reload avatar
+      setUser({ ...freshUser, token, updatedAt: new Date().toISOString() });
       
       toast.success("Avatar đã được xóa");
     } catch (err) {
@@ -290,15 +305,14 @@ export default function ProfileInfo() {
     } finally {
       setUploadingAvatar(false);
     }
-  }, [user?.avatar, withAuth, setUser]);
+  }, [user?.avatar, withAuth, setUser, accessToken, user?.token]);
 
   // 🔥 Tính avatar URL - phải đặt trước early return
   const avatarUrl = useMemo(() => {
     if (!user) return "https://i.pravatar.cc/150";
     if (user.avatar) {
-      // ✅ Dùng updatedAt hoặc _id để tạo cache key stable
-      const cacheKey = user.updatedAt || user._id;
-      return `/api/profile/avatar/${user._id}?v=${cacheKey}`;
+      // ✅ Dùng avatarVersion để force reload khi avatar thay đổi
+      return `/api/profile/avatar/${user._id}?v=${avatarVersion}`;
     }
     
     // Avatar Discord-style: chữ cái đầu + màu ngẫu nhiên
@@ -306,7 +320,7 @@ export default function ProfileInfo() {
     const colors = ["5865F2", "43B581", "FAA61A", "F04747", "7289DA"];
     const color = colors[initial.charCodeAt(0) % colors.length];
     return `https://ui-avatars.com/api/?name=${initial}&background=${color}&color=fff&bold=true`;
-  }, [user]);
+  }, [user, avatarVersion]);
 
   // ✅ Ưu tiên: preview (khi đang chọn ảnh) → avatar từ DB → avatar mặc định
   const currentAvatar = avatarPreview || avatarUrl;
@@ -328,6 +342,7 @@ export default function ProfileInfo() {
           <div className="flex flex-col items-center gap-4 p-5 border rounded-xl bg-gray-50">
             <div className="relative">
               <img
+                key={avatarVersion} 
                 src={currentAvatar}
                 alt="Avatar"
                 className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"

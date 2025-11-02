@@ -1,7 +1,7 @@
 // controller/reviewController.js
 const Review = require("../models/Review");
 const Booking = require("../models/Bookings");
-const Tour = require("../models/Tours");
+const Tour = require("../models/agency/Tours");
 const User = require("../models/Users");
 const mongoose = require("mongoose");
 
@@ -18,52 +18,58 @@ const createReview = async (req, res) => {
       detailedRatings,
       images,
       isAnonymous,
-      tourDate
+      tourDate,
     } = req.body;
 
     // Validate required fields
     if (!tourId || !bookingId || !rating || !title || !content) {
       return res.status(400).json({
         success: false,
-        message: "Thiếu thông tin bắt buộc: tourId, bookingId, rating, title, content"
+        message:
+          "Thiếu thông tin bắt buộc: tourId, bookingId, rating, title, content",
       });
     }
-
-    console.log("=== DEBUG REVIEW SUBMISSION ===");
-    console.log("Received data:", { tourId, bookingId, userId });
 
     // Kiểm tra booking có thuộc về user và đã completed
     const booking = await Booking.findOne({
       _id: bookingId,
       userId,
-      status: 'paid'
+      status: "paid",
     });
 
-    console.log("Found booking:", booking ? {
-      _id: booking._id,
-      userId: booking.userId,
-      status: booking.status,
-      itemsCount: booking.items?.length || 0,
-      items: booking.items?.map(item => ({
-        tourId: item.tourId?.toString(),
-        name: item.name,
-        date: item.date
-      }))
-    } : null);
+    console.log(
+      "Found booking:",
+      booking
+        ? {
+            _id: booking._id,
+            userId: booking.userId,
+            status: booking.status,
+            itemsCount: booking.items?.length || 0,
+            items: booking.items?.map((item) => ({
+              tourId: item.tourId?.toString(),
+              name: item.name,
+              date: item.date,
+            })),
+          }
+        : null
+    );
 
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy booking hợp lệ hoặc booking chưa hoàn thành"
+        message: "Không tìm thấy booking hợp lệ hoặc booking chưa hoàn thành",
       });
     }
 
     // Kiểm tra tour có trong booking không
     console.log("Looking for tourId:", tourId);
-    console.log("Available tourIds in booking:", booking.items.map(item => item.tourId?.toString()));
+    console.log(
+      "Available tourIds in booking:",
+      booking.items.map((item) => item.tourId?.toString())
+    );
 
     const tourInBooking = booking.items.find(
-      item => item.tourId?.toString() === tourId?.toString()
+      (item) => item.tourId?.toString() === tourId?.toString()
     );
 
     if (!tourInBooking) {
@@ -73,24 +79,26 @@ const createReview = async (req, res) => {
         console.log(`Item ${index}:`, {
           tourId: item.tourId?.toString(),
           matches: item.tourId?.toString() === tourId?.toString(),
-          name: item.name
+          name: item.name,
         });
       });
-      
+
       return res.status(400).json({
         success: false,
         message: "Tour không có trong booking này",
         debug: {
           requestedTourId: tourId,
-          availableTourIds: booking.items.map(item => item.tourId?.toString()),
-          bookingId: bookingId
-        }
+          availableTourIds: booking.items.map((item) =>
+            item.tourId?.toString()
+          ),
+          bookingId: bookingId,
+        },
       });
     }
 
     console.log("✅ Tour found in booking:", {
       tourId: tourInBooking.tourId?.toString(),
-      name: tourInBooking.name
+      name: tourInBooking.name,
     });
 
     // Kiểm tra đã review chưa
@@ -98,7 +106,7 @@ const createReview = async (req, res) => {
     if (existingReview) {
       return res.status(409).json({
         success: false,
-        message: "Bạn đã đánh giá booking này rồi"
+        message: "Bạn đã đánh giá booking này rồi",
       });
     }
 
@@ -118,30 +126,42 @@ const createReview = async (req, res) => {
       status: 'approved' // Auto approve vì đã verify booking
     });
 
+    console.log('✅ Review created successfully:', {
+      reviewId: review._id,
+      userId,
+      tourId,
+      bookingId,
+      rating: review.rating
+    });
+
     const populatedReview = await Review.findById(review._id)
       .populate('userId', 'name avatar')
       .populate('tourId', 'title imageItems')
       .populate('bookingId', 'bookingCode');
 
+    console.log('📤 Sending review response:', {
+      reviewId: populatedReview._id,
+      status: populatedReview.status
+    });
+
     res.status(201).json({
       success: true,
       review: populatedReview,
-      message: "Đánh giá đã được tạo thành công"
+      message: "Đánh giá đã được tạo thành công",
     });
-
   } catch (error) {
     console.error("createReview error:", error);
-    
+
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
-        message: "Bạn đã đánh giá booking này rồi"
+        message: "Bạn đã đánh giá booking này rồi",
       });
     }
 
     res.status(500).json({
       success: false,
-      message: error.message || "Lỗi khi tạo đánh giá"
+      message: error.message || "Lỗi khi tạo đánh giá",
     });
   }
 };
@@ -153,26 +173,26 @@ const getTourReviews = async (req, res) => {
     const {
       page = 1,
       limit = 10,
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
-      rating = null
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      rating = null,
     } = req.query;
 
     if (!mongoose.isValidObjectId(tourId)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid tour ID"
+        message: "Invalid tour ID",
       });
     }
 
-    const sortOrderNum = sortOrder === 'desc' ? -1 : 1;
+    const sortOrderNum = sortOrder === "desc" ? -1 : 1;
 
     const reviews = await Review.getTourReviews(tourId, {
       page: parseInt(page),
       limit: parseInt(limit),
       sortBy,
       sortOrder: sortOrderNum,
-      rating: rating ? parseInt(rating) : null
+      rating: rating ? parseInt(rating) : null,
     });
 
     // Lấy thống kê rating
@@ -180,7 +200,7 @@ const getTourReviews = async (req, res) => {
 
     const totalReviews = await Review.countDocuments({
       tourId,
-      status: 'approved'
+      status: "approved",
     });
 
     res.json({
@@ -190,16 +210,15 @@ const getTourReviews = async (req, res) => {
         page: parseInt(page),
         limit: parseInt(limit),
         totalReviews,
-        totalPages: Math.ceil(totalReviews / limit)
+        totalPages: Math.ceil(totalReviews / limit),
       },
-      ratingStats: ratingStats[0] || null
+      ratingStats: ratingStats[0] || null,
     });
-
   } catch (error) {
     console.error("getTourReviews error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Lỗi khi lấy đánh giá tour"
+      message: error.message || "Lỗi khi lấy đánh giá tour",
     });
   }
 };
@@ -210,12 +229,20 @@ const getUserReviews = async (req, res) => {
     const userId = req.user?.sub || req.user?._id;
     const { page = 1, limit = 10 } = req.query;
 
+    console.log('🔍 Fetching reviews for user:', userId);
+
     const reviews = await Review.getUserReviews(userId, {
       page: parseInt(page),
-      limit: parseInt(limit)
+      limit: parseInt(limit),
     });
 
     const totalReviews = await Review.countDocuments({ userId });
+
+    console.log('✅ Found reviews:', {
+      count: reviews.length,
+      total: totalReviews,
+      reviewIds: reviews.map(r => r._id.toString())
+    });
 
     res.json({
       success: true,
@@ -224,15 +251,14 @@ const getUserReviews = async (req, res) => {
         page: parseInt(page),
         limit: parseInt(limit),
         totalReviews,
-        totalPages: Math.ceil(totalReviews / limit)
-      }
+        totalPages: Math.ceil(totalReviews / limit),
+      },
     });
-
   } catch (error) {
     console.error("getUserReviews error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Lỗi khi lấy đánh giá của user"
+      message: error.message || "Lỗi khi lấy đánh giá của user",
     });
   }
 };
@@ -249,7 +275,7 @@ const updateReview = async (req, res) => {
     if (!review) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy đánh giá"
+        message: "Không tìm thấy đánh giá",
       });
     }
 
@@ -257,7 +283,8 @@ const updateReview = async (req, res) => {
     if (!review.canEdit(userId)) {
       return res.status(403).json({
         success: false,
-        message: "Bạn không thể sửa đánh giá này (quá thời hạn hoặc đã được duyệt)"
+        message:
+          "Bạn không thể sửa đánh giá này (quá thời hạn hoặc đã được duyệt)",
       });
     }
 
@@ -271,20 +298,19 @@ const updateReview = async (req, res) => {
     await review.save();
 
     const updatedReview = await Review.findById(reviewId)
-      .populate('userId', 'name avatar')
-      .populate('tourId', 'title imageItems');
+      .populate("userId", "name avatar")
+      .populate("tourId", "title imageItems");
 
     res.json({
       success: true,
       review: updatedReview,
-      message: "Đánh giá đã được cập nhật"
+      message: "Đánh giá đã được cập nhật",
     });
-
   } catch (error) {
     console.error("updateReview error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Lỗi khi cập nhật đánh giá"
+      message: error.message || "Lỗi khi cập nhật đánh giá",
     });
   }
 };
@@ -300,7 +326,7 @@ const deleteReview = async (req, res) => {
     if (!review) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy đánh giá"
+        message: "Không tìm thấy đánh giá",
       });
     }
 
@@ -308,7 +334,7 @@ const deleteReview = async (req, res) => {
     if (review.userId.toString() !== userId.toString()) {
       return res.status(403).json({
         success: false,
-        message: "Bạn không có quyền xóa đánh giá này"
+        message: "Bạn không có quyền xóa đánh giá này",
       });
     }
 
@@ -316,14 +342,13 @@ const deleteReview = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Đánh giá đã được xóa"
+      message: "Đánh giá đã được xóa",
     });
-
   } catch (error) {
     console.error("deleteReview error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Lỗi khi xóa đánh giá"
+      message: error.message || "Lỗi khi xóa đánh giá",
     });
   }
 };
@@ -339,7 +364,7 @@ const toggleReviewLike = async (req, res) => {
     if (!review) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy đánh giá"
+        message: "Không tìm thấy đánh giá",
       });
     }
 
@@ -348,14 +373,13 @@ const toggleReviewLike = async (req, res) => {
     res.json({
       success: true,
       likesCount: review.likesCount,
-      message: "Đã cập nhật like"
+      message: "Đã cập nhật like",
     });
-
   } catch (error) {
     console.error("toggleReviewLike error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Lỗi khi like đánh giá"
+      message: error.message || "Lỗi khi like đánh giá",
     });
   }
 };
@@ -370,16 +394,16 @@ const responseToReview = async (req, res) => {
     if (!content || content.trim().length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Nội dung phản hồi không được để trống"
+        message: "Nội dung phản hồi không được để trống",
       });
     }
 
-    const review = await Review.findById(reviewId).populate('tourId');
+    const review = await Review.findById(reviewId).populate("tourId");
 
     if (!review) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy đánh giá"
+        message: "Không tìm thấy đánh giá",
       });
     }
 
@@ -388,21 +412,20 @@ const responseToReview = async (req, res) => {
     await review.addResponse(content.trim(), userId);
 
     const updatedReview = await Review.findById(reviewId)
-      .populate('userId', 'name avatar')
-      .populate('tourId', 'title')
-      .populate('response.respondedBy', 'name');
+      .populate("userId", "name avatar")
+      .populate("tourId", "title")
+      .populate("response.respondedBy", "name");
 
     res.json({
       success: true,
       review: updatedReview,
-      message: "Đã phản hồi đánh giá"
+      message: "Đã phản hồi đánh giá",
     });
-
   } catch (error) {
     console.error("responseToReview error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Lỗi khi phản hồi đánh giá"
+      message: error.message || "Lỗi khi phản hồi đánh giá",
     });
   }
 };
@@ -412,33 +435,33 @@ const getReviewableBookings = async (req, res) => {
   try {
     const userId = req.user?.sub || req.user?._id;
 
-    // Lấy các booking đã hoàn thành nhưng chưa review
+    // Lấy các booking đã hoàn thành
     const bookings = await Booking.find({
       userId,
-      status: 'paid'
-    }).populate('items.tourId', 'title imageItems basePrice');
+      status: "paid",
+    }).populate("items.tourId", "title imageItems basePrice");
 
     // Lấy danh sách bookingId đã review
-    const reviewedBookingIds = await Review.distinct('bookingId', { userId });
+    const reviewedBookingIds = await Review.distinct("bookingId", { userId });
 
     // Lọc ra bookings chưa review
     const reviewableBookings = bookings.filter(
-      booking => !reviewedBookingIds.some(
-        id => id.toString() === booking._id.toString()
-      )
+      (booking) =>
+        !reviewedBookingIds.some(
+          (id) => id.toString() === booking._id.toString()
+        )
     );
 
     res.json({
       success: true,
       bookings: reviewableBookings,
-      total: reviewableBookings.length
+      total: reviewableBookings.length,
     });
-
   } catch (error) {
     console.error("getReviewableBookings error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Lỗi khi lấy danh sách booking có thể đánh giá"
+      message: error.message || "Lỗi khi lấy danh sách booking có thể đánh giá",
     });
   }
 };
@@ -451,5 +474,5 @@ module.exports = {
   deleteReview,
   toggleReviewLike,
   responseToReview,
-  getReviewableBookings
+  getReviewableBookings,
 };

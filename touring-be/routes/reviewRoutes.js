@@ -22,7 +22,10 @@ router.use(authJwt); // Apply middleware cho tất cả routes bên dưới
 
 // User review management
 router.post("/", createReview); // Tạo review mới
-router.get("/my", getUserReviews); // Lấy reviews của user hiện tại
+router.get("/my", (req, res, next) => {
+  console.log('📨 GET /api/reviews/my called by user:', req.user?.sub || req.user?._id);
+  next();
+}, getUserReviews); // Lấy reviews của user hiện tại
 router.get("/reviewable-bookings", getReviewableBookings); // Lấy bookings có thể review
 
 // Review interactions
