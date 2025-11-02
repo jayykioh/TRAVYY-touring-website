@@ -2,14 +2,14 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import TourCard from "./TourCard";
 import Button from "../common/Button";
-
+import { Calendar } from "lucide-react";
 const UpcomingTourList = ({ tours }) => {
   const navigate = useNavigate();
 
   if (!tours || tours.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-6xl mb-4">📅</p>
+        <Calendar className="w-16 h-16 mx-auto text-gray-400 mb-4" />
         <p className="text-gray-500 mb-2">No upcoming tours</p>
         <p className="text-sm text-gray-400">
           Accept new requests to get started

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Award } from "lucide-react";
 import { mockGuide } from "../../data/mockGuide";
 import { mockRequests } from "../../data/mockRequests";
 import GuideProfileModal from "./GuideProfileModal";
+import GuideInfoCard from "./GuideInfoCard";
 
 const Sidebar = ({ className = "" }) => {
   const location = useLocation();
@@ -55,18 +55,105 @@ const Sidebar = ({ className = "" }) => {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // 🧭 Menu
+  // 🧭 Menu với SVG icons
   const menuItems = [
-    { path: "/guide", icon: "🏠", label: "Home", exact: true },
+    {
+      path: "/guide",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+          />
+        </svg>
+      ),
+      label: "Home",
+      exact: true,
+    },
     {
       path: "/guide/requests",
-      icon: "📬",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+          />
+        </svg>
+      ),
       label: "Requests",
       badge: unreadRequests > 0 ? unreadRequests : null,
     },
-    { path: "/guide/tours", icon: "📆", label: "My Tours" },
-    { path: "/guide/earnings", icon: "💰", label: "Earnings" },
-    { path: "/guide/profile", icon: "👤", label: "Profile" },
+    {
+      path: "/guide/tours",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+      ),
+      label: "My Tours",
+    },
+    {
+      path: "/guide/earnings",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+      ),
+      label: "Earnings",
+    },
+    {
+      path: "/guide/profile",
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+          />
+        </svg>
+      ),
+      label: "Profile",
+    },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -77,65 +164,11 @@ const Sidebar = ({ className = "" }) => {
         className={`fixed lg:relative top-0 left-0 bg-white shadow-sm border-r border-gray-200 z-40 transition-transform duration-300 rounded-lg lg:translate-x-0 w-60 flex flex-col`}
         style={{ position: "fixed", top: 88, left: 35 }}
       >
-        {/* Guide Info */}
-        <div
-          className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow"
+        {/* Guide Info Card */}
+        <GuideInfoCard
+          guideData={mockGuide}
           onClick={() => setShowProfileModal(true)}
-        >
-          <div className="flex justify-center mb-2">
-            <div className="relative">
-              <img
-                src={mockGuide.avatar}
-                alt={mockGuide.name}
-                className="w-14 h-14 rounded-full border-2 border-[#02A0AA]"
-              />
-              <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[#02A0AA] rounded-full flex items-center justify-center border-2 border-white">
-                <svg
-                  className="w-3 h-3 text-white"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-center mb-2">
-            <h3 className="text-base font-semibold text-gray-900 mb-0.5">
-              {mockGuide.name}
-            </h3>
-            <p className="text-xs text-gray-500 mb-2 flex items-center justify-center gap-1">
-              <Award className="w-3 h-3" />
-              Tour Guide
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-1 text-center">
-            <div>
-              <div className="text-sm font-semibold text-gray-900">
-                {mockGuide.totalTours}
-              </div>
-              <div className="text-xs text-gray-500">Tours</div>
-            </div>
-            <div className="border-l border-r border-gray-200">
-              <div className="text-sm font-semibold text-gray-900">
-                {mockGuide.rating}★
-              </div>
-              <div className="text-xs text-gray-500">Rating</div>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-900">
-                {mockGuide.experience}
-              </div>
-              <div className="text-xs text-gray-500 leading-tight">Exp</div>
-            </div>
-          </div>
-        </div>
+        />
 
         {/* Navigation Menu */}
         <nav className="flex-1 overflow-y-auto py-3">
@@ -152,7 +185,7 @@ const Sidebar = ({ className = "" }) => {
                       : "border-transparent text-gray-700 hover:bg-gray-50"
                   }`}
                 >
-                  <span className="text-lg">{item.icon}</span>
+                  {item.icon}
                   <span className="text-[13px]">{item.label}</span>
                   {item.badge && (
                     <span className="ml-auto text-xs bg-red-600 text-white rounded-full px-2 animate-bounce">

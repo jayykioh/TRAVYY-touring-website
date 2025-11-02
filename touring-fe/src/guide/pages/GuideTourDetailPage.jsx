@@ -356,7 +356,6 @@ const GuideTourDetailPage = () => {
               </Button>
             </div>
           </Card>
-
           {/* Meeting Point */}
           <Card>
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
@@ -409,7 +408,6 @@ const GuideTourDetailPage = () => {
               </div>
             </div>
           </Card>
-
           {/* Special Requests */}
           {tour.specialRequests && (
             <Card>
@@ -425,7 +423,6 @@ const GuideTourDetailPage = () => {
               </div>
             </Card>
           )}
-
           {/* Tour Itinerary */}
           <Card>
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
@@ -460,7 +457,6 @@ const GuideTourDetailPage = () => {
                 ))}
             </div>
           </Card>
-
           {/* Included Services */}
           {tour.includedServices && (
             <Card>
@@ -511,36 +507,6 @@ const GuideTourDetailPage = () => {
               </div>
             </Card>
           )}
-
-          {/* Tour Progress (ongoing) */}
-          {isOngoing && tour.progress !== undefined && (
-            <Card>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                Tiến độ Tour
-              </h2>
-
-              <div className="border-t border-gray-100 pt-4"></div>
-
-              <div className="mt-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Hoàn thành</span>
-                  <span className="text-2xl font-bold text-emerald-600">
-                    {tour.progress}%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-3">
-                  <div
-                    className="bg-emerald-500 h-3 rounded-full transition-all duration-500"
-                    style={{ width: `${tour.progress}%` }}
-                  />
-                </div>
-                <p className="text-sm text-gray-500 text-center">
-                  Tiếp tục phát huy! 🎉
-                </p>
-              </div>
-            </Card>
-          )}
-
           {/* Completed Tour Info */}
           {isCompleted && (
             <Card>
@@ -602,7 +568,6 @@ const GuideTourDetailPage = () => {
               </div>
             </Card>
           )}
-
           {/* Canceled Tour Info */}
           {isCanceled && (
             <Card>
