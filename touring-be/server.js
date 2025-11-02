@@ -13,6 +13,7 @@ const cookieParser = require("cookie-parser");
 const tourRoutes = require("./routes/tour.routes");
 const profileRoutes = require("./routes/profile.routes");
 const authRoutes = require("./routes/auth.routes");
+
 // Admin Routes (modular structure)
 const adminRoutes = require("./routes/admin");
 const blogRoutes = require("./routes/blogs");
@@ -23,6 +24,8 @@ require("./middlewares/passport");
 const wishlistRoutes = require("./routes/wishlist.routes");
 const locationRoutes = require("./routes/location.routes");
 const bookingRoutes = require("./routes/bookingRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
+const promotionRoutes = require("./routes/promotion.routes");
 const app = express();
 const isProd = process.env.NODE_ENV === "production";
 const MONGO_URI =
@@ -31,6 +34,8 @@ const MONGO_URI =
   "mongodb://127.0.0.1:27017/travelApp";
 const notifyRoutes = require("./routes/notifyRoutes");
 const paymentRoutes = require("./routes/payment.routes");
+const reviewRoutes = require("./routes/reviewRoutes");
+const promotionRoutes = require("./routes/promotion.routes");
 // Quick visibility of PayPal env presence (not actual secrets)
 console.log("[Boot] PayPal env present:", {
   hasClient: !!process.env.PAYPAL_CLIENT_ID,
@@ -82,13 +87,14 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/admin", adminRoutes); // Updated to use modular admin routes
 app.use("/api/payments", paymentRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/promotions", promotionRoutes);
 const securityRoutes = require("./routes/security.routes");
 app.use("/api/security", securityRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api/notify", notifyRoutes);
-
-
-
+app.use("/api/promotions", promotionRoutes);
+app.use("/api/reviews", reviewRoutes);
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 app.use("/api/paypal", paypalRoutes);
@@ -130,61 +136,63 @@ mongoose
     process.exit(1);
   });
 
-
 module.exports = app;
 
 // ✅ Check services on startup
-const { health, isAvailable } = require('./services/ai/libs/embedding-client');
+const { health, isAvailable } = require("./services/ai/libs/embedding-client");
 
 async function checkServices() {
-  console.log('\n🔍 Checking services...');
-  
+  console.log("\n🔍 Checking services...");
+
   // MongoDB
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log('✅ MongoDB connected');
+    console.log("✅ MongoDB connected");
   } catch (error) {
-    console.error('❌ MongoDB failed:', error.message);
+    console.error("❌ MongoDB failed:", error.message);
     process.exit(1);
   }
-  
+
   // Embedding service
   try {
     const available = await isAvailable();
     if (available) {
       const healthData = await health();
-      console.log('✅ Embedding service OK:', {
+      console.log("✅ Embedding service OK:", {
         model: healthData.model,
         vectors: healthData.vectors,
-        url: process.env.EMBED_SERVICE_URL || 'http://localhost:8088'
+        url: process.env.EMBED_SERVICE_URL || "http://localhost:8088",
       });
     } else {
-      console.warn('⚠️ Embedding service not available');
-      console.warn('   URL:', process.env.EMBED_SERVICE_URL || 'http://localhost:8088');
-      console.warn('   Will use keyword fallback for zone matching');
+      console.warn("⚠️ Embedding service not available");
+      console.warn(
+        "   URL:",
+        process.env.EMBED_SERVICE_URL || "http://localhost:8088"
+      );
+      console.warn("   Will use keyword fallback for zone matching");
     }
   } catch (error) {
-    console.warn('⚠️ Embedding check failed:', error.message);
+    console.warn("⚠️ Embedding check failed:", error.message);
   }
 }
 
 checkServices().then(() => {
   // Routes
-  app.use('/api/auth', require('./routes/auth.routes'));
-  app.use('/api/discover', require('./routes/discover.routes'));
-  app.use('/api/zones', require('./routes/zone.routes'));
-  app.use('/api/itinerary', require('./routes/itinerary.routes'));
+  app.use("/api/auth", require("./routes/auth.routes"));
+  app.use("/api/discover", require("./routes/discover.routes"));
+  app.use("/api/zones", require("./routes/zone.routes"));
+  app.use("/api/itinerary", require("./routes/itinerary.routes"));
 
   // Health endpoint
-  app.get('/api/health', async (req, res) => {
+  app.get("/api/health", async (req, res) => {
     const embedHealth = await health();
     res.json({
-      backend: 'ok',
-      mongo: mongoose.connection.readyState === 1 ? 'ok' : 'error',
-      embedding: embedHealth
+      backend: "ok",
+      mongo: mongoose.connection.readyState === 1 ? "ok" : "error",
+      embedding: embedHealth,
     });
   });
-  
+
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
     console.log(`\n🚀 Backend running on port ${PORT}`);
