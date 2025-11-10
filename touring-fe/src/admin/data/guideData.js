@@ -445,7 +445,8 @@ export const MOCK_GUIDE_ACCOUNTS = [
     loginCount: 1245,
     canResetPassword: true,
     canLock: true,
-    canDelete: false
+    canDelete: false,
+    lockHistory: []
   },
   {
     id: 2,
@@ -460,7 +461,8 @@ export const MOCK_GUIDE_ACCOUNTS = [
     loginCount: 567,
     canResetPassword: true,
     canLock: true,
-    canDelete: false
+    canDelete: false,
+    lockHistory: []
   },
   {
     id: 3,
@@ -475,7 +477,8 @@ export const MOCK_GUIDE_ACCOUNTS = [
     loginCount: 2103,
     canResetPassword: true,
     canLock: true,
-    canDelete: false
+    canDelete: false,
+    lockHistory: []
   },
   {
     id: 4,
@@ -490,7 +493,8 @@ export const MOCK_GUIDE_ACCOUNTS = [
     loginCount: 892,
     canResetPassword: true,
     canLock: true,
-    canDelete: false
+    canDelete: false,
+    lockHistory: []
   },
   {
     id: 5,
@@ -505,7 +509,27 @@ export const MOCK_GUIDE_ACCOUNTS = [
     loginCount: 234,
     canResetPassword: true,
     canLock: true,
-    canDelete: true
+    canDelete: true,
+    lockHistory: [
+      {
+        id: 1,
+        action: "lock",
+        reason: "Hành vi không chuyên nghiệp với khách hàng",
+        lockedAt: "2025-10-20T14:30:00",
+        lockedBy: "admin@travyy.com",
+        unlockedAt: "2025-10-22T09:15:00",
+        unlockedBy: "admin@travyy.com"
+      },
+      {
+        id: 2,
+        action: "lock",
+        reason: "Không tuân thủ quy định về giờ làm việc",
+        lockedAt: "2025-10-24T11:00:00",
+        lockedBy: "admin@travyy.com",
+        unlockedAt: null,
+        unlockedBy: null
+      }
+    ]
   },
   {
     id: 6,
@@ -520,7 +544,8 @@ export const MOCK_GUIDE_ACCOUNTS = [
     loginCount: 3456,
     canResetPassword: true,
     canLock: true,
-    canDelete: false
+    canDelete: false,
+    lockHistory: []
   },
   {
     id: 7,
@@ -535,7 +560,8 @@ export const MOCK_GUIDE_ACCOUNTS = [
     loginCount: 1123,
     canResetPassword: true,
     canLock: true,
-    canDelete: false
+    canDelete: false,
+    lockHistory: []
   },
   {
     id: 8,
@@ -550,7 +576,8 @@ export const MOCK_GUIDE_ACCOUNTS = [
     loginCount: 12,
     canResetPassword: true,
     canLock: true,
-    canDelete: true
+    canDelete: true,
+    lockHistory: []
   }
 ];
 

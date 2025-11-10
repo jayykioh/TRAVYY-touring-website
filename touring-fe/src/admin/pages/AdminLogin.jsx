@@ -54,12 +54,28 @@ export default function AdminLogin() {
           localStorage.setItem("adminRemember", formData.email);
         }
 
-        console.log("Login successful, navigating to dashboard...");
-        // Show success message
-        alert("Đăng nhập thành công! Chuyển đến Dashboard...");
+        console.log("Login successful, navigating...");
 
-        // Navigate to dashboard
-        navigate("/admin/dashboard", { replace: true });
+        // Check if there's a redirect URL saved
+        const redirectUrl = sessionStorage.getItem("redirect_after_login");
+        if (redirectUrl) {
+          sessionStorage.removeItem("redirect_after_login");
+          navigate(redirectUrl, { replace: true });
+        } else {
+          // Default redirect to dashboard
+          navigate("/admin/dashboard", { replace: true });
+        }
+      } else if (result.requires2FA || result.requiresEmailVerification) {
+        // Redirect đến trang verify
+        navigate("/admin/login/verify", {
+          state: {
+            requires2FA: result.requires2FA,
+            requiresEmailVerification: result.requiresEmailVerification,
+            userId: result.userId,
+            message: result.message,
+          },
+          replace: true,
+        });
       } else {
         setError(result.message || "Email hoặc mật khẩu không chính xác");
       }

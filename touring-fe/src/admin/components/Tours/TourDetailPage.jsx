@@ -1,464 +1,370 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Star, Building2, Clock, Phone, Mail, Globe, Tag } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  MapPin,
+  Calendar,
+  Users,
+  Star,
+  Building2,
+  Clock,
+  Phone,
+  Mail,
+  Globe,
+} from "lucide-react";
+import { useState, useEffect } from "react";
 
 const TourDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [tour, setTour] = useState(null);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  // ✅ Hàm chuẩn hóa dữ liệu tour từ backend
+  const formatTourData = (data) => {
+    const durationText = data.duration
+      ? `${data.duration.days} ngày ${data.duration.nights} đêm`
+      : "Chưa xác định";
+
+    const locationText = data.locations?.length
+      ? data.locations.map((l) => l.name).join(" - ")
+      : "Chưa xác định";
+
+    const images = Array.isArray(data.imageItems)
+      ? data.imageItems.map((i) => i.imageUrl || i).filter(Boolean)
+      : [];
+
+    const agency = {
+      _id: data.agencyId._id,
+      name: data.agencyId.name || "Chưa có tên",
+      // contact là string email trực tiếp, phone là field riêng
+      email: data.agencyId.contact || "Không có email",
+      phone: data.agencyId.phone || "Không có số",
+      address: data.agencyId.address || "Chưa có địa chỉ",
+      logo:
+        data.agencyId.image ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          data.agencyId.name || "Agency"
+        )}&background=007980&color=fff`,
+    };
+
+    const itinerary = (data.itinerary || []).map((item, idx) => ({
+      day: item.day || idx + 1,
+      title: item.title || `Ngày ${idx + 1}`,
+      part: item.part,
+      activities: Array.isArray(item.description)
+        ? item.description
+        : [item.description].filter(Boolean),
+    }));
+
+    return {
+      ...data,
+      durationText,
+      locationText,
+      images,
+      agency,
+      itinerary,
+    };
+  };
+
+  // ✅ Lấy dữ liệu tour & reviews
   useEffect(() => {
-    // Mock data - replace with actual API call
-    const fetchTourDetail = async () => {
+    const fetchData = async () => {
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Mock tour data
-        const mockTour = {
-          _id: id,
-          title: "Hà Nội - Hạ Long - Ninh Bình 4N3Đ",
-          description: "Khám phá vẻ đẹp của miền Bắc Việt Nam với tour 4 ngày 3 đêm, tham quan vịnh Hạ Long, Tràng An Ninh Bình và các di sản văn hóa thế giới.",
-          images: [
-            "https://images.unsplash.com/photo-1528127269322-539801943592?w=800",
-            "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800",
-            "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800"
-          ],
-          basePrice: 5500000,
-          duration: "4 ngày 3 đêm",
-          location: "Hà Nội - Hạ Long - Ninh Bình",
-          tags: ["Văn hóa", "Thiên nhiên", "Di sản"],
-          isHidden: false,
-          agencyId: {
-            _id: "agency001",
-            name: "Saigon Tourist",
-            phone: "0901234567",
-            email: "contact@saigontourist.vn",
-            website: "www.saigontourist.vn",
-            logo: "https://ui-avatars.com/api/?name=Saigon+Tourist&background=3B82F6&color=fff"
-          },
-          itinerary: [
-            {
-              day: 1,
-              title: "Hà Nội - Tham quan thủ đô",
-              activities: ["Đón tại sân bay Nội Bài", "Tham quan Văn Miếu Quốc Tử Giám", "Hồ Gươm và Đền Ngọc Sơn", "Phố cổ Hà Nội"],
-              meals: "Trưa, Tối"
-            },
-            {
-              day: 2,
-              title: "Hà Nội - Hạ Long",
-              activities: ["Khởi hành đi Hạ Long", "Du thuyền trên vịnh Hạ Long", "Tham quan hang Sửng Sốt", "Kayak và bơi lội"],
-              meals: "Sáng, Trưa, Tối"
-            },
-            {
-              day: 3,
-              title: "Hạ Long - Ninh Bình",
-              activities: ["Khởi hành về Ninh Bình", "Tham quan Tràng An", "Đi thuyền qua các hang động", "Chùa Bái Đính"],
-              meals: "Sáng, Trưa, Tối"
-            },
-            {
-              day: 4,
-              title: "Ninh Bình - Hà Nội - Kết thúc",
-              activities: ["Tham quan Tam Cốc", "Hang Múa", "Trả khách tại sân bay"],
-              meals: "Sáng, Trưa"
-            }
-          ],
-          departures: [
-            {
-              _id: "dep1",
-              date: "2025-11-15",
-              priceAdult: 5500000,
-              priceChild: 4000000,
-              seatsTotal: 20,
-              seatsLeft: 5,
-              status: "open"
-            },
-            {
-              _id: "dep2",
-              date: "2025-12-01",
-              priceAdult: 5800000,
-              priceChild: 4200000,
-              seatsTotal: 20,
-              seatsLeft: 12,
-              status: "open"
-            },
-            {
-              _id: "dep3",
-              date: "2025-12-20",
-              priceAdult: 6200000,
-              priceChild: 4500000,
-              seatsTotal: 20,
-              seatsLeft: 0,
-              status: "full"
-            }
-          ],
-          reviews: [
-            {
-              _id: "rev1",
-              customerName: "Nguyễn Văn A",
-              rating: 5,
-              comment: "Tour rất tuyệt vời, hướng dẫn viên nhiệt tình, lịch trình hợp lý!",
-              date: "2025-10-10",
-              avatar: "https://i.pravatar.cc/150?img=12"
-            },
-            {
-              _id: "rev2",
-              customerName: "Trần Thị B",
-              rating: 4,
-              comment: "Khách sạn tốt, đồ ăn ngon. Tuy nhiên thời gian di chuyển hơi dài.",
-              date: "2025-10-05",
-              avatar: "https://i.pravatar.cc/150?img=5"
-            },
-            {
-              _id: "rev3",
-              customerName: "Lê Minh C",
-              rating: 5,
-              comment: "Gia đình tôi rất hài lòng. Cảnh đẹp, dịch vụ chu đáo. Sẽ quay lại!",
-              date: "2025-09-28",
-              avatar: "https://i.pravatar.cc/150?img=33"
-            }
-          ],
-          included: [
-            "Xe du lịch máy lạnh",
-            "Khách sạn 3-4 sao",
-            "Vé tham quan theo chương trình",
-            "Bảo hiểm du lịch",
-            "Hướng dẫn viên tiếng Việt",
-            "Bữa ăn theo chương trình"
-          ],
-          excluded: [
-            "Vé máy bay",
-            "Chi phí cá nhân",
-            "Đồ uống có cồn",
-            "Tip hướng dẫn viên",
-            "VAT"
-          ]
-        };
+        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
-        setTour(mockTour);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching tour:', error);
+        const [tourRes, reviewRes] = await Promise.all([
+          fetch(`${API_URL}/api/tours/${id}`),
+          fetch(`${API_URL}/api/reviews/tour/${id}`),
+        ]);
+
+        if (!tourRes.ok) throw new Error("Không thể tải thông tin tour");
+
+        const tourData = await tourRes.json();
+        const reviewsData = reviewRes.ok ? await reviewRes.json() : [];
+
+        setTour(formatTourData(tourData));
+        setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+        setError(null);
+      } catch (err) {
+        console.error("❌ Error fetching:", err);
+        setError(err.message);
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchTourDetail();
+    fetchData();
   }, [id]);
 
-  if (loading) {
+  // ✅ Trạng thái loading
+  if (loading)
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#007980] mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải thông tin tour...</p>
+        </div>
       </div>
     );
-  }
 
-  if (!tour) {
+  // ✅ Trạng thái lỗi
+  if (error || !tour)
     return (
-      <div className="p-6">
-        <div className="text-center">
-          <p className="text-gray-500">Không tìm thấy tour</p>
-          <button onClick={() => navigate(-1)} className="mt-4 text-blue-600 hover:underline">
-            Quay lại
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-xl shadow-md text-center max-w-md">
+          <div className="text-5xl mb-3">⚠️</div>
+          <h3 className="text-xl font-bold mb-2 text-gray-900">
+            Không thể tải tour
+          </h3>
+          <p className="text-gray-600 mb-6">
+            {error || "Tour không tồn tại hoặc đã bị xóa"}
+          </p>
+          <button
+            onClick={() => navigate("/admin/tours")}
+            className="bg-[#007980] hover:bg-[#006670] text-white px-6 py-2.5 rounded-lg"
+          >
+            Quay lại danh sách tour
           </button>
         </div>
       </div>
     );
-  }
 
-  // Calculate statistics
-  const totalSeats = tour.departures?.reduce((sum, dep) => sum + dep.seatsTotal, 0) || 0;
-  const bookedSeats = tour.departures?.reduce((sum, dep) => sum + (dep.seatsTotal - dep.seatsLeft), 0) || 0;
-  const availableSeats = tour.departures?.reduce((sum, dep) => sum + dep.seatsLeft, 0) || 0;
-  const avgRating = tour.reviews?.length > 0 
-    ? (tour.reviews.reduce((sum, r) => sum + r.rating, 0) / tour.reviews.length).toFixed(1)
-    : 0;
+  // ✅ Tính toán thống kê
+  const totalSeats =
+    tour.departures?.reduce((sum, d) => sum + (d.seatsTotal || 0), 0) || 0;
+  const bookedSeats =
+    tour.departures?.reduce(
+      (sum, d) => sum + ((d.seatsTotal || 0) - (d.seatsLeft || 0)),
+      0
+    ) || 0;
+  const availableSeats =
+    tour.departures?.reduce((sum, d) => sum + (d.seatsLeft || 0), 0) || 0;
 
+  const avgRating =
+    reviews.length > 0
+      ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+      : 0;
+
+  // ✅ Render giao diện
   return (
-    <div className="p-6">
-      {/* Header with back button */}
-      <div className="mb-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
-        >
-          <ArrowLeft className="w-5 h-5 mr-2" />
-          Quay lại
-        </button>
-        <h1 className="text-3xl font-bold text-gray-900">{tour.title}</h1>
-      </div>
+    <div className="min-h-screen bg-gray-50 pb-8">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <button
+            onClick={() => navigate("/admin/tours")}
+            className="flex items-center text-gray-600 hover:text-[#007980] transition mb-3 group"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
+            <span className="font-medium">Quay lại danh sách tour</span>
+          </button>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Image Gallery */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="grid grid-cols-2 gap-2 p-4">
-              {tour.images?.slice(0, 4).map((img, idx) => (
-                <img
-                  key={idx}
-                  src={img}
-                  alt={`Tour ${idx + 1}`}
-                  className={`rounded-lg object-cover ${idx === 0 ? 'col-span-2 h-80' : 'h-40'}`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Tour Info */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Thông tin tour</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center text-gray-600">
-                <Clock className="w-5 h-5 mr-2 text-blue-600" />
-                <div>
-                  <p className="text-xs text-gray-500">Thời gian</p>
-                  <p className="font-medium">{tour.duration}</p>
+          <div className="flex justify-between flex-wrap gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">
+                {tour.title}
+              </h1>
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                <div className="flex items-center">
+                  <MapPin className="w-4 h-4 mr-1.5 text-[#007980]" />
+                  <span>{tour.locationText}</span>
                 </div>
-              </div>
-              <div className="flex items-center text-gray-600">
-                <MapPin className="w-5 h-5 mr-2 text-blue-600" />
-                <div>
-                  <p className="text-xs text-gray-500">Địa điểm</p>
-                  <p className="font-medium">{tour.location}</p>
+                <div className="flex items-center">
+                  <Clock className="w-4 h-4 mr-1.5 text-[#007980]" />
+                  <span>{tour.durationText}</span>
                 </div>
-              </div>
-              <div className="flex items-center text-gray-600">
-                <Users className="w-5 h-5 mr-2 text-blue-600" />
-                <div>
-                  <p className="text-xs text-gray-500">Đã đặt / Tổng</p>
-                  <p className="font-medium">{bookedSeats} / {totalSeats} chỗ</p>
-                </div>
-              </div>
-              <div className="flex items-center text-gray-600">
-                <Star className="w-5 h-5 mr-2 text-yellow-500" />
-                <div>
-                  <p className="text-xs text-gray-500">Đánh giá</p>
-                  <p className="font-medium">{avgRating} ⭐ ({tour.reviews?.length || 0} reviews)</p>
-                </div>
+                {reviews.length > 0 && (
+                  <div className="flex items-center">
+                    <Star className="w-4 h-4 mr-1.5 text-yellow-500 fill-yellow-500" />
+                    <span className="font-medium">{avgRating}</span>
+                    <span className="ml-1">({reviews.length} đánh giá)</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            {tour.tags?.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-gray-500" />
-                  {tour.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+            {tour.basePrice && (
+              <div className="bg-gradient-to-br from-[#007980] to-[#005f68] text-white px-6 py-4 rounded-xl shadow-lg">
+                <div className="text-sm opacity-90 mb-1">Giá từ</div>
+                <div className="text-3xl font-bold">
+                  {tour.basePrice.toLocaleString("vi-VN")}
+                  <span className="text-lg ml-1">VNĐ</span>
                 </div>
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Section */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Image */}
+          {tour.images?.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+              <img
+                src={tour.images[0]}
+                alt={tour.title}
+                className="w-full h-auto object-cover"
+                onError={(e) =>
+                  (e.target.src =
+                    "https://via.placeholder.com/800x400?text=No+Image")
+                }
+              />
+            </div>
+          )}
 
           {/* Description */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Mô tả</h2>
-            <p className="text-gray-600 leading-relaxed">{tour.description}</p>
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              Mô tả chi tiết
+            </h2>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+              {tour.description}
+            </p>
           </div>
 
           {/* Itinerary */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Lịch trình</h2>
-            <div className="space-y-4">
-              {tour.itinerary?.map((day) => (
-                <div key={day.day} className="border-l-4 border-blue-600 pl-4">
-                  <h3 className="font-semibold text-gray-900">Ngày {day.day}: {day.title}</h3>
-                  <ul className="mt-2 space-y-1">
-                    {day.activities.map((activity, idx) => (
-                      <li key={idx} className="text-sm text-gray-600">• {activity}</li>
-                    ))}
-                  </ul>
-                  <p className="text-xs text-gray-500 mt-2">Bữa ăn: {day.meals}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Included/Excluded */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Bao gồm</h2>
-              <ul className="space-y-2">
-                {tour.included?.map((item, idx) => (
-                  <li key={idx} className="flex items-start text-sm text-gray-600">
-                    <span className="text-green-600 mr-2">✓</span>
-                    {item}
-                  </li>
+          {tour.itinerary?.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center">
+                <Calendar className="w-5 h-5 mr-2 text-[#007980]" />
+                Lịch trình chi tiết
+              </h2>
+              <div className="space-y-5">
+                {tour.itinerary.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="relative pl-6 border-l-4 border-[#007980] pb-5 last:pb-0"
+                  >
+                    <div className="absolute -left-2 top-0 w-4 h-4 rounded-full bg-[#007980] border-4 border-white"></div>
+                    <h3 className="font-bold text-gray-900 text-lg">
+                      Ngày {item.day}: {item.title}
+                    </h3>
+                    {item.part && (
+                      <p className="text-sm text-[#007980] mt-1">{item.part}</p>
+                    )}
+                    {item.activities?.length > 0 && (
+                      <ul className="mt-3 space-y-2">
+                        {item.activities.map((a, i) => (
+                          <li key={i} className="text-sm text-gray-700 flex">
+                            <span className="text-[#007980] mr-2">•</span>
+                            {a}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Không bao gồm</h2>
-              <ul className="space-y-2">
-                {tour.excluded?.map((item, idx) => (
-                  <li key={idx} className="flex items-start text-sm text-gray-600">
-                    <span className="text-red-600 mr-2">✗</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          )}
 
           {/* Reviews */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Đánh giá từ khách hàng</h2>
-            <div className="space-y-4">
-              {tour.reviews?.length > 0 ? (
-                tour.reviews.map((review) => (
-                  <div key={review._id} className="border-b border-gray-200 pb-4 last:border-0">
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={review.avatar}
-                        alt={review.customerName}
-                        className="w-10 h-10 rounded-full"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-semibold text-gray-900">{review.customerName}</h4>
-                          <span className="text-xs text-gray-500">
-                            {new Date(review.date).toLocaleDateString('vi-VN')}
-                          </span>
-                        </div>
-                        <div className="flex items-center my-1">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`w-4 h-4 ${
-                                i < review.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <p className="text-sm text-gray-600">{review.comment}</p>
-                      </div>
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center">
+              <Star className="w-5 h-5 mr-2 text-yellow-500 fill-yellow-500" />
+              Đánh giá từ khách hàng
+            </h2>
+            {reviews.length > 0 ? (
+              reviews.map((r) => (
+                <div
+                  key={r._id}
+                  className="border-b border-gray-100 pb-4 mb-4 last:border-0 last:pb-0"
+                >
+                  <div className="flex gap-3">
+                    <img
+                      src={
+                        r.userId?.avatar ||
+                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                          r.userId?.name || "User"
+                        )}&background=007980&color=fff`
+                      }
+                      alt={r.userId?.name || "User"}
+                      className="w-12 h-12 rounded-full border"
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900">
+                        {r.userId?.name || "Anonymous"}
+                      </h4>
+                      <span className="text-xs text-gray-500">
+                        {new Date(r.createdAt).toLocaleDateString("vi-VN")}
+                      </span>
+                      <p className="text-sm text-gray-600 mt-2">{r.content}</p>
                     </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-center py-4">Chưa có đánh giá nào</p>
-              )}
-            </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-6">
+                Chưa có đánh giá nào
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Right Column - Sidebar */}
+        {/* Right Section */}
         <div className="space-y-6">
           {/* Agency Info */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Công ty quản lý</h2>
-            <div className="flex items-center gap-3 mb-4">
-              <img
-                src={tour.agencyId.logo}
-                alt={tour.agencyId.name}
-                className="w-12 h-12 rounded-full"
-              />
-              <div>
-                <h3 className="font-semibold text-gray-900">{tour.agencyId.name}</h3>
-                <p className="text-xs text-gray-500">Travel Agency</p>
+          {tour.agency && (
+            <div className="bg-white rounded-xl shadow-sm border p-6 sticky top-24">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                <Building2 className="w-5 h-5 mr-2 text-[#007980]" />
+                Công ty quản lý
+              </h2>
+              <div className="flex items-center gap-3 mb-4 border-b pb-3">
+                <img
+                  src={tour.agency.logo}
+                  alt={tour.agency.name}
+                  className="w-14 h-14 rounded-full border-2 border-[#007980]/20"
+                />
+                <div>
+                  <h3 className="font-bold">{tour.agency.name}</h3>
+                  <p className="text-xs text-gray-500">Travel Agency</p>
+                </div>
               </div>
-            </div>
-            
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center text-gray-600">
-                <Phone className="w-4 h-4 mr-2 text-blue-600" />
-                <span>{tour.agencyId.phone}</span>
-              </div>
-              <div className="flex items-center text-gray-600">
-                <Mail className="w-4 h-4 mr-2 text-blue-600" />
-                <span className="truncate">{tour.agencyId.email}</span>
-              </div>
-              <div className="flex items-center text-gray-600">
-                <Globe className="w-4 h-4 mr-2 text-blue-600" />
-                <a href={`https://${tour.agencyId.website}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">
-                  {tour.agencyId.website}
-                </a>
-              </div>
-            </div>
-          </div>
 
-          {/* Departures */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Lịch khởi hành</h2>
-            <div className="space-y-3">
-              {tour.departures?.map((dep) => {
-                const seatsBooked = dep.seatsTotal - dep.seatsLeft;
-                const bookingPercentage = Math.round((seatsBooked / dep.seatsTotal) * 100);
-                
-                return (
-                  <div key={dep._id} className="border border-gray-200 rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center text-gray-900">
-                        <Calendar className="w-4 h-4 mr-2 text-blue-600" />
-                        <span className="font-medium text-sm">
-                          {new Date(dep.date).toLocaleDateString('vi-VN')}
-                        </span>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                        dep.status === 'full' 
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {dep.status === 'full' ? 'Đã đầy' : `Còn ${dep.seatsLeft} chỗ`}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600 mb-2">
-                      <div className="flex justify-between">
-                        <span>Người lớn:</span>
-                        <span className="font-medium">{dep.priceAdult.toLocaleString()} VNĐ</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Trẻ em:</span>
-                        <span className="font-medium">{dep.priceChild.toLocaleString()} VNĐ</span>
-                      </div>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-1.5">
-                      <div
-                        className={`h-1.5 rounded-full ${
-                          bookingPercentage === 100 ? 'bg-red-600' : 
-                          bookingPercentage > 75 ? 'bg-yellow-600' : 'bg-blue-600'
-                        }`}
-                        style={{ width: `${bookingPercentage}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {seatsBooked}/{dep.seatsTotal} chỗ đã đặt
-                    </p>
-                  </div>
-                );
-              })}
+              <div className="space-y-3 text-sm text-gray-700">
+                <div className="flex items-center">
+                  <Phone className="w-4 h-4 mr-3 text-[#007980]" />
+                  {tour.agency.phone}
+                </div>
+                <div className="flex items-center">
+                  <Mail className="w-4 h-4 mr-3 text-[#007980]" />
+                  {tour.agency.email}
+                </div>
+                <div className="flex items-start pt-2 border-t">
+                  <MapPin className="w-4 h-4 mr-3 text-[#007980] mt-0.5" />
+                  <span>{tour.agency.address}</span>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Stats Summary */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Thống kê</h2>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Tổng số chỗ:</span>
-                <span className="font-semibold text-gray-900">{totalSeats}</span>
+          {/* Stats */}
+          <div className="bg-gradient-to-br from-[#007980] to-[#005f68] text-white rounded-xl p-6 shadow-lg">
+            <h2 className="text-lg font-bold mb-4">Thống kê</h2>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span>Tổng chỗ:</span> <span>{totalSeats}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Đã đặt:</span>
-                <span className="font-semibold text-green-600">{bookedSeats}</span>
+              <div className="flex justify-between">
+                <span>Đã đặt:</span> <span>{bookedSeats}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Còn lại:</span>
-                <span className="font-semibold text-blue-600">{availableSeats}</span>
+              <div className="flex justify-between">
+                <span>Còn lại:</span> <span>{availableSeats}</span>
               </div>
-              <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                <span className="text-sm text-gray-600">Tỉ lệ đặt:</span>
-                <span className="font-semibold text-gray-900">
-                  {totalSeats > 0 ? Math.round((bookedSeats / totalSeats) * 100) : 0}%
+              <div className="flex justify-between">
+                <span>Tỉ lệ đặt:</span>
+                <span>
+                  {totalSeats
+                    ? Math.round((bookedSeats / totalSeats) * 100)
+                    : 0}
+                  %
                 </span>
               </div>
             </div>

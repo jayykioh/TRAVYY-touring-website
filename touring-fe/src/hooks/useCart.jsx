@@ -1,6 +1,6 @@
 // hooks/useCart.jsx
 import { useContext, useMemo } from "react";
-import { CartContext } from "../components/CartContext";
+import { CartContext } from "../context/CartContext";
 import { useAuth } from "../auth/context";
 import { toast } from "sonner";
 

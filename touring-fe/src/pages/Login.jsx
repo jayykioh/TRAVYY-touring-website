@@ -32,15 +32,34 @@ function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      if (form.username.includes('@') && form.username.includes('travyy.com')) {
+      // Check if there's a saved redirect URL
+      const redirectUrl = sessionStorage.getItem("redirect_after_login");
+
+      if (form.username.includes("@") && form.username.includes("travyy.com")) {
         // Admin login
         await adminLogin(form.username, form.password);
         toast.success("Đăng nhập admin thành công");
-        navigate("/admin/dashboard", { replace: true });
+
+        // Clear redirect URL and navigate
+        if (redirectUrl) {
+          sessionStorage.removeItem("redirect_after_login");
+          window.location.href = redirectUrl; // Use window.location to ensure full reload
+        } else {
+          navigate("/admin/dashboard", { replace: true });
+        }
       } else {
-      await login(form.username, form.password);
-      toast.success(`Chào mừng ${form.username} đã trở lại. Khám phá những chuyến đi tuyệt vời!`);
-      navigate("/home", { replace: true });
+        await login(form.username, form.password);
+        toast.success(
+          `Chào mừng ${form.username} đã trở lại. Khám phá những chuyến đi tuyệt vời!`
+        );
+
+        // Clear redirect URL and navigate
+        if (redirectUrl) {
+          sessionStorage.removeItem("redirect_after_login");
+          window.location.href = redirectUrl; // Use window.location to ensure full reload
+        } else {
+          navigate("/home", { replace: true });
+        }
       }
     } catch (err) {
       toast.error(err?.body?.message || "Login failed");
@@ -54,7 +73,7 @@ function Login() {
   };
 
   const facebookLogin = () => {
-  window.location.href = `${API}/api/auth/facebook`;
+    window.location.href = `${API}/api/auth/facebook`;
   };
 
   return (
@@ -136,9 +155,8 @@ function Login() {
               </div>
             </div>
 
-              {/* Right Side - Login Form */}
+            {/* Right Side - Login Form */}
             <div className="p-8 lg:p-10">
-             
               {/* Header */}
               <div className="text-center mb-8">
                 <h1 className="text-3xl font-bold text-white mb-2">Sign In</h1>
@@ -198,15 +216,13 @@ function Login() {
                   >
                     Forgot Password?
                   </a>
-                   <a
+                  <a
                     href="/register"
                     className="text-sm text-white/90 hover:text-white transition-colors font-medium"
                   >
-                    Register 
+                    Register
                   </a>
                 </div>
-
-            
 
                 {/* Login Button */}
                 <button

@@ -11,15 +11,209 @@ const Tour = require("../models/agency/Tours");
 const { Cart, CartItem } = require("../models/Carts");
 
 // Import unified helpers
-const {
-  clearCartAfterPayment,
-  createBookingFromSession,
-  FX_VND_USD,
-} = require("../utils/paymentHelpers");
+const { clearCartAfterPayment, createBookingFromSession, markBookingAsPaid, markBookingAsFailed, FX_VND_USD } = require("../utils/paymentHelpers");
 
-// Export helpers for use in other controllers
-module.exports.clearCartAfterPayment = clearCartAfterPayment;
-module.exports.createBookingFromSession = createBookingFromSession;
+// Helper function to restore cart from failed payment session
+async function restoreCartFromPaymentSession(session) {
+  try {
+    if (!session || !session.userId || !session.items || session.items.length === 0) {
+      console.log(`[Payment] No items to restore for session ${session?._id}`);
+      return false;
+    }
+
+    const { Cart, CartItem } = require("../models/Carts");
+    
+    // Find or create cart for user
+    let cart = await Cart.findOne({ userId: session.userId });
+    if (!cart) {
+      cart = await Cart.create({ userId: session.userId });
+      console.log(`[Payment] Created new cart for user ${session.userId}`);
+    }
+
+    // Restore items to cart
+    let restoredCount = 0;
+    for (const item of session.items) {
+      // Check if item already exists in cart to avoid duplicates
+      const existingItem = await CartItem.findOne({
+        cartId: cart._id,
+        tourId: item.tourId,
+        date: item.meta?.date || '',
+        adults: item.meta?.adults || 0,
+        children: item.meta?.children || 0
+      });
+
+      if (!existingItem) {
+        await CartItem.create({
+          cartId: cart._id,
+          tourId: item.tourId,
+          name: item.name,
+          image: item.meta?.image || '',
+          date: item.meta?.date || '',
+          adults: item.meta?.adults || 0,
+          children: item.meta?.children || 0,
+          unitPriceAdult: item.meta?.unitPriceAdult || 0,
+          unitPriceChild: item.meta?.unitPriceChild || 0,
+          selected: true // Mark as selected for payment
+        });
+        restoredCount++;
+      }
+    }
+
+    if (restoredCount > 0) {
+      console.log(`[Payment] ✅ Restored ${restoredCount} items to cart for user ${session.userId} from failed payment`);
+      return true;
+    } else {
+      console.log(`[Payment] All items already exist in cart for user ${session.userId}`);
+      return false;
+    }
+  } catch (error) {
+    console.error(`[Payment] ❌ Failed to restore cart from session ${session?._id}:`, error);
+    return false;
+  }
+}
+
+// Helper function to hold seats temporarily during payment
+async function holdSeatsForPayment(session) {
+  try {
+    if (!session || !session.items || session.items.length === 0) {
+      console.log(`[Payment] No items to hold seats for session ${session?._id}`);
+      return false;
+    }
+
+    console.log(`[Payment] 🔒 Holding seats for payment session ${session._id}`);
+    
+    for (const item of session.items) {
+      if (!item.tourId) continue;
+      
+      const tour = await Tour.findById(item.tourId);
+      if (!tour) {
+        console.log(`   ⚠️ Tour not found, skipping: ${item.tourId}`);
+        continue;
+      }
+
+      const dep = tour.departures.find(d => normDate(d.date) === item.meta?.date);
+      if (!dep) {
+        console.log(`   ⚠️ Departure not found, skipping: ${item.meta?.date}`);
+        continue;
+      }
+
+      const needed = (item.meta?.adults || 0) + (item.meta?.children || 0);
+      const currentSeats = dep.seatsLeft || 0;
+
+      if (currentSeats < needed) {
+        throw new Error(`INSUFFICIENT_SEATS: Need ${needed}, available ${currentSeats} for tour ${item.name}`);
+      }
+
+      // Temporarily reduce seats (hold them)
+      await Tour.updateOne(
+        { _id: tour._id, "departures.date": dep.date },
+        { $inc: { "departures.$.seatsLeft": -needed } }
+      );
+
+      console.log(`   ✅ Held ${needed} seats for tour ${item.name} (${item.tourId})`);
+    }
+
+    // Set timeout to release seats after 1 minute if payment not completed
+ // controller/payment.controller.js (trong setTimeout của holdSeatsForPayment)
+setTimeout(async () => {
+  try {
+    const currentSession = await PaymentSession.findById(session._id);
+    if (currentSession && currentSession.status === 'pending') {
+      console.log(`[Payment] ⏰ Timeout reached for session ${session._id}, releasing held seats`);
+      await releaseSeatsForPayment(session);
+      currentSession.status = 'expired';
+      await currentSession.save();
+      await restoreCartFromPaymentSession(session);
+
+      // 🔻 Tạo booking thất bại để hiện trong lịch sử (phục vụ "Thanh toán lại")
+      try {
+        const existing = await Booking.findOne({ "payment.orderId": currentSession.orderId });
+        if (!existing) {
+          await createBookingFromSession(currentSession, { failReason: "timeout" }); // => status=cancelled
+        }
+      } catch (e) {
+        console.warn("[Payment] Failed to create failed booking on timeout:", e.message);
+      }
+
+      // 🔻 (tuỳ chọn) Gửi mail thông báo hết hạn thanh toán
+      try {
+        const User = require("../models/Users");
+        const user = await User.findById(currentSession.userId);
+        if (user?.email) {
+          const { sendPaymentTimeoutNotification } = require("../controller/notifyController");
+          if (typeof sendPaymentTimeoutNotification === "function") {
+            await sendPaymentTimeoutNotification({
+              email: user.email,
+              orderId: currentSession.orderId,
+              items: currentSession.items,
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("[Payment] Failed to send timeout notification:", e.message);
+      }
+    }
+  } catch (error) {
+    console.error(`[Payment] ❌ Failed to release seats on timeout for session ${session._id}:`, error);
+  }
+}, 60 * 1000); // 1 minute
+
+    return true;
+  } catch (error) {
+    console.error(`[Payment] ❌ Failed to hold seats for session ${session?._id}:`, error);
+    throw error;
+  }
+}
+
+// Helper function to release held seats
+async function releaseSeatsForPayment(session) {
+  try {
+    if (!session || !session.items || session.items.length === 0) {
+      console.log(`[Payment] No items to release seats for session ${session?._id}`);
+      return false;
+    }
+
+    console.log(`[Payment] 🔓 Releasing held seats for payment session ${session._id}`);
+    
+    for (const item of session.items) {
+      if (!item.tourId) continue;
+      
+      const tour = await Tour.findById(item.tourId);
+      if (!tour) continue;
+
+      const dep = tour.departures.find(d => normDate(d.date) === item.meta?.date);
+      if (!dep) continue;
+
+      const needed = (item.meta?.adults || 0) + (item.meta?.children || 0);
+
+      // Release seats back
+      await Tour.updateOne(
+        { _id: tour._id, "departures.date": dep.date },
+        { $inc: { "departures.$.seatsLeft": needed } }
+      );
+
+      console.log(`   ✅ Released ${needed} seats for tour ${item.name} (${item.tourId})`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error(`[Payment] ❌ Failed to release seats for session ${session?._id}:`, error);
+    return false;
+  }
+}
+
+// Helper function to confirm held seats (permanent reduction)
+async function confirmSeatsForPayment(session) {
+  try {
+    console.log(`[Payment] ✅ Confirming held seats for successful payment session ${session._id}`);
+    // Seats are already reduced, just log success
+    console.log(`[Payment] Seats permanently confirmed for session ${session._id}`);
+    return true;
+  } catch (error) {
+    console.error(`[Payment] ❌ Failed to confirm seats for session ${session?._id}:`, error);
+    return false;
+  }
+}
 
 // Attempt to get a fetch implementation (Node 18+ has global fetch)
 async function getFetch() {
@@ -139,6 +333,46 @@ async function buildMoMoCharge(userId, body) {
       mode,
     };
   }
+  if (mode === "retry-payment") {
+    const retryItems = body?.retryItems || [];
+    if (!retryItems.length) throw Object.assign(new Error("NO_RETRY_ITEMS"), { status: 400 });
+    
+    const items = [];
+    let totalVND = 0;
+    
+    for (const item of retryItems) {
+      const tourId = item.tourId;
+      const date = normDate(item.date);
+      const a = clamp0(item.adults);
+      const c = clamp0(item.children);
+      const unitPriceAdult = Number(item.unitPriceAdult) || 0;
+      const unitPriceChild = Number(item.unitPriceChild) || 0;
+      const amt = unitPriceAdult * a + unitPriceChild * c;
+      totalVND += amt;
+      
+      items.push({
+        name: item.name,
+        price: amt,
+        originalPrice: undefined,
+        tourId,
+        meta: {
+          date,
+          adults: a,
+          children: c,
+          unitPriceAdult,
+          unitPriceChild,
+          image: item.image,
+        },
+      });
+    }
+    
+    return {
+      items,
+      totalVND,
+      mode,
+      retryBookingId: body?.retryBookingId
+    };
+  }
   // fallback: empty
   return {
     items: [],
@@ -155,15 +389,36 @@ exports.createMoMoPayment = async (req, res) => {
       ipnUrl,
       extraData = "",
       items = [], // snapshot optional
-      mode, // 'cart' | 'buy-now'
+      mode, // 'cart' | 'buy-now' | 'retry-payment'
       item: buyNowItem,
+      retryItems,
+      retryBookingId,
     } = req.body || {};
+
+    console.log("📥 [MoMo] Received payment request:", {
+      mode,
+      buyNowItem,
+      frontendAmount: req.body.amount,
+      frontendItems: items,
+      userId: req.user?.sub || req.user?._id,
+    });
 
     // Authoritatively recompute amount from server-side state
     const userId = req.user?.sub || req.user?._id;
-    const { items: serverItems, totalVND } = await buildMoMoCharge(userId, {
+    const { items: serverItems, totalVND, retryBookingId: serverRetryBookingId } = await buildMoMoCharge(userId, {
       mode,
       item: buyNowItem,
+      retryItems,
+      retryBookingId,
+    });
+
+    console.log("🧮 [MoMo] Server calculated:", {
+      totalVND,
+      serverItems: serverItems.map((it) => ({
+        name: it.name,
+        price: it.price,
+        meta: it.meta,
+      })),
     });
 
     // Apply discount from voucher/promotion
@@ -287,8 +542,9 @@ exports.createMoMoPayment = async (req, res) => {
     }
 
     // Persist pending payment session (simple snapshot)
+    let paymentSession;
     try {
-      await PaymentSession.create({
+      paymentSession = await PaymentSession.create({
         userId: req.user?.sub || req.user?._id || new mongoose.Types.ObjectId(),
         provider: "momo",
         orderId,
@@ -296,6 +552,7 @@ exports.createMoMoPayment = async (req, res) => {
         amount: amt,
         status: "pending",
         mode: mode || (buyNowItem ? "buy-now" : "cart"),
+        retryBookingId: serverRetryBookingId, // For retry payments
         items: (Array.isArray(serverItems) ? serverItems : []).map((it) => ({
           name: it.name,
           price: Number(it.price) || 0,
@@ -311,8 +568,13 @@ exports.createMoMoPayment = async (req, res) => {
         discountAmount: discountAmount,
         rawCreateResponse: data,
       });
+
+      // Hold seats temporarily for 1 minute
+      await holdSeatsForPayment(paymentSession);
+      
     } catch (dbErr) {
       console.error("Failed to persist payment session", dbErr);
+      throw dbErr;
     }
 
     res.json({
@@ -352,6 +614,10 @@ function buildIpnRawSignature(p) {
 exports.handleMoMoIPN = async (req, res) => {
   try {
     const body = req.body || {};
+    // Detailed debug logging for IPN
+    console.log('\n🔔 [MoMo IPN] Received IPN');
+    try { console.log('Headers:', JSON.stringify(req.headers)); } catch(e) { console.log('Headers: <unserializable>'); }
+    try { console.log('Body:', JSON.stringify(body, null, 2)); } catch(e) { console.log('Body: <unserializable>'); }
     const secretKey =
       process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz"; // sandbox fallback
     const raw = buildIpnRawSignature(body);
@@ -368,9 +634,35 @@ exports.handleMoMoIPN = async (req, res) => {
       return res.status(400).json({ error: "BAD_SIGNATURE" });
     }
 
-    const session = await PaymentSession.findOne({ orderId: body.orderId });
+    // Try several ways to locate the payment session: orderId, requestId, transId,
+    // or nested rawCreateResponse fields. This helps when different fields were
+    // used to persist the Pay/Session identifiers.
+    let session = null;
+    const candidates = [];
+    if (body.orderId) candidates.push({ orderId: body.orderId });
+    if (body.requestId) candidates.push({ requestId: body.requestId });
+    if (body.transId) candidates.push({ transId: body.transId });
+
+    // Try direct matches first
+    for (const q of candidates) {
+      console.log('[MoMo IPN] Trying session lookup with', q);
+      session = await PaymentSession.findOne(q);
+      console.log('[MoMo IPN] Lookup result:', session ? `FOUND session._id=${session._id}` : 'not found');
+      if (session) break;
+    }
+
+    // Try nested rawCreateResponse matches
+    if (!session && body.orderId) {
+      session = await PaymentSession.findOne({ $or: [ { 'rawCreateResponse.orderId': body.orderId }, { 'rawCreateResponse.id': body.orderId } ] });
+    }
+
     if (!session) {
-      console.warn("[MoMo] IPN unknown orderId", body.orderId);
+      console.warn("[MoMo] IPN unknown orderId/requestId/transId", { orderId: body.orderId, requestId: body.requestId, transId: body.transId });
+      // Also attempt to find by nested rawCreateResponse keys and log
+      if (body.orderId) {
+        const nested = await PaymentSession.findOne({ $or: [ { 'rawCreateResponse.orderId': body.orderId }, { 'rawCreateResponse.id': body.orderId } ] });
+        console.log('[MoMo IPN] nested lookup by rawCreateResponse:', nested ? `FOUND session._id=${nested._id}` : 'not found');
+      }
       return res.status(404).json({ error: "SESSION_NOT_FOUND" });
     }
 
@@ -380,17 +672,34 @@ exports.handleMoMoIPN = async (req, res) => {
     session.payType = body.payType;
 
     let justPaid = false;
+    let justFailed = false;
+    
     if (String(body.resultCode) === "0") {
       if (session.status !== "paid") {
         session.status = "paid";
         session.paidAt = new Date();
         justPaid = true;
+        console.log(`✅ [MoMo IPN] Payment successful (resultCode: 0) - setting status to 'paid'`);
+        
+        // Confirm held seats permanently
+        await confirmSeatsForPayment(session);
       }
     } else if (session.status === "pending") {
       session.status = "failed";
+      justFailed = true;
+      console.log(`⚠️ [MoMo IPN] Payment failed (resultCode: ${body.resultCode}) - setting status to 'failed'`);
     }
 
-    await session.save();
+  console.log('[MoMo IPN] Updating session status ->', session.status, ' saving...');
+  await session.save();
+  console.log('[MoMo IPN] Session saved:', session._id, 'status:', session.status);
+
+    // If payment failed -> release seats and restore cart
+    if (justFailed) {
+      console.log(`[MoMo IPN] Payment failed, releasing seats and restoring cart...`);
+      await releaseSeatsForPayment(session);
+      await restoreCartFromPaymentSession(session);
+    }
 
     // If newly paid -> mark voucher as used and create Booking
     if (justPaid) {
@@ -431,11 +740,65 @@ exports.handleMoMoIPN = async (req, res) => {
         }
       }
 
-      // Create booking (unified helper with idempotent check)
-      await createBookingFromSession(session, {
-        ipn: body,
-        sessionId: session._id,
-      });
+      // Create or update booking (unified helper with idempotent check)
+      let booking;
+      if (session.retryBookingId) {
+        // For retry payments, update the existing failed booking
+        console.log(`🔄 [MoMo IPN] Updating existing booking ${session.retryBookingId} for retry payment`);
+        booking = await Booking.findById(session.retryBookingId);
+        if (booking) {
+          booking.status = 'paid';
+          booking.payment.status = 'completed';
+          booking.payment.paidAt = new Date();
+          booking.payment.transactionId = body.transId;
+          booking.payment.momoData = {
+            partnerCode: body.partnerCode,
+            resultCode: body.resultCode,
+            message: body.message,
+            transId: body.transId,
+            raw: body
+          };
+          await booking.save();
+          console.log(`✅ [MoMo IPN] Updated existing booking ${booking._id} to paid status`);
+        } else {
+          console.warn(`⚠️ [MoMo IPN] Retry booking ${session.retryBookingId} not found, creating new booking`);
+       booking = await createBookingFromSession(
+            session,{
+              ipn: body,
+            sessionId: session._id,
+              markPaid: true 
+          });
+        }
+      } else {
+        // Normal payment flow
+        booking = await createBookingFromSession(session, {
+          ipn: body,
+          sessionId: session._id,
+        });
+      }
+
+      // Send payment success notification
+      try {
+        const User = require("../models/Users");
+        const user = await User.findById(session.userId);
+        if (user && user.email && booking) {
+          const { sendPaymentSuccessNotification } = require("../controller/notifyController");
+          const tourTitle = booking.items?.[0]?.name || "Tour";
+          await sendPaymentSuccessNotification({
+            email: user.email,
+            amount: booking.totalAmount,
+            bookingCode: booking.bookingCode,
+            tourTitle: tourTitle,
+            bookingId: booking._id
+          });
+          console.log(`[MoMo IPN] ✅ Payment success notification sent for booking ${booking._id}`);
+        } else {
+          console.warn(`[MoMo IPN] ⚠️ User email not found for session ${session._id}, skipping notification`);
+        }
+      } catch (notifyError) {
+        console.error(`[MoMo IPN] ❌ Failed to send payment notification:`, notifyError);
+        // Don't fail the IPN if notification fails
+      }
     }
 
     // Important: MoMo expects 200/204 to stop retrying
@@ -469,74 +832,89 @@ exports.getMoMoSessionStatus = async (req, res) => {
 // This is a UNIFIED handler for both MoMo and PayPal callback
 exports.markMoMoPaid = async (req, res) => {
   try {
-    const { orderId, resultCode } = req.body || {};
+    const { orderId, resultCode, message } = req.body || {};
+    console.log("\n🔍 [markMoMoPaid] Called by frontend:", { orderId, resultCode, message });
+
     if (!orderId) return res.status(400).json({ error: "MISSING_ORDER_ID" });
 
-    const sess = await PaymentSession.findOne({ orderId });
-    if (!sess) return res.status(404).json({ error: "SESSION_NOT_FOUND" });
+    // 1️⃣ Tìm PaymentSession
+    let sess = await PaymentSession.findOne({ orderId });
+    if (!sess) sess = await PaymentSession.findOne({ requestId: orderId });
+    if (!sess) sess = await PaymentSession.findOne({ transId: orderId });
+    if (!sess) sess = await PaymentSession.findOne({ 'rawCreateResponse.orderId': orderId });
+    if (!sess) sess = await PaymentSession.findOne({ 'rawCreateResponse.id': orderId });
 
+    if (!sess) {
+      console.warn("[markMoMoPaid] SESSION_NOT_FOUND for", orderId);
+      return res.status(404).json({ error: "SESSION_NOT_FOUND" });
+    }
+
+    // 2️⃣ Nếu MoMo trả lỗi → đánh dấu thất bại
+    if (String(resultCode) !== "0") {
+      sess.status = "failed";
+      sess.message = message || "Payment failed";
+      await sess.save();
+
+      await restoreCartFromPaymentSession(sess);
+      await markBookingAsFailed(orderId, {
+        transactionId: orderId,
+        momo: { orderId, resultCode, message, failedAt: new Date() },
+      });
+
+      return res.json({
+        success: false,
+        status: "failed",
+        message: "Thanh toán thất bại, đơn hàng đã được ghi nhận",
+      });
+    }
+
+    // 3️⃣ Nếu thanh toán thành công
     if (sess.status !== "paid") {
-      if (String(resultCode) !== "0") {
-        sess.status = "failed";
-        await sess.save();
-        return res.status(400).json({ error: "RESULT_NOT_SUCCESS" });
-      }
       sess.status = "paid";
       sess.paidAt = new Date();
       await sess.save();
-
-      // Mark voucher as used if stored in session
-      if (sess.voucherCode && sess.userId) {
-        try {
-          const User = require("../models/Users");
-          const Promotion = require("../models/Promotion");
-
-          const promotion = await Promotion.findOne({
-            code: sess.voucherCode.toUpperCase(),
-          });
-          if (promotion) {
-            // ✅ Tăng usageCount
-            await Promotion.findByIdAndUpdate(promotion._id, {
-              $inc: { usageCount: 1 },
-            });
-
-            // ✅ Đánh dấu user đã sử dụng
-            await User.findByIdAndUpdate(sess.userId, {
-              $addToSet: {
-                usedPromotions: {
-                  promotionId: promotion._id,
-                  code: promotion.code,
-                  usedAt: new Date(),
-                },
-              },
-            });
-            console.log(
-              `✅ [MoMo] Marked promotion ${sess.voucherCode} as used for user ${sess.userId} and incremented usageCount`
-            );
-          }
-        } catch (voucherError) {
-          console.error("[MoMo] Error marking voucher as used:", voucherError);
-          // Don't fail the payment if voucher marking fails
-        }
-      }
+      console.log(`✅ [markMoMoPaid] Session ${sess._id} marked as paid`);
     }
 
-    // Idempotent: create booking if not exists (using unified helper)
+    // 4️⃣ Tạo booking từ session (nếu chưa có)
     const booking = await createBookingFromSession(sess, {
       markPaid: true,
       sessionId: sess._id,
     });
 
-    res.json({
-      status: sess.status,
-      paidAt: sess.paidAt,
+    console.log(`✅ [markMoMoPaid] Booking created successfully: ${booking?._id}`);
+
+    // 5️⃣ Gửi email xác nhận (tùy chọn)
+    try {
+      const User = require("../models/Users");
+      const user = await User.findById(sess.userId);
+      if (user?.email) {
+        const { sendPaymentSuccessNotification } = require("../controller/notifyController");
+        await sendPaymentSuccessNotification({
+          email: user.email,
+          amount: booking.totalAmount,
+          bookingCode: booking.bookingCode,
+          tourTitle: booking.items?.[0]?.name || "Tour",
+          bookingId: booking._id,
+        });
+        console.log(`[markMoMoPaid] ✅ Payment success email sent to ${user.email}`);
+      }
+    } catch (notifyErr) {
+      console.error("[markMoMoPaid] ⚠️ Failed to send success email:", notifyErr);
+    }
+
+    return res.json({
+      success: true,
+      status: "paid",
       bookingId: booking?._id,
+      message: "Thanh toán thành công!",
     });
-  } catch (e) {
-    console.error("markMoMoPaid error", e);
+  } catch (err) {
+    console.error("markMoMoPaid error", err);
     res.status(500).json({ error: "INTERNAL_ERROR" });
   }
 };
+
 
 // ===== UNIFIED: Get booking by payment provider and orderId =====
 // This replaces the separate endpoint in bookingController
@@ -563,10 +941,12 @@ exports.getBookingByPayment = async (req, res) => {
     );
 
     // First check if booking exists
-    const booking = await Booking.findOne({
-      "payment.provider": provider,
-      "payment.orderID": orderId,
-      userId,
+    // Look up booking by the canonical payment.orderId field (lowercase),
+    // but keep a fallback for legacy 'payment.orderID' (uppercase D).
+    const booking = await Booking.findOne({ 
+      'payment.provider': provider, 
+      $or: [ { 'payment.orderId': orderId }, { 'payment.orderID': orderId } ],
+      userId 
     })
       .populate("items.tourId", "title imageItems")
       .lean();
@@ -600,9 +980,7 @@ exports.getBookingByPayment = async (req, res) => {
         `[Payment] 🔄 Session is paid, attempting to create booking...`
       );
       try {
-        const newBooking = await createBookingFromSession(session, {
-          lateCreation: true,
-        });
+        const newBooking = await createBookingFromSession(session, { lateCreation: true });
         return res.json({ success: true, booking: newBooking });
       } catch (createErr) {
         console.error(
@@ -629,3 +1007,102 @@ exports.getBookingByPayment = async (req, res) => {
     res.status(500).json({ error: "FETCH_BOOKING_FAILED" });
   }
 };
+
+// ===== Retry payment for failed booking =====
+exports.retryPaymentForBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const userId = req.user?.sub;
+    
+    if (!userId) return res.status(401).json({ error: "UNAUTHORIZED" });
+    if (!bookingId) return res.status(400).json({ error: "BOOKING_ID_REQUIRED" });
+
+    console.log(`[Payment] 🔄 Retrying payment for booking ${bookingId} by user ${userId}`);
+
+    // 1) Find the failed booking
+    const booking = await Booking.findOne({ 
+      _id: bookingId, 
+      userId,
+      status: "cancelled",
+      "payment.status": "failed"
+    });
+
+    if (!booking) {
+      return res.status(404).json({ error: "FAILED_BOOKING_NOT_FOUND" });
+    }
+
+    // 2) Check if seats are still available
+    for (const item of booking.items) {
+      const tour = await Tour.findById(item.tourId);
+      if (!tour) {
+        return res.status(400).json({ error: `TOUR_NOT_FOUND: ${item.tourId}` });
+      }
+
+      const dep = tour.departures.find(d => normDate(d.date) === item.date);
+      if (!dep) {
+        return res.status(400).json({ error: `DEPARTURE_NOT_FOUND: ${item.date}` });
+      }
+
+      const needed = (item.adults || 0) + (item.children || 0);
+      if (dep.seatsLeft < needed) {
+        return res.status(400).json({ 
+          error: "INSUFFICIENT_SEATS", 
+          message: `Not enough seats available for ${item.name}. Available: ${dep.seatsLeft}, Needed: ${needed}` 
+        });
+      }
+    }
+
+    // 3) Create new payment session from booking data
+    const paymentSession = await PaymentSession.create({
+      userId,
+      provider: booking.payment.provider,
+      items: booking.items.map(item => ({
+        tourId: item.tourId,
+        name: item.name,
+        image: item.image,
+        meta: {
+          date: item.date,
+          adults: item.adults,
+          children: item.children,
+          unitPriceAdult: item.unitPriceAdult,
+          unitPriceChild: item.unitPriceChild,
+          image: item.image
+        }
+      })),
+      currency: booking.currency,
+      originalAmount: booking.originalAmount,
+      discountAmount: booking.discountAmount,
+      totalAmount: booking.totalAmount,
+      voucherCode: booking.voucherCode,
+      promotionId: booking.promotionId,
+      status: 'pending',
+      createdAt: new Date()
+    });
+
+    // 4) Hold seats temporarily
+    await holdSeatsForPayment(paymentSession);
+
+    console.log(`[Payment] ✅ Created retry payment session ${paymentSession._id} for booking ${bookingId}`);
+
+    // 5) Return session info for frontend to proceed with payment
+    res.json({
+      success: true,
+      sessionId: paymentSession._id,
+      provider: booking.payment.provider,
+      amount: booking.totalAmount,
+      currency: booking.currency,
+      items: paymentSession.items
+    });
+
+  } catch (e) {
+    console.error("retryPaymentForBooking error", e);
+    res.status(500).json({ error: "RETRY_PAYMENT_FAILED" });
+  }
+};
+
+// Export helpers for use in other controllers
+// Export helpers for use in other controllers
+module.exports.restoreCartFromPaymentSession = restoreCartFromPaymentSession;
+module.exports.holdSeatsForPayment = holdSeatsForPayment;
+module.exports.releaseSeatsForPayment = releaseSeatsForPayment;
+module.exports.confirmSeatsForPayment = confirmSeatsForPayment;

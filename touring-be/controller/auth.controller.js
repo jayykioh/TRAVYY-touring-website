@@ -13,17 +13,33 @@ const ALLOWED_ROLES = ["Traveler", "TourGuide", "TravelAgency"];
 const VN_PHONE = /^(03|05|07|08|09)\d{8}$/;
 const USERNAME = /^[\p{L}\p{N}_]{3,20}$/u;
 
-
 const RegisterSchema = z.object({
-  email: z.string().email("Email không hợp lệ").transform(v => v.trim().toLowerCase()),
+  email: z
+    .string()
+    .email("Email không hợp lệ")
+    .transform((v) => v.trim().toLowerCase()),
   password: z.string().min(8, "Mật khẩu tối thiểu 8 ký tự"),
   name: z.string().trim().optional().nullable(),
-  username: z.string().trim().optional().nullable()
-    .transform(v => (v == null ? "" : v.toLowerCase()))
-    .refine(v => v === "" || USERNAME.test(v), "Username 3–20 ký tự; chỉ a-z, 0-9, _"),
-  phone: z.string().trim().optional().nullable()
-    .transform(v => (v == null ? "" : v))
-    .refine(v => v === "" || VN_PHONE.test(v), "Số điện thoại VN không hợp lệ"),
+  username: z
+    .string()
+    .trim()
+    .optional()
+    .nullable()
+    .transform((v) => (v == null ? "" : v.toLowerCase()))
+    .refine(
+      (v) => v === "" || USERNAME.test(v),
+      "Username 3–20 ký tự; chỉ a-z, 0-9, _"
+    ),
+  phone: z
+    .string()
+    .trim()
+    .optional()
+    .nullable()
+    .transform((v) => (v == null ? "" : v))
+    .refine(
+      (v) => v === "" || VN_PHONE.test(v),
+      "Số điện thoại VN không hợp lệ"
+    ),
   role: z.enum(ALLOWED_ROLES).optional().default("Traveler"),
   provinceId: z.string().min(1, "Chưa chọn tỉnh/thành"),
   wardId: z.string().min(1, "Chưa chọn phường/xã"),
@@ -48,13 +64,31 @@ exports.register = async (req, res) => {
 
     // Uniqueness checks
     if (await User.exists({ email })) {
-      return res.status(409).json({ error: "EMAIL_TAKEN", field: "email", message: "Email đã được sử dụng." });
+      return res
+        .status(409)
+        .json({
+          error: "EMAIL_TAKEN",
+          field: "email",
+          message: "Email đã được sử dụng.",
+        });
     }
-    if (username && await User.exists({ username })) {
-      return res.status(409).json({ error: "USERNAME_TAKEN", field: "username", message: "Username đã được sử dụng." });
+    if (username && (await User.exists({ username }))) {
+      return res
+        .status(409)
+        .json({
+          error: "USERNAME_TAKEN",
+          field: "username",
+          message: "Username đã được sử dụng.",
+        });
     }
-    if (phone && await User.exists({ phone })) {
-      return res.status(409).json({ error: "PHONE_TAKEN", field: "phone", message: "Số điện thoại đã được sử dụng." });
+    if (phone && (await User.exists({ phone }))) {
+      return res
+        .status(409)
+        .json({
+          error: "PHONE_TAKEN",
+          field: "phone",
+          message: "Số điện thoại đã được sử dụng.",
+        });
     }
 
     const passwordHash = await bcrypt.hash(payload.password, 10);
@@ -66,7 +100,7 @@ exports.register = async (req, res) => {
       name: payload.name || "",
       username: username || undefined,
       phone: phone || undefined, // đừng lưu "" vào field unique
-      role,                      // dùng role đã chọn
+      role, // dùng role đã chọn
       location: {
         provinceId: payload.provinceId,
         wardId: payload.wardId,
@@ -101,15 +135,40 @@ exports.register = async (req, res) => {
     });
   } catch (e) {
     if (e instanceof z.ZodError) {
-      return res.status(400).json({ error: "VALIDATION_ERROR", message: e.errors?.[0]?.message });
+      return res
+        .status(400)
+        .json({ error: "VALIDATION_ERROR", message: e.errors?.[0]?.message });
     }
     if (e?.code === 11000) {
-      if (e?.keyPattern?.email)   return res.status(409).json({ error: "EMAIL_TAKEN", field: "email", message: "Email đã được sử dụng." });
-      if (e?.keyPattern?.username) return res.status(409).json({ error: "USERNAME_TAKEN", field: "username", message: "Username đã được sử dụng." });
-      if (e?.keyPattern?.phone)   return res.status(409).json({ error: "PHONE_TAKEN", field: "phone", message: "Số điện thoại đã được sử dụng." });
+      if (e?.keyPattern?.email)
+        return res
+          .status(409)
+          .json({
+            error: "EMAIL_TAKEN",
+            field: "email",
+            message: "Email đã được sử dụng.",
+          });
+      if (e?.keyPattern?.username)
+        return res
+          .status(409)
+          .json({
+            error: "USERNAME_TAKEN",
+            field: "username",
+            message: "Username đã được sử dụng.",
+          });
+      if (e?.keyPattern?.phone)
+        return res
+          .status(409)
+          .json({
+            error: "PHONE_TAKEN",
+            field: "phone",
+            message: "Số điện thoại đã được sử dụng.",
+          });
     }
     console.error(e);
-    return res.status(500).json({ error: "REGISTER_FAILED", message: e.message || "Server error" });
+    return res
+      .status(500)
+      .json({ error: "REGISTER_FAILED", message: e.message || "Server error" });
   }
 };
 
@@ -118,10 +177,20 @@ exports.login = async (req, res) => {
     const { username, password } = req.body;
     // cần lấy field password => đừng .select("-password") ở query này
     const user = await User.findOne({ username });
-    if (!user) return res.status(400).json({ message: "Invalid email or password" });
+    if (!user)
+      return res.status(400).json({ message: "Invalid email or password" });
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ message: "Invalid email or password" });
+    if (!match)
+      return res.status(400).json({ message: "Invalid email or password" });
+
+    // Block login if account is banned
+    if (user.accountStatus === "banned") {
+      return res.status(403).json({
+        message: "Tài khoản của bạn đã bị khóa",
+        reason: user.statusReason || "",
+      });
+    }
 
     // ✅ tạo refresh cookie + access token như các flow khác
     const jti = newId();
@@ -134,7 +203,10 @@ exports.login = async (req, res) => {
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
-    const accessToken = signAccess({ id: user.id, role: user.role || "Traveler" });
+    const accessToken = signAccess({
+      id: user.id,
+      role: user.role || "Traveler",
+    });
 
     return res.json({
       accessToken,
@@ -150,7 +222,9 @@ exports.login = async (req, res) => {
     });
   } catch (err) {
     console.error("LOGIN_ERROR:", err);
-    res.status(500).json({ error: "LOGIN_FAILED", message: err.message || "Server error" });
+    res
+      .status(500)
+      .json({ error: "LOGIN_FAILED", message: err.message || "Server error" });
   }
 };
 
@@ -167,7 +241,9 @@ exports.changePassword = async (req, res) => {
     }
 
     if (newPassword.length < 8) {
-      return res.status(400).json({ message: "Mật khẩu mới phải có ít nhất 8 ký tự" });
+      return res
+        .status(400)
+        .json({ message: "Mật khẩu mới phải có ít nhất 8 ký tự" });
     }
 
     const user = await User.findById(userId);
@@ -177,17 +253,19 @@ exports.changePassword = async (req, res) => {
 
     // ✅ Kiểm tra xem user có đăng nhập bằng OAuth không
     if (user.googleId || user.facebookId) {
-      return res.status(400).json({ 
-        message: "Bạn đăng nhập bằng Google/Facebook nên không thể đổi mật khẩu. Vui lòng quản lý bảo mật qua tài khoản Google/Facebook của bạn.",
-        isOAuthUser: true
+      return res.status(400).json({
+        message:
+          "Bạn đăng nhập bằng Google/Facebook nên không thể đổi mật khẩu. Vui lòng quản lý bảo mật qua tài khoản Google/Facebook của bạn.",
+        isOAuthUser: true,
       });
     }
 
     // ✅ Kiểm tra user có password không
     if (!user.password) {
-      return res.status(400).json({ 
-        message: "Tài khoản của bạn không có mật khẩu. Vui lòng liên hệ hỗ trợ.",
-        isOAuthUser: true
+      return res.status(400).json({
+        message:
+          "Tài khoản của bạn không có mật khẩu. Vui lòng liên hệ hỗ trợ.",
+        isOAuthUser: true,
       });
     }
 
@@ -204,14 +282,22 @@ exports.changePassword = async (req, res) => {
 
     // Gửi email thông báo
     try {
-      await axios.post(`http://localhost:${process.env.PORT || 4000}/api/notify/password-changed`, {
-        email: user.email,
-        name: user.name,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent')
-      });
+      await axios.post(
+        `http://localhost:${
+          process.env.PORT || 4000
+        }/api/notify/password-changed`,
+        {
+          email: user.email,
+          name: user.name,
+          ipAddress: req.ip,
+          userAgent: req.get("user-agent"),
+        }
+      );
     } catch (emailErr) {
-      console.error("Failed to send password change notification:", emailErr.message);
+      console.error(
+        "Failed to send password change notification:",
+        emailErr.message
+      );
     }
 
     res.json({ success: true, message: "Đổi mật khẩu thành công" });
@@ -235,25 +321,32 @@ exports.forgotPassword = async (req, res) => {
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       // Không tiết lộ email có tồn tại hay không (security)
-      console.log(`⚠️ Forgot password request for non-existent email: ${email}`);
-      return res.json({ 
-        success: true, 
-        message: "Nếu email tồn tại, link đặt lại mật khẩu đã được gửi" 
+      console.log(
+        `⚠️ Forgot password request for non-existent email: ${email}`
+      );
+      return res.json({
+        success: true,
+        message: "Nếu email tồn tại, link đặt lại mật khẩu đã được gửi",
       });
     }
 
     console.log(`🔑 Forgot password request for: ${user.email}`);
 
     // Tạo reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
 
     user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; // 15 phút
     await user.save();
 
     // Tạo reset link
-    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    const resetLink = `${
+      process.env.FRONTEND_URL || "http://localhost:5173"
+    }/reset-password?token=${resetToken}`;
 
     console.log(`📧 Sending reset email to: ${user.email}`);
     console.log(`🔗 Reset link: ${resetLink}`);
@@ -269,7 +362,7 @@ exports.forgotPassword = async (req, res) => {
         </div>
 
         <h2 style="color: #2563eb;">🔑 Đặt lại mật khẩu</h2>
-        <p>Xin chào <b>${user.name || 'bạn'}</b>,</p>
+        <p>Xin chào <b>${user.name || "bạn"}</b>,</p>
         <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản Travyy của bạn.</p>
         
         <div style="text-align: center; margin: 30px 0;">
@@ -301,20 +394,27 @@ exports.forgotPassword = async (req, res) => {
         "🔑 Yêu cầu đặt lại mật khẩu - Travyy",
         htmlContent
       );
-      
-      console.log(`✅ Password reset email sent successfully to: ${user.email}`);
+
+      console.log(
+        `✅ Password reset email sent successfully to: ${user.email}`
+      );
     } catch (emailErr) {
-      console.error("❌ Failed to send password reset email:", emailErr.message);
+      console.error(
+        "❌ Failed to send password reset email:",
+        emailErr.message
+      );
       console.error("❌ Full error:", emailErr);
       user.resetPasswordToken = undefined;
       user.resetPasswordExpires = undefined;
       await user.save();
-      return res.status(500).json({ message: "Không thể gửi email. Vui lòng thử lại sau" });
+      return res
+        .status(500)
+        .json({ message: "Không thể gửi email. Vui lòng thử lại sau" });
     }
 
-    res.json({ 
-      success: true, 
-      message: "Link đặt lại mật khẩu đã được gửi đến email của bạn" 
+    res.json({
+      success: true,
+      message: "Link đặt lại mật khẩu đã được gửi đến email của bạn",
     });
   } catch (err) {
     console.error("FORGOT_PASSWORD_ERROR:", err);
@@ -334,19 +434,25 @@ exports.resetPassword = async (req, res) => {
     }
 
     if (newPassword.length < 8) {
-      return res.status(400).json({ message: "Mật khẩu mới phải có ít nhất 8 ký tự" });
+      return res
+        .status(400)
+        .json({ message: "Mật khẩu mới phải có ít nhất 8 ký tự" });
     }
 
     // Hash token để so sánh
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     const user = await User.findOne({
       resetPasswordToken: hashedToken,
-      resetPasswordExpires: { $gt: Date.now() }
+      resetPasswordExpires: { $gt: Date.now() },
     });
 
     if (!user) {
-      return res.status(400).json({ message: "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn" });
+      return res
+        .status(400)
+        .json({
+          message: "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn",
+        });
     }
 
     // Cập nhật mật khẩu mới
@@ -368,13 +474,15 @@ exports.resetPassword = async (req, res) => {
         </div>
 
         <h2 style="color: #16a34a;">✅ Đặt lại mật khẩu thành công</h2>
-        <p>Xin chào <b>${user.name || 'bạn'}</b>,</p>
+        <p>Xin chào <b>${user.name || "bạn"}</b>,</p>
         <p>Mật khẩu tài khoản Travyy của bạn đã được đặt lại thành công.</p>
         
         <div style="background: #fff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
-          <p><strong>⏰ Thời gian:</strong> ${new Date().toLocaleString('vi-VN')}</p>
-          <p><strong>🌐 IP:</strong> ${req.ip || 'N/A'}</p>
-          <p><strong>💻 Thiết bị:</strong> ${req.get('user-agent') || 'N/A'}</p>
+          <p><strong>⏰ Thời gian:</strong> ${new Date().toLocaleString(
+            "vi-VN"
+          )}</p>
+          <p><strong>🌐 IP:</strong> ${req.ip || "N/A"}</p>
+          <p><strong>💻 Thiết bị:</strong> ${req.get("user-agent") || "N/A"}</p>
         </div>
 
         <div style="text-align: center; margin: 30px 0;">
@@ -399,13 +507,16 @@ exports.resetPassword = async (req, res) => {
       await sendMail(user.email, subject, htmlContent);
       console.log(`✅ Password reset success email sent to: ${user.email}`);
     } catch (emailErr) {
-      console.error("❌ Failed to send password reset success email:", emailErr.message);
+      console.error(
+        "❌ Failed to send password reset success email:",
+        emailErr.message
+      );
       // Không block response vì password đã được reset thành công
     }
 
-    res.json({ 
-      success: true, 
-      message: "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập ngay bây giờ" 
+    res.json({
+      success: true,
+      message: "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập ngay bây giờ",
     });
   } catch (err) {
     console.error("RESET_PASSWORD_ERROR:", err);

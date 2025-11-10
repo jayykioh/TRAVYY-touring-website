@@ -58,7 +58,7 @@ export default function TopTravelersTable({ data = [] }) {
       <div className="space-y-3">
         {data.map((traveler, index) => (
           <div
-            key={traveler.id}
+            key={traveler.id || traveler._id || `traveler-${index}`}
             className="flex items-center gap-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border-2 border-emerald-100 hover:border-emerald-300 transition-all cursor-pointer"
           >
             {/* Rank Badge */}

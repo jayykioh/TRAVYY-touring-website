@@ -47,24 +47,6 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
       label: "Guide Management",
       icon: UserCheck,
       path: "/admin/guides",
-      subItems: [
-        { id: "all-guides", label: "All Guides", path: "/admin/guides" },
-        {
-          id: "hidden-guides",
-          label: "Hidden Guides",
-          path: "/admin/guides/hidden",
-        },
-        {
-          id: "sync-agency",
-          label: "Sync from Agency",
-          path: "/admin/guides/sync",
-        },
-        {
-          id: "guide-accounts",
-          label: "Guide Accounts",
-          path: "/admin/guides/accounts",
-        },
-      ],
     },
     {
       id: "customers",
@@ -85,22 +67,10 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
       ],
     },
     {
-      id: "api",
-      label: "Agency API Data",
-      icon: Database,
-      path: "/admin/api",
-    },
-    {
       id: "promotions",
       label: "Promotions",
       icon: Tag,
       path: "/admin/promotions",
-    },
-    {
-      id: "reports",
-      label: "Reports",
-      icon: FileText,
-      path: "/admin/reports",
     },
     {
       id: "settings",

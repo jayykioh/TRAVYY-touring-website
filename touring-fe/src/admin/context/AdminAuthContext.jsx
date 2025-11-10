@@ -8,24 +8,67 @@ export const AdminAuthProvider = ({ children }) => {
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const initAuth = () => {
       try {
-        if (adminAuthService.isAuthenticated()) {
+        const authenticated = adminAuthService.isAuthenticated();
+        setIsAuthenticated(authenticated);
+        
+        if (authenticated) {
           const currentAdmin = adminAuthService.getCurrentAdmin();
           const storedToken = sessionStorage.getItem("admin_token");
           setAdmin(currentAdmin);
           setToken(storedToken);
+        } else {
+          setAdmin(null);
+          setToken(null);
         }
       } catch (error) {
         console.error("Auth initialization error:", error);
+        setIsAuthenticated(false);
+        setAdmin(null);
+        setToken(null);
       } finally {
         setLoading(false);
       }
     };
 
+    // Initialize auth on mount
     initAuth();
+
+    // Also check auth state when window regains focus
+    // (in case user opens another tab, logs out, then returns to this tab)
+    const handleFocus = () => {
+      const authenticated = adminAuthService.isAuthenticated();
+      setIsAuthenticated(authenticated);
+      
+      if (authenticated && !admin) {
+        const currentAdmin = adminAuthService.getCurrentAdmin();
+        const storedToken = sessionStorage.getItem("admin_token");
+        setAdmin(currentAdmin);
+        setToken(storedToken);
+      } else if (!authenticated && admin) {
+        setAdmin(null);
+        setToken(null);
+      }
+    };
+
+    // Check auth state when page visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleFocus();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (email, password) => {
@@ -33,6 +76,7 @@ export const AdminAuthProvider = ({ children }) => {
     if (result.success) {
       setAdmin(result.admin);
       setToken(result.token);
+      setIsAuthenticated(true);
     }
     return result;
   };
@@ -41,6 +85,7 @@ export const AdminAuthProvider = ({ children }) => {
     adminAuthService.logout();
     setAdmin(null);
     setToken(null);
+    setIsAuthenticated(false);
   };
 
   const updateAdmin = (updatedAdmin) => {
@@ -55,7 +100,7 @@ export const AdminAuthProvider = ({ children }) => {
     login,
     logout,
     updateAdmin,
-    isAuthenticated: adminAuthService.isAuthenticated(),
+    isAuthenticated,
   };
 
   return (

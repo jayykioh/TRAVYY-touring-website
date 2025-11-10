@@ -55,8 +55,6 @@ export default function PaymentCallback() {
             setBookingId(data.bookingId);
             // ✅ Refresh cart to remove purchased items
             await refreshCart();
-            // ✅ Dispatch custom event thay vì context
-            window.dispatchEvent(new Event('promotion-changed'));
           } else {
             throw new Error('Không thể hoàn tất thanh toán');
           }
@@ -79,9 +77,10 @@ export default function PaymentCallback() {
           setMessage('Đang xác nhận thanh toán MoMo...');
           
           // STEP 1: Call mark-paid to ensure session is marked as paid
+          // STEP 1: Call mark-paid to ensure session is marked as paid
           try {
             console.log('[MoMo Callback] Calling mark-paid for orderId:', momoOrderId);
-            const markPaidResp = await fetch(`${API_BASE}/api/payments/momo/mark-paid`, {
+            const markPaidResp = await fetch(`${API_BASE}/api/payments/momo/mark-paid`, {  
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -100,11 +99,10 @@ export default function PaymentCallback() {
                 setBookingId(markData.bookingId);
                 // ✅ Refresh cart to remove purchased items
                 await refreshCart();
-                // ✅ Dispatch custom event
-                window.dispatchEvent(new Event('promotion-changed'));
                 return;
               }
             } else {
+              console.warn('[MoMo Callback] Mark-paid failed:', markPaidResp.status);
               console.warn('[MoMo Callback] Mark-paid failed:', markPaidResp.status);
             }
           } catch (e) {
@@ -135,8 +133,6 @@ export default function PaymentCallback() {
                   setBookingId(d.booking._id);
                   // ✅ Refresh cart to remove purchased items
                   await refreshCart();
-                  // ✅ Dispatch custom event
-                  window.dispatchEvent(new Event('promotion-changed'));
                   return;
                 }
               } else if (r.status === 202) {

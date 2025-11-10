@@ -1,6 +1,8 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import LocationCard from "@/components/LocationCard";
+import { Skeleton } from "@/components/ui/skeleton";
+
 export default function BlogPage() {
   const { slug } = useParams();
   const [blog, setBlog] = useState(null);
@@ -28,7 +30,7 @@ export default function BlogPage() {
   }, [slug]);
 
   if (loading) {
-    return <div className="p-6 text-center">⏳ Đang tải dữ liệu...</div>;
+    return <BlogSkeleton />;
   }
 
   if (error || !blog) {
@@ -79,7 +81,7 @@ export default function BlogPage() {
                 lat={blog.location.lat}
                 lng={blog.location.lng}
                 title="📍 Vị trí"
-                variant="plain" // để đồng bộ style các card trắng của trang Blog
+                variant="plain"
               />
             )}
           </section>
@@ -93,7 +95,7 @@ export default function BlogPage() {
                 name: a.name,
                 price: a.price,
                 description: a.description,
-                img: a.image, // đổi key từ image → img
+                img: a.image,
               }))}
             />
           </Section>
@@ -107,7 +109,7 @@ export default function BlogPage() {
                 name: a.name,
                 price: a.price,
                 description: a.description,
-                img: a.image, // đổi key từ image → img
+                img: a.image,
               }))}
             />
           </Section>
@@ -148,6 +150,87 @@ export default function BlogPage() {
 
         {/* FAQ */}
         {blog.faq?.length > 0 && <FAQ items={blog.faq} />}
+      </main>
+    </div>
+  );
+}
+
+/* ----------- Skeleton Component ----------- */
+function BlogSkeleton() {
+  return (
+    <div className="flex flex-col">
+      {/* Banner Skeleton */}
+      <div className="relative h-64 md:h-80 overflow-hidden bg-gray-200">
+        <Skeleton className="w-full h-full" />
+        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+          <Skeleton className="h-8 md:h-12 w-3/4 bg-white/20" />
+        </div>
+      </div>
+
+      {/* Main Content Skeleton */}
+      <main className="max-w-6xl mx-auto px-4 py-8 space-y-10">
+        {/* Description + Map Skeleton */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          <div className="bg-white rounded-lg p-6 shadow">
+            <Skeleton className="h-8 w-32 mb-4" />
+            <Skeleton className="h-4 w-full mb-2" />
+            <Skeleton className="h-4 w-full mb-2" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+          <div className="bg-white rounded-lg p-6 shadow">
+            <Skeleton className="h-8 w-32 mb-4" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        </section>
+
+        {/* Card Grid Sections Skeleton */}
+        {[1, 2, 3].map((section) => (
+          <section key={section}>
+            <Skeleton className="h-8 w-48 mb-4" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((card) => (
+                <div
+                  key={card}
+                  className="rounded-lg shadow overflow-hidden bg-white"
+                >
+                  <Skeleton className="h-32 w-full" />
+                  <div className="p-3 space-y-2">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-3 w-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+
+        {/* Quick Info Skeleton */}
+        <div className="bg-white rounded-lg p-6 shadow-md">
+          <Skeleton className="h-8 w-48 mb-4" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((item) => (
+              <div key={item} className="flex flex-col bg-gray-50 rounded-lg p-3 space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* FAQ Skeleton */}
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-56 mb-4" />
+          {[1, 2, 3].map((faq) => (
+            <div
+              key={faq}
+              className="border rounded-lg p-3 bg-white"
+            >
+              <Skeleton className="h-5 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          ))}
+        </div>
       </main>
     </div>
   );
