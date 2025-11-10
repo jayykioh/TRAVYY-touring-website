@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Lock, CreditCard, Wallet, MapPin, User, Phone, Mail, Tag } from "lucide-react";
 import { useAuth } from "@/auth/context";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import useLocationOptions from "../hooks/useLocation";
 import { useLocation } from "react-router-dom";
 import VoucherSelector from "./VoucherSelector";
@@ -24,6 +24,10 @@ export default function CheckoutForm({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [agreedPolicy, setAgreedPolicy] = useState(false);
+  const [openTerms, setOpenTerms] = useState(false);
+  const [termsScrolled, setTermsScrolled] = useState(false);
+  const termsContentRef = useRef(null);
   const didPrefetchRef = useRef(false);
   const location = useLocation();
 
@@ -323,6 +327,8 @@ export default function CheckoutForm({
     }
   };
 
+  const canPay = selectedPayment && isFormValid && agreedPolicy && !isProcessingPayment;
+
   return (
     <div className="w-full lg:w-3/5 bg-white p-6 lg:p-8 rounded-2xl">
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Thanh toán</h1>
@@ -562,12 +568,105 @@ export default function CheckoutForm({
           </div>
         </div>
       </div>
+      {/* Policy Agreement Checkbox */}
+      <div className="mb-6 flex items-start gap-2">
+        <input
+          id="agree-policy"
+          type="checkbox"
+          checked={agreedPolicy}
+          disabled={!termsScrolled}
+          onChange={e => setAgreedPolicy(e.target.checked)}
+          className={`mt-1 accent-blue-600 w-5 h-5 ${!termsScrolled ? 'opacity-60 cursor-not-allowed' : ''}`}
+        />
+        <label htmlFor="agree-policy" className="text-sm text-gray-700 select-none">
+          Tôi đã đọc, hiểu và đồng ý với
+          <button type="button" className="text-blue-700 underline font-semibold px-1" onClick={() => setOpenTerms(true)}>
+            Điều khoản Sử dụng
+          </button>.
+          {!termsScrolled && (
+            <span className="ml-2 text-xs text-red-500">(Vui lòng đọc và kéo hết nội dung để xác nhận)</span>
+          )}
+        </label>
+      </div>
+      {/* Popup for Điều khoản Sử dụng */}
+      <Dialog open={openTerms} onOpenChange={(open) => {
+        setOpenTerms(open);
+        // Khi mở lại dialog, nếu chưa đồng ý thì reset để bắt buộc kéo lại
+        if (open && !agreedPolicy) setTermsScrolled(false);
+        // Khi đóng dialog, KHÔNG reset để giữ trạng thái đã kéo
+      }}>
+        <DialogContent className="max-w-xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Điều khoản Sử dụng</DialogTitle>
+          </DialogHeader>
+          <div
+            ref={termsContentRef}
+            className="prose max-w-none text-gray-700 max-h-[60vh] overflow-y-auto pr-2 border border-blue-100 rounded"
+            onScroll={e => {
+              const el = e.target;
+              if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
+                setTermsScrolled(true);
+              }
+            }}
+          >
+            <h3 className="font-bold">A. Vai trò &amp; Trách nhiệm</h3>
+            <ul className="list-disc ml-6">
+              <li><b>Travyy</b> là nền tảng công nghệ kết nối Khách hàng với các Nhà cung cấp dịch vụ du lịch độc lập.</li>
+              <li>Travyy <b>không</b> trực tiếp tổ chức, điều hành hay sở hữu các tour, phương tiện vận chuyển hoặc hướng dẫn viên.</li>
+              <li>Travyy <b>không chịu trách nhiệm pháp lý</b> đối với:
+                <ul className="list-disc ml-6">
+                  <li>Bất kỳ tai nạn, thương tích, tử vong, mất mát hay thiệt hại tài sản cá nhân nào xảy ra trong quá trình tham gia tour.</li>
+                  <li>Chất lượng dịch vụ tour không đúng mô tả của Nhà cung cấp.</li>
+                  <li>Việc Nhà cung cấp hủy tour, thay đổi lịch trình, hoặc không cung cấp dịch vụ (Travyy sẽ hoàn tiền theo chính sách hủy tour mục B).</li>
+                </ul>
+              </li>
+            </ul>
+            <h3 className="font-bold mt-4">B. Chính sách Hủy tour &amp; Hoàn tiền</h3>
+            <ul className="list-disc ml-6">
+              <li>Hủy <b>trước 14 ngày</b> so với ngày khởi hành: <b>Hoàn 100%</b></li>
+              <li>Hủy <b>từ 7 ngày đến dưới 14 ngày</b> so với ngày khởi hành: <b>Hoàn 50%</b></li>
+              <li>Hủy <b>trong vòng 7 ngày</b> so với ngày khởi hành: <b>Không hoàn tiền</b></li>
+              <li><b>Không có mặt (No-show):</b> Không hoàn tiền</li>
+              <li><b>Nếu Khách hàng hủy:</b> Áp dụng theo các mốc trên.</li>
+              <li><b>Nếu lỗi do Nhà cung cấp hủy:</b> Khách hàng sẽ được hoàn tiền 100%. Nền tảng có thể tặng thêm voucher/giảm giá cho lần đặt sau.</li>
+              <li><b>Trường hợp Bất khả kháng:</b> (Thiên tai, dịch bệnh, chiến tranh...) Khách hàng được đổi ngày miễn phí hoặc hoàn 100% giá trị tour (nếu tour chưa diễn ra) dưới dạng voucher.</li>
+              <li>Khách hàng phải thao tác hủy trên nền tảng Travyy để được xử lý và theo dõi.</li>
+              <li><b>Hoàn về Ví điện tử (MoMo, ZaloPay...):</b> 1-3 ngày làm việc.</li>
+              <li><b>Hoàn về Thẻ ATM nội địa/Chuyển khoản:</b> 3-7 ngày làm việc.</li>
+              <li><b>Hoàn về Thẻ tín dụng/Ghi nợ quốc tế (Visa, Mastercard):</b> 7-15 ngày làm việc (tùy ngân hàng và chu kỳ sao kê).</li>
+              <li><b>Lưu ý:</b> Ngày làm việc không bao gồm Thứ 7, Chủ Nhật và các ngày Lễ, Tết.</li>
+            </ul>
+            <h3 className="font-bold mt-4">C. Trách nhiệm của Khách hàng</h3>
+            <ul className="list-disc ml-6">
+              <li>Cung cấp thông tin cá nhân chính xác khi đặt tour.</li>
+              <li>Tự chịu trách nhiệm về giấy tờ tùy thân hợp lệ cho chuyến đi.</li>
+              <li>Có mặt đúng giờ tại điểm tập kết. Mọi sự chậm trễ (No-show) sẽ không được hoàn tiền (xem mục B).</li>
+              <li>Tuân thủ quy tắc an toàn và hướng dẫn của Nhà cung cấp tại điểm đến.</li>
+            </ul>
+            <h3 className="font-bold mt-4">D. Quy trình Đặt tour &amp; Xác nhận</h3>
+            <ul className="list-disc ml-6">
+              <li>Giá tour hiển thị đã bao gồm/chưa bao gồm các dịch vụ như mô tả trong phần chi tiết tour.</li>
+              <li>Đơn đặt tour chỉ được xem là "Thành công" sau khi thanh toán và nhận được Email xác nhận hoặc Voucher điện tử từ Travyy.</li>
+            </ul>
+            <h3 className="font-bold mt-4">E. Đánh giá của Khách hàng</h3>
+            <ul className="list-disc ml-6">
+              <li>Khách hàng cấp phép cho Travyy sử dụng, hiển thị, chỉnh sửa (ẩn/xóa review vi phạm) các nội dung đánh giá trên nền tảng.</li>
+            </ul>
+            <h3 className="font-bold mt-4">F. Giải quyết Tranh chấp</h3>
+            <ul className="list-disc ml-6">
+              <li>Khiếu nại: Khách hàng liên hệ CSKH Travyy khi có vấn đề về chất lượng tour.</li>
+              <li>Travyy đóng vai trò trung gian hòa giải, tiếp nhận khiếu nại và làm việc với Nhà cung cấp để đưa ra giải pháp hợp lý.</li>
+              <li>Mọi tranh chấp không thể hòa giải sẽ được giải quyết theo luật pháp Việt Nam.</li>
+            </ul>
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* pay button */}
       <button
         onClick={handlePayment}
-        disabled={!selectedPayment || !isFormValid || isProcessingPayment}
+        disabled={!canPay}
         className={`w-full py-4 rounded-xl font-semibold text-white transition-all ${
-          selectedPayment && isFormValid && !isProcessingPayment
+          canPay
             ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-200"
             : "bg-gray-300 cursor-not-allowed"
         }`}
@@ -575,7 +674,8 @@ export default function CheckoutForm({
         {isProcessingPayment ? "Đang xử lý..."
           : !isFormValid ? "Vui lòng nhập thông tin"
           : !selectedPayment ? "Vui lòng chọn phương thức thanh toán"
-          : "Tiếp tục thanh toán"}
+          : !agreedPolicy ? "Vui lòng xác nhận chính sách"
+          : finalTotal > 0 ? `Thanh toán ${finalTotal.toLocaleString('vi-VN')}₫` : "Xác nhận đặt tour"}
       </button>
     </div>
   );
