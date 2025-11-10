@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Card from "../common/Card";
 import Badge from "../common/Badge";
 import Button from "../common/Button";
+import { Calendar, MapPin } from "lucide-react";
 
 const TourCard = ({ tour }) => {
   const navigate = useNavigate();
@@ -55,7 +56,7 @@ const TourCard = ({ tour }) => {
       {/* Details */}
       <div className="space-y-2 mb-4">
         <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span>📅</span>
+          <Calendar className="w-4 h-4 text-gray-400" />
           <span>
             {new Date(tour.departureDate).toLocaleDateString("vi-VN")}
           </span>
@@ -67,26 +68,9 @@ const TourCard = ({ tour }) => {
         </div>
 
         <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span>📍</span>
+          <MapPin className="w-4 h-4 text-gray-400" />
           <span className="line-clamp-1">{tour.location}</span>
         </div>
-
-        {tour.progress !== undefined && (
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-gray-500">Tiến độ</span>
-              <span className="font-semibold text-[#02A0AA]">
-                {tour.progress}%
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-[#02A0AA] h-2 rounded-full transition-all duration-300"
-                style={{ width: `${tour.progress}%` }}
-              />
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Price & Action */}

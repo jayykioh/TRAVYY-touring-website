@@ -10,13 +10,10 @@ import {
   ChevronLeft,
   Sparkles,
 } from "lucide-react";
-import { useAuth } from "../auth/context";
-import { toast } from "sonner";
 
 export default function RegionTours() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [tours, setTours] = useState([]);
   const [favorites, setFavorites] = useState(new Set());
   const [sortBy, setSortBy] = useState("popular");
@@ -37,109 +34,22 @@ export default function RegionTours() {
   // Lấy tour theo slug như file 1
   useEffect(() => {
     if (slug && destinationList[slug]) {
-      // Filter out hidden tours
-      const visibleTours = destinationList[slug].filter(
-        (tour) => !tour.isHidden
-      );
-      setTours(visibleTours);
+      setTours(destinationList[slug]);
     } else {
       setTours([]);
     }
   }, [slug]);
 
-  // ✅ Load wishlist từ server
-  useEffect(() => {
-    if (!user?.token) return;
-
-    fetch("/api/wishlist", {
-      headers: { Authorization: `Bearer ${user.token}` },
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setFavorites(
-            new Set(data.data.map((item) => String(item.tourId._id)))
-          );
-        }
-      })
-      .catch((err) => console.error("Error fetching wishlist:", err));
-  }, [user?.token]);
-
-  // ✅ Toggle wishlist với Optimistic Update
-  const handleFavoriteToggle = async (tourId) => {
-    if (!user?.token) {
-      toast.error("Bạn cần đăng nhập để sử dụng wishlist");
-      return;
-    }
-
-    // 🚀 OPTIMISTIC UPDATE: Update UI ngay lập tức
-    const wasInWishlist = favorites.has(tourId);
+  const handleFavoriteToggle = (tourId) => {
     setFavorites((prev) => {
-      const newSet = new Set(prev);
-      if (wasInWishlist) {
-        newSet.delete(tourId);
-      } else {
-        newSet.add(tourId);
-      }
-      return newSet;
+      const next = new Set(prev);
+      next.has(tourId) ? next.delete(tourId) : next.add(tourId);
+      return next;
     });
-
-    try {
-      const res = await fetch("/api/wishlist/toggle", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${user.token}`,
-        },
-        credentials: "include",
-        body: JSON.stringify({ tourId }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        // ✅ Confirm lại state từ server
-        setFavorites((prev) => {
-          const newSet = new Set(prev);
-          if (data.isFav) {
-            newSet.add(tourId);
-          } else {
-            newSet.delete(tourId);
-          }
-          return newSet;
-        });
-      } else {
-        // ❌ Nếu API fail, revert lại state cũ
-        setFavorites((prev) => {
-          const newSet = new Set(prev);
-          wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
-          return newSet;
-        });
-        toast.error("Không thể cập nhật wishlist");
-      }
-    } catch (err) {
-      console.error("Error toggling wishlist:", err);
-
-      // ❌ Revert lại state cũ khi có lỗi
-      setFavorites((prev) => {
-        const newSet = new Set(prev);
-        wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
-        return newSet;
-      });
-
-      toast.error("Có lỗi xảy ra, vui lòng thử lại");
-    }
   };
-
-  // Lấy categories duy nhất
-  const categories = ["all", ...new Set(tours.map((tour) => tour.category))];
 
   // Filter + Sort
   const filteredTours = tours
-    .filter(
-      (tour) => filterCategory === "all" || tour.category === filterCategory
-    )
     .filter(
       (tour) => filterCategory === "all" || tour.category === filterCategory
     )
@@ -244,272 +154,228 @@ export default function RegionTours() {
             <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-300" />
             <span className="font-medium">Quay lại</span>
           </button>
-
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-9 h-9 bg-gradient-to-r from-[#03B3BE] to-[#007980] rounded-lg flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-white" />
-            </div>
+          <div className="flex items-center gap-2 my-2 ml-5">
+            <MapPin className="w-5 h-7 text-gray-500 mb-5" />
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r bg-[#007980] bg-clip-text text-transparent leading-tight">
-                {slug.replace("-", " ").toUpperCase()}
-              </h1>
+              <h2 className="text-xl sm:text-3xl font-bold bg-gradient-to-r bg-gray-800 bg-clip-text text-transparent leading-tight">
+                Các tour tại {tours.length > 0 && tours[0].location}
+              </h2>
               <p className="text-gray-600 text-sm mt-0.5">
-                {filteredTours.length} tour & hoạt động
+                {filteredTours.length > 999 ? "999+" : filteredTours.length}{" "}
+                tour & hoạt động
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-1 py-3">
         {/* Filters & Sort */}
         <div className="flex flex-col lg:flex-row gap-2 sm:gap-3 items-end lg:items-center justify-end">
           {/* Sort */}
-          <span className="text-gray-600 font-medium">Sắp xếp:</span>
-          <div className="relative inline-block my-2 mb-4">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#03B3BE] min-w-[200px]"
-            >
-              <span className="flex-1 text-left text-gray-900">
-                {sortBy === "recommended" && "Đề xuất"}
-                {sortBy === "recently-added" && "Mới thêm gần đây"}
-                {sortBy === "popular" && "Phổ biến nhất"}
-                {sortBy === "rating" && "Đánh giá cao"}
-                {sortBy === "price-low" && "Giá thấp đến cao"}
-                {sortBy === "price-high" && "Giá cao đến thấp"}
-              </span>
-              <svg
-                className={`w-4 h-4 text-gray-600 transition-transform ${
-                  isOpen ? "rotate-180" : ""
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          <div className="flex items-center gap-3 my-2 mb-4">
+            <span className="text-gray-600 font-medium">Sắp xếp:</span>
+            <div className="relative overflow-visible">
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#03B3BE] min-w-[200px]"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
-
-            {isOpen && (
-              <div className="absolute right-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                {/* Đề xuất */}
-                <button
-                  onClick={() => {
-                    setSortBy("recommended");
-                    setIsOpen(false);
-                  }}
-                  className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 first:rounded-t-lg flex items-center justify-between ${
-                    sortBy === "recommended"
-                      ? "text-[#03B3BE] font-medium"
-                      : "text-gray-700"
+                <span className="flex-1 text-left text-gray-900">
+                  {sortBy === "recommended" && "Đề xuất"}
+                  {sortBy === "recently-added" && "Mới thêm gần đây"}
+                  {sortBy === "popular" && "Phổ biến nhất"}
+                  {sortBy === "rating" && "Đánh giá cao"}
+                  {sortBy === "price-low" && "Giá thấp đến cao"}
+                  {sortBy === "price-high" && "Giá cao đến thấp"}
+                </span>
+                <svg
+                  className={`w-4 h-4 text-gray-600 transition-transform ${
+                    isOpen ? "rotate-180" : ""
                   }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <span>Đề xuất</span>
-                  {sortBy === "recommended" && (
-                    <svg
-                      className="w-5 h-5 text-[#03B3BE]"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
-                </button>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
 
-                {/* Giá thấp đến cao */}
-                <button
-                  onClick={() => {
-                    setSortBy("price-low");
-                    setIsOpen(false);
-                  }}
-                  className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
-                    sortBy === "price-low"
-                      ? "text-[#03B3BE] font-medium"
-                      : "text-gray-700"
-                  }`}
-                >
-                  <span>Giá thấp đến cao</span>
-                  {sortBy === "price-low" && (
-                    <svg
-                      className="w-5 h-5 text-[#03B3BE]"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
-                </button>
-
-                {/* ✅ Giá cao đến thấp */}
-                <button
-                  onClick={() => {
-                    setSortBy("price-high");
-                    setIsOpen(false);
-                  }}
-                  className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
-                    sortBy === "price-high"
-                      ? "text-[#03B3BE] font-medium"
-                      : "text-gray-700"
-                  }`}
-                >
-                  <span>Giá cao đến thấp</span>
-                  {sortBy === "price-high" && (
-                    <svg
-                      className="w-5 h-5 text-[#03B3BE]"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
-                </button>
-
-                {/* Phổ biến nhất */}
-                <button
-                  onClick={() => {
-                    setSortBy("popular");
-                    setIsOpen(false);
-                  }}
-                  className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
-                    sortBy === "popular"
-                      ? "text-[#03B3BE] font-medium"
-                      : "text-gray-700"
-                  }`}
-                >
-                  <span>Phổ biến nhất</span>
-                  {sortBy === "popular" && (
-                    <svg
-                      className="w-5 h-5 text-[#03B3BE]"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
-                </button>
-
-                {/* Mới thêm gần đây */}
-                <button
-                  onClick={() => {
-                    setSortBy("recently-added");
-                    setIsOpen(false);
-                  }}
-                  className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
-                    sortBy === "recently-added"
-                      ? "text-[#03B3BE] font-medium"
-                      : "text-gray-700"
-                  }`}
-                >
-                  <span>Mới thêm gần đây</span>
-                  {sortBy === "recently-added" && (
-                    <svg
-                      className="w-5 h-5 text-[#03B3BE]"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
-                </button>
-
-                {/* Đánh giá cao */}
-                <button
-                  onClick={() => {
-                    setSortBy("rating");
-                    setIsOpen(false);
-                  }}
-                  className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 last:rounded-b-lg flex items-center justify-between ${
-                    sortBy === "rating"
-                      ? "text-[#03B3BE] font-medium"
-                      : "text-gray-700"
-                  }`}
-                >
-                  <span>Đánh giá cao</span>
-                  {sortBy === "rating" && (
-                    <svg
-                      className="w-5 h-5 text-[#03B3BE]"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-2 sm:p-3 mb-3 sm:mb-4">
-          <div className="flex flex-col lg:flex-row gap-2 sm:gap-3 items-start lg:items-center justify-between">
-            {/* Category Filter */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-1 text-gray-700 text-sm font-medium">
-                <Filter className="w-4 h-4 text-[#007980]" />
-                <span>Lọc:</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {categories.map((cat) => (
+              {isOpen && (
+                <div className="absolute right-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-[9999]">
+                  {/* Đề xuất */}
                   <button
-                    key={cat}
-                    onClick={() => setFilterCategory(cat)}
-                    className={`px-3 py-1.5 rounded-md text-sm transition-all duration-300 ${
-                      filterCategory === cat
-                        ? "bg-[#03B3BE] text-white shadow-sm"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    onClick={() => {
+                      setSortBy("recommended");
+                      setIsOpen(false);
+                    }}
+                    className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 first:rounded-t-lg flex items-center justify-between ${
+                      sortBy === "recommended"
+                        ? "text-[#03B3BE] font-medium"
+                        : "text-gray-700"
                     }`}
                   >
-                    {cat === "all" ? "Tất cả" : cat}
+                    <span>Đề xuất</span>
+                    {sortBy === "recommended" && (
+                      <svg
+                        className="w-5 h-5 text-[#03B3BE]"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
                   </button>
-                ))}
-              </div>
-            </div>
 
-            {/* Sort */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 text-gray-700 text-sm font-medium">
-                <SlidersHorizontal className="w-4 h-4 text-[#007980]" />
-                <span>Sắp xếp:</span>
-              </div>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#03B3BE] bg-white"
-              >
-                <option value="popular">Phổ biến nhất</option>
-                <option value="rating">Đánh giá cao</option>
-                <option value="price-low">Giá thấp đến cao</option>
-                <option value="price-high">Giá cao đến thấp</option>
-              </select>
+                  {/* Giá thấp đến cao */}
+                  <button
+                    onClick={() => {
+                      setSortBy("price-low");
+                      setIsOpen(false);
+                    }}
+                    className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
+                      sortBy === "price-low"
+                        ? "text-[#03B3BE] font-medium"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    <span>Giá thấp đến cao</span>
+                    {sortBy === "price-low" && (
+                      <svg
+                        className="w-5 h-5 text-[#03B3BE]"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </button>
+
+                  {/* ✅ Giá cao đến thấp */}
+                  <button
+                    onClick={() => {
+                      setSortBy("price-high");
+                      setIsOpen(false);
+                    }}
+                    className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
+                      sortBy === "price-high"
+                        ? "text-[#03B3BE] font-medium"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    <span>Giá cao đến thấp</span>
+                    {sortBy === "price-high" && (
+                      <svg
+                        className="w-5 h-5 text-[#03B3BE]"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </button>
+
+                  {/* Phổ biến nhất */}
+                  <button
+                    onClick={() => {
+                      setSortBy("popular");
+                      setIsOpen(false);
+                    }}
+                    className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
+                      sortBy === "popular"
+                        ? "text-[#03B3BE] font-medium"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    <span>Phổ biến nhất</span>
+                    {sortBy === "popular" && (
+                      <svg
+                        className="w-5 h-5 text-[#03B3BE]"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </button>
+
+                  {/* Mới thêm gần đây */}
+                  <button
+                    onClick={() => {
+                      setSortBy("recently-added");
+                      setIsOpen(false);
+                    }}
+                    className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
+                      sortBy === "recently-added"
+                        ? "text-[#03B3BE] font-medium"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    <span>Mới thêm gần đây</span>
+                    {sortBy === "recently-added" && (
+                      <svg
+                        className="w-5 h-5 text-[#03B3BE]"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </button>
+
+                  {/* Đánh giá cao */}
+                  <button
+                    onClick={() => {
+                      setSortBy("rating");
+                      setIsOpen(false);
+                    }}
+                    className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 last:rounded-b-lg flex items-center justify-between ${
+                      sortBy === "rating"
+                        ? "text-[#03B3BE] font-medium"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    <span>Đánh giá cao</span>
+                    {sortBy === "rating" && (
+                      <svg
+                        className="w-5 h-5 text-[#03B3BE]"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -624,7 +490,7 @@ export default function RegionTours() {
         )}
 
         {/* Footer CTA */}
-        <div className="mt-10 bg-gradient-to-r from-[#03B3BE] to-[#007980] rounded-xl p-5 text-center text-white shadow-lg">
+        {/* <div className="mt-10 bg-gradient-to-r from-[#03B3BE] to-[#007980] rounded-xl p-5 text-center text-white shadow-lg">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Sparkles className="w-5 h-5" />
             <h3 className="text-lg sm:text-xl font-semibold">
@@ -641,7 +507,7 @@ export default function RegionTours() {
           >
             Tùy chỉnh tour của bạn
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

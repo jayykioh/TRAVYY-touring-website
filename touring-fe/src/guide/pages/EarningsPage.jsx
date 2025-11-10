@@ -13,6 +13,7 @@ import {
   Area,
   AreaChart,
 } from "recharts";
+import { Calendar, BarChart2, Star, Clock } from "lucide-react";
 
 const EarningsPage = () => {
   const { summary, weeklyData, recentPayments, monthlyStats, yearlyStats } =
@@ -74,7 +75,7 @@ const EarningsPage = () => {
         <Card className="hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-gray-600">Tuần này</p>
-            <span className="text-2xl">📅</span>
+            <Calendar className="w-6 h-6 text-gray-500" />
           </div>
           <p className="text-3xl font-bold text-[#02A0AA] mb-1">
             {summary.thisWeek.toLocaleString("vi-VN")}
@@ -85,7 +86,7 @@ const EarningsPage = () => {
         <Card className="hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-gray-600">Tháng này</p>
-            <span className="text-2xl">📊</span>
+            <BarChart2 className="w-6 h-6 text-gray-500" />
           </div>
           <p className="text-3xl font-bold text-gray-900 mb-1">
             {summary.thisMonth.toLocaleString("vi-VN")}
@@ -96,7 +97,7 @@ const EarningsPage = () => {
         <Card className="hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-gray-600">Tổng thu nhập</p>
-            <span className="text-2xl">💎</span>
+            <Star className="w-6 h-6 text-gray-500" />
           </div>
           <p className="text-3xl font-bold text-gray-900 mb-1">
             {summary.totalEarnings.toLocaleString("vi-VN")}
@@ -109,7 +110,7 @@ const EarningsPage = () => {
             <p className="text-sm font-medium text-orange-700">
               Chờ thanh toán
             </p>
-            <span className="text-2xl">⏳</span>
+            <Clock className="w-6 h-6 text-orange-500" />
           </div>
           <p className="text-3xl font-bold text-orange-600 mb-1">
             {summary.pendingPayment.toLocaleString("vi-VN")}

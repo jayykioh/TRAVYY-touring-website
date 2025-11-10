@@ -1,37 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Award } from "lucide-react";
+import { Award, Home, Inbox, Calendar, DollarSign, User } from "lucide-react";
+import { motion } from "framer-motion";
 import { useAuth } from "../../../auth/context";
 import GuideProfileModal from "./GuideProfileModal";
 
-const Sidebar = ({ className = "" }) => {
+const Sidebar = () => {
   const location = useLocation();
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // 🟢 Số yêu cầu chưa xem
   const [unreadRequests, setUnreadRequests] = useState(0);
   const [requestIds, setRequestIds] = useState([]);
   const { user, withAuth } = useAuth();
 
-  // 🟢 Danh sách ID yêu cầu đã xem (lưu trong localStorage)
-  const [viewedRequestIds, setViewedRequestIds] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("viewedGuideRequests") || "[]");
-    } catch {
-      return [];
-    }
-  });
-
-  // 🟢 Fetch real requests from backend and compute unread
   useEffect(() => {
     async function fetchRequests() {
       try {
         const data = await withAuth("/api/itinerary/guide/requests");
-        if (data.success && Array.isArray(data.requests)) {
+        if (data && data.success && Array.isArray(data.requests)) {
           const ids = data.requests.map((r) => r._id || r.id);
           setRequestIds(ids);
-          // Only compute unseen once on mount
-          const viewed = JSON.parse(localStorage.getItem("viewedGuideRequests") || "[]");
+          const viewed = JSON.parse(
+            localStorage.getItem("viewedGuideRequests") || "[]"
+          );
           const unseen = ids.filter((id) => !viewed.includes(id));
           setUnreadRequests(unseen.length);
         } else {
@@ -46,144 +37,148 @@ const Sidebar = ({ className = "" }) => {
     fetchRequests();
   }, [withAuth]);
 
-  // 🟢 Lắng nghe thay đổi khi user xem trang /guide/requests
   useEffect(() => {
     if (location.pathname === "/guide/requests") {
-      // Khi mở trang Requests => đánh dấu tất cả là đã xem
       localStorage.setItem("viewedGuideRequests", JSON.stringify(requestIds));
-      setViewedRequestIds(requestIds);
       setUnreadRequests(0);
     }
   }, [location.pathname, requestIds]);
 
-  // 🟢 Lắng nghe thay đổi từ tab khác (nếu có)
   useEffect(() => {
     const handleStorageChange = () => {
       try {
         const updated = JSON.parse(
           localStorage.getItem("viewedGuideRequests") || "[]"
         );
-        setViewedRequestIds(updated);
+        const unseen = requestIds.filter((id) => !updated.includes(id));
+        setUnreadRequests(unseen.length);
       } catch {
-        setViewedRequestIds([]);
+        setUnreadRequests(0);
       }
     };
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+  }, [requestIds]);
 
-  // 🧭 Menu
   const menuItems = [
-    { path: "/guide", icon: "🏠", label: "Home", exact: true },
+    { path: "/guide", label: "Home", Icon: Home },
     {
       path: "/guide/requests",
-      icon: "📬",
       label: "Requests",
+      Icon: Inbox,
       badge: unreadRequests > 0 ? unreadRequests : null,
     },
-    { path: "/guide/tours", icon: "📆", label: "My Tours" },
-    { path: "/guide/earnings", icon: "💰", label: "Earnings" },
-    { path: "/guide/profile", icon: "👤", label: "Profile" },
+    { path: "/guide/tours", label: "My Tours", Icon: Calendar },
+    { path: "/guide/earnings", label: "Earnings", Icon: DollarSign },
+    { path: "/guide/profile", label: "Profile", Icon: User },
   ];
 
   const isActive = (path) => location.pathname === path;
+  const MotionDiv = motion.div;
 
   return (
     <>
-      <aside
-        className={`fixed lg:relative top-0 left-0 bg-white shadow-sm border-r border-gray-200 z-40 transition-transform duration-300 rounded-lg lg:translate-x-0 w-60 flex flex-col`}
-        style={{ position: "fixed", top: 88, left: 35 }}
-      >
-        {/* Guide Info */}
-        <div
-          className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => setShowProfileModal(true)}
-        >
-          <div className="flex justify-center mb-2">
-            <div className="relative">
-              <img
-                src={user?.avatar?.url || user?.avatar || "https://i.pravatar.cc/150?img=12"}
-                alt={user?.name || "Guide"}
-                className="w-14 h-14 rounded-full border-2 border-[#02A0AA]"
-              />
-              <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[#02A0AA] rounded-full flex items-center justify-center border-2 border-white">
-                <svg
-                  className="w-3 h-3 text-white"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+      {/* ✅ Ẩn thanh trượt ngang */}
+      <aside className="hidden md:block w-64 overflow-x-hidden">
+        <div className="sticky top-20 px-3">
+          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4 flex flex-col gap-4">
+            <button
+              onClick={() => setShowProfileModal(true)}
+              className="w-full text-left bg-white rounded-xl p-3 hover:shadow-lg transition-shadow flex items-center gap-3"
+            >
+              <div className="relative">
+                <img
+                  src={
+                    user?.avatar?.url ||
+                    user?.avatar ||
+                    "https://i.pravatar.cc/150?img=12"
+                  }
+                  alt={user?.name || "Guide"}
+                  className="w-14 h-14 rounded-full border-2 border-[#02A0AA] object-cover"
+                />
+                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[#02A0AA] rounded-full flex items-center justify-center border-2 border-white">
+                  <svg
+                    className="w-3 h-3 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
               </div>
-            </div>
-          </div>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-gray-900">
+                  {user?.name || "Guide"}
+                </div>
+                <div className="text-xs text-gray-500 flex items-center gap-2">
+                  <Award className="w-3 h-3 text-yellow-500" />{" "}
+                  <span>Tour Guide</span>
+                </div>
+              </div>
+            </button>
 
-          <div className="text-center mb-2">
-            <h3 className="text-base font-semibold text-gray-900 mb-0.5">
-              {user?.name || "Guide"}
-            </h3>
-            <p className="text-xs text-gray-500 mb-2 flex items-center justify-center gap-1">
-              <Award className="w-3 h-3" />
-              Tour Guide
-            </p>
-          </div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="px-1 py-2 rounded-lg bg-gray-50">
+                <div className="text-sm font-semibold text-gray-900">
+                  {user?.totalTours ?? "--"}
+                </div>
+                <div className="text-xs text-gray-500">Tours</div>
+              </div>
+              <div className="px-1 py-2 rounded-lg bg-gray-50">
+                <div className="text-sm font-semibold text-gray-900">
+                  {user?.rating ?? "--"}★
+                </div>
+                <div className="text-xs text-gray-500">Rating</div>
+              </div>
+              <div className="px-1 py-2 rounded-lg bg-gray-50">
+                <div className="text-sm font-semibold text-gray-900">
+                  {user?.experience ?? "--"}
+                </div>
+                <div className="text-xs text-gray-500">Exp</div>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-3 gap-1 text-center">
-            <div>
-              <div className="text-sm font-semibold text-gray-900">
-                {user?.totalTours ?? '--'}
-              </div>
-              <div className="text-xs text-gray-500">Tours</div>
-            </div>
-            <div className="border-l border-r border-gray-200">
-              <div className="text-sm font-semibold text-gray-900">
-                {user?.rating ?? '--'}★
-              </div>
-              <div className="text-xs text-gray-500">Rating</div>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-900">
-                {user?.experience ?? '--'}
-              </div>
-              <div className="text-xs text-gray-500 leading-tight">Exp</div>
-            </div>
+            <nav className="flex-1 overflow-y-auto mt-1">
+              <ul className="space-y-2">
+                {menuItems.map((item) => {
+                  const active = isActive(item.path);
+                  const Icon = item.Icon;
+                  return (
+                    <li key={item.path}>
+                      <NavLink to={item.path} className="block">
+                        <motion.div
+                          whileHover={{ scale: 1.0 }}
+                          whileTap={{ scale: 0.98 }}
+                          className={`origin-left flex items-center gap-3 px-3 py-2 rounded-lg transition-all border-l-3 ${
+                            active
+                              ? "border-[#02A0AA] bg-[#f0fdfd] text-[#02A0AA] font-medium shadow"
+                              : "border-transparent text-gray-700 hover:bg-gray-50"
+                          }`}
+                        >
+                          {Icon && (
+                            <Icon className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                          )}
+                          <span className="text-sm">{item.label}</span>
+                          {item.badge && (
+                            <span className="ml-auto inline-flex items-center justify-center text-[11px] px-2 py-0.5 rounded-full bg-red-600 text-white shadow-sm">
+                              {item.badge}
+                            </span>
+                          )}
+                        </motion.div>
+                      </NavLink>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
           </div>
         </div>
-
-        {/* Navigation Menu */}
-        <nav className="flex-1 overflow-y-auto py-3">
-          <div className="space-y-0.5">
-            {menuItems.map((item) => {
-              const active = isActive(item.path);
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={`flex items-center gap-3 px-6 py-2 transition-all border-l-4 ${
-                    active
-                      ? "border-[#02A0AA] bg-[#f0fdfd] text-[#02A0AA] font-medium"
-                      : "border-transparent text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <span className="text-lg">{item.icon}</span>
-                  <span className="text-[13px]">{item.label}</span>
-                  {item.badge && (
-                    <span className="ml-auto text-xs bg-red-600 text-white rounded-full px-2 animate-bounce">
-                      {item.badge}
-                    </span>
-                  )}
-                </NavLink>
-              );
-            })}
-          </div>
-        </nav>
       </aside>
 
-      {/* Profile Modal */}
       <GuideProfileModal
         show={showProfileModal}
         onClose={() => setShowProfileModal(false)}

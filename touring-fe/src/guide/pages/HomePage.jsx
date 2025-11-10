@@ -6,10 +6,10 @@ import Button from "../components/common/Button";
 import { useAuth } from "../../auth/context";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { Inbox, Activity, Calendar, DollarSign, Clock } from "lucide-react";
 
 const HomePage = () => {
   const navigate = useNavigate();
-
 
   const { user, withAuth } = useAuth();
   const [tours, setTours] = useState([]);
@@ -26,45 +26,52 @@ const HomePage = () => {
         ]);
         // Filter tours by current user's agencyId
         const myTours = Array.isArray(tourData)
-          ? tourData.filter((tour) =>
-              tour.agencyId &&
-              (tour.agencyId._id === user?.agencyId || tour.agencyId === user?.agencyId)
+          ? tourData.filter(
+              (tour) =>
+                tour.agencyId &&
+                (tour.agencyId._id === user?.agencyId ||
+                  tour.agencyId === user?.agencyId)
             )
           : [];
         setTours(myTours);
         // Map backend requests to UI format
-        const reqs = requestData.success && Array.isArray(requestData.requests)
-          ? requestData.requests.map((it) => ({
-              id: it._id,
-              tourName: it.name || it.zoneName,
-              customerId: it.userId?._id || it.userId,
-              customerName: it.userId?.name || 'Khách hàng',
-              customerAvatar: it.userId?.avatar?.url || '',
-              customerEmail: it.userId?.email || '',
-              contactPhone: it.userId?.phone || '',
-              departureDate: '',
-              startTime: '',
-              endTime: '',
-              location: it.zoneName,
-              pickupPoint: '',
-              numberOfGuests: '',
-              duration: '',
-              totalPrice: '',
-              earnings: '',
-              requestedAt: it.tourGuideRequest?.requestedAt,
-              specialRequests: '',
-              paymentStatus: '',
-              paymentMethod: '',
-              imageItems: [],
-              itinerary: it.items?.map(item => ({
-                title: item.name,
-                time: item.startTime && item.endTime ? `${item.startTime} - ${item.endTime}` : '',
-                description: item.address || ''
-              })) || [],
-              includedServices: [],
-              raw: it
-            }))
-          : [];
+        const reqs =
+          requestData.success && Array.isArray(requestData.requests)
+            ? requestData.requests.map((it) => ({
+                id: it._id,
+                tourName: it.name || it.zoneName,
+                customerId: it.userId?._id || it.userId,
+                customerName: it.userId?.name || "Khách hàng",
+                customerAvatar: it.userId?.avatar?.url || "",
+                customerEmail: it.userId?.email || "",
+                contactPhone: it.userId?.phone || "",
+                departureDate: "",
+                startTime: "",
+                endTime: "",
+                location: it.zoneName,
+                pickupPoint: "",
+                numberOfGuests: "",
+                duration: "",
+                totalPrice: "",
+                earnings: "",
+                requestedAt: it.tourGuideRequest?.requestedAt,
+                specialRequests: "",
+                paymentStatus: "",
+                paymentMethod: "",
+                imageItems: [],
+                itinerary:
+                  it.items?.map((item) => ({
+                    title: item.name,
+                    time:
+                      item.startTime && item.endTime
+                        ? `${item.startTime} - ${item.endTime}`
+                        : "",
+                    description: item.address || "",
+                  })) || [],
+                includedServices: [],
+                raw: it,
+              }))
+            : [];
         setRequests(reqs);
       } catch {
         setTours([]);
@@ -86,9 +93,7 @@ const HomePage = () => {
       return tour.departures.some((d) => {
         if (!d.date) return false;
         const depDate = new Date(d.date);
-        return (
-          depDate.toDateString() === now.toDateString()
-        );
+        return depDate.toDateString() === now.toDateString();
       });
     }
     return false;
@@ -172,7 +177,7 @@ const HomePage = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Yêu cầu mới */}
         <Card className="text-center relative">
-          <div className="text-4xl mb-2">📬</div>
+          <Inbox className="w-10 h-10 mx-auto text-gray-600 mb-2" />
           <div className="text-2xl font-bold text-gray-900">
             {loading ? "..." : pendingRequests}
           </div>
@@ -199,7 +204,7 @@ const HomePage = () => {
 
         {/* Tour đang diễn ra */}
         <Card className="text-center">
-          <div className="text-4xl mb-2">🚀</div>
+          <Activity className="w-10 h-10 mx-auto text-emerald-500 mb-2" />
           <div className="text-2xl font-bold text-[#02A0AA]">
             {loading ? "..." : ongoingTours.length}
           </div>
@@ -219,7 +224,7 @@ const HomePage = () => {
 
         {/* Tour sắp tới */}
         <Card className="text-center">
-          <div className="text-4xl mb-2">📆</div>
+          <Calendar className="w-10 h-10 mx-auto text-blue-500 mb-2" />
           <div className="text-2xl font-bold text-gray-900">
             {loading ? "..." : upcomingTours.length}
           </div>
@@ -228,7 +233,7 @@ const HomePage = () => {
 
         {/* Doanh thu */}
         <Card className="text-center">
-          <div className="text-4xl mb-2">💰</div>
+          <DollarSign className="w-10 h-10 mx-auto text-orange-500 mb-2" />
           <div className="text-2xl font-bold text-[#02A0AA]">15.7M</div>
           <div className="text-sm text-gray-500">Tuần này</div>
         </Card>
@@ -240,19 +245,22 @@ const HomePage = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-[#02A0AA] text-white rounded-full flex items-center justify-center animate-pulse">
-                <span className="text-2xl">🚀</span>
+                <Activity className="w-6 h-6 text-white" />
               </div>
               <div>
                 <p className="font-bold text-gray-900">Tour đang diễn ra</p>
                 <p className="text-sm text-gray-600">
-                  {ongoingTours[0].tourName} - {ongoingTours[0].progress || 0}% hoàn
-                  thành
+                  {ongoingTours[0].tourName}
                 </p>
               </div>
             </div>
             <Button
               variant="primary"
-              onClick={() => navigate(`/guide/tours/${ongoingTours[0]._id || ongoingTours[0].id}`)}
+              onClick={() =>
+                navigate(
+                  `/guide/tours/${ongoingTours[0]._id || ongoingTours[0].id}`
+                )
+              }
             >
               Tiếp tục
             </Button>
@@ -260,8 +268,8 @@ const HomePage = () => {
         </Card>
       )}
 
-  {/* Tour sắp tới */}
-  {!loading && <UpcomingTourList tours={upcomingTours} />}
+      {/* Tour sắp tới */}
+      {!loading && <UpcomingTourList tours={upcomingTours} />}
 
       {/* Modal thông báo mới */}
       <AnimatePresence>

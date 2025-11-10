@@ -2,6 +2,16 @@ import React from "react";
 import Modal from "../common/Modal";
 import Button from "../common/Button";
 import Badge from "../common/Badge";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Users,
+  DollarSign,
+  XCircle,
+  CheckCircle,
+  AlertTriangle,
+} from "lucide-react";
 
 const NewTourPopup = ({
   isOpen,
@@ -16,7 +26,7 @@ const NewTourPopup = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="🎉 Yêu cầu tour mới!"
+      title="Yêu cầu tour mới!"
       size="md"
       closeOnOverlayClick={false}
     >
@@ -29,7 +39,7 @@ const NewTourPopup = ({
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="flex items-center gap-2">
-              <span className="text-2xl">📅</span>
+              <Calendar className="w-6 h-6 text-gray-500" />
               <div>
                 <p className="text-xs text-gray-500">Ngày khởi hành</p>
                 <p className="font-semibold text-gray-900">
@@ -41,7 +51,7 @@ const NewTourPopup = ({
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-2xl">⏱️</span>
+              <Clock className="w-6 h-6 text-gray-500" />
               <div>
                 <p className="text-xs text-gray-500">Thời lượng</p>
                 <p className="font-semibold text-gray-900">
@@ -51,7 +61,7 @@ const NewTourPopup = ({
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-2xl">📍</span>
+              <MapPin className="w-6 h-6 text-gray-500" />
               <div>
                 <p className="text-xs text-gray-500">Địa điểm</p>
                 <p className="font-semibold text-gray-900">
@@ -61,7 +71,7 @@ const NewTourPopup = ({
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-2xl">👥</span>
+              <Users className="w-6 h-6 text-gray-500" />
               <div>
                 <p className="text-xs text-gray-500">Số khách</p>
                 <p className="font-semibold text-gray-900">
@@ -72,7 +82,7 @@ const NewTourPopup = ({
           </div>
 
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-2xl">💰</span>
+            <DollarSign className="w-6 h-6 text-gray-500" />
             <div>
               <p className="text-xs text-gray-500">Tổng giá</p>
               <p className="text-2xl font-bold text-[#02A0AA]">
@@ -114,17 +124,20 @@ const NewTourPopup = ({
 
         {/* Warning */}
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
-          <p className="text-sm text-yellow-800">
-            ⚠️ Vui lòng phản hồi nhanh! Khách hàng đang chờ xác nhận của bạn.
+          <p className="text-sm text-yellow-800 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            Vui lòng phản hồi nhanh! Khách hàng đang chờ xác nhận của bạn.
           </p>
         </div>
 
         {/* Actions */}
         <div className="flex gap-3">
-          <Button variant="danger" onClick={onDecline} fullWidth icon="❌">
+          <Button variant="danger" onClick={onDecline} fullWidth>
+            <XCircle className="w-4 h-4 mr-2" />
             Từ chối
           </Button>
-          <Button variant="success" onClick={onAccept} fullWidth icon="✅">
+          <Button variant="success" onClick={onAccept} fullWidth>
+            <CheckCircle className="w-4 h-4 mr-2" />
             Chấp nhận
           </Button>
         </div>
