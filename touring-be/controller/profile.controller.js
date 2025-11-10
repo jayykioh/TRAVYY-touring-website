@@ -1,4 +1,5 @@
 const User = require("../models/Users");
+const Guide = require("../models/guide/Guide");
 const { z } = require("zod");
 const multer = require("multer");
 
@@ -32,6 +33,30 @@ exports.getProfile = async (req, res) => {
     const uid = req.user?.sub || req.user?._id;
     const user = await User.findById(uid).select("-password");
     if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
+    
+    // If user is a guide, also fetch guide profile
+    if (user.role === 'guide') {
+      const guide = await Guide.findOne({ userId: uid });
+      if (guide) {
+        // Merge user and guide data
+        const profile = {
+          ...user.toObject(),
+          guideId: guide.guideId,
+          bio: guide.bio || user.bio,
+          rating: guide.rating,
+          totalTours: guide.totalTours,
+          toursConducted: guide.toursConducted,
+          experience: guide.experience,
+          languages: guide.languages || [],
+          specialties: guide.specialties || [],
+          availability: guide.availability,
+          responseTime: guide.responseTime,
+          joinedDate: guide.joinedDate,
+        };
+        return res.json(profile);
+      }
+    }
+    
     res.json(user);
   } catch (e) {
     res.status(500).json({ error: "FETCH_FAILED", message: e.message });
@@ -40,19 +65,89 @@ exports.getProfile = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const payload = UpdateSchema.parse(req.body);
     const uid = req.user?.sub || req.user?._id;
+    const user = await User.findById(uid);
+    if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
 
-    const $set = {
-      name: payload.name,
-      "location.provinceId": payload.location.provinceId,
-      "location.wardId": payload.location.wardId,
-      "location.addressLine": payload.location.addressLine,
-    };
-    if (payload.phone) $set.phone = payload.phone;
-    if (payload.username) $set.username = payload.username.toLowerCase();
+    // Handle both standard user fields and guide-specific fields
+    const {
+      name,
+      username,
+      phone,
+      location,
+      bio,
+      experience,
+      languages,
+      specialties,
+    } = req.body;
 
-    const updated = await User.findByIdAndUpdate(uid, { $set }, { new: true }).select("-password");
+    // Update User model
+    const userUpdates = {};
+    if (name !== undefined) userUpdates.name = name.trim();
+    if (username !== undefined) userUpdates.username = username.toLowerCase().trim();
+    if (phone !== undefined) userUpdates.phone = phone.trim();
+
+    // Handle location object
+    if (location) {
+      if (typeof location === 'string') {
+        userUpdates.location = location;
+      } else if (location.provinceId && location.wardId) {
+        userUpdates["location.provinceId"] = location.provinceId;
+        userUpdates["location.wardId"] = location.wardId;
+        if (location.addressLine !== undefined) {
+          userUpdates["location.addressLine"] = location.addressLine;
+        }
+      }
+    }
+
+    if (Object.keys(userUpdates).length > 0) {
+      await User.findByIdAndUpdate(uid, { $set: userUpdates });
+    }
+
+    // If user is a guide, also update Guide model
+    if (user.role === 'guide') {
+      const guide = await Guide.findOne({ userId: uid });
+      if (guide) {
+        const guideUpdates = {};
+        if (name !== undefined) guideUpdates.name = name.trim();
+        if (phone !== undefined) guideUpdates.phone = phone.trim();
+        if (bio !== undefined) guideUpdates.bio = bio.trim();
+        if (experience !== undefined) guideUpdates.experience = experience;
+        if (languages !== undefined) guideUpdates.languages = languages;
+        if (specialties !== undefined) guideUpdates.specialties = specialties;
+        if (typeof location === 'string') guideUpdates.location = location;
+
+        if (Object.keys(guideUpdates).length > 0) {
+          await Guide.findByIdAndUpdate(guide._id, { $set: guideUpdates });
+        }
+      }
+    }
+
+    // Fetch updated profile
+    const updated = await User.findById(uid).select("-password");
+    
+    // Merge guide data if applicable
+    if (user.role === 'guide') {
+      const guide = await Guide.findOne({ userId: uid });
+      if (guide) {
+        const profile = {
+          ...updated.toObject(),
+          guideId: guide.guideId,
+          bio: guide.bio || updated.bio,
+          rating: guide.rating,
+          totalTours: guide.totalTours,
+          toursConducted: guide.toursConducted,
+          experience: guide.experience,
+          languages: guide.languages || [],
+          specialties: guide.specialties || [],
+          availability: guide.availability,
+          responseTime: guide.responseTime,
+          joinedDate: guide.joinedDate,
+        };
+        return res.json(profile);
+      }
+    }
+
     res.json(updated);
   } catch (e) {
     if (e instanceof z.ZodError) {

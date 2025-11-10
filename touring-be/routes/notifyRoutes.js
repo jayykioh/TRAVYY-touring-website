@@ -7,6 +7,9 @@ const {
   notifyRegister,
   getUserNotifications,
   markNotificationsAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  getUnreadCount,
   getNotificationStats,
   notifyPasswordChanged,
   notifyPasswordReset,
@@ -28,8 +31,12 @@ router.post("/password-reset", notifyPasswordReset);
 router.post("/password-reset-success", notifyPasswordResetSuccess);
 
 // User notification management (protected)
-router.get("/my", authJwt, getUserNotifications);
-router.patch("/mark-read", authJwt, markNotificationsAsRead);
+router.get("/", authJwt, getUserNotifications); // Default endpoint
+router.get("/my", authJwt, getUserNotifications); // Alias
+router.post("/mark-read", authJwt, markNotificationsAsRead); // Changed from PATCH to POST
+router.post("/mark-all-read", authJwt, markAllNotificationsAsRead);
+router.delete("/:id", authJwt, deleteNotification);
+router.get("/unread-count", authJwt, getUnreadCount);
 
 // Admin stats (protected - có thể thêm admin middleware sau)
 router.get("/stats", authJwt, getNotificationStats);

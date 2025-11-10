@@ -29,6 +29,8 @@ import HelpCategoryView from "./components/HelpCategoryView";
 import HelpArticleView from "./components/HelpArticleView";
 import Cart from "./pages/Cart";
 import WishlistPage from "./pages/WishlistPage";
+import MyTourRequests from "./pages/MyTourRequests";
+import CustomTourPaymentPage from "./pages/CustomTourPaymentPage";
 import LoadingScreen from "./components/LoadingScreen";
 import NotFoundPage from "./pages/NotFound";
 import BookingPage from "./pages/BookingPage";
@@ -41,6 +43,7 @@ import DiscoverResults from "./pages/DiscoverResults";
 import ZoneDetail from "./pages/ZoneDetail";
 import ItineraryView  from "./pages/ItineraryView";
 import ItineraryResult from "./pages/ItineraryResult"; // ✅ ADD THIS IMPORT
+import ItineraryPaymentResult from "./pages/ItineraryPaymentResult"; // ✅ ADD DEPOSIT PAYMENT RESULT
 // import ItineraryView from "./pages/ItineraryView";
 
 // ✅ THÊM: Import Admin components
@@ -197,6 +200,36 @@ export default function App() {
           element={
             <ProtectedRoute>
               <ItineraryResult />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ ADD: Itinerary Deposit Payment Result */}
+        <Route
+          path="/itinerary/:id/payment-result"
+          element={
+            <ProtectedRoute>
+              <ItineraryPaymentResult />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ ADD: My Tour Requests */}
+        <Route
+          path="/my-tour-requests"
+          element={
+            <ProtectedRoute>
+              <MyTourRequests />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ ADD: Custom Tour Payment Page */}
+        <Route
+          path="/payment/custom-tour/:bookingId"
+          element={
+            <ProtectedRoute>
+              <CustomTourPaymentPage />
             </ProtectedRoute>
           }
         />

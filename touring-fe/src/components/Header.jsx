@@ -22,6 +22,7 @@ import {
   NavigationMenuTrigger,
 } from "../components/ui/navigation-menu";
 import UserMenu from "./UsersMenu";
+import NotificationBell from "./NotificationBell";
 import logo from "../assets/logo.png";
 import CartBadge from "./CartBadge";
 import SearchBar from "./SearchBar";
@@ -263,6 +264,7 @@ export default function Header() {
                   <span className="hidden sm:inline">Giỏ hàng</span>
                   <CartBadge count={cartCount} />
                 </Link>
+                <NotificationBell />
                 <UserMenu />
               </div>
             ) : (
@@ -352,7 +354,7 @@ export default function Header() {
               <Link 
                 to="/help" 
                 className="flex items-center gap-2 py-2 text-gray-800 hover:text-blue-600" 
-                onClick={onNavigate}
+                onClick={() => setIsMenuOpen(false)}
               >
                 <HelpCircle className="w-4 h-4" />
                 Trợ giúp

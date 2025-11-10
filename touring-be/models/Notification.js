@@ -29,7 +29,11 @@ const notificationSchema = new mongoose.Schema({
       "general",
       "password_reset",       // 🔑 Quên mật khẩu
       "password_changed",     // 🔒 Đổi mật khẩu
-      "security_alert"        // ⚠️ Cảnh báo bảo mật
+      "security_alert",       // ⚠️ Cảnh báo bảo mật
+      "tour_guide_accepted",  // ✅ Guide chấp nhận tour
+      "tour_guide_rejected",  // ❌ Guide từ chối tour
+      "deposit_paid",         // 💰 Đã đặt cọc
+      "new_message"           // 💬 Tin nhắn mới
     ],
     required: true,
     index: true
@@ -81,6 +85,10 @@ const notificationSchema = new mongoose.Schema({
     // Thêm field tùy chỉnh
     additionalData: { type: mongoose.Schema.Types.Mixed }
   },
+
+  // Related document (flexible reference)
+  relatedId: { type: mongoose.Schema.Types.ObjectId },
+  relatedModel: { type: String, enum: ['Itinerary', 'TourCustomRequest', 'Booking', 'Tour', null] },
 
   // Trạng thái
   status: {

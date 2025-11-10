@@ -7,7 +7,7 @@ import MyToursPage from "../pages/MyToursPage";
 import GuideTourDetailPage from "../pages/GuideTourDetailPage";
 import NotificationsPage from "../pages/NotificationsPage";
 import EarningsPage from "../pages/EarningsPage";
-import ProfilePage from "../pages/ProfilePage";
+import GuideProfilePage from "../pages/GuideProfilePage"; // Updated
 
 const GuideRoutes = () => {
   return (
@@ -20,7 +20,7 @@ const GuideRoutes = () => {
         <Route path="/tours/:id" element={<GuideTourDetailPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/earnings" element={<EarningsPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile" element={<GuideProfilePage />} />
       </Route>
     </Routes>
   );

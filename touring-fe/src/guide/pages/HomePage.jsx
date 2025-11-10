@@ -5,7 +5,7 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import { useAuth } from "../../auth/context";
 import { useNavigate } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -20,19 +20,12 @@ const HomePage = () => {
     async function fetchData() {
       setLoading(true);
       try {
-        const [tourData, requestData] = await Promise.all([
-          withAuth("/api/tours"),
+        const [requestData, tourData] = await Promise.all([
           withAuth("/api/itinerary/guide/requests"),
+          withAuth("/api/itinerary/guide/accepted-tours"),
         ]);
-        // Filter tours by current user's agencyId
-        const myTours = Array.isArray(tourData)
-          ? tourData.filter((tour) =>
-              tour.agencyId &&
-              (tour.agencyId._id === user?.agencyId || tour.agencyId === user?.agencyId)
-            )
-          : [];
-        setTours(myTours);
-        // Map backend requests to UI format
+        
+        // Map requests
         const reqs = requestData.success && Array.isArray(requestData.requests)
           ? requestData.requests.map((it) => ({
               id: it._id,
@@ -42,14 +35,14 @@ const HomePage = () => {
               customerAvatar: it.userId?.avatar?.url || '',
               customerEmail: it.userId?.email || '',
               contactPhone: it.userId?.phone || '',
-              departureDate: '',
-              startTime: '',
-              endTime: '',
+              departureDate: it.preferredDate || '',
+              startTime: it.startTime || '',
+              endTime: it.endTime || '',
               location: it.zoneName,
               pickupPoint: '',
-              numberOfGuests: '',
-              duration: '',
-              totalPrice: '',
+              numberOfGuests: it.numberOfPeople || '',
+              duration: it.totalDuration ? `${Math.floor(it.totalDuration / 60)}h${it.totalDuration % 60}m` : '',
+              totalPrice: it.estimatedCost || '',
               earnings: '',
               requestedAt: it.tourGuideRequest?.requestedAt,
               specialRequests: '',
@@ -66,45 +59,35 @@ const HomePage = () => {
             }))
           : [];
         setRequests(reqs);
-      } catch {
+        
+        // Map tours
+        const myTours = tourData.success && Array.isArray(tourData.tours)
+          ? tourData.tours
+          : [];
+        setTours(myTours);
+      } catch (error) {
+        console.error('Error fetching data:', error);
         setTours([]);
         setRequests([]);
       } finally {
         setLoading(false);
       }
     }
-    if (user?.agencyId) fetchData();
-  }, [user?.agencyId, withAuth]);
+    if (user) {
+      fetchData();
+    }
+  }, [user, withAuth]);
 
   // Categorize tours
   const now = new Date();
   const ongoingTours = tours.filter((tour) => {
-    if (tour.isHidden || tour.status === "canceled") return false;
-    if (tour.status === "completed") return false;
-    if (tour.departures && tour.departures.length > 0) {
-      // Ongoing if any departure is today
-      return tour.departures.some((d) => {
-        if (!d.date) return false;
-        const depDate = new Date(d.date);
-        return (
-          depDate.toDateString() === now.toDateString()
-        );
-      });
-    }
-    return false;
+    const preferredDate = tour.preferredDate ? new Date(tour.preferredDate) : null;
+    return preferredDate && preferredDate.toDateString() === now.toDateString();
   });
+  
   const upcomingTours = tours.filter((tour) => {
-    if (tour.isHidden || tour.status === "canceled") return false;
-    if (tour.status === "completed") return false;
-    if (tour.departures && tour.departures.length > 0) {
-      // Upcoming if any departure is in the future
-      return tour.departures.some((d) => {
-        if (!d.date) return false;
-        const depDate = new Date(d.date);
-        return depDate > now;
-      });
-    }
-    return false;
+    const preferredDate = tour.preferredDate ? new Date(tour.preferredDate) : null;
+    return preferredDate && preferredDate > now;
   });
 
   // Danh sách yêu cầu mới trong 48h
@@ -266,19 +249,13 @@ const HomePage = () => {
       {/* Modal thông báo mới */}
       <AnimatePresence>
         {showBlogNotification && newRequests.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={handleCloseBlogNotification}
           >
-            <motion.div
-              initial={{ y: 20, opacity: 0, scale: 0.95 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: 20, opacity: 0, scale: 0.95 }}
+            <div
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative"
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-in fade-in slide-in-from-bottom-4 duration-300"
             >
               {/* Nút đóng */}
               <button
@@ -338,8 +315,8 @@ const HomePage = () => {
               >
                 Xem chi tiết
               </Button>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
       </AnimatePresence>
     </div>

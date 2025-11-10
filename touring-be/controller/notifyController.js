@@ -223,16 +223,35 @@ const notifyRegister = async (req, res) => {
 const getUserNotifications = async (req, res) => {
   try {
     const userId = req.user?.sub || req.user?._id;
+    const userRole = req.user?.role;
     const { limit = 20, type, status, unreadOnly } = req.query;
 
-    const notifications = await Notification.findByUser(userId, {
-      limit: parseInt(limit),
-      type,
-      status,
-      unreadOnly: unreadOnly === 'true'
-    });
+    let notifications, unreadCount;
 
-    const unreadCount = await Notification.getUnreadCount(userId);
+    // If user is TourGuide, get from GuideNotification
+    if (userRole === 'TourGuide') {
+      const GuideNotification = require('../models/guide/GuideNotification');
+      
+      let query = { guideId: userId };
+      if (type) query.type = type;
+      if (unreadOnly === 'true') query.read = false;
+      
+      notifications = await GuideNotification.find(query)
+        .sort({ createdAt: -1 })
+        .limit(parseInt(limit));
+      
+      unreadCount = await GuideNotification.countDocuments({ guideId: userId, read: false });
+    } else {
+      // For regular users (travellers)
+      notifications = await Notification.findByUser(userId, {
+        limit: parseInt(limit),
+        type,
+        status,
+        unreadOnly: unreadOnly === 'true'
+      });
+
+      unreadCount = await Notification.getUnreadCount(userId);
+    }
 
     res.json({
       success: true,
@@ -250,6 +269,7 @@ const getUserNotifications = async (req, res) => {
 const markNotificationsAsRead = async (req, res) => {
   try {
     const userId = req.user?.sub || req.user?._id;
+    const userRole = req.user?.role;
     const { notificationIds } = req.body; // Array of notification IDs
 
     if (!Array.isArray(notificationIds) || notificationIds.length === 0) {
@@ -259,7 +279,24 @@ const markNotificationsAsRead = async (req, res) => {
       });
     }
 
-    const result = await Notification.markAsRead(notificationIds, userId);
+    let result;
+
+    // If user is TourGuide, mark in GuideNotification
+    if (userRole === 'TourGuide') {
+      const GuideNotification = require('../models/guide/GuideNotification');
+      result = await GuideNotification.updateMany(
+        { 
+          _id: { $in: notificationIds },
+          guideId: userId 
+        },
+        { 
+          $set: { read: true }
+        }
+      );
+    } else {
+      // For regular users (travellers)
+      result = await Notification.markAsRead(notificationIds, userId);
+    }
 
     res.json({
       success: true,
@@ -518,6 +555,129 @@ module.exports = {
   notifyRegister,
   getUserNotifications,
   markNotificationsAsRead,
+  getNotificationStats,
+  notifyPasswordChanged,
+  notifyPasswordReset,
+  notifyPasswordResetSuccess,
+};
+
+// ===== ADDITIONAL API ENDPOINTS =====
+
+/**
+ * Mark all notifications as read for user
+ * POST /api/notifications/mark-all-read
+ */
+const markAllNotificationsAsRead = async (req, res) => {
+  try {
+    const userId = req.user?.sub || req.user?._id;
+    const userRole = req.user?.role;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    let result;
+
+    // If user is TourGuide, mark in GuideNotification
+    if (userRole === 'TourGuide') {
+      const GuideNotification = require('../models/guide/GuideNotification');
+      result = await GuideNotification.updateMany(
+        { guideId: userId, read: false },
+        { $set: { read: true } }
+      );
+    } else {
+      // For regular users (travellers)
+      result = await Notification.updateMany(
+        { userId, status: { $ne: 'read' } },
+        { $set: { status: 'read', readAt: new Date() } }
+      );
+    }
+
+    res.json({
+      success: true,
+      message: "All notifications marked as read",
+      count: result.modifiedCount
+    });
+  } catch (error) {
+    console.error("[Notifications] Mark all read error:", error);
+    res.status(500).json({ 
+      error: "Failed to mark all notifications as read",
+      message: error.message 
+    });
+  }
+};
+
+/**
+ * Delete a notification
+ * DELETE /api/notifications/:id
+ */
+const deleteNotification = async (req, res) => {
+  try {
+    const userId = req.user?.sub || req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { id } = req.params;
+    
+    const notification = await Notification.findOneAndDelete({
+      _id: id,
+      userId // Ensure user owns this notification
+    });
+
+    if (!notification) {
+      return res.status(404).json({ error: "Notification not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Notification deleted"
+    });
+  } catch (error) {
+    console.error("[Notifications] Delete error:", error);
+    res.status(500).json({ 
+      error: "Failed to delete notification",
+      message: error.message 
+    });
+  }
+};
+
+/**
+ * Get unread count
+ * GET /api/notifications/unread-count
+ */
+const getUnreadCount = async (req, res) => {
+  try {
+    const userId = req.user?.sub || req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const unreadCount = await Notification.getUnreadCount(userId);
+
+    res.json({
+      success: true,
+      unreadCount
+    });
+  } catch (error) {
+    console.error("[Notifications] Unread count error:", error);
+    res.status(500).json({ 
+      error: "Failed to get unread count",
+      message: error.message 
+    });
+  }
+};
+
+module.exports = {
+  notifyBookingSuccess,
+  notifyPaymentSuccess,
+  sendPaymentSuccessNotification,
+  notifyNewTour,
+  notifyRegister,
+  getUserNotifications,
+  markNotificationsAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  getUnreadCount,
   getNotificationStats,
   notifyPasswordChanged,
   notifyPasswordReset,

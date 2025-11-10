@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Card from "../components/common/Card";
 import Badge from "../components/common/Badge";
-import { mockEarnings } from "../data/mockEarnings";
+import { getGuideEarnings } from "../data/guideAPI";
 import {
   LineChart,
   Line,
@@ -15,15 +15,45 @@ import {
 } from "recharts";
 
 const EarningsPage = () => {
-  const { summary, weeklyData, recentPayments, monthlyStats, yearlyStats } =
-    mockEarnings;
+  const [earningsData, setEarningsData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [range, setRange] = useState("week");
 
+  useEffect(() => {
+    const fetchEarnings = async () => {
+      try {
+        const data = await getGuideEarnings();
+        setEarningsData(data);
+      } catch (error) {
+        console.error("Failed to fetch earnings:", error);
+        // Fallback data
+        setEarningsData({
+          summary: { thisWeek: 0, thisMonth: 0, lastMonth: 0, totalEarnings: 0, pendingPayment: 0 },
+          weeklyData: [],
+          recentPayments: [],
+          monthlyStats: [],
+          yearlyStats: []
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEarnings();
+  }, []);
+
+  const summary = earningsData?.summary || { thisWeek: 0, thisMonth: 0, lastMonth: 0, totalEarnings: 0, pendingPayment: 0 };
+  const recentPayments = earningsData?.recentPayments || [];
+
   const chartData = useMemo(() => {
+    const weekly = earningsData?.weeklyData || [];
+    const monthly = earningsData?.monthlyStats || [];
+    const yearly = earningsData?.yearlyStats || [];
+
     if (range === "week") {
       return {
         title: "Tuần này",
-        data: weeklyData.map((d) => ({
+        data: weekly.map((d) => ({
           name: d.day,
           value: d.amount || 0,
         })),
@@ -32,7 +62,7 @@ const EarningsPage = () => {
     if (range === "month") {
       return {
         title: "Tháng này",
-        data: monthlyStats.map((d) => ({
+        data: monthly.map((d) => ({
           name: d.month,
           value: d.earnings || 0,
         })),
@@ -40,12 +70,12 @@ const EarningsPage = () => {
     }
     return {
       title: "Năm nay",
-      data: yearlyStats.map((d) => ({
+      data: yearly.map((d) => ({
         name: d.month,
         value: d.earnings || 0,
       })),
     };
-  }, [range, weeklyData, monthlyStats, yearlyStats]);
+  }, [range, earningsData]);
 
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {

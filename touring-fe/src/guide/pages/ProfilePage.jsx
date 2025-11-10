@@ -2,41 +2,102 @@ import React, { useState, useEffect } from "react";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Badge from "../components/common/Badge";
+import { useAuth } from "../../auth/context";
+import { toast } from "sonner";
 
 const ProfilePage = () => {
+  const { user, withAuth } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     async function fetchProfile() {
       try {
         setLoading(true);
-        setError(null);
-        const res = await fetch("/api/profile", {
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("Không thể lấy thông tin hồ sơ");
-        const data = await res.json();
-        setProfile(data);
+        const data = await withAuth("/api/profile");
+        
+        if (data) {
+          setProfile({
+            name: data.name || user?.name || '',
+            email: data.email || user?.email || '',
+            phone: data.phone || user?.phone || '',
+            avatar: data.avatar?.url || data.avatar || user?.avatar?.url || '',
+            bio: data.bio || 'Chưa có thông tin giới thiệu',
+            rating: data.rating || 5.0,
+            totalTours: data.totalTours || 0,
+            experience: data.experience || 'Mới',
+            languages: data.languages || ['Tiếng Việt'],
+            specialties: data.specialties || ['Tour Du lịch'],
+            location: data.location || '',
+          });
+        }
       } catch (e) {
-        setError(e.message);
+        console.error('Error fetching profile:', e);
+        // Set default profile from user data
+        setProfile({
+          name: user?.name || '',
+          email: user?.email || '',
+          phone: user?.phone || '',
+          avatar: user?.avatar?.url || '',
+          bio: 'Chưa có thông tin giới thiệu',
+          rating: 5.0,
+          totalTours: 0,
+          experience: 'Mới',
+          languages: ['Tiếng Việt'],
+          specialties: ['Tour Du lịch'],
+          location: '',
+        });
       } finally {
         setLoading(false);
       }
     }
-    fetchProfile();
-  }, []);
+    if (user) {
+      fetchProfile();
+    }
+  }, [user, withAuth]);
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      const response = await withAuth("/api/profile", {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile)
+      });
+      
+      if (response.success || response._id) {
+        toast.success('Cập nhật hồ sơ thành công!');
+        setIsEditing(false);
+      } else {
+        toast.error('Không thể cập nhật hồ sơ');
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      toast.error('Có lỗi xảy ra khi lưu hồ sơ');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
-    return <div className="p-6">Đang tải hồ sơ...</div>;
+    return (
+      <div className="p-6 flex justify-center items-center min-h-screen">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 border-4 border-[#02A0AA] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-gray-500">Đang tải hồ sơ...</p>
+        </div>
+      </div>
+    );
   }
-  if (error) {
-    return <div className="p-6 text-red-500">Lỗi: {error}</div>;
-  }
+  
   if (!profile) {
-    return <div className="p-6">Không có dữ liệu hồ sơ.</div>;
+    return (
+      <div className="p-6 text-center">
+        <p className="text-gray-500">Không có dữ liệu hồ sơ.</p>
+      </div>
+    );
   }
 
   return (
@@ -82,10 +143,17 @@ const ProfilePage = () => {
               </div>
               <Button
                 variant={isEditing ? "success" : "outline"}
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={() => {
+                  if (isEditing) {
+                    handleSave();
+                  } else {
+                    setIsEditing(true);
+                  }
+                }}
                 size="md"
+                disabled={saving}
               >
-                {isEditing ? "Lưu thay đổi" : "Chỉnh sửa"}
+                {saving ? 'Đang lưu...' : isEditing ? "Lưu thay đổi" : "Chỉnh sửa"}
               </Button>
             </div>
 

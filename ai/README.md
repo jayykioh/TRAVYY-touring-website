@@ -59,13 +59,14 @@ A high-performance microservice for Vietnamese semantic search using **AITeamVN/
 
 ## Quick Start (Local)
 ```bash
-python -m venv .venv && source .venv/bin/activate
-( .venv\Scripts\activate )
+python -m venv .venv 
+ .venv\Scripts\Activate    
 pip install -r requirements.txt
-cp .env.example .env
+cp .env.example .env // khi tạo .env mới cho ai chưa tạo thôi
 uvicorn app:app --reload --port 8088
+thoát .venv thì dùng deactivate
 ```
-
+thoát .venv thì dùng deactivate
 ## Docker
 ```bash
 docker build -t embedding-service:latest .

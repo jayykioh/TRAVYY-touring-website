@@ -373,6 +373,54 @@ async function buildMoMoCharge(userId, body) {
       retryBookingId: body?.retryBookingId
     };
   }
+  
+  // ✅ NEW: Support for custom-tour mode
+  if (mode === "custom-tour") {
+    const bookingId = body?.bookingId;
+    if (!bookingId) {
+      throw Object.assign(new Error("MISSING_BOOKING_ID"), { status: 400 });
+    }
+
+    // Load booking to get amount
+    const booking = await Booking.findById(bookingId).populate('customTourRequest.itineraryId');
+    if (!booking) {
+      throw Object.assign(new Error("BOOKING_NOT_FOUND"), { status: 404 });
+    }
+
+    // Verify booking belongs to user
+    if (booking.userId.toString() !== userId.toString()) {
+      throw Object.assign(new Error("UNAUTHORIZED_BOOKING"), { status: 403 });
+    }
+
+    // Verify booking is in pending payment status
+    if (booking.payment?.status !== 'pending') {
+      throw Object.assign(new Error("BOOKING_NOT_PENDING"), { status: 400 });
+    }
+
+    const totalVND = booking.payment.totalVND;
+    const items = booking.items.map(item => ({
+      name: item.name,
+      price: item.priceVND,
+      originalPrice: undefined,
+      tourId: null, // Custom tour doesn't have tourId
+      meta: {
+        date: item.date,
+        adults: item.adults,
+        children: item.children,
+        unitPriceAdult: item.priceVND / (item.adults + item.children), // Approximate
+        unitPriceChild: 0,
+        image: booking.customTourRequest?.itineraryId?.thumbnail || '',
+      },
+    }));
+
+    return {
+      items,
+      totalVND,
+      mode,
+      bookingId
+    };
+  }
+  
   // fallback: empty
   return {
     items: [],

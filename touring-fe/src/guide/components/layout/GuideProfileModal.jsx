@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Mail,
   Phone,
@@ -11,14 +11,48 @@ import {
   Calendar,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { mockGuide } from "../../data/mockGuide"; // 🧩 import mock data
+import { getGuideProfile } from "../../data/guideAPI"; // 🧩 import API function
 
 const GuideProfileModal = ({
   show = true,
   onClose = () => {},
   profileData,
 }) => {
-  const data = profileData || mockGuide; // nếu chưa có prop thì dùng mockGuide
+  const [apiData, setApiData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!profileData) {
+      const fetchProfile = async () => {
+        setLoading(true);
+        try {
+          const data = await getGuideProfile();
+          setApiData(data);
+        } catch (error) {
+          console.error("Failed to fetch guide profile:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchProfile();
+    }
+  }, [profileData]);
+
+  const data = profileData || apiData || {
+    name: "Hướng dẫn viên",
+    email: "",
+    phone: "",
+    location: "",
+    experience: "",
+    languages: [],
+    rating: 0,
+    totalTours: 0,
+    responseTime: "",
+    availability: "Available",
+    specialties: [],
+    joinedDate: new Date().toISOString().split('T')[0],
+    bio: ""
+  }; // fallback data
 
   return (
     <AnimatePresence>

@@ -26,6 +26,8 @@ import {
   Download,
 } from "lucide-react";
 import { useAuth } from "../../auth/context";
+import { toast } from "sonner";
+import ChatBox from "../components/chat/ChatBox";
 
 const GuideTourDetailPage = () => {
   const { id } = useParams();
@@ -39,41 +41,102 @@ const GuideTourDetailPage = () => {
   const [completionNotes, setCompletionNotes] = useState("");
 
   const { withAuth } = useAuth();
+  
+  // Determine if this is a request or accepted tour based on current route
+  const isRequestView = window.location.pathname.includes('/requests/');
+  
   useEffect(() => {
     async function fetchTour() {
       setLoading(true);
       try {
-        // Try to fetch tour by ID
-        const data = await withAuth(`/api/tours/${id}`);
+        // Use different endpoint based on whether viewing request or accepted tour
+        const endpoint = isRequestView 
+          ? `/api/itinerary/guide/requests/${id}`
+          : `/api/itinerary/guide/tours/${id}`;
+        
+        const data = await withAuth(endpoint);
         if (data && data._id) {
-          setTour(data);
+          // Transform itinerary data to match the expected tour format
+          const transformedTour = {
+            ...data,
+            id: data._id,
+            tourName: data.name || data.zoneName || 'Tour',
+            departureDate: data.preferredDate,
+            startTime: data.startTime || '08:00',
+            endTime: data.endTime || '18:00',
+            numberOfGuests: data.numberOfPeople || 1,
+            duration: data.totalDuration ? `${Math.floor(data.totalDuration / 60)}h ${data.totalDuration % 60}m` : 'N/A',
+            totalPrice: data.estimatedCost || 0,
+            earnings: data.estimatedCost ? Math.floor(data.estimatedCost * 0.8) : 0, // 80% for guide
+            location: data.zoneName || data.province || 'N/A',
+            pickupPoint: data.pickupLocation || data.startPoint || null,
+            customerName: data.customerInfo?.name || 'Khách hàng',
+            customerId: typeof data.userId === 'string' ? data.userId : data.userId?._id || 'N/A',
+            customerAvatar: data.customerInfo?.avatar || 'https://via.placeholder.com/150',
+            customerEmail: data.customerInfo?.email || '',
+            contactPhone: data.customerInfo?.phone || '',
+            itinerary: data.items?.map((item) => ({
+              title: item.name,
+              description: item.description || '',
+              time: item.arrivalTime || '',
+            })) || [],
+            imageItems: data.items?.flatMap(item => 
+              item.imageUrl ? [{ imageUrl: item.imageUrl }] : []
+            ) || [],
+            specialRequests: data.notes || data.specialRequests || '',
+            status: data.tourGuideRequest?.status || 'pending',
+            paymentStatus: data.paymentStatus || 'pending',
+            paymentMethod: data.paymentMethod || 'N/A',
+            rawData: data, // Keep original data for reference
+          };
+          setTour(transformedTour);
         } else {
-          // If not found, try to fetch requests and match by ID
-          const reqData = await withAuth("/api/itinerary/guide/requests");
-          if (reqData.success && Array.isArray(reqData.requests)) {
-            const foundRequest = reqData.requests.find((r) => r._id === id || r.id === id);
-            setTour(foundRequest || null);
-          } else {
-            setTour(null);
-          }
+          setTour(null);
         }
-      } catch {
+      } catch (error) {
+        console.error('[GuideTourDetail] Error fetching tour:', error);
         setTour(null);
       } finally {
         setLoading(false);
       }
     }
     fetchTour();
-  }, [id, withAuth]);
+  }, [id, withAuth, isRequestView]);
 
-  const handleAcceptRequest = () => {
-    console.log("Accepting tour request:", id);
-    navigate("/guide/tours");
+  const handleAcceptRequest = async () => {
+    try {
+      const response = await withAuth(`/api/itinerary/${id}/accept-tour-guide`, {
+        method: 'POST'
+      });
+      
+      if (response.success) {
+        toast.success('Đã chấp nhận yêu cầu tour!');
+        navigate("/guide/tours");
+      } else {
+        toast.error(response.error || 'Không thể chấp nhận yêu cầu');
+      }
+    } catch (error) {
+      console.error('Error accepting request:', error);
+      toast.error('Có lỗi xảy ra khi chấp nhận yêu cầu');
+    }
   };
 
-  const handleDeclineRequest = () => {
-    console.log("Declining tour request:", id);
-    navigate("/guide/requests");
+  const handleDeclineRequest = async () => {
+    try {
+      const response = await withAuth(`/api/itinerary/${id}/reject-tour-guide`, {
+        method: 'POST'
+      });
+      
+      if (response.success) {
+        toast.success('Đã từ chối yêu cầu');
+        navigate("/guide/requests");
+      } else {
+        toast.error(response.error || 'Không thể từ chối yêu cầu');
+      }
+    } catch (error) {
+      console.error('Error declining request:', error);
+      toast.error('Có lỗi xảy ra khi từ chối yêu cầu');
+    }
   };
 
   const handleCompleteTour = () => {
@@ -126,13 +189,14 @@ const GuideTourDetailPage = () => {
     );
   }
 
-  const isRequest = !tour.status;
+  const isRequest = tour.status === "pending";
   const isOngoing = tour.status === "ongoing";
   const isUpcoming = tour.status === "accepted";
   const isCompleted = tour.status === "completed";
   const isCanceled = tour.status === "canceled";
 
   const statusColors = {
+    pending: "warning",
     ongoing: "success",
     accepted: "info",
     completed: "default",
@@ -357,14 +421,7 @@ const GuideTourDetailPage = () => {
                   Email khách hàng
                 </Button>
               )}
-              <Button
-                variant="outline"
-                onClick={handleContactCustomer}
-                className="justify-start md:col-span-2"
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Gửi tin nhắn
-              </Button>
+             
             </div>
           </Card>
 
@@ -948,6 +1005,24 @@ const GuideTourDetailPage = () => {
                 </button>
               </div>
             </Card>
+          )}
+
+          {/* Chat Box - Show for requests and ongoing/upcoming tours */}
+          {(isRequest || isUpcoming || isOngoing) && (
+            <ChatBox 
+              requestId={id} 
+              customerName={tour.customerName}
+              tourInfo={{
+                tourName: tour.tourName,
+                name: tour.tourName,
+                location: tour.location,
+                departureDate: tour.departureDate,
+                numberOfGuests: tour.numberOfGuests,
+                duration: tour.duration,
+                itinerary: tour.itinerary,
+                totalPrice: tour.totalPrice
+              }}
+            />
           )}
         </div>
       </div>

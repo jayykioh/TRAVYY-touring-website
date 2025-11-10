@@ -182,6 +182,48 @@ async function buildChargeForUser(userId, body) {
     };
   }
 
+  // ✅ NEW: Support for custom-tour mode
+  if (mode === "custom-tour") {
+    const bookingId = body?.bookingId;
+    if (!bookingId) {
+      throw Object.assign(new Error("MISSING_BOOKING_ID"), { status: 400 });
+    }
+
+    // Load booking to get amount
+    const Booking = require("../models/Bookings");
+    const booking = await Booking.findById(bookingId).populate('customTourRequest.itineraryId');
+    if (!booking) {
+      throw Object.assign(new Error("BOOKING_NOT_FOUND"), { status: 404 });
+    }
+
+    // Verify booking belongs to user
+    if (booking.userId.toString() !== userId.toString()) {
+      throw Object.assign(new Error("UNAUTHORIZED_BOOKING"), { status: 403 });
+    }
+
+    // Verify booking is in pending payment status
+    if (booking.payment?.status !== 'pending') {
+      throw Object.assign(new Error("BOOKING_NOT_PENDING"), { status: 400 });
+    }
+
+    const totalVND = booking.payment.totalVND;
+    const items = booking.items.map(item => ({
+      sku: `custom-tour-${bookingId}`,
+      name: item.name,
+      quantity: 1,
+      unit_amount_vnd: item.priceVND,
+      image: booking.customTourRequest?.itineraryId?.thumbnail || '',
+    }));
+
+    return {
+      currency: "USD",
+      items,
+      totalVND,
+      cartItems: [], // No cart items for custom tour
+      bookingId
+    };
+  }
+
   throw Object.assign(new Error("UNSUPPORTED_MODE"), { status: 400 });
 }
 

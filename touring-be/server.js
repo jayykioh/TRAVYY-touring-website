@@ -34,6 +34,10 @@ const MONGO_URI =
   "mongodb://127.0.0.1:27017/travelApp";
 const notifyRoutes = require("./routes/notifyRoutes");
 const paymentRoutes = require("./routes/payment.routes");
+// Guide Routes
+const guideRoutes = require("./routes/guide/guide.routes");
+// Tour Request Routes
+const tourRequestRoutes = require("./routes/tourRequest.routes");
 // Quick visibility of PayPal env presence (not actual secrets)
 console.log("[Boot] PayPal env present:", {
   hasClient: !!process.env.PAYPAL_CLIENT_ID,
@@ -85,14 +89,17 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/admin", adminRoutes); // Updated to use modular admin routes
 app.use("/api/payments", paymentRoutes);
-app.use("/api/reviews", reviewRoutes);
-app.use("/api/promotions", promotionRoutes);
 const securityRoutes = require("./routes/security.routes");
 app.use("/api/security", securityRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api/notify", notifyRoutes);
+app.use("/api/notifications", notifyRoutes); // Alias for notifications
 app.use("/api/promotions", promotionRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/guide", guideRoutes);
+app.use("/api/tour-requests", tourRequestRoutes);
+const chatRoutes = require("./routes/chat.routes");
+app.use("/api/chat", chatRoutes);
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 app.use("/api/paypal", paypalRoutes);

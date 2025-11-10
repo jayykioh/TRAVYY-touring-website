@@ -100,6 +100,13 @@ const bookingSchema = new mongoose.Schema({
     fullName: { type: String }
   },
   
+  // ===== CUSTOM TOUR REQUEST LINK =====
+  customTourRequest: {
+    requestId: { type: mongoose.Schema.Types.ObjectId, ref: "TourCustomRequest" },
+    guideId: { type: mongoose.Schema.Types.ObjectId, ref: "Guide" },
+    itineraryId: { type: mongoose.Schema.Types.ObjectId, ref: "Itinerary" }
+  },
+  
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, { 

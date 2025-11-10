@@ -65,6 +65,19 @@ const ItinerarySchema = new mongoose.Schema({
     respondedAt: Date
   },
   
+  // Payment information for custom tour
+  paymentInfo: {
+    status: { type: String, enum: ['pending', 'deposit_paid', 'fully_paid', 'refunded'], default: 'pending' },
+    depositAmount: { type: Number, default: 0 },
+    depositPaidAt: Date,
+    depositProvider: { type: String, enum: ['momo', 'paypal', 'card'], default: null },
+    depositOrderId: String,
+    totalAmount: { type: Number, default: 0 },
+    fullPaymentAt: Date,
+    fullPaymentProvider: String,
+    fullPaymentOrderId: String
+  },
+  
   status: {
     type: String,
     enum: ['draft', 'optimized', 'confirmed'],
@@ -113,6 +126,15 @@ const ItinerarySchema = new mongoose.Schema({
   
   itemCount: { type: Number, default: 0 },
   maxDistance: { type: Number, default: 50 },
+  
+  // Additional fields for custom tour
+  estimatedCost: { type: Number, default: 0 },
+  numberOfPeople: { type: Number, default: 1 },
+  preferredDate: Date,
+  startTime: String,
+  endTime: String,
+  pickupLocation: String,
+  notes: String,
   
 }, {
   timestamps: true,
