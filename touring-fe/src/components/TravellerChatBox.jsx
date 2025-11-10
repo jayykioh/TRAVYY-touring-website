@@ -58,8 +58,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          message: messageText,
-          senderRole: 'traveller'
+          message: messageText
         })
       });
 
@@ -201,7 +200,8 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
           </div>
         ) : (
           messages.map((msg) => {
-            const isMyMessage = msg.senderRole === 'traveller' || msg.senderId === user?.sub;
+            // Check if message is from current user
+            const isMyMessage = msg.sender?.role === 'user' || msg.sender?.userId === user?.sub;
             return (
               <div
                 key={msg._id}
@@ -216,11 +216,11 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
                 >
                   {!isMyMessage && (
                     <p className="text-xs font-semibold mb-1 opacity-70">
-                      {msg.senderName || guideName || 'Tour Guide'}
+                      {msg.sender?.name || guideName || 'Tour Guide'}
                     </p>
                   )}
                   <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-                    {msg.message || msg.content}
+                    {msg.content}
                   </p>
                   <p
                     className={`text-xs mt-1.5 ${
