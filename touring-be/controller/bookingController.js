@@ -107,9 +107,9 @@ exports.getUserBookings = async (req, res) => {
     console.log("📚 Fetching bookings for userId:", userId);
 
     // 1️⃣ Lấy danh sách booking từ travelApp (bao gồm cả cancelled để hiển thị failed bookings)
-    const bookings = await Booking.find({ 
+    const bookings = await Booking.find({
       userId,
-      status: { $in: ["pending", "confirmed", "paid", "cancelled"] } // Include cancelled for failed bookings
+      status: { $in: ["pending", "confirmed", "paid", "cancelled"] }, // Include cancelled for failed bookings
     })
       .sort({ createdAt: -1 })
       .lean();
@@ -147,6 +147,78 @@ exports.getUserBookings = async (req, res) => {
   } catch (e) {
     console.error("getUserBookings error", e);
     res.status(500).json({ error: "FETCH_BOOKINGS_FAILED" });
+  }
+};
+
+/**
+ * Get single booking by ID
+ * GET /api/bookings/:id
+ */
+exports.getBookingById = async (req, res) => {
+  try {
+    const userId = req.user?.sub || req.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: "UNAUTHORIZED",
+      });
+    }
+
+    // Validate booking ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: "INVALID_BOOKING_ID",
+      });
+    }
+
+    // Find booking
+    const booking = await Booking.findById(id).lean();
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        error: "BOOKING_NOT_FOUND",
+      });
+    }
+
+    // Check if booking belongs to user (security check)
+    if (booking.userId.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: "FORBIDDEN",
+      });
+    }
+
+    // Enrich with tour details
+    const tourIds = booking.items
+      ?.map((i) => i.tourId?.toString())
+      .filter(Boolean);
+    const tours = await Tour.find({ _id: { $in: tourIds } })
+      .select("title imageItems")
+      .lean();
+
+    const items = booking.items?.map((item) => {
+      const t = tours.find((x) => x._id.toString() === item.tourId.toString());
+      return {
+        ...item,
+        name: item.name || t?.title || "",
+        image: item.image || t?.imageItems?.[0]?.imageUrl || "",
+      };
+    });
+
+    res.json({
+      success: true,
+      data: { ...booking, items },
+    });
+  } catch (e) {
+    console.error("getBookingById error", e);
+    res.status(500).json({
+      success: false,
+      error: "FETCH_BOOKING_FAILED",
+    });
   }
 };
 

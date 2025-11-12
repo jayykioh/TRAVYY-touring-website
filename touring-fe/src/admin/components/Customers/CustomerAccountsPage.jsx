@@ -224,7 +224,7 @@ export default function CustomerAccountsPage() {
           </p>
         </div>
         <button
-          onClick={() => alert("Xuất báo cáo")}
+          onClick={() => toast.info("Chức năng xuất báo cáo đang phát triển")}
           className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
         >
           <Download className="w-4 h-4" />

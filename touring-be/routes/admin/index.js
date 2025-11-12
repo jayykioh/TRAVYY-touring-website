@@ -8,6 +8,7 @@ const statsRoutes = require("./stats.routes");
 const userRoutes = require("./user.routes");
 const agencyRoutes = require("./agency.routes");
 const helpRoutes = require("./help.routes");
+const refundRoutes = require("./refund.routes");
 
 // Mount routes
 router.use("/", authRoutes); // /api/admin/login, /api/admin/logout
@@ -15,6 +16,7 @@ router.use("/", statsRoutes); // /api/admin/revenue-stats, /api/admin/dashboard-
 router.use("/users", userRoutes); // /api/admin/users
 router.use("/agencies", agencyRoutes); // /api/admin/agencies
 router.use("/help", helpRoutes); // /api/admin/help/feedback
+router.use("/refunds", refundRoutes); // /api/admin/refunds
 
 // Future admin routes can be added here:
 // const tourRoutes = require("./tours.routes");

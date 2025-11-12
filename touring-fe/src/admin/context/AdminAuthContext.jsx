@@ -13,12 +13,19 @@ export const AdminAuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = () => {
       try {
+        console.log("[AdminAuthContext] Initializing auth...");
         const authenticated = adminAuthService.isAuthenticated();
+        console.log("[AdminAuthContext] isAuthenticated:", authenticated);
         setIsAuthenticated(authenticated);
-        
+
         if (authenticated) {
           const currentAdmin = adminAuthService.getCurrentAdmin();
           const storedToken = sessionStorage.getItem("admin_token");
+          console.log("[AdminAuthContext] Setting admin:", currentAdmin);
+          console.log(
+            "[AdminAuthContext] Setting token:",
+            storedToken ? "exists" : "null"
+          );
           setAdmin(currentAdmin);
           setToken(storedToken);
         } else {
@@ -33,9 +40,7 @@ export const AdminAuthProvider = ({ children }) => {
       } finally {
         setLoading(false);
       }
-    };
-
-    // Initialize auth on mount
+    }; // Initialize auth on mount
     initAuth();
 
     // Also check auth state when window regains focus
@@ -43,7 +48,7 @@ export const AdminAuthProvider = ({ children }) => {
     const handleFocus = () => {
       const authenticated = adminAuthService.isAuthenticated();
       setIsAuthenticated(authenticated);
-      
+
       if (authenticated && !admin) {
         const currentAdmin = adminAuthService.getCurrentAdmin();
         const storedToken = sessionStorage.getItem("admin_token");
@@ -57,23 +62,28 @@ export const AdminAuthProvider = ({ children }) => {
 
     // Check auth state when page visibility changes
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         handleFocus();
       }
     };
 
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (email, password) => {
+    console.log("[AdminAuthContext] Login attempt for:", email);
     const result = await adminAuthService.login(email, password);
+    console.log("[AdminAuthContext] Login result:", result);
     if (result.success) {
+      console.log(
+        "[AdminAuthContext] Setting admin state after successful login"
+      );
       setAdmin(result.admin);
       setToken(result.token);
       setIsAuthenticated(true);

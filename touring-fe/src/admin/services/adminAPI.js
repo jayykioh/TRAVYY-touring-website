@@ -1,7 +1,7 @@
 // services/adminAPI.js
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:4000/api";
-const USE_MOCK_DATA = true; // Đổi thành false khi backend ready
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+// Toggle to use real backend vs mock data. Set to false to fetch real data from the API.
+const USE_MOCK_DATA = false; // was true during development
 
 // Import mock data
 import { mockTours, mockBookings, mockGuides } from "../data/mockData";
@@ -349,7 +349,7 @@ export const adminAPI = {
   getRevenueStats: async (year) => {
     // Không dùng mock data cho stats, luôn fetch từ backend
     const response = await fetchWithAuth(
-      `${API_BASE_URL}/admin/revenue-stats?year=${
+      `${API_BASE_URL}/api/admin/revenue-stats?year=${
         year || new Date().getFullYear()
       }`
     );
@@ -358,47 +358,51 @@ export const adminAPI = {
 
   getCategoryStats: async () => {
     const response = await fetchWithAuth(
-      `${API_BASE_URL}/admin/category-stats`
+      `${API_BASE_URL}/api/admin/category-stats`
     );
     return response.json();
   },
 
   getDashboardStats: async () => {
     const response = await fetchWithAuth(
-      `${API_BASE_URL}/admin/dashboard-stats`
+      `${API_BASE_URL}/api/admin/dashboard-stats`
     );
     return response.json();
   },
 
   getUserMetrics: async () => {
-    const response = await fetchWithAuth(`${API_BASE_URL}/admin/user-metrics`);
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/api/admin/user-metrics`
+    );
     return response.json();
   },
 
   // ==================== NEW DASHBOARD STATS ====================
   getBookingTrends: async () => {
     const response = await fetchWithAuth(
-      `${API_BASE_URL}/admin/booking-trends`
+      `${API_BASE_URL}/api/admin/booking-trends`
     );
     return response.json();
   },
 
   getToursByRegion: async () => {
     const response = await fetchWithAuth(
-      `${API_BASE_URL}/admin/tours-by-region`
+      `${API_BASE_URL}/api/admin/tours-by-region`
     );
     return response.json();
   },
 
   getAgeDistribution: async () => {
     const response = await fetchWithAuth(
-      `${API_BASE_URL}/admin/age-distribution`
+      `${API_BASE_URL}/api/admin/age-distribution`
     );
     return response.json();
   },
 
   getTopTravelers: async () => {
-    const response = await fetchWithAuth(`${API_BASE_URL}/admin/top-travelers`);
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/api/admin/top-travelers`
+    );
     return response.json();
   },
 };

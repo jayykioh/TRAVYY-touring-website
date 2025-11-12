@@ -123,25 +123,28 @@ const createReview = async (req, res) => {
       isAnonymous: isAnonymous || false,
       tourDate: tourDate || tourInBooking.date,
       isVerified: true, // Auto verify vì đã có booking
-      status: 'approved' // Auto approve vì đã verify booking
+      status: "approved", // Auto approve vì đã verify booking
     });
 
-    console.log('✅ Review created successfully:', {
+    console.log("✅ Review created successfully:", {
       reviewId: review._id,
       userId,
       tourId,
       bookingId,
-      rating: review.rating
+      rating: review.rating,
     });
 
-    const populatedReview = await Review.findById(review._id)
-      .populate('userId', 'name avatar')
-      .populate('tourId', 'title imageItems')
-      .populate('bookingId', 'bookingCode');
+    // ✅ Update tour rating and review count
+    await updateTourRating(tourId);
 
-    console.log('📤 Sending review response:', {
+    const populatedReview = await Review.findById(review._id)
+      .populate("userId", "name avatar")
+      .populate("tourId", "title imageItems")
+      .populate("bookingId", "bookingCode");
+
+    console.log("📤 Sending review response:", {
       reviewId: populatedReview._id,
-      status: populatedReview.status
+      status: populatedReview.status,
     });
 
     res.status(201).json({
@@ -229,7 +232,7 @@ const getUserReviews = async (req, res) => {
     const userId = req.user?.sub || req.user?._id;
     const { page = 1, limit = 10 } = req.query;
 
-    console.log('🔍 Fetching reviews for user:', userId);
+    console.log("🔍 Fetching reviews for user:", userId);
 
     const reviews = await Review.getUserReviews(userId, {
       page: parseInt(page),
@@ -238,10 +241,10 @@ const getUserReviews = async (req, res) => {
 
     const totalReviews = await Review.countDocuments({ userId });
 
-    console.log('✅ Found reviews:', {
+    console.log("✅ Found reviews:", {
       count: reviews.length,
       total: totalReviews,
-      reviewIds: reviews.map(r => r._id.toString())
+      reviewIds: reviews.map((r) => r._id.toString()),
     });
 
     res.json({
@@ -297,6 +300,11 @@ const updateReview = async (req, res) => {
 
     await review.save();
 
+    // ✅ Update tour rating if rating changed
+    if (rating) {
+      await updateTourRating(review.tourId);
+    }
+
     const updatedReview = await Review.findById(reviewId)
       .populate("userId", "name avatar")
       .populate("tourId", "title imageItems");
@@ -339,6 +347,9 @@ const deleteReview = async (req, res) => {
     }
 
     await Review.findByIdAndDelete(reviewId);
+
+    // ✅ Update tour rating and review count after deletion
+    await updateTourRating(review.tourId);
 
     res.json({
       success: true,
@@ -465,6 +476,47 @@ const getReviewableBookings = async (req, res) => {
     });
   }
 };
+
+/**
+ * Helper: Update tour rating and review count
+ * Calculate average rating from all approved reviews
+ */
+async function updateTourRating(tourId) {
+  try {
+    const reviews = await Review.find({
+      tourId,
+      status: "approved",
+    }).select("rating");
+
+    const totalReviews = reviews.length;
+
+    if (totalReviews === 0) {
+      // No reviews - reset to 0
+      await Tour.findByIdAndUpdate(tourId, {
+        isRating: 0,
+        isReview: 0,
+      });
+      console.log(`✅ Reset rating for tour ${tourId} (no reviews)`);
+      return;
+    }
+
+    // Calculate average rating
+    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+    const averageRating = Math.round((totalRating / totalReviews) * 10) / 10; // Round to 1 decimal
+
+    await Tour.findByIdAndUpdate(tourId, {
+      isRating: averageRating,
+      isReview: totalReviews,
+    });
+
+    console.log(
+      `✅ Updated tour ${tourId}: rating=${averageRating}, reviews=${totalReviews}`
+    );
+  } catch (error) {
+    console.error("❌ Error updating tour rating:", error);
+    // Don't throw - review should succeed even if tour update fails
+  }
+}
 
 module.exports = {
   createReview,
