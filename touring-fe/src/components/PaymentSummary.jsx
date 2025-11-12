@@ -42,12 +42,12 @@ export default function OrderSummary({ items = [], voucherDiscount = 0, voucherC
         </div>
       </div>
 
-      <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-100">
+      {/* <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-100">
         <p className="text-sm text-gray-700">
           Bằng việc hoàn tất thanh toán, bạn đồng ý với{" "}
           <a href="#" className="text-blue-600 hover:underline font-medium">Điều khoản sử dụng</a>
         </p>
-      </div>
+      </div> */}
 
       <div className="space-y-4">
         <h3 className="font-semibold text-gray-900 mb-3">Chi tiết tours ({items.length} tours)</h3>
