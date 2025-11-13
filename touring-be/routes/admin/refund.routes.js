@@ -3,37 +3,25 @@ const router = express.Router();
 const refundController = require("../../controller/refundController");
 const { verifyToken, isAdmin } = require("../../middlewares/authJwt");
 
-/**
- * @route   GET /api/admin/refunds
- * @desc    Get all refund requests with filters
- * @access  Private (Admin)
- */
-router.get("/", verifyToken, isAdmin, refundController.getAllRefunds);
+// Apply admin middleware to all routes
+router.use(verifyToken, isAdmin);
 
-/**
- * @route   GET /api/admin/refunds/stats
- * @desc    Get refund statistics
- * @access  Private (Admin)
- */
-router.get("/stats", verifyToken, isAdmin, refundController.getRefundStats);
+// GET routes
+router.get("/", refundController.getAllRefunds);
+router.get("/stats", refundController.getRefundStats);
 
-/**
- * @route   POST /api/admin/refunds/:id/review
- * @desc    Review refund request (approve/reject)
- * @access  Private (Admin)
- */
-router.post("/:id/review", verifyToken, isAdmin, refundController.reviewRefund);
+// POST routes - Review & Process
+router.post("/:id/review", refundController.reviewRefund);
+router.post("/:id/process", refundController.processRefund);
 
-/**
- * @route   POST /api/admin/refunds/:id/process
- * @desc    Process approved refund payment
- * @access  Private (Admin)
- */
+// POST routes - Manual Payment (MoMo)
 router.post(
-  "/:id/process",
-  verifyToken,
-  isAdmin,
-  refundController.processRefund
+  "/:refundId/create-manual-payment",
+  refundController.createManualRefundPayment
+);
+router.post(
+  "/:refundId/check-payment",
+  refundController.checkAndCompleteManualPayment
 );
 
 module.exports = router;

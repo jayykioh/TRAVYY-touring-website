@@ -177,7 +177,12 @@ const RefundDetailModal = ({ refund, isOpen, onClose, onCancel }) => {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Mã Booking:</span>
                     <span className="font-semibold">
-                      {refund.bookingId?.orderRef || "N/A"}
+                      {refund.orderRef ||
+                        refund.bookingId?.orderRef ||
+                        refund.bookingId?.payment?.orderId ||
+                        (typeof refund.bookingId === "string"
+                          ? refund.bookingId.slice(-8)
+                          : "N/A")}
                     </span>
                   </div>
                   <div className="flex justify-between">

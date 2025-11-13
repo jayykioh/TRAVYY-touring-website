@@ -178,20 +178,15 @@ async function processRefund(booking, refundAmount, refundNote) {
       amount: refundAmount,
     });
 
-    // 🧪 TEST MODE: Simulate successful refund
-    const isTestMode =
-      process.env.REFUND_TEST_MODE === "true" ||
-      process.env.NODE_ENV === "development";
-
-    if (isTestMode) {
-      console.log("🧪 [Test Mode] Simulating refund success");
+    // Validate payment provider
+    if (!paymentProvider) {
+      console.warn("⚠️ No payment provider found, requires manual processing");
       return {
         success: true,
-        transactionId: `TEST-REF-${Date.now()}`,
-        refundId: `SIM-${booking._id}`,
-        message: "Refund simulated successfully (test mode)",
-        provider: paymentProvider || "test",
-        isSimulated: true,
+        requiresManualProcessing: true,
+        message:
+          "Refund requires manual processing - no payment provider found",
+        provider: "manual",
       };
     }
 

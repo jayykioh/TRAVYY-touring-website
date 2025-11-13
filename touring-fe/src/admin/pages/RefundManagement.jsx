@@ -14,6 +14,9 @@ const RefundManagement = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showProcessModal, setShowProcessModal] = useState(false);
+  const [showManualPaymentModal, setShowManualPaymentModal] = useState(false);
+  const [manualPaymentData, setManualPaymentData] = useState(null);
+  const [isAutoChecking, setIsAutoChecking] = useState(false);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState("");
@@ -29,12 +32,186 @@ const RefundManagement = () => {
   const [transactionId, setTransactionId] = useState("");
   const [processNote, setProcessNote] = useState("");
 
+  // Check and save payment return params on FIRST render (before auth check)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentSuccess = urlParams.get("paymentSuccess");
+    const refundId = urlParams.get("refundId");
+
+    if (paymentSuccess === "true" && refundId) {
+      console.log(
+        "🔄 Detected return from MoMo payment - saving params to localStorage"
+      );
+      // Save to localStorage to persist across any navigation
+      localStorage.setItem(
+        "pendingPaymentCheck",
+        JSON.stringify({
+          refundId,
+          timestamp: Date.now(),
+        })
+      );
+      // Clear URL params
+      window.history.replaceState({}, "", "/admin/refunds");
+      console.log("✅ Payment params saved and URL cleaned");
+    }
+  }, []); // Empty deps = run once on mount
+
   useEffect(() => {
     if (token) {
       loadRefunds();
       loadStats();
+      checkPaymentReturn();
     }
   }, [token, statusFilter, typeFilter]);
+
+  // Auto-check payment status when Payment Modal is open
+  useEffect(() => {
+    if (!showManualPaymentModal || !selectedRefund || isAutoChecking) {
+      return;
+    }
+
+    console.log("🔄 Starting auto-check for payment...");
+    setIsAutoChecking(true);
+
+    // Check payment every 5 seconds
+    const intervalId = setInterval(async () => {
+      try {
+        console.log("⏰ Auto-checking payment status...");
+        const response = await fetch(
+          `${API_URL}/api/admin/refunds/${selectedRefund._id}/check-payment`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (result.success) {
+          console.log("✅ Payment completed! Stopping auto-check.");
+          clearInterval(intervalId);
+          setIsAutoChecking(false);
+
+          toast.success(
+            "✅ Thanh toán thành công! Hoàn tiền đã hoàn tất và email đã được gửi.",
+            {
+              duration: 6000,
+            }
+          );
+
+          // Close modal and reload
+          setShowManualPaymentModal(false);
+          setManualPaymentData(null);
+          await loadRefunds();
+          await loadStats();
+        } else {
+          console.log("⏳ Payment not completed yet, will check again...");
+        }
+      } catch (error) {
+        console.error("❌ Error in auto-check:", error);
+      }
+    }, 5000); // Check every 5 seconds
+
+    // Cleanup on unmount or when modal closes
+    return () => {
+      console.log("🛑 Stopping auto-check");
+      clearInterval(intervalId);
+      setIsAutoChecking(false);
+    };
+  }, [showManualPaymentModal, selectedRefund, token]);
+
+  // Check if returning from MoMo payment
+  const checkPaymentReturn = async () => {
+    // Check localStorage for pending payment check
+    const pendingCheck = localStorage.getItem("pendingPaymentCheck");
+
+    if (pendingCheck) {
+      try {
+        const { refundId, timestamp } = JSON.parse(pendingCheck);
+
+        // Only process if less than 10 minutes old (give time for login)
+        if (Date.now() - timestamp < 10 * 60 * 1000) {
+          console.log(
+            "🔄 Processing pending payment check for refund:",
+            refundId
+          );
+
+          // Clear localStorage IMMEDIATELY to prevent duplicate checks
+          localStorage.removeItem("pendingPaymentCheck");
+
+          // Show loading toast
+          const loadingToast = toast.loading(
+            "Đang kiểm tra thanh toán MoMo..."
+          );
+
+          try {
+            // Wait a bit for MoMo to process
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+
+            // Check payment status
+            console.log("📤 Sending check-payment request to backend...");
+            const response = await fetch(
+              `${API_URL}/api/admin/refunds/${refundId}/check-payment`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            const result = await response.json();
+            console.log("📥 Backend response:", result);
+
+            toast.dismiss(loadingToast);
+
+            if (result.success) {
+              toast.success(
+                "✅ Thanh toán thành công! Hoàn tiền đã hoàn tất và email đã được gửi.",
+                {
+                  duration: 6000,
+                }
+              );
+              // Reload data
+              await loadRefunds();
+              await loadStats();
+            } else {
+              toast.error(
+                "⏳ " +
+                  (result.message ||
+                    "Thanh toán chưa hoàn tất. Vui lòng thử lại sau."),
+                {
+                  duration: 5000,
+                }
+              );
+            }
+          } catch (error) {
+            toast.dismiss(loadingToast);
+            console.error("❌ Error checking payment:", error);
+            toast.error(
+              "Lỗi kiểm tra thanh toán. Vui lòng kiểm tra thủ công trong modal.",
+              {
+                duration: 6000,
+              }
+            );
+          }
+        } else {
+          // Too old, clear it
+          console.log(
+            "⚠️ Pending payment check expired (>10 minutes), clearing"
+          );
+          localStorage.removeItem("pendingPaymentCheck");
+        }
+      } catch (error) {
+        console.error("❌ Error parsing pending payment check:", error);
+        localStorage.removeItem("pendingPaymentCheck");
+      }
+    }
+  };
 
   const loadRefunds = async () => {
     try {
@@ -81,6 +258,10 @@ const RefundManagement = () => {
   };
 
   const handleViewDetails = (refund) => {
+    console.log("=== Opening Detail Modal ===");
+    console.log("Refund:", refund);
+    console.log("Requires manual processing:", refund.requiresManualProcessing);
+    console.log("Status:", refund.status);
     setSelectedRefund(refund);
     setShowDetailModal(true);
   };
@@ -118,7 +299,17 @@ const RefundManagement = () => {
 
       if (!response.ok) throw new Error("Failed to review refund");
 
-      toast.success(`Refund ${reviewAction}d successfully`);
+      const result = await response.json();
+
+      if (reviewAction === "approve") {
+        toast.success(
+          "✅ Refund approved! User has been notified to provide bank information via email.",
+          { duration: 5000 }
+        );
+      } else {
+        toast.success("Refund rejected successfully");
+      }
+
       setShowReviewModal(false);
       loadRefunds();
       loadStats();
@@ -129,6 +320,15 @@ const RefundManagement = () => {
   };
 
   const handleProcess = (refund) => {
+    // Check if bank info is provided
+    if (!refund.bankInfo?.accountNumber) {
+      toast.error(
+        "⚠️ Cannot process refund without bank information. User must provide bank details first.",
+        { duration: 5000 }
+      );
+      return;
+    }
+
     setSelectedRefund(refund);
     setRefundMethod("original_payment");
     setTransactionId("");
@@ -156,15 +356,84 @@ const RefundManagement = () => {
         }
       );
 
-      if (!response.ok) throw new Error("Failed to process refund");
+      const result = await response.json();
 
-      toast.success("Refund processed successfully");
+      // Handle auto-process failure (still success response but needs manual handling)
+      if (result.autoProcessFailed) {
+        toast.error(
+          `⚠️ Auto-refund failed: ${result.error}\n\n` +
+            `Refund marked for manual processing. Use "Create Payment" button to generate MoMo transfer.`,
+          { duration: 10000 }
+        );
+        setShowProcessModal(false);
+        loadRefunds();
+        loadStats();
+        return;
+      }
+
+      if (!response.ok) {
+        if (result.requiresBankInfo) {
+          throw new Error(
+            "Cannot process refund without bank information. User must provide bank details first."
+          );
+        }
+        throw new Error(result.message || "Failed to process refund");
+      }
+
+      toast.success(
+        result.refundResult?.requiresManualProcessing
+          ? "⚠️ Refund marked for manual processing"
+          : "✅ Refund processed successfully! Email sent to user.",
+        { duration: 5000 }
+      );
+
       setShowProcessModal(false);
       loadRefunds();
       loadStats();
     } catch (error) {
       console.error("Error processing refund:", error);
-      toast.error("Error processing refund");
+      toast.error(error.message || "Error processing refund");
+    }
+  };
+
+  const createManualPayment = async () => {
+    try {
+      console.log("=== Creating Manual Payment ===");
+      console.log("Refund ID:", selectedRefund._id);
+      console.log(
+        "API URL:",
+        `${API_URL}/api/admin/refunds/${selectedRefund._id}/create-manual-payment`
+      );
+
+      const response = await fetch(
+        `${API_URL}/api/admin/refunds/${selectedRefund._id}/create-manual-payment`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const result = await response.json();
+      console.log("Response status:", response.status);
+      console.log("Response data:", result);
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to create payment");
+      }
+
+      console.log("Payment data:", result.payment);
+      setManualPaymentData(result.payment);
+      setShowProcessModal(false); // Close process modal
+      setShowManualPaymentModal(true);
+      toast.success("✅ Đã tạo mã thanh toán MoMo! Scan QR để thanh toán.", {
+        duration: 4000,
+      });
+    } catch (error) {
+      console.error("Error creating manual payment:", error);
+      toast.error(error.message || "Error creating manual payment");
     }
   };
 
@@ -342,7 +611,9 @@ const RefundManagement = () => {
                   <td className="px-6 py-4">
                     <div>
                       <p className="font-medium">
-                        {refund.userId?.name || "N/A"}
+                        {refund.userId?.fullName ||
+                          refund.userId?.name ||
+                          "N/A"}
                       </p>
                       <p className="text-xs text-gray-500">
                         {refund.userId?.email}
@@ -363,7 +634,17 @@ const RefundManagement = () => {
                       </p>
                     </div>
                   </td>
-                  <td className="px-6 py-4">{getStatusBadge(refund.status)}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-1">
+                      {getStatusBadge(refund.status)}
+                      {refund.requiresManualProcessing &&
+                        refund.status === "approved" && (
+                          <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-100 text-orange-700 border border-orange-200">
+                            ⚠️ Manual Required
+                          </span>
+                        )}
+                    </div>
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {new Date(refund.createdAt).toLocaleDateString()}
                   </td>
@@ -383,12 +664,27 @@ const RefundManagement = () => {
                         Review
                       </button>
                     )}
-                    {refund.status === "approved" && (
+                    {(refund.status === "approved" ||
+                      refund.status === "processing") && (
                       <button
                         onClick={() => handleProcess(refund)}
-                        className="text-green-600 hover:underline text-sm font-medium"
+                        disabled={!refund.bankInfo?.accountNumber}
+                        className={`text-sm font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed ${
+                          refund.bankInfo?.accountNumber
+                            ? "text-green-600"
+                            : "text-orange-600"
+                        }`}
+                        title={
+                          refund.bankInfo?.accountNumber
+                            ? "Bank info received - Ready to process"
+                            : "Waiting for bank info from user"
+                        }
                       >
-                        Process
+                        {refund.bankInfo?.accountNumber
+                          ? refund.status === "processing"
+                            ? "Retry Process"
+                            : "Process"
+                          : "Pending Info"}
                       </button>
                     )}
                   </td>
@@ -411,6 +707,17 @@ const RefundManagement = () => {
             <div>
               <p className="text-sm text-gray-600">Reference</p>
               <p className="font-semibold">{selectedRefund.refundReference}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Booking Reference</p>
+              <p className="font-semibold">
+                {selectedRefund.orderRef ||
+                  selectedRefund.bookingId?.orderRef ||
+                  selectedRefund.bookingId?.payment?.orderId ||
+                  (typeof selectedRefund.bookingId === "string"
+                    ? selectedRefund.bookingId.slice(-8)
+                    : "N/A")}
+              </p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Type</p>
@@ -459,6 +766,81 @@ const RefundManagement = () => {
               <div>
                 <p className="text-sm text-gray-600">Admin Review Note</p>
                 <p className="text-sm">{selectedRefund.reviewNote}</p>
+              </div>
+            )}
+            {selectedRefund.status === "approved" && (
+              <div>
+                <p className="text-sm text-gray-600 mb-2">
+                  Bank Information Status
+                </p>
+                {selectedRefund.bankInfo?.accountNumber ? (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="text-sm font-semibold text-green-700 mb-1">
+                      ✅ Bank Info Received
+                    </p>
+                    <div className="text-xs text-green-600 space-y-1">
+                      <p>
+                        <strong>Bank:</strong>{" "}
+                        {selectedRefund.bankInfo.bankName}
+                      </p>
+                      <p>
+                        <strong>Account:</strong>{" "}
+                        {selectedRefund.bankInfo.accountNumber}
+                      </p>
+                      <p>
+                        <strong>Name:</strong>{" "}
+                        {selectedRefund.bankInfo.accountName}
+                      </p>
+                      {selectedRefund.bankInfo.branchName && (
+                        <p>
+                          <strong>Branch:</strong>{" "}
+                          {selectedRefund.bankInfo.branchName}
+                        </p>
+                      )}
+                      <p className="text-green-500 mt-2">
+                        Provided at:{" "}
+                        {new Date(
+                          selectedRefund.bankInfo.providedAt
+                        ).toLocaleString("vi-VN")}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <p className="text-sm font-semibold text-orange-700">
+                      ⏳ Waiting for Bank Information
+                    </p>
+                    <p className="text-xs text-orange-600 mt-1">
+                      User has been notified to provide bank account details
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+            {selectedRefund.requiresManualProcessing && (
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mt-4">
+                <p className="text-sm font-bold text-red-800 mb-2">
+                  ⚠️ REQUIRES MANUAL PROCESSING
+                </p>
+                <p className="text-xs text-red-700 mb-2">
+                  Automatic refund via payment gateway failed. Create a MoMo
+                  payment to transfer refund manually.
+                </p>
+                {selectedRefund.processingNote && (
+                  <div className="bg-red-100 rounded p-2 mt-2">
+                    <p className="text-xs text-red-800">
+                      <strong>Error:</strong> {selectedRefund.processingNote}
+                    </p>
+                  </div>
+                )}
+                <div className="mt-3 flex justify-center">
+                  <button
+                    onClick={createManualPayment}
+                    className="px-6 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 font-semibold transition-colors"
+                  >
+                    🏦 Create MoMo Payment
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -697,10 +1079,8 @@ const RefundManagement = () => {
         <Modal
           isOpen={showProcessModal}
           onClose={() => setShowProcessModal(false)}
-          onConfirm={submitProcess}
           title="Process Refund"
-          confirmText="Process Refund"
-          type="success"
+          size="md"
         >
           <div className="space-y-4">
             {/* Bank Account Info Display */}
@@ -728,93 +1108,240 @@ const RefundManagement = () => {
                       {selectedRefund.bankInfo.branchName}
                     </p>
                   )}
-                  <p className="text-xs text-green-600 mt-2">
-                    Cung cấp lúc:{" "}
-                    {new Date(
-                      selectedRefund.bankInfo.providedAt
-                    ).toLocaleString("vi-VN")}
-                  </p>
                 </div>
               </div>
             )}
+
+            {/* Amount Display */}
+            <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+              <p className="text-lg font-bold text-blue-900 text-center">
+                Số tiền hoàn:{" "}
+                {selectedRefund.finalRefundAmount?.toLocaleString()} VND
+              </p>
+            </div>
+
+            {/* Create MoMo Payment Button */}
+            <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-2 border-pink-300 rounded-lg p-6">
+              <p className="text-sm font-bold text-pink-800 mb-2 text-center">
+                💳 Tạo Thanh Toán MoMo
+              </p>
+              <p className="text-xs text-gray-700 mb-4 text-center">
+                Tạo mã QR MoMo để chuyển tiền hoàn trả cho khách hàng
+              </p>
+              <div className="flex justify-center">
+                <button
+                  onClick={createManualPayment}
+                  className="px-8 py-4 bg-gradient-to-r from-pink-600 to-pink-700 text-white rounded-xl hover:from-pink-700 hover:to-pink-800 font-bold text-lg transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  🏦 Tạo MoMo Payment
+                </button>
+              </div>
+            </div>
 
             {/* Warning if no bank info */}
             {!selectedRefund.bankInfo?.accountNumber && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <div className="flex items-start gap-2">
-                  <svg
-                    className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-semibold text-yellow-800">
-                      Chưa có thông tin tài khoản
-                    </p>
-                    <p className="text-xs text-yellow-700 mt-1">
-                      Khách hàng chưa cung cấp thông tin ngân hàng. Bạn có thể
-                      xử lý thủ công hoặc đợi khách hàng cập nhật.
-                    </p>
-                  </div>
-                </div>
+                <p className="text-sm font-semibold text-yellow-800">
+                  ⚠️ Chưa có thông tin tài khoản
+                </p>
+                <p className="text-xs text-yellow-700 mt-1">
+                  Khách hàng chưa cung cấp thông tin ngân hàng.
+                </p>
               </div>
             )}
+          </div>
+        </Modal>
+      )}
 
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Refund Method *
-              </label>
-              <select
-                value={refundMethod}
-                onChange={(e) => setRefundMethod(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
-              >
-                <option value="original_payment">
-                  Original Payment Method
-                </option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="wallet">Wallet</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Transaction ID
-              </label>
-              <input
-                type="text"
-                value={transactionId}
-                onChange={(e) => setTransactionId(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
-                placeholder="Enter transaction ID"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Processing Note
-              </label>
-              <textarea
-                value={processNote}
-                onChange={(e) => setProcessNote(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
-                rows={3}
-                placeholder="Add processing notes..."
-              />
-            </div>
-
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>Amount to refund:</strong>{" "}
-                {selectedRefund.finalRefundAmount?.toLocaleString()} VND
+      {/* Manual Payment Modal - MoMo QR Code */}
+      {showManualPaymentModal && manualPaymentData && (
+        <Modal
+          isOpen={showManualPaymentModal}
+          onClose={() => {
+            // Warn if auto-checking is in progress
+            if (isAutoChecking) {
+              const confirm = window.confirm(
+                "Hệ thống đang tự động kiểm tra thanh toán. Đóng modal này có thể làm gián đoạn quá trình. Bạn có chắc muốn đóng không?"
+              );
+              if (!confirm) return;
+            }
+            setShowManualPaymentModal(false);
+            setManualPaymentData(null);
+            setIsAutoChecking(false);
+            loadRefunds(); // Reload to check if payment completed
+          }}
+          title="🏦 MoMo Manual Refund Payment"
+          size="lg"
+        >
+          <div className="space-y-6 text-center">
+            <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-6 border-2 border-pink-200">
+              <h3 className="text-lg font-bold text-pink-800 mb-2">
+                Scan QR Code to Transfer Refund
+              </h3>
+              <p className="text-sm text-gray-700 mb-4">
+                Amount:{" "}
+                <span className="font-bold text-pink-700">
+                  {manualPaymentData.amount.toLocaleString()} VND
+                </span>
               </p>
+
+              {/* QR Code */}
+              <div className="flex justify-center mb-4">
+                <div className="bg-white p-4 rounded-lg shadow-lg border-4 border-pink-300">
+                  <img
+                    src={manualPaymentData.qrCodeUrl}
+                    alt="MoMo QR Code"
+                    className="w-64 h-64"
+                  />
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="bg-white rounded-lg p-4 text-left space-y-2">
+                <p className="text-xs text-gray-600 font-semibold">
+                  📱 Hướng dẫn:
+                </p>
+                <ol className="text-xs text-gray-700 space-y-2 list-decimal list-inside">
+                  <li>
+                    <strong>Scan QR:</strong> Mở ứng dụng MoMo → Quét mã QR bên
+                    trên
+                  </li>
+                  <li>
+                    <strong>Hoặc:</strong> Click nút "Open in MoMo App" phía
+                    dưới
+                  </li>
+                  <li>
+                    <strong>Thanh toán:</strong> Xác nhận và hoàn tất giao dịch{" "}
+                    {manualPaymentData.amount.toLocaleString()} VND trong app
+                    MoMo
+                  </li>
+                  <li>
+                    <strong>Sau khi thanh toán:</strong> Có thể đóng app MoMo và
+                    quay lại trang này
+                  </li>
+                  <li>
+                    <strong>Tự động hoàn tất:</strong> Modal này sẽ tự động đóng
+                    trong 5-10 giây khi thanh toán thành công
+                  </li>
+                </ol>
+
+                {isAutoChecking && (
+                  <div className="mt-3 flex items-center gap-2 text-blue-600 bg-blue-50 p-2 rounded animate-pulse">
+                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                    <span className="text-xs font-semibold">
+                      Đang tự động kiểm tra thanh toán mỗi 5 giây...
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Order ID */}
+              <div className="mt-4 bg-gray-50 rounded p-3">
+                <p className="text-xs text-gray-600">
+                  <strong>Order ID:</strong> {manualPaymentData.orderId}
+                </p>
+              </div>
+
+              {/* Alternative: Open in MoMo app */}
+              {manualPaymentData.deeplink && (
+                <div className="mt-4">
+                  <a
+                    href={manualPaymentData.deeplink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block px-6 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 font-semibold transition-colors"
+                  >
+                    Open in MoMo App
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 rounded-lg p-4 shadow-lg">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="w-7 h-7 text-green-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-green-900 mb-2">
+                    🔄 Tự động xác nhận thanh toán
+                  </p>
+                  <p className="text-xs text-green-800 leading-relaxed">
+                    Sau khi thanh toán xong trong MoMo, bạn sẽ được{" "}
+                    <strong>tự động chuyển về trang này</strong>. Hệ thống sẽ tự
+                    động xác nhận thanh toán, hoàn tất refund và gửi email cho
+                    khách hàng.
+                  </p>
+                  <p className="text-xs text-green-700 mt-2 font-semibold">
+                    ✉️ Không cần làm gì thêm - mọi thứ đều tự động!
+                  </p>
+                </div>
+              </div>
+
+              {/* Manual verify button (backup) */}
+              <div className="mt-4 pt-4 border-t border-blue-200">
+                <p className="text-xs text-blue-700 mb-2 text-center">
+                  Hoặc kiểm tra thủ công nếu cần:
+                </p>
+                <button
+                  onClick={async () => {
+                    try {
+                      const loadingToast = toast.loading(
+                        "Đang kiểm tra thanh toán..."
+                      );
+
+                      const response = await fetch(
+                        `${API_URL}/api/admin/refunds/${selectedRefund._id}/check-payment`,
+                        {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`,
+                          },
+                        }
+                      );
+
+                      const result = await response.json();
+                      toast.dismiss(loadingToast);
+
+                      if (result.success) {
+                        toast.success(
+                          "✅ Thanh toán thành công! Refund đã hoàn tất.",
+                          { duration: 5000 }
+                        );
+                        setShowManualPaymentModal(false);
+                        setManualPaymentData(null);
+                        loadRefunds();
+                        loadStats();
+                      } else {
+                        toast.error(
+                          result.message ||
+                            "Thanh toán chưa hoàn tất. Vui lòng thử lại.",
+                          { duration: 4000 }
+                        );
+                      }
+                    } catch (error) {
+                      console.error("Error checking payment:", error);
+                      toast.error("Lỗi kiểm tra thanh toán");
+                    }
+                  }}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors text-sm"
+                >
+                  🔄 Kiểm tra thanh toán ngay
+                </button>
+              </div>
             </div>
           </div>
         </Modal>

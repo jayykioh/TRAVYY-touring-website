@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, Lock, Mail, Shield, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../context/AdminAuthContext";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
-  const { login } = useAdminAuth();
+  const { login, isAuthenticated, admin } = useAdminAuth();
 
   const [formData, setFormData] = useState({
     email: localStorage.getItem("adminRememberEmail") || "",
@@ -18,6 +18,22 @@ export default function AdminLogin() {
   );
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // ✅ Auto redirect when authenticated as admin
+  useEffect(() => {
+    if (isAuthenticated && admin?.role === "Admin") {
+      console.log(
+        "[AdminLogin] Already authenticated as admin, redirecting..."
+      );
+      const redirectUrl = sessionStorage.getItem("redirect_after_login");
+      if (redirectUrl) {
+        sessionStorage.removeItem("redirect_after_login");
+        navigate(redirectUrl, { replace: true });
+      } else {
+        navigate("/admin/dashboard", { replace: true });
+      }
+    }
+  }, [isAuthenticated, admin, navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -53,6 +69,13 @@ export default function AdminLogin() {
       console.log("Login result:", result);
 
       if (result.success) {
+        // ✅ Verify admin role before proceeding
+        if (result.admin?.role !== "Admin") {
+          setError("Tài khoản này không có quyền truy cập trang quản trị");
+          setLoading(false);
+          return;
+        }
+
         if (rememberMe) {
           localStorage.setItem("adminRememberEmail", formData.email);
           localStorage.setItem("adminRememberPassword", formData.password);
@@ -63,17 +86,8 @@ export default function AdminLogin() {
           localStorage.removeItem("adminRememberMe");
         }
 
-        console.log("Login successful, navigating...");
-
-        // Check if there's a redirect URL saved
-        const redirectUrl = sessionStorage.getItem("redirect_after_login");
-        if (redirectUrl) {
-          sessionStorage.removeItem("redirect_after_login");
-          navigate(redirectUrl, { replace: true });
-        } else {
-          // Default redirect to dashboard
-          navigate("/admin/dashboard", { replace: true });
-        }
+        console.log("Login successful! useEffect will handle navigation.");
+        // Navigation will be handled by useEffect when state updates
       } else if (result.requires2FA || result.requiresEmailVerification) {
         // Redirect đến trang verify
         navigate("/admin/login/verify", {
