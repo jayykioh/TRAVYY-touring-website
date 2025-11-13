@@ -5,6 +5,7 @@ import Header from "./Header";
 import Footer from "./Footer";
 import BottomNav from "./BottomNav";
 import ScrollToTop from "../common/ScrollToTop";
+import FloatingChatButton from "../chat/FloatingChatButton";
 
 const MainLayout = ({ title = "", subtitle = "" }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -50,6 +51,9 @@ const MainLayout = ({ title = "", subtitle = "" }) => {
       <div className="md:hidden fixed bottom-0 left-0 right-0">
         <BottomNav />
       </div>
+
+      {/* Floating Chat Button */}
+      <FloatingChatButton />
     </div>
   );
 };

@@ -51,46 +51,91 @@ const GuideTourDetailPage = () => {
       try {
         // Use different endpoint based on whether viewing request or accepted tour
         const endpoint = isRequestView 
-          ? `/api/itinerary/guide/requests/${id}`
+          ? `/api/guide/custom-requests/${id}`
           : `/api/itinerary/guide/tours/${id}`;
         
         const data = await withAuth(endpoint);
-        if (data && data._id) {
-          // Transform itinerary data to match the expected tour format
+        console.log('[GuideTourDetail] Raw data from API:', data);
+        
+        // API returns { success: true, tourRequest: {...} } for custom requests
+        if (data && (data.success || data._id)) {
+          const tourRequest = data.tourRequest || data; // Handle both wrapped and unwrapped responses
+          const itinerary = tourRequest.itineraryId || data;
+          const customer = tourRequest.userId || data.userId || data.customerInfo;
+          
+          console.log('[GuideTourDetail] Parsed:', { tourRequest, itinerary, customer });
+          
+          // Transform to UI format
           const transformedTour = {
-            ...data,
-            id: data._id,
-            tourName: data.name || data.zoneName || 'Tour',
-            departureDate: data.preferredDate,
-            startTime: data.startTime || '08:00',
-            endTime: data.endTime || '18:00',
-            numberOfGuests: data.numberOfPeople || 1,
-            duration: data.totalDuration ? `${Math.floor(data.totalDuration / 60)}h ${data.totalDuration % 60}m` : 'N/A',
-            totalPrice: data.estimatedCost || 0,
-            earnings: data.estimatedCost ? Math.floor(data.estimatedCost * 0.8) : 0, // 80% for guide
-            location: data.zoneName || data.province || 'N/A',
-            pickupPoint: data.pickupLocation || data.startPoint || null,
-            customerName: data.customerInfo?.name || 'Khách hàng',
-            customerId: typeof data.userId === 'string' ? data.userId : data.userId?._id || 'N/A',
-            customerAvatar: data.customerInfo?.avatar || 'https://via.placeholder.com/150',
-            customerEmail: data.customerInfo?.email || '',
-            contactPhone: data.customerInfo?.phone || '',
-            itinerary: data.items?.map((item) => ({
+            ...tourRequest,
+            id: tourRequest._id || data._id,
+            requestNumber: tourRequest.requestNumber,
+            
+            // Tour info - prefer tourDetails from TourCustomRequest
+            tourName: tourRequest.tourDetails?.zoneName || itinerary?.zoneName || itinerary?.name || 'Tour',
+            location: tourRequest.tourDetails?.zoneName || itinerary?.zoneName || 'N/A',
+            numberOfGuests: tourRequest.tourDetails?.numberOfGuests || data.numberOfPeople || 1,
+            
+            // Dates
+            departureDate: tourRequest.preferredDates?.[0]?.startDate || data.preferredDate,
+            startTime: tourRequest.preferredDates?.[0]?.startDate ? new Date(tourRequest.preferredDates[0].startDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '08:00',
+            endTime: tourRequest.preferredDates?.[0]?.endDate ? new Date(tourRequest.preferredDates[0].endDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '18:00',
+            
+            // Duration
+            duration: itinerary?.totalDuration ? `${Math.floor(itinerary.totalDuration / 60)}h ${itinerary.totalDuration % 60}m` : 
+                     tourRequest.tourDetails?.numberOfDays ? `${tourRequest.tourDetails.numberOfDays} ngày` : 'N/A',
+            
+            // Pricing
+            totalPrice: tourRequest.initialBudget?.amount || tourRequest.finalPrice?.amount || data.estimatedCost || 0,
+            currency: tourRequest.initialBudget?.currency || tourRequest.finalPrice?.currency || 'VND',
+            earnings: (tourRequest.initialBudget?.amount || 0) * 0.8, // 80% for guide
+            
+            // Customer info
+            customerName: customer?.name || 'Khách hàng',
+            customerId: customer?._id || (typeof customer === 'string' ? customer : 'N/A'),
+            customerAvatar: customer?.avatar?.url || customer?.avatar || 'https://via.placeholder.com/150',
+            customerEmail: customer?.email || tourRequest.contactInfo?.email || '',
+            contactPhone: customer?.phone || tourRequest.contactInfo?.phone || '',
+            
+            // Itinerary details - use tourDetails.items from TourCustomRequest
+            itinerary: (tourRequest.tourDetails?.items || itinerary?.items || []).map((item) => ({
               title: item.name,
-              description: item.description || '',
-              time: item.arrivalTime || '',
-            })) || [],
-            imageItems: data.items?.flatMap(item => 
-              item.imageUrl ? [{ imageUrl: item.imageUrl }] : []
-            ) || [],
-            specialRequests: data.notes || data.specialRequests || '',
-            status: data.tourGuideRequest?.status || 'pending',
+              description: item.address || item.description || '',
+              time: item.startTime && item.endTime ? `${item.startTime} - ${item.endTime}` : item.timeSlot || '',
+              day: item.day,
+              duration: item.duration ? `${item.duration} phút` : '',
+              itemType: item.itemType
+            })),
+            
+            // Images
+            imageItems: (itinerary?.items || []).flatMap(item => 
+              item.imageUrl ? [{ imageUrl: item.imageUrl }] : 
+              item.photos ? item.photos.map(photo => ({ imageUrl: photo })) : []
+            ),
+            
+            // Special requests & notes
+            specialRequests: tourRequest.specialRequirements || data.notes || data.specialRequests || '',
+            
+            // Status
+            status: tourRequest.status || data.tourGuideRequest?.status || 'pending',
             paymentStatus: data.paymentStatus || 'pending',
             paymentMethod: data.paymentMethod || 'N/A',
-            rawData: data, // Keep original data for reference
+            
+            // Route info
+            pickupPoint: data.pickupLocation || itinerary?.items?.[0]?.address || null,
+            routePolyline: itinerary?.routePolyline,
+            totalDistance: itinerary?.totalDistance,
+            
+            // Keep raw data
+            rawData: data,
+            tourRequestData: tourRequest,
+            itineraryData: itinerary
           };
+          
+          console.log('[GuideTourDetail] Transformed tour:', transformedTour);
           setTour(transformedTour);
         } else {
+          console.error('[GuideTourDetail] Invalid data format:', data);
           setTour(null);
         }
       } catch (error) {

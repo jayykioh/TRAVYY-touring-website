@@ -21,39 +21,72 @@ const RequestsPage = () => {
   const fetchRequests = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await withAuth("/api/itinerary/guide/requests");
+      const data = await withAuth("/api/guide/custom-requests");
+      console.log('[RequestsPage] Raw API response:', data);
+      
       if (data.success && Array.isArray(data.requests)) {
-        // Map backend itinerary to request format for UI
-        const mappedRequests = data.requests.map((it) => ({
-          id: it._id,
-          tourName: it.name || it.zoneName,
-          customerId: it.userId?._id || it.userId,
-          customerName: it.userId?.name || 'Khách hàng',
-          customerAvatar: it.userId?.avatar?.url || '',
-          customerEmail: it.userId?.email || '',
-          contactPhone: it.userId?.phone || '',
-          departureDate: it.preferredDate || '',
-          startTime: it.startTime || '',
-          endTime: it.endTime || '',
-          location: it.zoneName,
-          pickupPoint: '',
-          numberOfGuests: it.numberOfPeople || '',
-          duration: it.totalDuration ? `${Math.floor(it.totalDuration / 60)}h${it.totalDuration % 60}m` : '',
-          totalPrice: it.estimatedCost || '',
-          earnings: '',
-          requestedAt: it.tourGuideRequest?.requestedAt,
-          specialRequests: it.preferences?.specialRequests || '',
-          paymentStatus: '',
-          paymentMethod: '',
-          imageItems: [],
-          itinerary: it.items?.map(item => ({
-            title: item.name,
-            time: item.startTime && item.endTime ? `${item.startTime} - ${item.endTime}` : '',
-            description: item.address || ''
-          })) || [],
-          includedServices: [],
-          raw: it
-        }));
+        // Map TourCustomRequest to UI format
+        const mappedRequests = data.requests.map((req) => {
+          const itinerary = req.itineraryId || {};
+          const customer = req.userId || {};
+          
+          console.log('[RequestsPage] Mapping request:', { req, itinerary, customer });
+          
+          return {
+            id: req._id,
+            requestNumber: req.requestNumber,
+            
+            // Tour info from tourDetails or itinerary
+            tourName: req.tourDetails?.zoneName || itinerary.zoneName || itinerary.name || 'Tour',
+            location: req.tourDetails?.zoneName || itinerary.zoneName || '',
+            numberOfGuests: req.tourDetails?.numberOfGuests || 1,
+            
+            // Customer info
+            customerId: customer._id || '',
+            customerName: customer.name || 'Khách hàng',
+            customerAvatar: customer.avatar?.url || customer.avatar || '',
+            customerEmail: customer.email || req.contactInfo?.email || '',
+            contactPhone: customer.phone || req.contactInfo?.phone || '',
+            
+            // Dates
+            departureDate: req.preferredDates?.[0]?.startDate || '',
+            startTime: req.preferredDates?.[0]?.startDate ? new Date(req.preferredDates[0].startDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '',
+            endTime: req.preferredDates?.[0]?.endDate ? new Date(req.preferredDates[0].endDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '',
+            
+            // Pricing
+            totalPrice: req.initialBudget?.amount || 0,
+            currency: req.initialBudget?.currency || 'VND',
+            earnings: (req.initialBudget?.amount || 0) * 0.8,
+            
+            // Duration
+            duration: itinerary.totalDuration ? `${Math.floor(itinerary.totalDuration / 60)}h ${itinerary.totalDuration % 60}m` : 
+                     req.tourDetails?.numberOfDays ? `${req.tourDetails.numberOfDays} ngày` : '',
+            
+            // Other info
+            requestedAt: req.createdAt,
+            specialRequests: req.specialRequirements || '',
+            status: req.status,
+            
+            // Itinerary items
+            itinerary: (req.tourDetails?.items || itinerary.items || []).map(item => ({
+              title: item.name,
+              time: item.startTime && item.endTime ? `${item.startTime} - ${item.endTime}` : item.timeSlot || '',
+              description: item.address || ''
+            })),
+            
+            pickupPoint: itinerary.items?.[0]?.address || '',
+            imageItems: [],
+            paymentStatus: 'pending',
+            paymentMethod: '',
+            includedServices: [],
+            
+            // Keep raw data
+            raw: req,
+            rawItinerary: itinerary
+          };
+        });
+        
+        console.log('[RequestsPage] Mapped requests:', mappedRequests);
         setRequests(mappedRequests);
       }
     } catch (e) {

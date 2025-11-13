@@ -21,7 +21,7 @@ const HomePage = () => {
       setLoading(true);
       try {
         const [requestData, tourData] = await Promise.all([
-          withAuth("/api/itinerary/guide/requests"),
+          withAuth("/api/guide/custom-requests"),
           withAuth("/api/itinerary/guide/accepted-tours"),
         ]);
         

@@ -26,7 +26,7 @@ const Sidebar = ({ className = "" }) => {
   useEffect(() => {
     async function fetchRequests() {
       try {
-        const data = await withAuth("/api/itinerary/guide/requests");
+        const data = await withAuth("/api/guide/custom-requests");
         if (data.success && Array.isArray(data.requests)) {
           const ids = data.requests.map((r) => r._id || r.id);
           setRequestIds(ids);

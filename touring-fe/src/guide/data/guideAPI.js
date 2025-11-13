@@ -1,14 +1,29 @@
 // Guide API functions - centralized API calls for guide functionality
 
+// Helper to get access token from AuthContext (stored in memory)
+const getAccessToken = () => {
+  // Try to get from localStorage as fallback (some pages may store it there)
+  const token = localStorage.getItem('accessToken');
+  return token;
+};
+
 // Get guide profile
 export const getGuideProfile = async () => {
   try {
+    const token = getAccessToken();
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Add Authorization header if token exists
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch('/api/guide/profile', {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -26,12 +41,19 @@ export const getGuideProfile = async () => {
 // Get tour requests
 export const getTourRequests = async () => {
   try {
+    const token = getAccessToken();
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch('/api/guide/requests', {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -49,12 +71,19 @@ export const getTourRequests = async () => {
 // Accept tour request
 export const acceptTourRequest = async (requestId) => {
   try {
+    const token = getAccessToken();
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(`/api/guide/requests/${requestId}/accept`, {
       method: 'PUT',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -72,12 +101,19 @@ export const acceptTourRequest = async (requestId) => {
 // Reject tour request
 export const rejectTourRequest = async (requestId) => {
   try {
+    const token = getAccessToken();
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(`/api/guide/requests/${requestId}/reject`, {
       method: 'PUT',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -95,12 +131,19 @@ export const rejectTourRequest = async (requestId) => {
 // Get guide tours
 export const getGuideTours = async () => {
   try {
+    const token = getAccessToken();
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch('/api/guide/tours', {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -118,12 +161,19 @@ export const getGuideTours = async () => {
 // Get guide earnings
 export const getGuideEarnings = async () => {
   try {
+    const token = getAccessToken();
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch('/api/guide/earnings', {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -141,12 +191,19 @@ export const getGuideEarnings = async () => {
 // Get guide notifications
 export const getGuideNotifications = async () => {
   try {
+    const token = getAccessToken();
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch('/api/guide/notifications', {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {

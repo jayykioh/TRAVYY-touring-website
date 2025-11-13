@@ -175,14 +175,15 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
-    // cần lấy field password => đừng .select("-password") ở query này
-    const user = await User.findOne({ username });
+    // Find user by email if contains @, else by username
+    const query = username.includes('@') ? { email: username } : { username };
+    const user = await User.findOne(query);
     if (!user)
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(400).json({ message: "Invalid username or password" });
 
     const match = await bcrypt.compare(password, user.password);
     if (!match)
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(400).json({ message: "Invalid username or password" });
 
     // Block login if account is banned
     if (user.accountStatus === "banned") {

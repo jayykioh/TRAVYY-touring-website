@@ -44,6 +44,8 @@ import ZoneDetail from "./pages/ZoneDetail";
 import ItineraryView  from "./pages/ItineraryView";
 import ItineraryResult from "./pages/ItineraryResult"; // ✅ ADD THIS IMPORT
 import ItineraryPaymentResult from "./pages/ItineraryPaymentResult"; // ✅ ADD DEPOSIT PAYMENT RESULT
+import TourRequestPayment from "./pages/TourRequestPayment"; // ✅ ADD TOUR REQUEST PAYMENT
+import BookingDetail from "./pages/BookingDetail"; // ✅ ADD BOOKING DETAIL PAGE
 // import ItineraryView from "./pages/ItineraryView";
 
 // ✅ THÊM: Import Admin components
@@ -105,6 +107,22 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <BookingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/payment/tour-request/:requestId"
+            element={
+              <ProtectedRoute>
+                <TourRequestPayment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/booking-detail/:bookingId"
+            element={
+              <ProtectedRoute>
+                <BookingDetail />
               </ProtectedRoute>
             }
           />

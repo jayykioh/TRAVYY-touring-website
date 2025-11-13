@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useAuth } from "../../auth/context";
 import { toast } from "sonner";
 import {
@@ -14,6 +14,12 @@ const GuideProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Avatar upload state (guide-specific UI)
+  const fileInputRef = useRef(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [avatarVersion, setAvatarVersion] = useState(Date.now());
 
   // Certificate upload state
   const [uploadingCert, setUploadingCert] = useState(false);
@@ -41,15 +47,11 @@ const GuideProfilePage = () => {
   });
 
   // Load guide profile
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
       const data = await withAuth("/api/guide/profile");
-      
+
       if (data.success !== false) {
         setGuide(data);
         setFormData({
@@ -71,7 +73,11 @@ const GuideProfilePage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [withAuth]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const handleSave = async () => {
     try {
@@ -161,6 +167,81 @@ const GuideProfilePage = () => {
     }
   };
 
+  // Handle avatar change (reuse profile endpoints)
+  const handleAvatarChange = useCallback(
+    async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+      if (file.size > MAX_SIZE) {
+        toast.error("Ảnh phải nhỏ hơn 5MB");
+        e.target.value = "";
+        return;
+      }
+
+      const allowedTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error("Chỉ chấp nhận file ảnh (JPEG, PNG, GIF, WEBP)");
+        e.target.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => setAvatarPreview(reader.result);
+      reader.readAsDataURL(file);
+
+      setUploadingAvatar(true);
+      try {
+        const fd = new FormData();
+        fd.append("avatar", file);
+
+        await withAuth("/api/profile/upload-avatar", {
+          method: "POST",
+          body: fd,
+        });
+
+        // Force refresh and update
+        setAvatarVersion(Date.now());
+        setAvatarPreview(null);
+        await loadProfile();
+        toast.success("Avatar đã được cập nhật!");
+      } catch (err) {
+        console.error("Upload avatar error:", err);
+        toast.error(err?.message || "Không thể upload avatar");
+        setAvatarPreview(null);
+      } finally {
+        setUploadingAvatar(false);
+        e.target.value = "";
+      }
+    },
+    [withAuth, loadProfile]
+  );
+
+  const handleRemoveAvatar = useCallback(async () => {
+    if (!guide?.avatar) return;
+    if (!confirm("Bạn có chắc muốn xóa avatar?")) return;
+    setUploadingAvatar(true);
+    try {
+      await withAuth("/api/profile/avatar", { method: "DELETE" });
+      setAvatarVersion(Date.now());
+      setAvatarPreview(null);
+      await loadProfile();
+      toast.success("Avatar đã được xóa");
+    } catch (err) {
+      console.error("Remove avatar error:", err);
+      toast.error(err?.message || "Không thể xóa avatar");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }, [withAuth, guide, loadProfile]);
+
   const addToArray = (field, value) => {
     if (value && !formData[field].includes(value)) {
       setFormData({ ...formData, [field]: [...formData[field], value] });
@@ -173,6 +254,13 @@ const GuideProfilePage = () => {
       [field]: formData[field].filter((item) => item !== value),
     });
   };
+
+  // Compute avatar source (preview -> uploaded avatar -> placeholder)
+  const avatarSrc = useMemo(() => {
+    if (avatarPreview) return avatarPreview;
+    if (guide?.avatar) return `/api/profile/avatar/${guide._id}?v=${avatarVersion}`;
+    return "https://i.pravatar.cc/150";
+  }, [guide, avatarPreview, avatarVersion]);
 
   if (loading) {
     return (
@@ -211,6 +299,8 @@ const GuideProfilePage = () => {
           100
       );
 
+  // Compute avatar source (preview -> uploaded avatar -> placeholder)
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       {/* Header */}
@@ -218,6 +308,59 @@ const GuideProfilePage = () => {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Hồ sơ Hướng dẫn viên</h1>
         <p className="text-gray-500">Quản lý thông tin và chứng chỉ của bạn</p>
       </div>
+
+      {/* Avatar Card */}
+      <Card className="mb-6">
+        <div className="flex items-center gap-6">
+          <div className="relative">
+            <img
+              src={avatarSrc}
+              alt={guide.name}
+              className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
+            />
+            {uploadingAvatar && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 rounded-full">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900">{guide.name}</h3>
+            <p className="text-sm text-gray-500">{guide.email}</p>
+
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-medium transition-colors"
+              >
+                {uploadingAvatar ? "Đang tải..." : "Đổi avatar"}
+              </button>
+
+              {guide?.avatar && (
+                <button
+                  type="button"
+                  onClick={handleRemoveAvatar}
+                  disabled={uploadingAvatar}
+                  className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white text-sm font-medium transition-colors"
+                >
+                  Xóa avatar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+          onChange={handleAvatarChange}
+          className="hidden"
+        />
+      </Card>
 
       {/* Profile Completion Status */}
       {!guide.profileComplete && (

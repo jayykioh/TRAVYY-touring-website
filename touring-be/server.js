@@ -3,6 +3,8 @@ const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 const PORT = process.env.PORT || 4000;
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 const mongoose = require("mongoose");
 const passport = require("passport");
 const cors = require("cors");
@@ -27,6 +29,14 @@ const bookingRoutes = require("./routes/bookingRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const promotionRoutes = require("./routes/promotion.routes");
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    credentials: true,
+    methods: ["GET", "POST"]
+  }
+});
 const isProd = process.env.NODE_ENV === "production";
 const MONGO_URI =
   process.env.MONGO_URI ||
@@ -38,6 +48,8 @@ const paymentRoutes = require("./routes/payment.routes");
 const guideRoutes = require("./routes/guide/guide.routes");
 // Tour Request Routes
 const tourRequestRoutes = require("./routes/tourRequest.routes");
+// Itinerary Routes
+const itineraryRoutes = require("./routes/itinerary.routes");
 // Quick visibility of PayPal env presence (not actual secrets)
 console.log("[Boot] PayPal env present:", {
   hasClient: !!process.env.PAYPAL_CLIENT_ID,
@@ -100,6 +112,12 @@ app.use("/api/guide", guideRoutes);
 app.use("/api/tour-requests", tourRequestRoutes);
 const chatRoutes = require("./routes/chat.routes");
 app.use("/api/chat", chatRoutes);
+// Itinerary API
+app.use("/api/itinerary", itineraryRoutes);
+const discoverRoutes = require("./routes/discover.routes");
+app.use("/api/discover", discoverRoutes);
+const zoneRoutes = require("./routes/zone.routes");
+app.use("/api/zones", zoneRoutes);
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 app.use("/api/paypal", paypalRoutes);
@@ -132,7 +150,12 @@ mongoose
   .connect(MONGO_URI)
   .then(() => {
     console.log("✅ MongoDB connected");
-    app.listen(PORT, () =>
+    
+    // Initialize WebSocket
+    const setupChatSocket = require('./socket/chatSocket');
+    setupChatSocket(io);
+    
+    server.listen(PORT, () =>
       console.log(`🚀 API listening on http://localhost:${PORT}`)
     );
   })
@@ -141,65 +164,7 @@ mongoose
     process.exit(1);
   });
 
+// Make io available to routes
+app.set('io', io);
+
 module.exports = app;
-
-// ✅ Check services on startup
-const { health, isAvailable } = require("./services/ai/libs/embedding-client");
-
-async function checkServices() {
-  console.log("\n🔍 Checking services...");
-
-  // MongoDB
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ MongoDB connected");
-  } catch (error) {
-    console.error("❌ MongoDB failed:", error.message);
-    process.exit(1);
-  }
-
-  // Embedding service
-  try {
-    const available = await isAvailable();
-    if (available) {
-      const healthData = await health();
-      console.log("✅ Embedding service OK:", {
-        model: healthData.model,
-        vectors: healthData.vectors,
-        url: process.env.EMBED_SERVICE_URL || "http://localhost:8088",
-      });
-    } else {
-      console.warn("⚠️ Embedding service not available");
-      console.warn(
-        "   URL:",
-        process.env.EMBED_SERVICE_URL || "http://localhost:8088"
-      );
-      console.warn("   Will use keyword fallback for zone matching");
-    }
-  } catch (error) {
-    console.warn("⚠️ Embedding check failed:", error.message);
-  }
-}
-
-checkServices().then(() => {
-  // Routes
-  app.use("/api/auth", require("./routes/auth.routes"));
-  app.use("/api/discover", require("./routes/discover.routes"));
-  app.use("/api/zones", require("./routes/zone.routes"));
-  app.use("/api/itinerary", require("./routes/itinerary.routes"));
-
-  // Health endpoint
-  app.get("/api/health", async (req, res) => {
-    const embedHealth = await health();
-    res.json({
-      backend: "ok",
-      mongo: mongoose.connection.readyState === 1 ? "ok" : "error",
-      embedding: embedHealth,
-    });
-  });
-
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`\n🚀 Backend running on port ${PORT}`);
-  });
-});

@@ -38,19 +38,8 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
         params.append('zoneName', itineraryLocation);
       }
       
-      const response = await fetch(`/api/guide/available?${params.toString()}`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to load guides');
-      }
-
-      const data = await response.json();
+      const data = await withAuth(`/api/guide/available?${params.toString()}`);
+      
       console.log('📍 [Guides] Loaded for zone:', itineraryLocation, 'Found:', data.guides?.length || 0);
       setGuides(data.guides || []);
       
@@ -94,6 +83,11 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
       return;
     }
 
+    if (!formData.preferredDate) {
+      toast.error('Vui lòng chọn ngày khởi hành dự kiến');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const requestBody = {
@@ -104,10 +98,11 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
           currency: 'VND'
         },
         numberOfGuests: parseInt(formData.numberOfPeople),
-        preferredDates: formData.preferredDate ? [formData.preferredDate] : [],
-        specialRequirements: formData.specialRequirements,
+        preferredDates: [formData.preferredDate], // Always has value after validation
+        specialRequirements: formData.specialRequirements || '',
         contactInfo: {
-          phone: formData.contactPhone,
+          phone: formData.contactPhone || '',
+          email: '', // Will be filled by backend from user profile
         },
       };
 
@@ -393,10 +388,11 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ngày dự kiến
+                    Ngày dự kiến *
                   </label>
                   <input
                     type="date"
+                    required
                     value={formData.preferredDate}
                     onChange={(e) => setFormData({ ...formData, preferredDate: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#02A0AA] focus:border-transparent"

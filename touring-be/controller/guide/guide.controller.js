@@ -302,12 +302,20 @@ const getCustomTourRequests = async (req, res) => {
     const userId = req.user?.sub || req.user?._id || req.user?.id;
     const { status, page = 1, limit = 10 } = req.query;
 
-    // Build query - get pending requests or requests assigned to this guide
+    console.log('[Guide] getCustomTourRequests - req.user:', req.user);
+    console.log('[Guide] getCustomTourRequests - userId:', userId);
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized: User ID not found in token'
+      });
+    }
+
+    // Build query: Show ALL requests assigned to this guide (both direct and claimed)
     const query = {
-      $or: [
-        { status: 'pending' }, // All pending requests visible to all guides
-        { guideId: userId, status: { $ne: 'pending' } } // Assigned requests to this guide
-      ]
+      guideId: userId
+      // ✅ Removed isDirectRequest filter - show both direct and broadcast requests
     };
 
     // Filter by specific status if provided
@@ -317,6 +325,9 @@ const getCustomTourRequests = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
+    console.log('[Guide] Fetching requests for guide:', userId);
+    console.log('[Guide] Query:', JSON.stringify(query));
+
     const requests = await TourCustomRequest.find(query)
       .populate('userId', 'name email phone avatar')
       .populate('itineraryId', 'name zoneName items preferences routePolyline totalDistance totalDuration')
@@ -325,6 +336,9 @@ const getCustomTourRequests = async (req, res) => {
       .limit(parseInt(limit));
 
     const total = await TourCustomRequest.countDocuments(query);
+
+    console.log(`[Guide] Found ${total} requests for guide ${userId}`);
+    console.log('[Guide] Requests:', requests.map(r => ({ id: r._id, status: r.status, isDirectRequest: r.isDirectRequest })));
 
     res.json({
       success: true,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getGuideProfile } from "../../data/guideAPI";
+import { getGuideProfile } from "../../../TravelAgency/guideAPI";
 
 const WelcomeBanner = () => {
   const [guideData, setGuideData] = useState(null);

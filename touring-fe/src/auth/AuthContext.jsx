@@ -72,6 +72,8 @@ export default function AuthProvider({ children }) {
 
     if (res?.accessToken) {
       setAccessToken(res.accessToken);
+      // Store in localStorage for API calls that don't use withAuth
+      localStorage.setItem('accessToken', res.accessToken);
     }
 
     if (res?.user) {
@@ -91,6 +93,8 @@ export default function AuthProvider({ children }) {
 
     if (res?.accessToken) {
       setAccessToken(res.accessToken);
+      // Store in localStorage for API calls that don't use withAuth
+      localStorage.setItem('accessToken', res.accessToken);
     }
 
     if (res?.user) {
@@ -126,6 +130,8 @@ export default function AuthProvider({ children }) {
           }).catch(() => null);
           if (!r?.accessToken) throw e;
           setAccessToken(r.accessToken);
+          // Update localStorage as well
+          localStorage.setItem('accessToken', r.accessToken);
           return await api(url, {
             ...init,
             headers: { ...headers, Authorization: `Bearer ${r.accessToken}` },
@@ -183,6 +189,8 @@ export default function AuthProvider({ children }) {
 
         if (r?.accessToken) {
           setAccessToken(r.accessToken);
+          // Store in localStorage for API calls
+          localStorage.setItem('accessToken', r.accessToken);
           try {
             const me = await api(`${API_BASE}/api/auth/me`, {
               headers: { Authorization: `Bearer ${r.accessToken}` },

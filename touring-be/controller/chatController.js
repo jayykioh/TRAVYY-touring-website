@@ -2,6 +2,7 @@ const TourRequestChat = require('../models/TourRequestChat');
 const TourCustomRequest = require('../models/TourCustomRequest');
 const Itinerary = require('../models/Itinerary');
 const User = require('../models/Users');
+const Guide = require('../models/guide/Guide');
 const Notification = require('../models/Notification');
 const GuideNotification = require('../models/guide/GuideNotification');
 const { GridFSBucket } = require('mongodb');
@@ -41,6 +42,24 @@ async function findTourRequest(requestId) {
   return null;
 }
 
+// Helper to check chat access
+function checkChatAccess(requestData, userId, role) {
+  if (requestData.type === 'Itinerary') {
+    const itinerary = requestData.request;
+    return (
+      requestData.userId.toString() === userId || // Traveller who created
+      (requestData.guideId && requestData.guideId.toString() === userId) || // Guide who accepted
+      (role === 'guide' && itinerary.tourGuideRequest?.status === 'pending') // Any guide for pending requests
+    );
+  } else {
+    // TourCustomRequest - must be assigned guide or traveller
+    return (
+      requestData.userId.toString() === userId ||
+      (requestData.guideId && requestData.guideId.toString() === userId)
+    );
+  }
+}
+
 // Get chat history for a tour request
 exports.getChatHistory = async (req, res) => {
   try {
@@ -48,9 +67,18 @@ exports.getChatHistory = async (req, res) => {
     const { requestId } = req.params;
     const { page = 1, limit = 50 } = req.query;
 
+    console.log('[Chat] getChatHistory called:', {
+      requestId,
+      userId,
+      role,
+      page,
+      limit
+    });
+
     // Verify user has access to this request
     const requestData = await findTourRequest(requestId);
     if (!requestData) {
+      console.log('[Chat] Tour request not found:', requestId);
       return res.status(404).json({
         success: false,
         error: 'Tour request not found'
@@ -58,11 +86,8 @@ exports.getChatHistory = async (req, res) => {
     }
 
     // Check access rights
-    const hasAccess = 
-      requestData.userId.toString() === userId ||
-      (requestData.guideId && requestData.guideId.toString() === userId);
-
-    if (!hasAccess) {
+    if (!checkChatAccess(requestData, userId, role)) {
+      console.log('[Chat] Access denied:', { userId, role, requestData: requestData.type });
       return res.status(403).json({
         success: false,
         error: 'Access denied to this chat'
@@ -76,6 +101,11 @@ exports.getChatHistory = async (req, res) => {
       parseInt(limit)
     );
 
+    console.log('[Chat] Messages retrieved:', {
+      count: messages.length,
+      reversed: messages.length
+    });
+
     // Get unread count
     const unreadCount = await TourRequestChat.getUnreadCount(requestId, userId, role);
 
@@ -83,6 +113,12 @@ exports.getChatHistory = async (req, res) => {
     const totalCount = await TourRequestChat.countDocuments({
       tourRequestId: requestId,
       isDeleted: false
+    });
+
+    console.log('[Chat] Chat stats:', {
+      totalMessages: totalCount,
+      unreadCount,
+      currentPage: parseInt(page)
     });
 
     res.json({
@@ -113,10 +149,20 @@ exports.sendMessage = async (req, res) => {
     const { requestId } = req.params;
     const { content, message, replyTo } = req.body;
     
+    console.log('[Chat] sendMessage called:', {
+      requestId,
+      userId,
+      role,
+      content,
+      message,
+      hasContent: !!(content || message)
+    });
+    
     // Support both 'content' and 'message' field names
     const messageContent = content || message;
 
     if (!messageContent || messageContent.trim().length === 0) {
+      console.log('[Chat] Empty message content');
       return res.status(400).json({
         success: false,
         error: 'Message content is required'
@@ -126,17 +172,16 @@ exports.sendMessage = async (req, res) => {
     // Verify user has access
     const requestData = await findTourRequest(requestId);
     if (!requestData) {
+      console.log('[Chat] Tour request not found:', requestId);
       return res.status(404).json({
         success: false,
         error: 'Tour request not found'
       });
     }
 
-    const hasAccess = 
-      requestData.userId.toString() === userId ||
-      (requestData.guideId && requestData.guideId.toString() === userId);
-
-    if (!hasAccess) {
+    // Check access rights (same logic as getChatHistory)
+    if (!checkChatAccess(requestData, userId, role)) {
+      console.log('[Chat] Send access denied:', { userId, role, requestData: requestData.type });
       return res.status(403).json({
         success: false,
         error: 'Access denied'
@@ -145,6 +190,7 @@ exports.sendMessage = async (req, res) => {
 
     // Get sender name
     const senderUser = await User.findById(userId).select('name');
+    console.log('[Chat] Sender:', { userId, name: senderUser?.name, role });
 
     // Create message
     const chatMessage = new TourRequestChat({
@@ -161,6 +207,12 @@ exports.sendMessage = async (req, res) => {
 
     await chatMessage.save();
     await chatMessage.populate('sender.userId', 'name avatar email');
+    
+    console.log('[Chat] Message saved:', {
+      messageId: chatMessage._id,
+      sender: chatMessage.sender,
+      content: chatMessage.content
+    });
 
     // Add to TourCustomRequest messages if applicable (backward compatibility)
     if (requestData.type === 'TourCustomRequest') {
@@ -170,32 +222,72 @@ exports.sendMessage = async (req, res) => {
     // Notify the other party
     const recipientId = role === 'user' ? requestData.guideId : requestData.userId;
     const recipientRole = role === 'user' ? 'guide' : 'user';
+    
+    console.log('[Chat] Notifying recipient:', {
+      recipientId,
+      recipientRole,
+      senderName: senderUser.name
+    });
 
     if (recipientId) {
       try {
         if (recipientRole === 'guide') {
-          await GuideNotification.create({
-            guideId: recipientId,
-            notificationId: `guide-${recipientId}-${Date.now()}`,
-            type: 'new_message',
-            title: 'New Message',
-            message: `${senderUser.name}: ${messageContent.substring(0, 50)}${messageContent.length > 50 ? '...' : ''}`,
-            tourId: requestId,
-            priority: 'medium'
-          });
+          // recipientId may be a User._id stored on requestData.guideId; find Guide profile
+          const guideProfile = await Guide.findOne({ userId: recipientId });
+          if (guideProfile) {
+            await GuideNotification.create({
+              guideId: guideProfile._id,
+              notificationId: `guide-${guideProfile._id}-${Date.now()}`,
+              type: 'new_message',
+              title: 'New Message',
+              message: `${senderUser.name}: ${messageContent.substring(0, 50)}${messageContent.length > 50 ? '...' : ''}`,
+              tourId: requestId,
+              priority: 'medium'
+            });
+            console.log('[Chat] GuideNotification created for guide:', guideProfile._id);
+          } else {
+            console.log('[Chat] Guide profile not found for userId:', recipientId);
+          }
         } else {
+          // Get recipient user email
+          const recipientUser = await User.findById(recipientId).select('email name');
           await Notification.create({
             userId: recipientId,
+            recipientEmail: recipientUser.email,
+            recipientName: recipientUser.name,
             type: 'new_message',
             title: 'New Message from Guide',
             message: `${senderUser.name}: ${messageContent.substring(0, 50)}${messageContent.length > 50 ? '...' : ''}`,
             relatedId: requestId,
             relatedModel: requestData.type
           });
+          console.log('[Chat] Notification created for user:', recipientId);
         }
       } catch (notifError) {
         console.error('[Chat] Error creating notification:', notifError);
       }
+    }
+
+    // Emit to WebSocket room so other connected clients receive the new file message
+    try {
+      const io = req.app && req.app.get && req.app.get('io');
+      if (io) {
+        io.to(`chat-${requestId}`).emit('new-message', chatMessage);
+        console.log('[Chat] Emitted new-message (file) via HTTP for room:', `chat-${requestId}`);
+      }
+    } catch (emitErr) {
+      console.error('[Chat] Error emitting new-message (file) via HTTP:', emitErr);
+    }
+
+    // Emit to WebSocket room so other connected clients receive the new message
+    try {
+      const io = req.app && req.app.get && req.app.get('io');
+      if (io) {
+        io.to(`chat-${requestId}`).emit('new-message', chatMessage);
+        console.log('[Chat] Emitted new-message via HTTP for room:', `chat-${requestId}`);
+      }
+    } catch (emitErr) {
+      console.error('[Chat] Error emitting new-message via HTTP:', emitErr);
     }
 
     res.json({
@@ -237,11 +329,7 @@ exports.sendFileMessage = async (req, res) => {
       });
     }
 
-    const hasAccess = 
-      requestData.userId.toString() === userId ||
-      (requestData.guideId && requestData.guideId.toString() === userId);
-
-    if (!hasAccess) {
+    if (!checkChatAccess(requestData, userId, role)) {
       return res.status(403).json({
         success: false,
         error: 'Access denied'
@@ -308,18 +396,24 @@ exports.sendFileMessage = async (req, res) => {
       try {
         const notifMessage = `${senderUser.name} sent ${files.length} file(s)`;
         if (recipientRole === 'guide') {
-          await GuideNotification.create({
-            guideId: recipientId,
-            notificationId: `guide-${recipientId}-${Date.now()}`,
-            type: 'new_message',
-            title: 'New File(s)',
-            message: notifMessage,
-            tourId: requestId,
-            priority: 'medium'
-          });
+          const guideProfile = await Guide.findOne({ userId: recipientId });
+          if (guideProfile) {
+            await GuideNotification.create({
+              guideId: guideProfile._id,
+              notificationId: `guide-${guideProfile._id}-${Date.now()}`,
+              type: 'new_message',
+              title: 'New File(s)',
+              message: notifMessage,
+              tourId: requestId,
+              priority: 'medium'
+            });
+          }
         } else {
+          const recipientUser = await User.findById(recipientId).select('email name');
           await Notification.create({
             userId: recipientId,
+            recipientEmail: recipientUser.email,
+            recipientName: recipientUser.name,
             type: 'new_message',
             title: 'New File(s) from Guide',
             message: notifMessage,
@@ -362,11 +456,7 @@ exports.downloadFile = async (req, res) => {
       });
     }
 
-    const hasAccess = 
-      requestData.userId.toString() === userId ||
-      (requestData.guideId && requestData.guideId.toString() === userId);
-
-    if (!hasAccess) {
+    if (!checkChatAccess(requestData, userId, role)) {
       return res.status(403).json({
         success: false,
         error: 'Access denied'
@@ -419,11 +509,7 @@ exports.markAsRead = async (req, res) => {
       });
     }
 
-    const hasAccess = 
-      requestData.userId.toString() === userId ||
-      (requestData.guideId && requestData.guideId.toString() === userId);
-
-    if (!hasAccess) {
+    if (!checkChatAccess(requestData, userId, role)) {
       return res.status(403).json({
         success: false,
         error: 'Access denied'
@@ -459,6 +545,20 @@ exports.markAsRead = async (req, res) => {
       message: 'Messages marked as read'
     });
 
+    // Emit read event to other clients in the socket room
+    try {
+      const io = req.app && req.app.get && req.app.get('io');
+      if (io) {
+        io.to(`chat-${requestId}`).emit('messages-read-by-other', {
+          userId,
+          messageIds: messageIds && Array.isArray(messageIds) && messageIds.length > 0 ? messageIds : 'all'
+        });
+        console.log('[Chat] Emitted messages-read-by-other via HTTP for room:', `chat-${requestId}`);
+      }
+    } catch (emitErr) {
+      console.error('[Chat] Error emitting messages-read-by-other via HTTP:', emitErr);
+    }
+
   } catch (error) {
     console.error('[Chat] Error marking messages as read:', error);
     res.status(500).json({
@@ -483,11 +583,7 @@ exports.getUnreadCount = async (req, res) => {
       });
     }
 
-    const hasAccess = 
-      requestData.userId.toString() === userId ||
-      (requestData.guideId && requestData.guideId.toString() === userId);
-
-    if (!hasAccess) {
+    if (!checkChatAccess(requestData, userId, role)) {
       return res.status(403).json({
         success: false,
         error: 'Access denied'

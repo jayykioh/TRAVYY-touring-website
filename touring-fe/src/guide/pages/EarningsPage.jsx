@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import Card from "../components/common/Card";
 import Badge from "../components/common/Badge";
-import { getGuideEarnings } from "../data/guideAPI";
+import { getGuideEarnings } from "../../TravelAgency/guideAPI";
 import {
   LineChart,
   Line,
@@ -16,7 +16,6 @@ import {
 
 const EarningsPage = () => {
   const [earningsData, setEarningsData] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [range, setRange] = useState("week");
 
   useEffect(() => {
@@ -35,7 +34,7 @@ const EarningsPage = () => {
           yearlyStats: []
         });
       } finally {
-        setLoading(false);
+        // finished fetching — loading state removed because it was unused
       }
     };
 
@@ -240,9 +239,9 @@ const EarningsPage = () => {
           Các khoản thanh toán gần đây
         </h3>
         <div className="space-y-3">
-          {recentPayments.map((payment) => (
+          {recentPayments.map((payment, idx) => (
             <div
-              key={payment.id}
+              key={payment.id || payment._id || `${payment.tourName}-${payment.date}-${idx}`}
               className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all hover:shadow-md"
             >
               <div className="flex-1">

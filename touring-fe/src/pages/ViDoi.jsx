@@ -5,6 +5,7 @@ import { Sparkles, MapPin, X, ChevronLeft, Waves, Mountain, Utensils, Landmark, 
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import FloatingChatButton from "../components/FloatingChatButton";
 
 // ✅ STANDARDIZED: Match with backend vibePatterns
 const vibeOptions = [
@@ -549,6 +550,9 @@ export default function VibeSelectPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating Chat Button */}
+      <FloatingChatButton />
     </div>
   );
 }

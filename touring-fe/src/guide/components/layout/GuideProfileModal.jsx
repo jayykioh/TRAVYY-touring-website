@@ -11,7 +11,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getGuideProfile } from "../../data/guideAPI"; // 🧩 import API function
+import { getGuideProfile } from "../../../TravelAgency/guideAPI"; // 🧩 import API function (moved to TravelAgency)
 
 const GuideProfileModal = ({
   show = true,

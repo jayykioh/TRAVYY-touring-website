@@ -92,6 +92,13 @@ const TourCustomRequestSchema = new mongoose.Schema({
     index: true
   },
   
+  // Flag: true if customer directly selected a specific guide, false if open/broadcast
+  isDirectRequest: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  
   // Request status
   status: {
     type: String,

@@ -100,6 +100,9 @@ export default function ItineraryResult() {
   const [depositLoading, setDepositLoading] = useState(false);
   const [depositMsg, setDepositMsg] = useState("");
 
+  // ========== Chat State ==========
+  const [showChat, setShowChat] = useState(true);
+
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
@@ -954,11 +957,12 @@ export default function ItineraryResult() {
       )}
 
       {/* Chat Box - Show when request is pending or accepted */}
-      {itinerary.isCustomTour && (itinerary.tourGuideRequest?.status === 'pending' || itinerary.tourGuideRequest?.status === 'accepted') && (
+      {showChat && itinerary.isCustomTour && (itinerary.tourGuideRequest?.status === 'pending' || itinerary.tourGuideRequest?.status === 'accepted') && (
         <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 mt-8 mb-8">
           <TravellerChatBox
             requestId={itinerary._id}
             guideName="Tour Guide"
+            onClose={() => setShowChat(false)}
             tourInfo={{
               tourName: itinerary.name,
               name: itinerary.name,
@@ -974,6 +978,21 @@ export default function ItineraryResult() {
               totalPrice: itinerary.estimatedCost
             }}
           />
+        </div>
+      )}
+
+      {/* Reopen Chat Button - Show when chat is closed */}
+      {!showChat && itinerary.isCustomTour && (itinerary.tourGuideRequest?.status === 'pending' || itinerary.tourGuideRequest?.status === 'accepted') && (
+        <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 mt-8 mb-8">
+          <button
+            onClick={() => setShowChat(true)}
+            className="w-full px-6 py-4 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Mở Chat với Tour Guide
+          </button>
         </div>
       )}
 
