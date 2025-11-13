@@ -228,18 +228,6 @@ function Map4DPanel({
           );
         })}
       </MFMap>
-
-      {import.meta.env.DEV && (
-        <div className="absolute top-2 right-2 bg-black/80 text-white text-xs p-2 rounded z-50 max-w-xs">
-          <div>Polygon: {polygonPaths ? polygonPaths[0].length : 0} pts</div>
-          <div>Markers: {markers.length}</div>
-          <div>
-            Center: {viewCenter.lat.toFixed(4)}, {viewCenter.lng.toFixed(4)} | z {viewZoom}
-          </div>
-          <div>ActiveId: {activeId || "-"}</div>
-          <div>Cached: {detailCache.size} places</div>
-        </div>
-      )}
     </div>
   );
 }

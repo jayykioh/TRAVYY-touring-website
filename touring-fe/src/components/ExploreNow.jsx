@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 const ExploreNow = () => {
   return (
-    <section className="pb-16">
+    <section id="highlights" className="pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Creative sections */}
         <div className="max-w-7xl mx-auto px-6 py-12">
