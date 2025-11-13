@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AdminAuthProvider } from "../context/AdminAuthContext";
+import { NotificationProvider } from "../context/NotificationContext";
 import AdminProtectedRoute from "../components/Auth/AdminProtectedRoute";
 import AdminLayout from "../components/Common/layout/AdminLayout";
 
@@ -13,6 +14,7 @@ import GuideManagement from "../pages/GuideManagement";
 import Settings from "../pages/Settings";
 import PromotionManagement from "../pages/PromotionManagement";
 import CustomerRequestManagement from "../pages/CustomerRequestManagement";
+import RefundManagement from "../pages/RefundManagement";
 
 // Guide components - REMOVED: Only GuideManagement remains
 
@@ -29,152 +31,171 @@ const Certification = () => (
   <div className="p-6">Certification Page - Coming soon</div>
 );
 
+const ProtectedRoutes = () => {
+  return (
+    <Routes>
+      {/* Public route - Login */}
+      <Route path="/login" element={<AdminLogin />} />
+
+      {/* Protected routes with layout */}
+      <Route
+        path="/dashboard"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="dashboard">
+              <Dashboard />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/tours"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="tours">
+              <TourManagement />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/tours/:id"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="tours">
+              <TourDetailPage />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/guides"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="guides">
+              <GuideManagement />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Customer Management Routes */}
+      <Route
+        path="/customers/accounts"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="customers">
+              <CustomerAccountsPage />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/customers/:id"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="customers">
+              <CustomerAccountDetailPage />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Customer Requests Routes */}
+      <Route
+        path="/customer-requests"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="customer-requests">
+              <CustomerRequestManagement />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/customer-requests/:id"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="customer-requests">
+              <RequestDetailPage />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/customer-requests/:id/update"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="customer-requests">
+              <RequestUpdatePage />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/certification"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="certification">
+              <Certification />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="settings">
+              <Settings />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/promotions"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="promotions">
+              <PromotionManagement />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/refunds"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout activePage="refunds">
+              <RefundManagement />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Default redirect */}
+      <Route path="/" element={<Navigate to="dashboard" replace />} />
+      <Route path="*" element={<Navigate to="dashboard" replace />} />
+    </Routes>
+  );
+};
+
 const AdminRoutes = () => {
   return (
     <AdminAuthProvider>
-      <Routes>
-        {/* Public route - Login */}
-        <Route path="/login" element={<AdminLogin />} />
-
-        {/* Protected routes with layout */}
-        <Route
-          path="/dashboard"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="dashboard">
-                <Dashboard />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/tours"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="tours">
-                <TourManagement />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/tours/:id"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="tours">
-                <TourDetailPage />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/guides"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="guides">
-                <GuideManagement />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        {/* Customer Management Routes */}
-        <Route
-          path="/customers/accounts"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="customers">
-                <CustomerAccountsPage />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/customers/:id"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="customers">
-                <CustomerAccountDetailPage />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        {/* Customer Requests Routes */}
-        <Route
-          path="/customer-requests"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="customer-requests">
-                <CustomerRequestManagement />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/customer-requests/:id"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="customer-requests">
-                <RequestDetailPage />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/customer-requests/:id/update"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="customer-requests">
-                <RequestUpdatePage />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/certification"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="certification">
-                <Certification />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/settings"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="settings">
-                <Settings />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/promotions"
-          element={
-            <AdminProtectedRoute>
-              <AdminLayout activePage="promotions">
-                <PromotionManagement />
-              </AdminLayout>
-            </AdminProtectedRoute>
-          }
-        />
-
-        {/* Default redirect */}
-        <Route path="/" element={<Navigate to="dashboard" replace />} />
-        <Route path="*" element={<Navigate to="dashboard" replace />} />
-      </Routes>
+      <NotificationProvider>
+        <ProtectedRoutes />
+      </NotificationProvider>
     </AdminAuthProvider>
   );
 };

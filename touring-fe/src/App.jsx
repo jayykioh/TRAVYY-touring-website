@@ -37,12 +37,22 @@ import AvailableToursPage from "./pages/AvailableToursPage";
 import AITourCreator from "./pages/AITourCreator";
 import PaymentCallback from "./pages/PaymentCallback";
 import PreferencesPage from "./pages/ViDoi";
+import DiscoverWrapped from "./pages/DiscoverWrapped";
 import DiscoverResults from "./pages/DiscoverResults";
 import ZoneDetail from "./pages/ZoneDetail";
-import ItineraryView  from "./pages/ItineraryView";
+import ItineraryView from "./pages/ItineraryView";
 import ItineraryResult from "./pages/ItineraryResult"; // ✅ ADD THIS IMPORT
+import RefundRequest from "./pages/RefundRequest";
+import UserRefundList from "./components/UserRefundList";
+// import ItineraryView from "./pages/ItineraryView";
+
+// ✅ THÊM: Import Admin components
+// import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
 import AdminRoutes from "./admin/routes/AdminRoutes";
 import GuideRoutes from "./guide/routes/guideRoutes";
+
+// ✅ NEW: Daily Ask floating button
+import DailyAskTrigger from "./components/DailyAskTrigger";
 
 // Route guard
 function ProtectedRoute({ children }) {
@@ -59,8 +69,12 @@ export default function App() {
   const { booting, isAuth, user, bannedInfo } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-           useEffect(() => {
-    if (isAuth && user?.role === "TourGuide" && !location.pathname.startsWith("/guide")) {
+  useEffect(() => {
+    if (
+      isAuth &&
+      user?.role === "TourGuide" &&
+      !location.pathname.startsWith("/guide")
+    ) {
       navigate("/guide", { replace: true });
     }
   }, [isAuth, user?.role, location.pathname, navigate]);
@@ -136,9 +150,19 @@ export default function App() {
             <Route path="vouchers" element={<ProfilePromotions />} />
             <Route path="favorites" element={<WishlistPage />} />
             <Route path="booking-history" element={<BookingHistory />} />
+            <Route path="refunds" element={<UserRefundList />} />
             <Route path="change-password" element={<ChangePassword />} />
             <Route path="security" element={<ProfileSecurity />} />
           </Route>
+          {/* Refund Request Route */}
+          <Route
+            path="/refund-request/:bookingId"
+            element={
+              <ProtectedRoute>
+                <RefundRequest />
+              </ProtectedRoute>
+            }
+          />
         </Route>
         <Route
           path="/ai-tour-creator"
@@ -156,25 +180,32 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/itinerary" element={
-          <ProtectedRoute>  
-          <ItineraryView />
-          </ProtectedRoute>} />
         <Route
-          path="/discover/results"
+          path="/itinerary"
+          element={
+            <ProtectedRoute>
+              <ItineraryView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/discover-wrapped"
+          element={
+            <ProtectedRoute>
+              <DiscoverWrapped />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/discover-results"
           element={
             <ProtectedRoute>
               <DiscoverResults />
             </ProtectedRoute>
           }
         />
-        
-<Route
-  path="/zone/:zoneId"
-  element={
-      <ZoneDetail />
-  }
-/>
+
+        <Route path="/zone/:zoneId" element={<ZoneDetail />} />
         {/* ✅ ADD: Itinerary routes */}
         <Route
           path="/itinerary"
@@ -184,7 +215,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        
+
         {/* ✅ ADD: Result page route */}
         <Route
           path="/itinerary/result/:id"
@@ -237,6 +268,9 @@ export default function App() {
       {isAuth && (!user?.role || user.role === "uninitialized") && (
         <RolePopup />
       )}
+
+      {/* ✅ NEW: Daily Ask floating button (shows when user logged in & not answered today) */}
+      <DailyAskTrigger />
     </Fragment>
   );
 }

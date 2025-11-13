@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import Modal from "../Common/Modal";
 
 // Services
 import * as customerService from "../../services/customerService";
@@ -46,6 +47,11 @@ export default function CustomerAccountDetailPage() {
   const [loading, setLoading] = useState(true);
   const [customer, setCustomer] = useState(null);
   const [bookings, setBookings] = useState([]);
+  const [actionModal, setActionModal] = useState({
+    isOpen: false,
+    type: null,
+    customer: null,
+  });
 
   // Fetch customer data
   useEffect(() => {
@@ -125,70 +131,58 @@ export default function CustomerAccountDetailPage() {
   }
 
   const handleAction = async (action) => {
-    switch (action) {
+    setActionModal({ isOpen: true, type: action, customer });
+  };
+
+  const confirmAction = async () => {
+    const { type, customer } = actionModal;
+
+    switch (type) {
       case "lock":
-        if (
-          window.confirm(
-            `Bạn có chắc muốn khóa tài khoản ${customer.fullName}?`
-          )
-        ) {
-          try {
-            const result = await customerService.updateCustomerStatus(
-              customer._id,
-              "banned",
-              "Khóa từ trang chi tiết khách hàng"
-            );
-            if (result.success) {
-              toast.success("Đã khóa tài khoản");
-              await loadCustomerData();
-            } else {
-              toast.error(result.error || "Khóa tài khoản thất bại");
-            }
-          } catch (error) {
-            toast.error("Có lỗi xảy ra");
+        try {
+          const result = await customerService.updateCustomerStatus(
+            customer._id,
+            "banned",
+            "Khóa từ trang chi tiết khách hàng"
+          );
+          if (result.success) {
+            toast.success("Đã khóa tài khoản");
+            await loadCustomerData();
+          } else {
+            toast.error(result.error || "Khóa tài khoản thất bại");
           }
+        } catch (error) {
+          toast.error("Có lỗi xảy ra");
         }
         break;
       case "unlock":
-        if (
-          window.confirm(
-            `Bạn có chắc muốn mở khóa tài khoản ${customer.fullName}?`
-          )
-        ) {
-          try {
-            const result = await customerService.updateCustomerStatus(
-              customer._id,
-              "active",
-              ""
-            );
-            if (result.success) {
-              toast.success("Đã mở khóa tài khoản");
-              await loadCustomerData();
-            } else {
-              toast.error(result.error || "Mở khóa thất bại");
-            }
-          } catch (error) {
-            toast.error("Có lỗi xảy ra");
+        try {
+          const result = await customerService.updateCustomerStatus(
+            customer._id,
+            "active",
+            ""
+          );
+          if (result.success) {
+            toast.success("Đã mở khóa tài khoản");
+            await loadCustomerData();
+          } else {
+            toast.error(result.error || "Mở khóa thất bại");
           }
+        } catch (error) {
+          toast.error("Có lỗi xảy ra");
         }
         break;
       case "delete":
-        if (
-          window.confirm(
-            `Bạn có chắc muốn xóa tài khoản ${customer.fullName}? Hành động này không thể hoàn tác!`
-          )
-        ) {
-          try {
-            const result = await customerService.deleteCustomer(customer._id);
-            if (result.success) {
-              toast.success("Đã xóa tài khoản");
-              navigate("/admin/customers/accounts");
-            } else {
-              toast.error(result.error || "Xóa tài khoản thất bại");
-            }
-          } catch (error) {
-            toast.error("Có lỗi xảy ra");
+        try {
+          const result = await customerService.deleteCustomer(customer._id);
+          if (result.success) {
+            toast.success("Đã xóa tài khoản");
+            navigate("/admin/customers/accounts");
+          } else {
+            toast.error(result.error || "Xóa tài khoản thất bại");
           }
+        } catch (error) {
+          toast.error("Có lỗi xảy ra");
         }
         break;
       case "export":
@@ -197,6 +191,7 @@ export default function CustomerAccountDetailPage() {
       default:
         break;
     }
+    setActionModal({ isOpen: false, type: null, customer: null });
   };
 
   return (
@@ -572,6 +567,64 @@ export default function CustomerAccountDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Action Confirmation Modal */}
+      <Modal
+        isOpen={actionModal.isOpen}
+        onClose={() =>
+          setActionModal({ isOpen: false, type: null, customer: null })
+        }
+        onConfirm={confirmAction}
+        title={
+          actionModal.type === "lock"
+            ? "Xác nhận khóa tài khoản"
+            : actionModal.type === "unlock"
+            ? "Xác nhận mở khóa tài khoản"
+            : "Xác nhận xóa tài khoản"
+        }
+        type={actionModal.type === "delete" ? "error" : "warning"}
+        confirmText={
+          actionModal.type === "lock"
+            ? "Khóa"
+            : actionModal.type === "unlock"
+            ? "Mở khóa"
+            : "Xóa"
+        }
+        cancelText="Hủy"
+      >
+        <p className="text-gray-600">
+          {actionModal.type === "lock" && (
+            <>
+              Bạn có chắc muốn khóa tài khoản{" "}
+              <span className="font-semibold text-gray-900">
+                {actionModal.customer?.fullName}
+              </span>
+              ?
+            </>
+          )}
+          {actionModal.type === "unlock" && (
+            <>
+              Bạn có chắc muốn mở khóa tài khoản{" "}
+              <span className="font-semibold text-gray-900">
+                {actionModal.customer?.fullName}
+              </span>
+              ?
+            </>
+          )}
+          {actionModal.type === "delete" && (
+            <>
+              Bạn có chắc muốn xóa tài khoản{" "}
+              <span className="font-semibold text-gray-900">
+                {actionModal.customer?.fullName}
+              </span>
+              ?
+              <p className="text-sm text-red-600 mt-2 font-medium">
+                ⚠️ Hành động này không thể hoàn tác!
+              </p>
+            </>
+          )}
+        </p>
+      </Modal>
     </div>
   );
 }

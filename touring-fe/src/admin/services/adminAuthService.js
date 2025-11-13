@@ -14,8 +14,11 @@ const adminAuthService = {
     });
     if (result.success) {
       const { accessToken, user } = result.data;
+
+      // Always store in sessionStorage only
       sessionStorage.setItem(STORAGE_KEYS.ADMIN_TOKEN, accessToken);
       sessionStorage.setItem(STORAGE_KEYS.ADMIN_USER, JSON.stringify(user));
+
       return { success: true, admin: user, token: accessToken };
     }
     return { success: false, message: result.message };

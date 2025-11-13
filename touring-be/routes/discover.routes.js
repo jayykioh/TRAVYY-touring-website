@@ -93,9 +93,163 @@ router.post("/parse", verifyToken, async (req, res) => {
     console.error('❌ [Discover] Error:', error.message);
     res.status(500).json({
       ok: false,
-      error: 'INTERNAL_ERROR',
-      message: error.message
+      error: "INTERNAL_ERROR",
+      message: error.message,
     });
+  }
+});
+
+// ========================================
+// POST /api/discover/save-history
+// Save discovery search to user history
+// ========================================
+router.post("/save-history", verifyToken, async (req, res) => {
+  try {
+    const userId = req.userId || req.user?.sub;
+    if (!userId) {
+      return res.status(401).json({ ok: false, message: "Unauthorized" });
+    }
+
+    const { vibes, freeText, parsedPrefs, zoneResults } = req.body;
+
+    if (!vibes && !freeText) {
+      return res
+        .status(400)
+        .json({ ok: false, message: "Missing vibes or freeText" });
+    }
+
+    console.log(
+      "💾 [Save History] User:",
+      userId,
+      "Zones:",
+      zoneResults?.length
+    );
+
+    // Prepare history entry
+    const historyEntry = {
+      vibes: vibes || [],
+      freeText: freeText || "",
+      parsedPrefs: parsedPrefs || {},
+      zoneResults: (zoneResults || []).slice(0, 10).map((z) => ({
+        zoneId: z._id || z.id,
+        zoneName: z.name,
+        matchScore: z.finalScore || z.matchScore || 0,
+        embedScore: z.embedScore || 0,
+        ruleScore: z.ruleScore || 0,
+        ruleReasons: z.ruleReasons || [],
+      })),
+      createdAt: new Date(),
+    };
+
+    // Update user - add to beginning of array and limit to 20 entries
+    await User.findByIdAndUpdate(
+      userId,
+      {
+        $push: {
+          discoveryHistory: {
+            $each: [historyEntry],
+            $position: 0,
+            $slice: 20, // Keep only last 20 searches
+          },
+        },
+      },
+      { new: true }
+    );
+
+    console.log("✅ [Save History] Saved successfully");
+    res.json({ ok: true, message: "History saved" });
+  } catch (error) {
+    console.error("❌ [Save History] Error:", error);
+    res.status(500).json({ ok: false, message: error.message });
+  }
+});
+
+// ========================================
+// GET /api/discover/history
+// Get user's discovery history
+// ========================================
+router.get("/history", verifyToken, async (req, res) => {
+  try {
+    const userId = req.userId || req.user?.sub;
+    if (!userId) {
+      return res.status(401).json({ ok: false, message: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId)
+      .select("discoveryHistory")
+      .populate(
+        "discoveryHistory.zoneResults.zoneId",
+        "id name province heroImg gallery desc tags center poly polyComputed bestTime funActivities tips donts rating"
+      );
+
+    const history = user?.discoveryHistory || [];
+
+    console.log("📜 [Get History] User:", userId, "Entries:", history.length);
+    res.json({ ok: true, history });
+  } catch (error) {
+    console.error("❌ [Get History] Error:", error);
+    res.status(500).json({ ok: false, message: error.message });
+  }
+});
+
+// ========================================
+// DELETE /api/discover/clear-history
+// Delete all history entries
+// ========================================
+router.delete("/clear-history", verifyToken, async (req, res) => {
+  try {
+    const userId = req.userId || req.user?.sub;
+    if (!userId) {
+      return res.status(401).json({ ok: false, message: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ ok: false, message: "User not found" });
+    }
+
+    // Clear all history
+    user.discoveryHistory = [];
+    await user.save();
+
+    console.log("🗑️ [Clear History] User:", userId);
+    res.json({ ok: true, message: "All history deleted" });
+  } catch (error) {
+    console.error("❌ [Delete All History] Error:", error);
+    res.status(500).json({ ok: false, message: error.message });
+  }
+});
+
+// ========================================
+// DELETE /api/discover/history/:historyId
+// Delete a single history entry
+// ========================================
+router.delete("/history/:historyId", verifyToken, async (req, res) => {
+  try {
+    const userId = req.userId || req.user?.sub;
+    if (!userId) {
+      return res.status(401).json({ ok: false, message: "Unauthorized" });
+    }
+
+    const { historyId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ ok: false, message: "User not found" });
+    }
+
+    // Remove the specific history entry
+    user.discoveryHistory = user.discoveryHistory.filter(
+      (entry) => entry._id.toString() !== historyId
+    );
+
+    await user.save();
+
+    console.log("🗑️ [Delete History] User:", userId, "Entry:", historyId);
+    res.json({ ok: true, message: "History entry deleted" });
+  } catch (error) {
+    console.error("❌ [Delete History Entry] Error:", error);
+    res.status(500).json({ ok: false, message: error.message });
   }
 });
 

@@ -1,13 +1,18 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useAuth } from "@/auth/context";
+import { useBehaviorTracking } from "@/hooks/useBehaviorTracking";
 import LocationCard from "@/components/LocationCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function BlogPage() {
   const { slug } = useParams();
+  const { user } = useAuth();
+  const { trackBlogView } = useBehaviorTracking();
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const hasTrackedView = useRef(false);
 
   useEffect(() => {
     setLoading(true);
@@ -21,13 +26,19 @@ export default function BlogPage() {
       .then((data) => {
         console.log("Blog data from API:", data);
         setBlog(data);
+        
+        // ✅ Track blog view immediately when blog loads (simplified - no duration/scroll tracking)
+        if (user?.token && !hasTrackedView.current) {
+          trackBlogView(slug);
+          hasTrackedView.current = true;
+        }
       })
       .catch((err) => {
         console.error("Error fetching blog:", err);
         setError(err.message);
       })
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, user?.token, trackBlogView]);
 
   if (loading) {
     return <BlogSkeleton />;
@@ -64,12 +75,20 @@ export default function BlogPage() {
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-10">
         {/* Description + Map side by side */}
         {(blog.description || (blog.location?.lat && blog.location?.lng)) && (
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Description */}
             {blog.description && (
-              <div className="bg-white rounded-lg p-6 shadow">
+              <div className="bg-white rounded-lg p-6 shadow flex flex-col h-full transition-all duration-500 hover:shadow-xl hover:scale-[1.02] animate-fadeIn">
                 <h2 className="text-2xl font-bold mb-4">Mô tả</h2>
-                <p className="text-gray-700 leading-relaxed">
+                <p
+                  className="text-gray-700 leading-[1.8] flex-1"
+                  style={{
+                    textAlign: "justify",
+                    textJustify: "inter-word",
+                    wordSpacing: "0.05em",
+                    letterSpacing: "0.01em",
+                  }}
+                >
                   {blog.description}
                 </p>
               </div>
@@ -77,19 +96,25 @@ export default function BlogPage() {
 
             {/* Map — dùng LocationCard, bo góc + responsive, fit với card trắng */}
             {blog.location?.lat && blog.location?.lng && (
-              <LocationCard
-                lat={blog.location.lat}
-                lng={blog.location.lng}
-                title="📍 Vị trí"
-                variant="plain"
-              />
+              <div
+                className="flex flex-col h-full animate-fadeIn"
+                style={{ animationDelay: "0.2s" }}
+              >
+                <LocationCard
+                  lat={blog.location.lat}
+                  lng={blog.location.lng}
+                  title="📍 Vị trí"
+                  variant="plain"
+                  className="transition-all duration-500 hover:shadow-xl hover:scale-[1.02] h-full"
+                />
+              </div>
             )}
           </section>
         )}
 
         {/* Vui chơi & Trải nghiệm */}
         {blog.activities?.length > 0 && (
-          <Section title="Vui chơi & Trải nghiệm">
+          <Section title="Vui chơi & Trải nghiệm" delay="0s">
             <CardGrid
               items={blog.activities.map((a) => ({
                 name: a.name,
@@ -103,7 +128,7 @@ export default function BlogPage() {
 
         {/* Điểm tham quan */}
         {blog.sightseeing?.length > 0 && (
-          <Section title="Điểm tham quan">
+          <Section title="Điểm tham quan" delay="0.1s">
             <CardGrid
               items={blog.sightseeing.map((a) => ({
                 name: a.name,
@@ -117,7 +142,7 @@ export default function BlogPage() {
 
         {/* Phương tiện */}
         {blog.transport?.length > 0 && (
-          <Section title="Phương tiện">
+          <Section title="Phương tiện" delay="0.2s">
             <CardGrid
               items={blog.transport.map((a) => ({
                 name: a.name,
@@ -131,7 +156,7 @@ export default function BlogPage() {
 
         {/* Khách sạn */}
         {blog.hotels?.length > 0 && (
-          <Section title="Khách sạn">
+          <Section title="Khách sạn" delay="0.3s">
             <CardGrid
               items={blog.hotels.map((a) => ({
                 name: a.name,
@@ -210,7 +235,10 @@ function BlogSkeleton() {
           <Skeleton className="h-8 w-48 mb-4" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[1, 2, 3, 4].map((item) => (
-              <div key={item} className="flex flex-col bg-gray-50 rounded-lg p-3 space-y-2">
+              <div
+                key={item}
+                className="flex flex-col bg-gray-50 rounded-lg p-3 space-y-2"
+              >
                 <Skeleton className="h-4 w-24" />
                 <Skeleton className="h-5 w-32" />
               </div>
@@ -222,10 +250,7 @@ function BlogSkeleton() {
         <div className="space-y-4">
           <Skeleton className="h-8 w-56 mb-4" />
           {[1, 2, 3].map((faq) => (
-            <div
-              key={faq}
-              className="border rounded-lg p-3 bg-white"
-            >
+            <div key={faq} className="border rounded-lg p-3 bg-white">
               <Skeleton className="h-5 w-3/4 mb-2" />
               <Skeleton className="h-4 w-full" />
             </div>
@@ -238,10 +263,12 @@ function BlogSkeleton() {
 
 /* ----------- Các component phụ ----------- */
 
-function Section({ title, children }) {
+function Section({ title, children, delay = "0s" }) {
   return (
-    <section>
-      <h2 className="text-2xl font-bold mb-4">{title}</h2>
+    <section className="animate-fadeIn" style={{ animationDelay: delay }}>
+      <h2 className="text-2xl font-bold mb-4 pb-2 border-b-2 border-transparent hover:border-blue-600 transition-all duration-300 hover:text-blue-600 inline-block">
+        {title}
+      </h2>
       {children}
     </section>
   );
@@ -253,22 +280,31 @@ function CardGrid({ items }) {
       {items.map((item, idx) => (
         <div
           key={idx}
-          className="rounded-lg shadow hover:shadow-md overflow-hidden bg-white"
+          className="rounded-lg shadow hover:shadow-xl overflow-hidden bg-white transition-all duration-300 hover:scale-105 hover:-translate-y-1 group animate-slideUp flex flex-col h-full"
+          style={{ animationDelay: `${idx * 0.1}s` }}
         >
           {item.img && (
-            <img
-              src={item.img}
-              alt={item.name}
-              className="h-32 w-full object-cover"
-            />
+            <div className="overflow-hidden h-32 flex-shrink-0">
+              <img
+                src={item.img}
+                alt={item.name}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 group-hover:rotate-2"
+              />
+            </div>
           )}
-          <div className="p-3">
-            <h3 className="font-semibold text-gray-800">{item.name}</h3>
+          <div className="p-3 flex flex-col flex-grow">
+            <h3 className="font-semibold text-gray-800 transition-colors duration-300 group-hover:text-blue-600 line-clamp-2 min-h-[2.5rem]">
+              {item.name}
+            </h3>
             {item.price && (
-              <p className="text-sm text-blue-600 font-medium">{item.price}</p>
+              <p className="text-sm text-blue-600 font-medium mt-1">
+                {item.price}
+              </p>
             )}
             {item.description && (
-              <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+              <p className="text-sm text-gray-600 mt-1 line-clamp-2 flex-grow">
+                {item.description}
+              </p>
             )}
           </div>
         </div>
@@ -286,15 +322,22 @@ function QuickInfo({ info }) {
   ].filter((i) => i.value);
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-md">
-      <h2 className="text-2xl font-bold text-gray-900 mb-4">Thông tin nhanh</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="bg-white rounded-lg p-6 shadow-md transition-all duration-500 hover:shadow-xl animate-fadeIn">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6 pb-2 border-b-2 border-blue-100">
+        Thông tin nhanh
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {infoList.map((item, idx) => (
-          <div key={idx} className="flex flex-col bg-gray-50 rounded-lg p-3">
-            <span className="text-sm font-semibold text-gray-600">
-              {item.icon} {item.label}
+          <div
+            key={idx}
+            className="flex flex-col bg-gradient-to-br from-gray-50 to-blue-50 rounded-lg p-4 transition-all duration-300 hover:from-blue-50 hover:to-blue-100 hover:scale-105 hover:shadow-md animate-slideUp border border-gray-100"
+            style={{ animationDelay: `${idx * 0.1}s` }}
+          >
+            <span className="text-2xl mb-2">{item.icon}</span>
+            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">
+              {item.label}
             </span>
-            <span className="text-gray-800">{item.value}</span>
+            <span className="text-gray-800 font-medium">{item.value}</span>
           </div>
         ))}
       </div>
@@ -304,19 +347,44 @@ function QuickInfo({ info }) {
 
 function FAQ({ items }) {
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold">Câu hỏi thường gặp</h2>
-      {items.map((faq, idx) => (
-        <details
-          key={idx}
-          className="border rounded-lg p-3 bg-white hover:shadow"
-        >
-          <summary className="cursor-pointer font-semibold text-gray-700">
-            {faq.q}
-          </summary>
-          <p className="mt-2 text-gray-600">{faq.a}</p>
-        </details>
-      ))}
+    <div className="space-y-4 animate-fadeIn bg-white rounded-lg p-6 shadow-md">
+      <h2 className="text-2xl font-bold mb-6 pb-2 border-b-2 border-blue-100">
+        Câu hỏi thường gặp
+      </h2>
+      <div className="space-y-3">
+        {items.map((faq, idx) => (
+          <details
+            key={idx}
+            className="border border-gray-200 rounded-lg p-4 bg-gray-50 hover:bg-white hover:shadow-md transition-all duration-300 hover:border-blue-300 animate-slideUp group"
+            style={{ animationDelay: `${idx * 0.1}s` }}
+          >
+            <summary className="cursor-pointer font-semibold text-gray-700 hover:text-blue-600 transition-colors duration-300 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <span className="text-blue-600 font-bold">Q:</span>
+                {faq.q}
+              </span>
+              <svg
+                className="w-5 h-5 transition-transform duration-300 group-open:rotate-180 flex-shrink-0 ml-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </summary>
+            <p className="mt-3 text-gray-600 animate-fadeIn pl-6 border-l-2 border-blue-200">
+              <span className="text-blue-600 font-bold">A:</span> {faq.a}
+            </p>
+          </details>
+        ))}
+      </div>
     </div>
   );
 }
+
+/* ----------- Helper functions removed - tracking now handled by backend ----------- */

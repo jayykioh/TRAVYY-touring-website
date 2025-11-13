@@ -102,6 +102,7 @@ async function hybridSearch(options = {}) {
   console.log('📊 [EmbedClient] Vector comparison details:', {
     freeTextFull: free_text || '(empty)',
     freeTextLength: free_text?.length || 0,
+    
     vibesArray: vibes,
     boostVibes: boost_vibes,
     topK: top_k,

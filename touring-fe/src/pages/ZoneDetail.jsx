@@ -328,8 +328,8 @@ export default function ZoneDetail() {
             <button
               onClick={() => {
                 const discoverData = location.state?.data || null;
-                if (discoverData) navigate("/discover/results", { state: { data: discoverData } });
-                else navigate("/discover/results");
+                if (discoverData) navigate("/discover-results", { state: { data: discoverData } });
+                else navigate("/discover-results");
               }}
               className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 text-xs font-semibold text-slate-700 border border-white/40 shadow-sm hover:bg-white"
               aria-label="Quay lại"
