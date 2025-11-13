@@ -12,7 +12,8 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // Helper function to refresh token
 const refreshAdminToken = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    // ✅ Fix the refresh endpoint path
+    const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
       method: "POST",
       credentials: "include", // Send cookies
     });
@@ -20,7 +21,8 @@ const refreshAdminToken = async () => {
     if (response.ok) {
       const data = await response.json();
       const newToken = data.accessToken;
-      sessionStorage.setItem("admin_token", newToken);
+      // ✅ Use localStorage instead of sessionStorage
+      localStorage.setItem("admin_token", newToken);
       return newToken;
     }
     return null;
@@ -32,7 +34,8 @@ const refreshAdminToken = async () => {
 
 // Helper function to make authenticated request with auto-refresh
 const fetchWithAuth = async (url, options = {}) => {
-  let token = sessionStorage.getItem("admin_token");
+  // ✅ Use localStorage instead of sessionStorage
+  let token = localStorage.getItem("admin_token");
 
   // First attempt
   let response = await fetch(url, {
@@ -59,9 +62,9 @@ const fetchWithAuth = async (url, options = {}) => {
       });
     } else {
       console.error("Failed to refresh token, redirecting to login...");
-      // Clear session and redirect to login
-      sessionStorage.removeItem("admin_token");
-      sessionStorage.removeItem("admin_user");
+      // ✅ Clear localStorage and redirect to login
+      localStorage.removeItem("admin_token");
+      localStorage.removeItem("admin_user");
       window.location.href = "/admin/login";
       throw new Error("Authentication failed");
     }

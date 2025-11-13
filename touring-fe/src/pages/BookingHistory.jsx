@@ -92,10 +92,11 @@ export default function BookingHistory() {
         const data = await response.json();
         const refunds = data.data || [];
 
-        // Map refunds to bookings (only active refunds, not cancelled/rejected)
+        // Map refunds to bookings
         refunds.forEach((refund) => {
-          // Skip cancelled and rejected refunds - they should not show as "in progress"
-          if (refund.status === "cancelled" || refund.status === "rejected") {
+          // Skip only cancelled refunds (user cancelled themselves)
+          // Keep rejected (can request again) and completed (show success status)
+          if (refund.status === "cancelled") {
             return;
           }
 
@@ -226,13 +227,13 @@ export default function BookingHistory() {
         };
       case "completed":
         return {
-          text: "Hoàn tiền thành công",
+          text: "Request đã phản hồi thành công",
           className: "bg-teal-50 text-teal-700 ring-1 ring-inset ring-teal-200",
           icon: "💰",
         };
       case "rejected":
         return {
-          text: "Từ chối",
+          text: "Request bị từ chối",
           className: "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200",
           icon: "❌",
         };
@@ -485,18 +486,23 @@ export default function BookingHistory() {
                               )}
 
                             {/* Request Refund Button for Paid Bookings */}
-                            {booking.status === "paid" && !refundStatus && (
-                              <Link
-                                to={`/refund-request/${booking._id}`}
-                                className="px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
-                                title="Yêu cầu hoàn tiền"
-                              >
-                                <RefreshCw className="w-3.5 h-3.5" />
-                                Yêu Cầu Hoàn Tiền
-                              </Link>
-                            )}
+                            {/* Show if: no refund OR refund was rejected (can request again) */}
+                            {booking.status === "paid" &&
+                              (!refundStatus ||
+                                refundStatus.status === "rejected") && (
+                                <Link
+                                  to={`/refund-request/${booking._id}`}
+                                  className="px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
+                                  title="Yêu cầu hoàn tiền"
+                                >
+                                  <RefreshCw className="w-3.5 h-3.5" />
+                                  {refundStatus?.status === "rejected"
+                                    ? "Tạo Request Mới"
+                                    : "Yêu Cầu Hoàn Tiền"}
+                                </Link>
+                              )}
 
-                            {/* Show Refund in Progress for bookings with active refund */}
+                            {/* Show Refund in Progress for active refunds */}
                             {refundStatus &&
                               refundStatus.status !== "completed" &&
                               refundStatus.status !== "rejected" && (
@@ -510,17 +516,31 @@ export default function BookingHistory() {
                                 </Link>
                               )}
 
-                            {/* Show View Refund for completed/rejected refunds */}
+                            {/* Show View Refund for completed refunds (no new request allowed) */}
+                            {/* Also show for bookings with status "refunded" */}
+                            {(refundStatus &&
+                              refundStatus.status === "completed") ||
+                            booking.status === "refunded" ? (
+                              <Link
+                                to="/profile/refunds"
+                                className="px-3 py-1.5 rounded-md bg-teal-500 hover:bg-teal-600 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
+                                title="Xem chi tiết refund đã hoàn tất"
+                              >
+                                <Receipt className="w-3.5 h-3.5" />
+                                Xem Chi Tiết
+                              </Link>
+                            ) : null}
+
+                            {/* Show View Refund for rejected (with new request option shown above) */}
                             {refundStatus &&
-                              (refundStatus.status === "completed" ||
-                                refundStatus.status === "rejected") && (
+                              refundStatus.status === "rejected" && (
                                 <Link
                                   to="/profile/refunds"
                                   className="px-3 py-1.5 rounded-md bg-gray-500 hover:bg-gray-600 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
-                                  title="Xem lịch sử refund"
+                                  title="Xem lý do từ chối"
                                 >
                                   <Receipt className="w-3.5 h-3.5" />
-                                  Xem Refund
+                                  Xem Lý Do
                                 </Link>
                               )}
 

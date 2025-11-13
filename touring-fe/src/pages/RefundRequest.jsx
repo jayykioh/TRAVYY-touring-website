@@ -182,6 +182,7 @@ const RefundRequest = () => {
     console.log("Booking ID from params:", bookingId);
     console.log("Booking object:", booking);
     console.log("Booking._id:", booking?._id);
+    console.log("Booking.id:", booking?.id);
 
     try {
       const token = user?.token;
@@ -199,9 +200,15 @@ const RefundRequest = () => {
           ? `${API_URL}/api/refunds/pre-trip`
           : `${API_URL}/api/refunds/post-trip`;
 
-      // Use booking._id if available, otherwise use bookingId from params
-      const actualBookingId = booking?._id || bookingId;
+      // ✅ Try multiple ways to get booking ID
+      const actualBookingId = booking?._id || booking?.id || bookingId;
       console.log("Actual booking ID to send:", actualBookingId);
+
+      if (!actualBookingId) {
+        console.error("❌ No booking ID found!");
+        toast.error("Không tìm thấy booking ID");
+        return;
+      }
 
       const payload =
         refundType === "pre_trip_cancellation"
@@ -332,7 +339,7 @@ const RefundRequest = () => {
               <p className="text-gray-600 mt-1 flex items-center gap-2">
                 <span className="text-sm font-medium">Booking Reference:</span>
                 <span className="font-semibold text-[#007980]">
-                  {booking.orderRef}
+                  {booking.payment?.orderId || booking.orderRef || booking._id}
                 </span>
               </p>
             </div>
@@ -975,7 +982,9 @@ const RefundRequest = () => {
         <ConfirmModal
           isOpen={showConfirmModal}
           title="Xác nhận gửi yêu cầu hoàn tiền"
-          message={`Bạn có chắc chắn muốn gửi yêu cầu hoàn tiền cho booking ${booking?.orderRef}? Sau khi gửi, yêu cầu sẽ được chuyển đến bộ phận xem xét.`}
+          message={`Bạn có chắc chắn muốn gửi yêu cầu hoàn tiền cho booking ${
+            booking.payment?.orderId || booking.orderRef || booking._id
+          }? Sau khi gửi, yêu cầu sẽ được chuyển đến bộ phận xem xét.`}
           confirmText="Gửi Yêu Cầu"
           cancelText="Hủy"
           confirmStyle="primary"
