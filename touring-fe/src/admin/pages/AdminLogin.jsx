@@ -8,11 +8,14 @@ export default function AdminLogin() {
   const { login } = useAdminAuth();
 
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+    email: localStorage.getItem("adminRememberEmail") || "",
+    password: localStorage.getItem("adminRememberPassword") || "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(
+    !!localStorage.getItem("adminRememberEmail") &&
+      !!localStorage.getItem("adminRememberPassword")
+  );
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -51,7 +54,13 @@ export default function AdminLogin() {
 
       if (result.success) {
         if (rememberMe) {
-          localStorage.setItem("adminRemember", formData.email);
+          localStorage.setItem("adminRememberEmail", formData.email);
+          localStorage.setItem("adminRememberPassword", formData.password);
+          localStorage.setItem("adminRememberMe", "true");
+        } else {
+          localStorage.removeItem("adminRememberEmail");
+          localStorage.removeItem("adminRememberPassword");
+          localStorage.removeItem("adminRememberMe");
         }
 
         console.log("Login successful, navigating...");

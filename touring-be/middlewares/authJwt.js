@@ -43,7 +43,14 @@ const verifyToken = async (req, res, next) => {
 
       const verified = verifyAccess(accessToken);
       req.user = verified;
-      console.log("   ✅ Access token valid:", req.user.sub);
+      req.userId = verified.sub || verified.id || verified._id;
+      req.userRole = verified.role;
+      console.log(
+        "   ✅ Access token valid:",
+        req.user.sub,
+        "| Role:",
+        req.userRole
+      );
       return next();
     } catch (error) {
       console.log("   ⚠️ Access token expired/invalid:", error.message);
@@ -167,7 +174,19 @@ const verifyAdminToken = (req, res, next) => {
   }
 };
 
+// Middleware to check if authenticated user is admin (use after verifyToken)
+const isAdmin = (req, res, next) => {
+  if (!req.userRole || req.userRole !== "Admin") {
+    return res.status(403).json({
+      success: false,
+      message: "Admin access required",
+    });
+  }
+  next();
+};
+
 module.exports = verifyToken;
 module.exports.verifyToken = verifyToken;
 module.exports.optionalAuth = optionalAuth;
 module.exports.verifyAdminToken = verifyAdminToken;
+module.exports.isAdmin = isAdmin;

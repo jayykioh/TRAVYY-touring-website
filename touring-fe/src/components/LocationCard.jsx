@@ -2,13 +2,20 @@
 import React from "react";
 import { MapPin } from "lucide-react";
 
-export default function LocationCard({ lat, lng, title = "Địa điểm" }) {
+export default function LocationCard({
+  lat,
+  lng,
+  title = "Địa điểm",
+  className = "",
+}) {
   const hasCoord = Number.isFinite(lat) && Number.isFinite(lng);
 
   return (
-    <div className="rounded-2xl overflow-hidden backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
+    <div
+      className={`rounded-2xl overflow-hidden backdrop-blur-xl bg-white/60 border border-white/50 shadow-[0_8px_30px_rgba(0,0,0,0.06)] flex flex-col h-full ${className}`}
+    >
       {/* Header */}
-      <div className="px-6 pt-5 pb-3 flex items-center justify-between">
+      <div className="px-6 pt-5 pb-3 flex items-center justify-between flex-shrink-0">
         <h2 className="text-xl font-bold text-gray-900">{title}</h2>
         {hasCoord && (
           <a
@@ -23,7 +30,7 @@ export default function LocationCard({ lat, lng, title = "Địa điểm" }) {
       </div>
 
       {/* Map body */}
-      <div className="relative w-full aspect-[4/3] sm:aspect-video lg:aspect-[21/9] bg-gray-100">
+      <div className="relative w-full flex-1 bg-gray-100 min-h-[300px]">
         {hasCoord ? (
           <iframe
             title="Blog location"

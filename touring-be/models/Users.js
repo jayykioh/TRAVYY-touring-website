@@ -65,7 +65,26 @@ const userSchema = new mongoose.Schema(
         },
       },
     ],
-    // 🔐 Account status management
+    // � Discovery history - track user's vibe searches
+    discoveryHistory: [
+      {
+        vibes: [String], // Selected vibes (e.g., ["beach", "food", "sunset"])
+        freeText: String, // Free text input
+        parsedPrefs: mongoose.Schema.Types.Mixed, // Parsed preferences from AI
+        zoneResults: [
+          {
+            zoneId: { type: mongoose.Schema.Types.ObjectId, ref: "Zone" },
+            zoneName: String,
+            matchScore: Number,
+            embedScore: Number,
+            ruleScore: Number,
+            ruleReasons: [String],
+          },
+        ],
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    // �🔐 Account status management
     accountStatus: {
       type: String,
       enum: ["active", "banned", "inactive", "pending"],

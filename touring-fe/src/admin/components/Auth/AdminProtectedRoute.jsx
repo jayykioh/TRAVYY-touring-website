@@ -6,6 +6,11 @@ import { useAdminAuth } from "../../context/AdminAuthContext";
 const AdminProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAdminAuth();
 
+  console.log("[AdminProtectedRoute] Auth state:", {
+    isAuthenticated,
+    loading,
+  });
+
   // Show loading state
   if (loading) {
     return (
@@ -20,9 +25,13 @@ const AdminProtectedRoute = ({ children }) => {
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
+    console.log(
+      "[AdminProtectedRoute] Not authenticated, redirecting to login"
+    );
     return <Navigate to="/admin/login" replace />;
   }
 
+  console.log("[AdminProtectedRoute] Authenticated, rendering children");
   return children;
 };
 

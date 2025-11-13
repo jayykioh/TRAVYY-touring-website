@@ -39,8 +39,10 @@ import PaymentCallback from "./pages/PaymentCallback";
 import PreferencesPage from "./pages/ViDoi";
 import DiscoverResults from "./pages/DiscoverResults";
 import ZoneDetail from "./pages/ZoneDetail";
-import ItineraryView  from "./pages/ItineraryView";
+import ItineraryView from "./pages/ItineraryView";
 import ItineraryResult from "./pages/ItineraryResult"; // ✅ ADD THIS IMPORT
+import RefundRequest from "./pages/RefundRequest";
+import UserRefundList from "./components/UserRefundList";
 // import ItineraryView from "./pages/ItineraryView";
 
 // ✅ THÊM: Import Admin components
@@ -65,8 +67,12 @@ export default function App() {
   const { booting, isAuth, user, bannedInfo } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-           useEffect(() => {
-    if (isAuth && user?.role === "TourGuide" && !location.pathname.startsWith("/guide")) {
+  useEffect(() => {
+    if (
+      isAuth &&
+      user?.role === "TourGuide" &&
+      !location.pathname.startsWith("/guide")
+    ) {
       navigate("/guide", { replace: true });
     }
   }, [isAuth, user?.role, location.pathname, navigate]);
@@ -142,9 +148,19 @@ export default function App() {
             <Route path="vouchers" element={<ProfilePromotions />} />
             <Route path="favorites" element={<WishlistPage />} />
             <Route path="booking-history" element={<BookingHistory />} />
+            <Route path="refunds" element={<UserRefundList />} />
             <Route path="change-password" element={<ChangePassword />} />
             <Route path="security" element={<ProfileSecurity />} />
           </Route>
+          {/* Refund Request Route */}
+          <Route
+            path="/refund-request/:bookingId"
+            element={
+              <ProtectedRoute>
+                <RefundRequest />
+              </ProtectedRoute>
+            }
+          />
         </Route>
         <Route
           path="/ai-tour-creator"
@@ -162,10 +178,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/itinerary" element={
-          <ProtectedRoute>  
-          <ItineraryView />
-          </ProtectedRoute>} />
+        <Route
+          path="/itinerary"
+          element={
+            <ProtectedRoute>
+              <ItineraryView />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/discover/results"
           element={
@@ -174,13 +194,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        
-<Route
-  path="/zone/:zoneId"
-  element={
-      <ZoneDetail />
-  }
-/>
+
+        <Route path="/zone/:zoneId" element={<ZoneDetail />} />
         {/* ✅ ADD: Itinerary routes */}
         <Route
           path="/itinerary"
@@ -190,7 +205,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        
+
         {/* ✅ ADD: Result page route */}
         <Route
           path="/itinerary/result/:id"
