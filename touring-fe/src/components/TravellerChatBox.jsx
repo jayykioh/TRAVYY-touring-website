@@ -178,6 +178,29 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
 
   return (
     <>
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(-20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+        .animate-slideIn {
+          animation: slideIn 0.3s ease-out;
+        }
+        .animate-pulse-custom {
+          animation: pulse 2s infinite;
+        }
+      `}</style>
       <div className="flex flex-col h-full bg-white dark:bg-gray-900 overflow-hidden rounded-lg shadow-xl">
       {/* Header - Minimal since popup already has header */}
       <div className="p-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md">
@@ -295,7 +318,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
               return (
                 <div
                   key={msg._id}
-                  className={`flex gap-2 group ${isMyMessage ? 'justify-end' : 'justify-start'}`}
+                  className={`flex gap-2 group ${isMyMessage ? 'justify-end' : 'justify-start'} animate-fadeIn`}
                   role="article"
                   aria-label={`Message from ${senderName}`}
                 >
@@ -436,7 +459,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
             
             {/* Typing indicator */}
             {typingUsers.size > 0 && (
-              <div className="flex gap-2 justify-start" aria-label="Someone is typing">
+              <div className="flex gap-2 justify-start animate-fadeIn" aria-label="Someone is typing">
                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow-md">
                   {guideName?.charAt(0).toUpperCase() || 'G'}
                 </div>

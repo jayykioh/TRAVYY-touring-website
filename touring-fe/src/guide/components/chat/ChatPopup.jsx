@@ -21,7 +21,15 @@ const ChatPopup = ({ isOpen, onClose }) => {
       // Debug: log auth state before API call
       console.log('[ChatPopup] fetchActiveRequests - auth context:', { user: user?.id, hasWithAuth: !!withAuth });
       
-      const response = await withAuth('/api/guide/custom-requests?status=accepted,negotiating,agreement_pending');
+      // Check if user is a guide
+      const isGuide = user?.role === 'TourGuide';
+      const endpoint = isGuide 
+        ? '/api/guide/custom-requests?status=accepted,negotiating,agreement_pending'
+        : '/api/tourRequest/?status=accepted,negotiating,agreement_pending';
+      
+      console.log('[ChatPopup] Fetching from endpoint:', endpoint, 'isGuide:', isGuide);
+      
+      const response = await withAuth(endpoint);
       
       console.log('[ChatPopup] API response:', response);
       
@@ -220,7 +228,11 @@ const ChatPopup = ({ isOpen, onClose }) => {
             )}
             <MessageCircle className="w-5 h-5" />
             <h3 className="font-semibold">
-              {selectedRequest ? selectedRequest.userId?.name || 'Chat' : 'Chat với Khách hàng'}
+              {selectedRequest ? (
+                user?.role === 'TourGuide' 
+                  ? (selectedRequest.userId?.name || 'Khách hàng')
+                  : (selectedRequest.guideId?.name || 'Hướng dẫn viên')
+              ) : (user?.role === 'TourGuide' ? 'Chat với Khách hàng' : 'Chat với Hướng dẫn viên')}
             </h3>
             {!selectedRequest && totalUnread > 0 && (
               <div className="flex items-center gap-1 bg-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold animate-pulse">
@@ -243,7 +255,11 @@ const ChatPopup = ({ isOpen, onClose }) => {
           <div className="flex-1 overflow-hidden">
             <ChatBox
               requestId={selectedRequest._id}
-              customerName={selectedRequest.userId?.name || 'Khách hàng'}
+              customerName={
+                user?.role === 'TourGuide' 
+                  ? (selectedRequest.userId?.name || 'Khách hàng')
+                  : (selectedRequest.guideId?.name || 'Hướng dẫn viên')
+              }
               tourInfo={{
                 tourName: selectedRequest.tourDetails?.zoneName || 'Tour',
                 name: selectedRequest.tourDetails?.zoneName,
@@ -266,7 +282,12 @@ const ChatPopup = ({ isOpen, onClose }) => {
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
                 <MessageCircle className="w-16 h-16 mb-4 opacity-50" />
                 <p className="text-center">Chưa có yêu cầu tour nào đang hoạt động</p>
-                <p className="text-sm text-center mt-2">Chấp nhận yêu cầu để bắt đầu chat với khách hàng</p>
+                <p className="text-sm text-center mt-2">
+                  {user?.role === 'TourGuide' 
+                    ? 'Chấp nhận yêu cầu để bắt đầu chat với khách hàng'
+                    : 'Tạo yêu cầu tour để bắt đầu chat với hướng dẫn viên'
+                  }
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -291,7 +312,10 @@ const ChatPopup = ({ isOpen, onClose }) => {
                             {request.tourDetails?.zoneName || 'Tour Request'}
                           </h4>
                           <p className="text-sm text-gray-600 mt-1">
-                            {request.userId?.name || 'Khách hàng'}
+                            {user?.role === 'TourGuide' 
+                              ? (request.userId?.name || 'Khách hàng')
+                              : (request.guideId?.name || 'Hướng dẫn viên')
+                            }
                           </p>
                         </div>
                         {requestUnread > 0 && (

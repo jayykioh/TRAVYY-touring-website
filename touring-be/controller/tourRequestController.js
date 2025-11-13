@@ -274,7 +274,12 @@ exports.getUserTourRequests = async (req, res) => {
 
     const query = { userId };
     if (status) {
-      query.status = status;
+      const statusList = status.split(',').map(s => s.trim());
+      if (statusList.length === 1) {
+        query.status = statusList[0];
+      } else {
+        query.status = { $in: statusList };
+      }
     }
 
     const skip = (page - 1) * limit;
