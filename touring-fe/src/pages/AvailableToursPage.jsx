@@ -14,13 +14,7 @@ export default function ToursPage() {
   const [favorites, setFavorites] = useState(new Set());
   const { user } = useAuth();
 
-  const categories = [
-    "Tất cả",
-    "Miền Bắc",
-    "Miền Trung",
-    "Miền Nam",
-    "Nước ngoài",
-  ];
+  const categories = ["Tất cả", "Miền Bắc", "Miền Trung", "Miền Nam"];
 
   // ✅ Load wishlist từ server
   useEffect(() => {

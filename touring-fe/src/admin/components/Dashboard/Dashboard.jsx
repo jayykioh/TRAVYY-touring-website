@@ -22,6 +22,7 @@ import {
   recentTours,
   availableGuides,
 } from "../../data/mockData";
+import { useAdminAuth } from "../../context/AdminAuthContext";
 
 const Dashboard = () => {
   const [revenueChartData, setRevenueChartData] = useState(revenueData);
@@ -165,14 +166,16 @@ const Dashboard = () => {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      alert("Báo cáo CSV đã được xuất thành công!");
+      toast.success("Báo cáo CSV đã được xuất thành công!");
     } catch (error) {
       console.error("Error exporting report:", error);
-      alert("Có lỗi khi xuất báo cáo. Vui lòng thử lại!");
+      toast.error("Có lỗi khi xuất báo cáo. Vui lòng thử lại!");
     }
   };
 
   // Fetch dashboard summary stats
+  const { token, isAuthenticated, loading: authLoading } = useAdminAuth();
+
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
@@ -251,8 +254,11 @@ const Dashboard = () => {
       }
     };
 
-    fetchDashboardStats();
-  }, []);
+    // Only fetch if authenticated (token present)
+    if (!authLoading && isAuthenticated) {
+      fetchDashboardStats();
+    }
+  }, [isAuthenticated, authLoading]);
 
   // Fetch revenue data từ API
   useEffect(() => {
@@ -275,8 +281,10 @@ const Dashboard = () => {
       }
     };
 
-    fetchRevenueData();
-  }, [selectedYear]);
+    if (!authLoading && isAuthenticated) {
+      fetchRevenueData();
+    }
+  }, [selectedYear, isAuthenticated, authLoading]);
 
   // Fetch category data từ API
   useEffect(() => {
@@ -296,8 +304,10 @@ const Dashboard = () => {
       }
     };
 
-    fetchCategoryData();
-  }, []);
+    if (!authLoading && isAuthenticated) {
+      fetchCategoryData();
+    }
+  }, [isAuthenticated, authLoading]);
 
   // Fetch user metrics data từ API
   useEffect(() => {
@@ -365,8 +375,10 @@ const Dashboard = () => {
       }
     };
 
-    fetchUserMetrics();
-  }, []);
+    if (!authLoading && isAuthenticated) {
+      fetchUserMetrics();
+    }
+  }, [isAuthenticated, authLoading]);
 
   // Fetch NEW dashboard charts data
   useEffect(() => {
@@ -401,8 +413,10 @@ const Dashboard = () => {
       }
     };
 
-    fetchChartData();
-  }, []);
+    if (!authLoading && isAuthenticated) {
+      fetchChartData();
+    }
+  }, [isAuthenticated, authLoading]);
 
   return (
     <div className="min-h-screen bg-gray-50">

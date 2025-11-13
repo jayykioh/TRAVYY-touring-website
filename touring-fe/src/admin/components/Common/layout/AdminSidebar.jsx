@@ -11,6 +11,7 @@ import {
   Users,
   LogOut,
   Tag,
+  RefreshCw,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../../../context/AdminAuthContext";
@@ -71,6 +72,12 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
       label: "Promotions",
       icon: Tag,
       path: "/admin/promotions",
+    },
+    {
+      id: "refunds",
+      label: "Refund Management",
+      icon: RefreshCw,
+      path: "/admin/refunds",
     },
     {
       id: "settings",

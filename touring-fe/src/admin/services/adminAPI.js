@@ -1,7 +1,7 @@
 // services/adminAPI.js
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:4000/api";
-const USE_MOCK_DATA = true; // Đổi thành false khi backend ready
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+// Toggle to use real backend vs mock data. Set to false to fetch real data from the API.
+const USE_MOCK_DATA = false; // was true during development
 
 // Import mock data
 import { mockTours, mockBookings, mockGuides } from "../data/mockData";
@@ -12,7 +12,8 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // Helper function to refresh token
 const refreshAdminToken = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    // ✅ Fix the refresh endpoint path
+    const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
       method: "POST",
       credentials: "include", // Send cookies
     });
@@ -20,7 +21,8 @@ const refreshAdminToken = async () => {
     if (response.ok) {
       const data = await response.json();
       const newToken = data.accessToken;
-      sessionStorage.setItem("admin_token", newToken);
+      // ✅ Use localStorage instead of sessionStorage
+      localStorage.setItem("admin_token", newToken);
       return newToken;
     }
     return null;
@@ -32,7 +34,8 @@ const refreshAdminToken = async () => {
 
 // Helper function to make authenticated request with auto-refresh
 const fetchWithAuth = async (url, options = {}) => {
-  let token = sessionStorage.getItem("admin_token");
+  // ✅ Use localStorage instead of sessionStorage
+  let token = localStorage.getItem("admin_token");
 
   // First attempt
   let response = await fetch(url, {
@@ -59,9 +62,9 @@ const fetchWithAuth = async (url, options = {}) => {
       });
     } else {
       console.error("Failed to refresh token, redirecting to login...");
-      // Clear session and redirect to login
-      sessionStorage.removeItem("admin_token");
-      sessionStorage.removeItem("admin_user");
+      // ✅ Clear localStorage and redirect to login
+      localStorage.removeItem("admin_token");
+      localStorage.removeItem("admin_user");
       window.location.href = "/admin/login";
       throw new Error("Authentication failed");
     }
@@ -349,7 +352,7 @@ export const adminAPI = {
   getRevenueStats: async (year) => {
     // Không dùng mock data cho stats, luôn fetch từ backend
     const response = await fetchWithAuth(
-      `${API_BASE_URL}/admin/revenue-stats?year=${
+      `${API_BASE_URL}/api/admin/revenue-stats?year=${
         year || new Date().getFullYear()
       }`
     );
@@ -358,47 +361,51 @@ export const adminAPI = {
 
   getCategoryStats: async () => {
     const response = await fetchWithAuth(
-      `${API_BASE_URL}/admin/category-stats`
+      `${API_BASE_URL}/api/admin/category-stats`
     );
     return response.json();
   },
 
   getDashboardStats: async () => {
     const response = await fetchWithAuth(
-      `${API_BASE_URL}/admin/dashboard-stats`
+      `${API_BASE_URL}/api/admin/dashboard-stats`
     );
     return response.json();
   },
 
   getUserMetrics: async () => {
-    const response = await fetchWithAuth(`${API_BASE_URL}/admin/user-metrics`);
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/api/admin/user-metrics`
+    );
     return response.json();
   },
 
   // ==================== NEW DASHBOARD STATS ====================
   getBookingTrends: async () => {
     const response = await fetchWithAuth(
-      `${API_BASE_URL}/admin/booking-trends`
+      `${API_BASE_URL}/api/admin/booking-trends`
     );
     return response.json();
   },
 
   getToursByRegion: async () => {
     const response = await fetchWithAuth(
-      `${API_BASE_URL}/admin/tours-by-region`
+      `${API_BASE_URL}/api/admin/tours-by-region`
     );
     return response.json();
   },
 
   getAgeDistribution: async () => {
     const response = await fetchWithAuth(
-      `${API_BASE_URL}/admin/age-distribution`
+      `${API_BASE_URL}/api/admin/age-distribution`
     );
     return response.json();
   },
 
   getTopTravelers: async () => {
-    const response = await fetchWithAuth(`${API_BASE_URL}/admin/top-travelers`);
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/api/admin/top-travelers`
+    );
     return response.json();
   },
 };

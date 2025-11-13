@@ -13,15 +13,33 @@ export const AdminAuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = () => {
       try {
+        console.log("[AdminAuthContext] Initializing auth...");
         const authenticated = adminAuthService.isAuthenticated();
-        setIsAuthenticated(authenticated);
-        
+        console.log("[AdminAuthContext] isAuthenticated:", authenticated);
+
         if (authenticated) {
           const currentAdmin = adminAuthService.getCurrentAdmin();
-          const storedToken = sessionStorage.getItem("admin_token");
-          setAdmin(currentAdmin);
-          setToken(storedToken);
+          const storedToken = localStorage.getItem("admin_token");
+          console.log("[AdminAuthContext] Setting admin:", currentAdmin);
+          console.log(
+            "[AdminAuthContext] Setting token:",
+            storedToken ? "exists" : "null"
+          );
+
+          // ✅ Validate admin role
+          if (currentAdmin?.role !== "Admin") {
+            console.log("[AdminAuthContext] User is not Admin, clearing auth");
+            adminAuthService.logout();
+            setIsAuthenticated(false);
+            setAdmin(null);
+            setToken(null);
+          } else {
+            setIsAuthenticated(true);
+            setAdmin(currentAdmin);
+            setToken(storedToken);
+          }
         } else {
+          setIsAuthenticated(false);
           setAdmin(null);
           setToken(null);
         }
@@ -33,23 +51,33 @@ export const AdminAuthProvider = ({ children }) => {
       } finally {
         setLoading(false);
       }
-    };
-
-    // Initialize auth on mount
+    }; // Initialize auth on mount
     initAuth();
 
     // Also check auth state when window regains focus
     // (in case user opens another tab, logs out, then returns to this tab)
     const handleFocus = () => {
       const authenticated = adminAuthService.isAuthenticated();
-      setIsAuthenticated(authenticated);
-      
-      if (authenticated && !admin) {
+
+      if (authenticated) {
         const currentAdmin = adminAuthService.getCurrentAdmin();
-        const storedToken = sessionStorage.getItem("admin_token");
-        setAdmin(currentAdmin);
-        setToken(storedToken);
-      } else if (!authenticated && admin) {
+        // ✅ Validate admin role
+        if (currentAdmin?.role !== "Admin") {
+          console.log(
+            "[AdminAuthContext] Non-admin detected on focus, clearing auth"
+          );
+          adminAuthService.logout();
+          setIsAuthenticated(false);
+          setAdmin(null);
+          setToken(null);
+        } else if (!admin) {
+          const storedToken = localStorage.getItem("admin_token");
+          setIsAuthenticated(true);
+          setAdmin(currentAdmin);
+          setToken(storedToken);
+        }
+      } else if (admin) {
+        setIsAuthenticated(false);
         setAdmin(null);
         setToken(null);
       }
@@ -57,23 +85,28 @@ export const AdminAuthProvider = ({ children }) => {
 
     // Check auth state when page visibility changes
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         handleFocus();
       }
     };
 
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (email, password) => {
+    console.log("[AdminAuthContext] Login attempt for:", email);
     const result = await adminAuthService.login(email, password);
+    console.log("[AdminAuthContext] Login result:", result);
     if (result.success) {
+      console.log(
+        "[AdminAuthContext] Setting admin state after successful login"
+      );
       setAdmin(result.admin);
       setToken(result.token);
       setIsAuthenticated(true);
@@ -90,7 +123,7 @@ export const AdminAuthProvider = ({ children }) => {
 
   const updateAdmin = (updatedAdmin) => {
     setAdmin(updatedAdmin);
-    sessionStorage.setItem("admin_user", JSON.stringify(updatedAdmin));
+    localStorage.setItem("admin_user", JSON.stringify(updatedAdmin));
   };
 
   const value = {

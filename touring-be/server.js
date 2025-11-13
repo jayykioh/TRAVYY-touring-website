@@ -26,6 +26,8 @@ const locationRoutes = require("./routes/location.routes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const promotionRoutes = require("./routes/promotion.routes");
+const refundRoutes = require("./routes/refund.routes");
+const { setupRefundScheduler } = require("./utils/refundScheduler");
 const app = express();
 const isProd = process.env.NODE_ENV === "production";
 const MONGO_URI =
@@ -67,8 +69,15 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["Content-Type", "Cross-Origin-Resource-Policy"],
   })
 );
+
+// Add Cross-Origin-Resource-Policy header for all responses
+app.use((req, res, next) => {
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  next();
+});
 
 if (isProd) app.set("trust proxy", 1);
 
@@ -87,6 +96,7 @@ app.use("/api/admin", adminRoutes); // Updated to use modular admin routes
 app.use("/api/payments", paymentRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/promotions", promotionRoutes);
+app.use("/api/refunds", refundRoutes); // User refund routes
 const securityRoutes = require("./routes/security.routes");
 app.use("/api/security", securityRoutes);
 app.use("/api/locations", locationRoutes);
@@ -125,6 +135,10 @@ mongoose
   .connect(MONGO_URI)
   .then(() => {
     console.log("✅ MongoDB connected");
+
+    // Setup refund scheduler after MongoDB is connected
+    setupRefundScheduler();
+
     app.listen(PORT, () =>
       console.log(`🚀 API listening on http://localhost:${PORT}`)
     );
