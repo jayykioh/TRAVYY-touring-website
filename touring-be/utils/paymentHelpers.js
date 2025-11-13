@@ -24,16 +24,22 @@ async function createBookingFromSession(session, additionalData = {}) {
     // ✅ Nhận biết kết quả thanh toán
     const isPaid =
       additionalData.markPaid === true ||
-      String(additionalData?.ipn?.resultCode) === "0" ||               // MoMo IPN success
-      String(additionalData?.capture?.status || "").toUpperCase() === "COMPLETED"; // PayPal capture success
+      String(additionalData?.ipn?.resultCode) === "0" || // MoMo IPN success
+      String(additionalData?.capture?.status || "").toUpperCase() ===
+        "COMPLETED"; // PayPal capture success
 
     const isFailed =
       additionalData.failReason ||
       String(session.status) === "failed" ||
-      String(additionalData?.ipn?.resultCode || "") !== "" && String(additionalData?.ipn?.resultCode) !== "0";
+      (String(additionalData?.ipn?.resultCode || "") !== "" &&
+        String(additionalData?.ipn?.resultCode) !== "0");
 
-    const paymentStatus = isPaid ? "completed" : (isFailed ? "failed" : "pending");
-    const bookingStatus = isPaid ? "paid" : (isFailed ? "cancelled" : "pending");
+    const paymentStatus = isPaid
+      ? "completed"
+      : isFailed
+      ? "failed"
+      : "pending";
+    const bookingStatus = isPaid ? "paid" : isFailed ? "cancelled" : "pending";
 
     // ✅ Nếu là “retry-payment” và có retryBookingId, cập nhật booking cũ thay vì tạo cái mới
     if (session.retryBookingId) {
@@ -72,19 +78,36 @@ async function createBookingFromSession(session, additionalData = {}) {
         booking.voucherCode = session.voucherCode || booking.voucherCode;
 
         booking.payment = booking.payment || {};
-        booking.payment.provider = String(session.provider || "momo").toLowerCase();
+        booking.payment.provider = String(
+          session.provider || "momo"
+        ).toLowerCase();
         booking.payment.orderId = session.orderId;
         booking.payment.status = paymentStatus;
         if (isPaid) booking.payment.paidAt = new Date();
-        booking.payment.providerData = { ...booking.payment.providerData, ...additionalData };
+        booking.payment.providerData = {
+          ...booking.payment.providerData,
+          ...additionalData,
+        };
 
         booking.status = bookingStatus;
 
         // totalVND / totalUSD cho FE
-        booking.totalVND = booking.currency === "VND" ? booking.totalAmount : toVND(booking.totalAmount);
-        booking.totalUSD = booking.currency === "USD" ? booking.totalAmount : Number(toUSD(booking.totalAmount));
+        booking.totalVND =
+          booking.currency === "VND"
+            ? booking.totalAmount
+            : toVND(booking.totalAmount);
+        booking.totalUSD =
+          booking.currency === "USD"
+            ? booking.totalAmount
+            : Number(toUSD(booking.totalAmount));
 
         await booking.save();
+
+        // ✅ Update tour departure seats if booking is paid
+        if (isPaid) {
+          await updateTourSeats(bookingItems);
+        }
+
         return booking;
       }
       // nếu retryBookingId không tìm thấy -> rơi xuống nhánh tạo mới
@@ -115,7 +138,9 @@ async function createBookingFromSession(session, additionalData = {}) {
     const originalAmount = totalFromItems;
     const finalAmount = Math.max(0, totalFromItems - discountAmount);
 
-    const providerNormalized = (session.provider || "momo").toString().toLowerCase();
+    const providerNormalized = (session.provider || "momo")
+      .toString()
+      .toLowerCase();
 
     const bookingDoc = await Booking.create({
       userId: session.userId,
@@ -137,16 +162,27 @@ async function createBookingFromSession(session, additionalData = {}) {
 
     const bookingCode = bookingDoc._id.toString().substring(0, 8).toUpperCase();
     bookingDoc.bookingCode = bookingCode;
-    bookingDoc.totalVND = bookingDoc.currency === "VND" ? bookingDoc.totalAmount : toVND(bookingDoc.totalAmount);
-    bookingDoc.totalUSD = bookingDoc.currency === "USD" ? bookingDoc.totalAmount : Number(toUSD(bookingDoc.totalAmount));
+    bookingDoc.totalVND =
+      bookingDoc.currency === "VND"
+        ? bookingDoc.totalAmount
+        : toVND(bookingDoc.totalAmount);
+    bookingDoc.totalUSD =
+      bookingDoc.currency === "USD"
+        ? bookingDoc.totalAmount
+        : Number(toUSD(bookingDoc.totalAmount));
     await bookingDoc.save();
+
+    // ✅ Update tour departure seats if booking is paid
+    if (isPaid) {
+      await updateTourSeats(bookingItems);
+    }
+
     return bookingDoc;
   } catch (err) {
     console.error("[Payment] ❌ createBookingFromSession failed:", err);
     throw err;
   }
 }
-
 
 /**
  * Clear cart after payment
@@ -156,11 +192,16 @@ async function clearCartAfterPayment(userId) {
     const cart = await Cart.findOne({ userId });
     if (!cart) return true;
 
-    const result = await CartItem.deleteMany({ cartId: cart._id, selected: true });
-    console.log(`[Payment] ✅ Cleared ${result.deletedCount} selected items from cart for user: ${userId}`);
+    const result = await CartItem.deleteMany({
+      cartId: cart._id,
+      selected: true,
+    });
+    console.log(
+      `[Payment] ✅ Cleared ${result.deletedCount} selected items from cart for user: ${userId}`
+    );
     return true;
   } catch (error) {
-    console.error('[Payment] ❌ Error clearing cart:', error);
+    console.error("[Payment] ❌ Error clearing cart:", error);
     return false;
   }
 }
@@ -170,11 +211,13 @@ async function markBookingAsPaid(orderId, paymentData = {}) {
   try {
     const Booking = require("../models/Bookings");
     const User = require("../models/Users");
-    const { sendPaymentSuccessNotification } = require("../controller/notifyController");
+    const {
+      sendPaymentSuccessNotification,
+    } = require("../controller/notifyController");
 
     // try both common property names (orderId / orderID)
     const booking = await Booking.findOne({
-      $or: [{ "payment.orderId": orderId }, { "payment.orderID": orderId }]
+      $or: [{ "payment.orderId": orderId }, { "payment.orderID": orderId }],
     });
 
     if (!booking) {
@@ -189,28 +232,56 @@ async function markBookingAsPaid(orderId, paymentData = {}) {
 
     booking.payment = booking.payment || {};
     booking.payment.orderId = booking.payment.orderId || orderId;
-    booking.payment.provider = (booking.payment.provider || paymentData.provider || paymentData.paymentProvider || booking.payment.provider || "paypal").toString().toLowerCase();
+    booking.payment.provider = (
+      booking.payment.provider ||
+      paymentData.provider ||
+      paymentData.paymentProvider ||
+      booking.payment.provider ||
+      "paypal"
+    )
+      .toString()
+      .toLowerCase();
 
     // set amounts if missing (compute from items)
-    if (typeof booking.totalAmount === "undefined" || booking.totalAmount === null) {
+    if (
+      typeof booking.totalAmount === "undefined" ||
+      booking.totalAmount === null
+    ) {
       booking.totalAmount = calculateTotal(booking.items || []);
     }
-    if (typeof booking.originalAmount === "undefined" || booking.originalAmount === null) {
+    if (
+      typeof booking.originalAmount === "undefined" ||
+      booking.originalAmount === null
+    ) {
       booking.originalAmount = calculateTotal(booking.items || []);
     }
 
     // Ensure totalVND/totalUSD exist for frontend
-    booking.totalVND = booking.totalVND || (booking.currency === "VND" ? booking.totalAmount : toVND(booking.totalAmount));
-    booking.totalUSD = booking.totalUSD || (booking.currency === "USD" ? booking.totalAmount : Number(toUSD(booking.totalAmount)));
+    booking.totalVND =
+      booking.totalVND ||
+      (booking.currency === "VND"
+        ? booking.totalAmount
+        : toVND(booking.totalAmount));
+    booking.totalUSD =
+      booking.totalUSD ||
+      (booking.currency === "USD"
+        ? booking.totalAmount
+        : Number(toUSD(booking.totalAmount)));
 
     booking.status = "paid";
     booking.payment.status = "completed";
     booking.payment.paidAt = new Date();
-    booking.payment.transactionId = paymentData.transactionId || paymentData.id || paymentData.orderId || null;
+    booking.payment.transactionId =
+      paymentData.transactionId ||
+      paymentData.id ||
+      paymentData.orderId ||
+      null;
     booking.payment.providerData = paymentData;
 
     await booking.save();
-    console.log(`[Payment] ✅ Booking ${booking._id} marked as paid (orderId=${orderId})`);
+    console.log(
+      `[Payment] ✅ Booking ${booking._id} marked as paid (orderId=${orderId})`
+    );
 
     // Send payment success notification if not already paid
     if (!wasAlreadyPaid) {
@@ -223,14 +294,21 @@ async function markBookingAsPaid(orderId, paymentData = {}) {
             amount: booking.totalAmount,
             bookingCode: booking.bookingCode,
             tourTitle: tourTitle,
-            bookingId: booking._id
+            bookingId: booking._id,
           });
-          console.log(`[Payment] ✅ Payment success notification sent for booking ${booking._id}`);
+          console.log(
+            `[Payment] ✅ Payment success notification sent for booking ${booking._id}`
+          );
         } else {
-          console.warn(`[Payment] ⚠️ User email not found for booking ${booking._id}, skipping notification`);
+          console.warn(
+            `[Payment] ⚠️ User email not found for booking ${booking._id}, skipping notification`
+          );
         }
       } catch (notifyError) {
-        console.error(`[Payment] ❌ Failed to send payment notification for booking ${booking._id}:`, notifyError);
+        console.error(
+          `[Payment] ❌ Failed to send payment notification for booking ${booking._id}:`,
+          notifyError
+        );
         // Don't fail the payment if notification fails
       }
     }
@@ -246,9 +324,13 @@ async function markBookingAsPaid(orderId, paymentData = {}) {
 async function markBookingAsFailed(orderId, failureData = {}) {
   try {
     const Booking = require("../models/Bookings");
-    const booking = await Booking.findOne({ $or: [{ "payment.orderId": orderId }, { "payment.orderID": orderId }] });
+    const booking = await Booking.findOne({
+      $or: [{ "payment.orderId": orderId }, { "payment.orderID": orderId }],
+    });
     if (!booking) {
-      console.warn(`[Payment] ⚠️ No booking found for failed orderId=${orderId}`);
+      console.warn(
+        `[Payment] ⚠️ No booking found for failed orderId=${orderId}`
+      );
       return null;
     }
 
@@ -289,6 +371,65 @@ function toVND(usd) {
   return Math.round((Number(usd) || 0) / FX_VND_USD);
 }
 
+/**
+ * Update tour departure seats after successful booking
+ * @param {Array} bookingItems - Array of booking items with tourId, date, adults, children
+ */
+async function updateTourSeats(bookingItems) {
+  try {
+    for (const item of bookingItems) {
+      const tourId = item.tourId;
+      const departureDate = item.date;
+      const totalSeats = (item.adults || 0) + (item.children || 0);
+
+      if (!tourId || !departureDate || totalSeats <= 0) continue;
+
+      // Find tour and update specific departure's seatsLeft
+      const tour = await Tour.findOne({
+        _id: tourId,
+        "departures.date": departureDate,
+      });
+
+      if (!tour) {
+        console.warn(
+          `⚠️ Tour ${tourId} or departure ${departureDate} not found`
+        );
+        continue;
+      }
+
+      const departure = tour.departures.find((d) => d.date === departureDate);
+
+      if (departure && departure.seatsLeft != null) {
+        const newSeatsLeft = Math.max(0, departure.seatsLeft - totalSeats);
+
+        await Tour.updateOne(
+          { _id: tourId, "departures.date": departureDate },
+          {
+            $set: {
+              "departures.$.seatsLeft": newSeatsLeft,
+              "departures.$.status":
+                newSeatsLeft === 0 ? "soldout" : departure.status,
+            },
+            $inc: { usageCount: 1 }, // ✅ Increment booking count
+          }
+        );
+
+        console.log(
+          `✅ Updated tour ${tourId}: seatsLeft ${departure.seatsLeft} -> ${newSeatsLeft}, usageCount +1`
+        );
+      } else {
+        // If no seatsLeft tracking, just increment usageCount
+        await Tour.updateOne({ _id: tourId }, { $inc: { usageCount: 1 } });
+
+        console.log(`✅ Updated tour ${tourId}: usageCount +1`);
+      }
+    }
+  } catch (error) {
+    console.error("❌ Error updating tour seats:", error);
+    // Don't throw - booking should succeed even if seat update fails
+  }
+}
+
 module.exports = {
   FX_VND_USD,
   createBookingFromSession,
@@ -298,4 +439,5 @@ module.exports = {
   calculateTotal,
   toUSD,
   toVND,
+  updateTourSeats,
 };

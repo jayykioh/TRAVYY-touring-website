@@ -4,7 +4,14 @@ import { Navigate } from "react-router-dom";
 import { useAdminAuth } from "../../context/AdminAuthContext";
 
 const AdminProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAdminAuth();
+  const { admin, isAuthenticated, loading } = useAdminAuth();
+
+  console.log("[AdminProtectedRoute] Auth state:", {
+    isAuthenticated,
+    loading,
+    admin,
+    role: admin?.role,
+  });
 
   // Show loading state
   if (loading) {
@@ -20,9 +27,25 @@ const AdminProtectedRoute = ({ children }) => {
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
+    console.log(
+      "[AdminProtectedRoute] Not authenticated, redirecting to login"
+    );
     return <Navigate to="/admin/login" replace />;
   }
 
+  // ✅ CHECK ADMIN ROLE - Reject non-admin users
+  if (admin?.role !== "Admin") {
+    console.log(
+      "[AdminProtectedRoute] User is not Admin (role:",
+      admin?.role,
+      "), redirecting to login"
+    );
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  console.log(
+    "[AdminProtectedRoute] Authenticated as Admin, rendering children"
+  );
   return children;
 };
 

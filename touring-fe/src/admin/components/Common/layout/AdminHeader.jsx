@@ -8,17 +8,47 @@ import {
   ChevronDown,
   Menu,
   X,
+  Check,
+  Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../../../context/AdminAuthContext";
+import { useNotifications } from "../../../context/NotificationContext";
+import Modal from "../Modal";
+
+// Helper function to format time ago
+function getTimeAgo(timeString) {
+  const now = new Date();
+  const time = new Date(timeString);
+  const diffInSeconds = Math.floor((now - time) / 1000);
+
+  if (diffInSeconds < 60) return "Vừa xong";
+  if (diffInSeconds < 3600)
+    return `${Math.floor(diffInSeconds / 60)} phút trước`;
+  if (diffInSeconds < 86400)
+    return `${Math.floor(diffInSeconds / 3600)} giờ trước`;
+  if (diffInSeconds < 604800)
+    return `${Math.floor(diffInSeconds / 86400)} ngày trước`;
+  return time.toLocaleDateString("vi-VN");
+}
 
 export default function AdminHeader({ toggleSidebar, isSidebarOpen }) {
   const navigate = useNavigate();
   const { admin: user, logout } = useAdminAuth();
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    NOTIFICATION_TYPES,
+  } = useNotifications();
+
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
@@ -26,40 +56,15 @@ export default function AdminHeader({ toggleSidebar, isSidebarOpen }) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const notifications = [
-    {
-      id: 1,
-      type: "booking",
-      title: "Booking mới",
-      message: "Tour Đà Nẵng - Hội An có booking mới",
-      time: "5 phút trước",
-      read: false,
-    },
-    {
-      id: 2,
-      type: "guide",
-      title: "HDV mới đăng ký",
-      message: "Trần Thị B đã đăng ký làm hướng dẫn viên",
-      time: "15 phút trước",
-      read: false,
-    },
-    {
-      id: 3,
-      type: "review",
-      title: "Đánh giá mới",
-      message: "Tour Sapa nhận được đánh giá 5 sao",
-      time: "1 giờ trước",
-      read: true,
-    },
-  ];
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
   const handleLogout = () => {
-    if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
-      logout();
-      navigate("/admin/login");
-    }
+    setShowProfileMenu(false); // Đóng profile menu
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    logout();
+    setShowLogoutModal(false);
+    navigate("/admin/login");
   };
 
   return (
@@ -144,48 +149,99 @@ export default function AdminHeader({ toggleSidebar, isSidebarOpen }) {
                     className="fixed inset-0 z-40"
                     onClick={() => setShowNotifications(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-[90vw] sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                  <div className="absolute right-0 mt-2 w-[90vw] sm:w-[420px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
                     <div className="p-3 md:p-4 bg-gradient-to-r from-[#007980] to-[#005f65] flex justify-between items-center">
                       <h3 className="font-bold text-white flex items-center gap-2 text-sm md:text-base">
                         <Bell className="w-4 h-4 md:w-5 md:h-5" />
-                        Notifications
+                        Thông báo
                       </h3>
-                      {unreadCount > 0 && (
-                        <span className="px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs bg-white/20 backdrop-blur-sm text-white rounded-full font-semibold">
-                          {unreadCount} new
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {unreadCount > 0 && (
+                          <>
+                            <span className="px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs bg-white/20 backdrop-blur-sm text-white rounded-full font-semibold">
+                              {unreadCount} mới
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markAllAsRead();
+                              }}
+                              className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                              title="Đánh dấu tất cả đã đọc"
+                            >
+                              <Check className="w-4 h-4 text-white" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className="max-h-[60vh] md:max-h-96 overflow-y-auto divide-y divide-gray-100">
-                      {notifications.map((notif) => (
-                        <div
-                          key={notif.id}
-                          className={`p-3 md:p-4 hover:bg-gradient-to-r hover:from-[#007980]/10 hover:to-[#005f65]/10 cursor-pointer transition-all duration-200 ${
-                            !notif.read ? "bg-[#007980]/5" : ""
-                          }`}
-                        >
-                          <div className="flex items-start gap-2 md:gap-3">
-                            <div
-                              className={`w-2 h-2 rounded-full mt-1.5 md:mt-2 ring-4 ${
-                                !notif.read
-                                  ? "bg-[#007980] ring-[#007980]/20"
-                                  : "bg-gray-300 ring-gray-100"
-                              }`}
-                            ></div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-xs md:text-sm text-gray-900 mb-1">
-                                {notif.title}
-                              </h4>
-                              <p className="text-xs md:text-sm text-gray-600 mb-1 md:mb-2">
-                                {notif.message}
-                              </p>
-                              <span className="text-[10px] md:text-xs text-gray-500 font-medium">
-                                {notif.time}
-                              </span>
-                            </div>
-                          </div>
+                      {notifications.length === 0 ? (
+                        <div className="p-8 text-center">
+                          <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm text-gray-500">
+                            Chưa có thông báo nào
+                          </p>
                         </div>
-                      ))}
+                      ) : (
+                        notifications.map((notif) => {
+                          const typeConfig =
+                            NOTIFICATION_TYPES[notif.type] ||
+                            NOTIFICATION_TYPES.info;
+                          const timeAgo = getTimeAgo(notif.time);
+
+                          return (
+                            <div
+                              key={notif.id}
+                              className={`group p-3 md:p-4 hover:bg-gradient-to-r hover:from-[#007980]/10 hover:to-[#005f65]/10 cursor-pointer transition-all duration-200 ${
+                                !notif.read ? "bg-[#007980]/5" : ""
+                              }`}
+                              onClick={() => {
+                                if (!notif.read) markAsRead(notif.id);
+                              }}
+                            >
+                              <div className="flex items-start gap-2 md:gap-3">
+                                <div
+                                  className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-lg shadow-sm"
+                                  style={{
+                                    backgroundColor: typeConfig.bgColor,
+                                  }}
+                                >
+                                  {typeConfig.icon}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2 mb-1">
+                                    <h4 className="font-semibold text-xs md:text-sm text-gray-900">
+                                      {notif.title}
+                                    </h4>
+                                    {!notif.read && (
+                                      <div className="w-2 h-2 rounded-full bg-[#007980] ring-4 ring-[#007980]/20 flex-shrink-0 mt-1"></div>
+                                    )}
+                                  </div>
+                                  <p className="text-xs md:text-sm text-gray-600 mb-1 md:mb-2 line-clamp-2">
+                                    {notif.message}
+                                  </p>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] md:text-xs text-gray-500 font-medium">
+                                      {timeAgo}
+                                    </span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        deleteNotification(notif.id);
+                                      }}
+                                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded transition-all"
+                                      title="Xóa thông báo"
+                                    >
+                                      <Trash2 className="w-3 h-3 text-red-500" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                     <div className="p-3 border-t border-gray-200 text-center">
                       <button
@@ -319,6 +375,21 @@ export default function AdminHeader({ toggleSidebar, isSidebarOpen }) {
           />
         </div>
       )}
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={confirmLogout}
+        title="Xác nhận đăng xuất"
+        type="confirm"
+        confirmText="Đăng xuất"
+        cancelText="Hủy"
+      >
+        <p className="text-gray-600">
+          Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?
+        </p>
+      </Modal>
     </header>
   );
 }
