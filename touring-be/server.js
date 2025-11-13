@@ -83,7 +83,7 @@ app.use("/api/tours", tourRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
-app.use("/api/admin", adminRoutes); // Updated to use modular admin routes
+app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/promotions", promotionRoutes);
@@ -91,11 +91,15 @@ const securityRoutes = require("./routes/security.routes");
 app.use("/api/security", securityRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api/notify", notifyRoutes);
-app.use("/api/promotions", promotionRoutes);
-app.use("/api/reviews", reviewRoutes);
+app.use("/api/paypal", paypalRoutes);
+
+// ✅ Discovery & Zone routes (must be AFTER other routes to avoid conflicts)
+app.use("/api/discover", require("./routes/discover.routes"));
+app.use("/api/zones", require("./routes/zone.routes"));
+app.use("/api/itinerary", require("./routes/itinerary.routes"));
+
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
-app.use("/api/paypal", paypalRoutes);
 
 // Lightweight ping to verify credentials loaded (non-sensitive)
 app.get("/api/paypal/ping", (_req, res) => {
@@ -106,6 +110,17 @@ app.get("/api/paypal/ping", (_req, res) => {
       process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET
     ),
     mode: process.env.PAYPAL_MODE || "sandbox",
+  });
+});
+
+// Health endpoint
+app.get("/api/health", async (req, res) => {
+  const { health } = require("./services/ai/libs/embedding-client");
+  const embedHealth = await health();
+  res.json({
+    backend: "ok",
+    mongo: mongoose.connection.readyState === 1 ? "ok" : "error",
+    embedding: embedHealth,
   });
 });
 
@@ -120,24 +135,11 @@ app.use((err, _req, res, _next) => {
   res.status(500).json(payload);
 });
 
-// --- Connect Mongo + Start server ---
-mongoose
-  .connect(MONGO_URI)
-  .then(() => {
-    console.log("✅ MongoDB connected");
-    app.listen(PORT, () =>
-      console.log(`🚀 API listening on http://localhost:${PORT}`)
-    );
-  })
-  .catch((e) => {
-    console.error("❌ Mongo connect error:", e);
-    process.exit(1);
-  });
-
 module.exports = app;
 
 // ✅ Check services on startup
 const { health, isAvailable } = require("./services/ai/libs/embedding-client");
+const { syncZones } = require("./services/embedding-sync-zones");
 
 async function checkServices() {
   console.log("\n🔍 Checking services...");
@@ -161,6 +163,16 @@ async function checkServices() {
         vectors: healthData.vectors,
         url: process.env.EMBED_SERVICE_URL || "http://localhost:8088",
       });
+      
+      // ✅ Auto-sync zones if embedding service is available
+      console.log("\n🔄 Auto-syncing zones with embedding service...");
+      try {
+        await syncZones(true);
+        console.log("✅ Zone sync complete");
+      } catch (syncError) {
+        console.warn("⚠️ Zone sync failed:", syncError.message);
+        console.warn("   Continuing without embedding sync...");
+      }
     } else {
       console.warn("⚠️ Embedding service not available");
       console.warn(
@@ -175,23 +187,7 @@ async function checkServices() {
 }
 
 checkServices().then(() => {
-  // Routes
-  app.use("/api/auth", require("./routes/auth.routes"));
-  app.use("/api/discover", require("./routes/discover.routes"));
-  app.use("/api/zones", require("./routes/zone.routes"));
-  app.use("/api/itinerary", require("./routes/itinerary.routes"));
-
-  // Health endpoint
-  app.get("/api/health", async (req, res) => {
-    const embedHealth = await health();
-    res.json({
-      backend: "ok",
-      mongo: mongoose.connection.readyState === 1 ? "ok" : "error",
-      embedding: embedHealth,
-    });
-  });
-
-  const PORT = process.env.PORT || 5000;
+  // ✅ Single listen point
   app.listen(PORT, () => {
     console.log(`\n🚀 Backend running on port ${PORT}`);
   });

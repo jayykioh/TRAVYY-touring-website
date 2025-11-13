@@ -63,7 +63,6 @@ function extractDuration(text) {
 
   const day = lower.match(/(\d+)\s*(?:ngày|hôm|days?)/);
   if (day) return parseInt(day[1], 10);
-
   return null;
 }
 

@@ -5,46 +5,50 @@ import { Sparkles, MapPin, X, ChevronLeft, Waves, Mountain, Utensils, Landmark, 
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../auth/AuthContext";
 
-// ✅ STANDARDIZED: Match with backend vibePatterns
+// ✅ SYNCED WITH DATABASE: Top 16 tags from zone.tags
+// Based on frequency analysis: photo(32), nature(19), local(13), history(12), culture(12), food(11), beach(8), temple(7), sunset(7), view(6), architecture(5), nightlife(5), adventure(4), market(4), shopping(4), cave(3)
 const vibeOptions = [
-  { id: "beach", label: "🏖️ Biển", color: "blue" },
-  { id: "mountain", label: "🏔️ Núi", color: "green" },
-  { id: "food", label: "🍜 Ẩm thực", color: "orange" },
-  { id: "culture", label: "🏛️ Văn hóa", color: "purple" },
-  { id: "nature", label: "🌿 Thiên nhiên", color: "green" },
-  { id: "relax", label: "🧘 Nghỉ ngơi", color: "teal" },
-  { id: "romantic", label: "💕 Lãng mạn", color: "pink" },
-  { id: "adventure", label: "🗺️ Khám phá", color: "red" },
   { id: "photo", label: "📸 Chụp ảnh", color: "yellow" },
+  { id: "nature", label: "� Thiên nhiên", color: "green" },
+  { id: "local", label: "�️ Bản địa", color: "brown" },
+  { id: "history", label: "📜 Lịch sử", color: "purple" },
+  { id: "culture", label: "🏛️ Văn hóa", color: "purple" },
+  { id: "food", label: "� Ẩm thực", color: "orange" },
+  { id: "beach", label: "🏖️ Biển", color: "blue" },
+  { id: "temple", label: "⛩️ Tâm linh", color: "pink" },
   { id: "sunset", label: "🌅 Hoàng hôn", color: "amber" },
+  { id: "view", label: "🏞️ Cảnh đẹp", color: "teal" },
+  { id: "architecture", label: "�️ Kiến trúc", color: "indigo" },
   { id: "nightlife", label: "🍻 Nightlife", color: "violet" },
+  { id: "adventure", label: "�️ Khám phá", color: "red" },
+  { id: "market", label: "🏪 Chợ", color: "orange" },
   { id: "shopping", label: "🛍️ Shopping", color: "pink" },
-  { id: "temple", label: "⛩️ Tâm linh", color: "gold" },
-  { id: "local", label: "🏘️ Bản địa", color: "brown" },
-  { id: "island", label: "🏝️ Đảo", color: "cyan" }
+  { id: "cave", label: "�️ Hang động", color: "gray" }
 ];
 
 const ALL_VIBES = vibeOptions.map((v) => v.id);
 const MAX = 3;
 
-// 🎨 Subtle accent colors per vibe (used only for styling, logic unchanged)
+// 🎨 Subtle accent colors per tag (synced with database)
 const VIBE_ACCENTS = {
-  beach: { hex: "#6366F1", rgba: "rgba(99,102,241,0.35)" },
-  mountain: { hex: "#10B981", rgba: "rgba(16,185,129,0.35)" },
-  food: { hex: "#F59E0B", rgba: "rgba(245,158,11,0.35)" },
-  culture: { hex: "#8B5CF6", rgba: "rgba(139,92,246,0.35)" },
-  nature: { hex: "#22C55E", rgba: "rgba(34,197,94,0.35)" },
-  relax: { hex: "#14B8A6", rgba: "rgba(20,184,166,0.35)" },
-  romantic: { hex: "#EC4899", rgba: "rgba(236,72,153,0.35)" },
-  adventure: { hex: "#EF4444", rgba: "rgba(239,68,68,0.35)" },
   photo: { hex: "#EAB308", rgba: "rgba(234,179,8,0.35)" },
-  sunset: { hex: "#FB923C", rgba: "rgba(251,146,60,0.35)" },
-  nightlife: { hex: "#7C3AED", rgba: "rgba(124,58,237,0.35)" },
-  shopping: { hex: "#F472B6", rgba: "rgba(244,114,182,0.35)" },
-  temple: { hex: "#FB7185", rgba: "rgba(251,113,133,0.35)" },
+  nature: { hex: "#22C55E", rgba: "rgba(34,197,94,0.35)" },
   local: { hex: "#64748B", rgba: "rgba(100,116,139,0.35)" },
-  island: { hex: "#06B6D4", rgba: "rgba(6,182,212,0.35)" },
+  history: { hex: "#8B5CF6", rgba: "rgba(139,92,246,0.35)" },
+  culture: { hex: "#8B5CF6", rgba: "rgba(139,92,246,0.35)" },
+  food: { hex: "#F59E0B", rgba: "rgba(245,158,11,0.35)" },
+  beach: { hex: "#6366F1", rgba: "rgba(99,102,241,0.35)" },
+  temple: { hex: "#FB7185", rgba: "rgba(251,113,133,0.35)" },
+  sunset: { hex: "#FB923C", rgba: "rgba(251,146,60,0.35)" },
+  view: { hex: "#14B8A6", rgba: "rgba(20,184,166,0.35)" },
+  architecture: { hex: "#6366F1", rgba: "rgba(99,102,241,0.35)" },
+  nightlife: { hex: "#7C3AED", rgba: "rgba(124,58,237,0.35)" },
+  adventure: { hex: "#EF4444", rgba: "rgba(239,68,68,0.35)" },
+  market: { hex: "#F59E0B", rgba: "rgba(245,158,11,0.35)" },
+  shopping: { hex: "#F472B6", rgba: "rgba(244,114,182,0.35)" },
+  cave: { hex: "#6B7280", rgba: "rgba(107,114,128,0.35)" }
 };
 
 const getAccent = (v) => VIBE_ACCENTS[v] || { hex: "#6366F1", rgba: "rgba(99,102,241,0.35)" };
@@ -70,13 +74,13 @@ const VIBE_ICONS = {
 
 export default function VibeSelectPage() {
   const navigate = useNavigate();
+  const { accessToken } = useAuth(); // ✅ Lấy token từ context
   const [selected, setSelected] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [freeText, setFreeText] = useState("");
   const [useMyLoc, setUseMyLoc] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [parsedPreview, setParsedPreview] = useState(null);
   const [parsing, setParsing] = useState(false);
 
   const canContinue = selected.length > 0 && selected.length <= MAX;
@@ -142,19 +146,25 @@ export default function VibeSelectPage() {
         );
       }
 
-      const combinedText = [...selected, freeText].filter(Boolean).join(", ");
-
       const body = {
-        text: combinedText,
-        province: null,
+        vibes: selected,                    // Send selected vibes as array
+        freeText: freeText.trim(),          // Send free text separately
+        ...(origin && { userLocation: origin })  // Include location if available
       };
 
       console.log("🔵 Sending request:", body);
 
+      // Get access token from Auth context
+      const headers = { "Content-Type": "application/json" };
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`;
+      }
+
       const r = await fetch("/api/discover/parse", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(body),
+        credentials: "include",  // ✅ Gửi refresh_token cookie
       });
 
       console.log("🔵 Response status:", r.status);
@@ -199,32 +209,6 @@ export default function VibeSelectPage() {
     const rest = ALL_VIBES.filter((v) => !setHot.has(v));
     return [...hot, ...rest];
   }, []);
-
-  async function handlePreviewParse() {
-    if (!freeText) return;
-    setParsing(true);
-    try {
-      const combinedText = [...selected, freeText].filter(Boolean).join(", ");
-
-      const r = await fetch("/api/discover/parse", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: combinedText }),
-      });
-
-      if (!r.ok) {
-        throw new Error(`Error ${r.status}`);
-      }
-
-      const data = await r.json();
-      setParsedPreview(data.prefs);
-    } catch (e) {
-      console.error("❌ Preview error:", e);
-      setParsedPreview(null);
-    } finally {
-      setParsing(false);
-    }
-  }
 
   // ====== Animation presets ======
   const fadeInUp = {
@@ -470,34 +454,12 @@ export default function VibeSelectPage() {
                 <motion.button
                   whileHover={{ y: -1 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={handlePreviewParse}
+
                   disabled={parsing || !freeText}
                   className="text-xs px-3 py-1.5 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-50"
                 >
-                  {parsing ? "Đang phân tích..." : "🔍 Xem hệ thống hiểu gì"}
+                
                 </motion.button>
-
-                <AnimatePresence>
-                  {parsedPreview && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      className="bg-indigo-50 border border-indigo-200 rounded p-2 text-xs"
-                    >
-                      <p className="font-medium">Hệ thống hiểu:</p>
-                      {parsedPreview.pace && <p>• Nhịp độ: {parsedPreview.pace}</p>}
-                      {parsedPreview.budget && <p>• Ngân sách: {parsedPreview.budget}</p>}
-                      {parsedPreview.durationDays > 0 && (
-                        <p>• Thời gian: {parsedPreview.durationDays} ngày</p>
-                      )}
-                      {parsedPreview.avoid?.length > 0 && (
-                        <p>• Tránh: {parsedPreview.avoid.join(", ")}</p>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"

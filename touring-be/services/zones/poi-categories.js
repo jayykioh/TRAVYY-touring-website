@@ -3,7 +3,6 @@ const POI_CATEGORIES = {
     label: 'Điểm tham quan',
     labelEn: 'Views & Landmarks',
     icon: '📸',
-    // ✅ Just use main keyword (Map4D will return relevant results)
     query: 'điểm tham quan',
     vibes: ['photo', 'sunset', 'nature'],
     priority: 1,
@@ -22,11 +21,11 @@ const POI_CATEGORIES = {
     label: 'Ẩm thực & Cafe',
     labelEn: 'Food, Dining & Cafe',
     icon: '🍜',
-      queries: ['cafe', 'nhà hàng'], // Ưu tiên cafe trước, sau đó nhà hàng
-    vibes: ['food', 'local', 'cafe', 'coffee', 'drink','cà phê'],
+    queries: ['cafe', 'nhà hàng'],
+    queryLimit: [4, 3], // 4 cafes, 3 restaurants
+    vibes: ['food', 'local', 'cafe', 'coffee', 'drink', 'cà phê'],
     priority: 4,
     lazy: true,
-      queryLimit: [4, 3], // Lấy 4 cafe, 3 nhà hàng (tổng 7)
   },
   
   culture: {

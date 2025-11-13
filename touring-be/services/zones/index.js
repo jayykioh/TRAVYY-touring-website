@@ -1,10 +1,8 @@
 const Zone = require('../../models/Zones');
-const { getMatchingZones: matchZonesImpl } = require('./matcher'); // ✅ FIX: Import đúng tên
 const { findPOIsForZone } = require('./poi-finder');
 
 async function getZoneById(zoneId) {
   console.log(`🔍 [ZoneService] getZoneById: "${zoneId}"`);
-  
   try {
     const zone = await Zone.findOne({ 
       id: zoneId, 
@@ -12,8 +10,7 @@ async function getZoneById(zoneId) {
     }).lean();
     
     if (!zone) {
-      console.log(`   ❌ Zone not found`);
-      
+      console.log(`❌ Zone not found`);
       const availableZones = await Zone.find({ isActive: true })
         .select('id name')
         .limit(5)
@@ -38,13 +35,11 @@ async function getZoneById(zoneId) {
  */
 async function getZonePOIs(zoneId, options = {}) {
   const { vibes = [], limit = 20, includeAdjacent = true } = options;
-  
   console.log(`\n📍 [ZoneService] getZonePOIs called`);
   console.log(`   zoneId: "${zoneId}"`);
   console.log(`   vibes: [${vibes.join(', ')}]`);
   console.log(`   limit: ${limit}`);
   console.log(`   includeAdjacent: ${includeAdjacent}`);
-  
   try {
     const zone = await getZoneById(zoneId);
     
@@ -138,41 +133,8 @@ async function zoneExists(zoneId) {
   return count > 0;
 }
 
-/**
- * ✅ Get matching zones based on user preferences
- */
-async function getMatchingZones(prefs, options = {}) {
-  console.log(`\n🎯 [ZoneService] getMatchingZones called`);
-  console.log(`   Preferences:`, JSON.stringify(prefs, null, 2));
-  
-  try {
-    // Get all zones (filtered by province if provided)
-    const zones = await getAllZones({ 
-      province: options.province 
-    });
-    
-    if (zones.length === 0) {
-      console.log(`   ⚠️ No zones found`);
-      return { strategy: 'none', zones: [], reason: 'No zones available' };
-    }
-    console.log(`   Found ${zones.length} zones to match`);
-  
-    // ✅ FIX: Call matcher correctly
-    const result = await matchZonesImpl(prefs, options);
-    console.log(`   ✅ Matched ${result.zones.length} zones (strategy: ${result.strategy})`);
-    return result;
-    
-  } catch (error) {
-    console.error(`   ❌ getMatchingZones error: ${error.message}`);
-    throw error;
-  }
-}
-
 // ========== EXPORTS ==========
 module.exports = {
-  // Matcher
-  getMatchingZones, // ✅ Export zone matching function
-
   // Zone CRUD
   getZoneById,
   getZonesByProvince,
@@ -181,9 +143,4 @@ module.exports = {
   
   // POI operations
   getZonePOIs,
-  
-  // ✅ Export ZONES_DB for matcher
-  get ZONES_DB() {
-    return Zone.find({ isActive: true }).lean();
-  }
 };

@@ -7,9 +7,10 @@ const pLimit = require('p-limit').default || require('p-limit');
 const limit = pLimit(3);
 
 /**
- * ✅ Check if point is inside zone boundary
+ * Check if point is inside zone boundary
  */
 function isPointInZone(lat, lng, zone) {
+  // No polygon: use radius check
   if (!zone.polygon || zone.polygon.length < 3) {
     if (!zone.center?.lat || !zone.center?.lng || !zone.radiusM) {
       return true;
@@ -23,6 +24,7 @@ function isPointInZone(lat, lng, zone) {
     return distance <= (zone.radiusM / 1000);
   }
   
+  // Has polygon: use bounding box check
   const lats = zone.polygon.map(p => p[0]);
   const lngs = zone.polygon.map(p => p[1]);
   
@@ -48,45 +50,34 @@ function getDistance(p1, p2) {
 }
 
 /**
- * ✅ Find POIs by category (with multiple queries support)
+ * Find POIs by category (with multiple queries support)
  */
 async function findPOIsByCategory(zoneId, categoryKey, options = {}) {
   const { limit: maxResults = 7 } = options;
-  
-  console.log(`\n🔍 [POI-FINDER] Finding POIs for zone: ${zoneId}, category: ${categoryKey}`);
 
   const zone = await Zone.findOne({ id: zoneId, isActive: true }).lean();
   if (!zone) {
     throw new Error(`Zone not found: ${zoneId}`);
   }
 
-  console.log(`   ✅ Zone loaded: ${zone.name}`);
-  console.log(`   📍 Center: (${zone.center?.lat}, ${zone.center?.lng})`);
-  console.log(`   📏 Radius: ${zone.radiusM}m`);
-  console.log(`   🔷 Polygon: ${zone.polygon ? `${zone.polygon.length} points` : 'NONE'}`);
-
   const category = POI_CATEGORIES[categoryKey];
   if (!category) {
     throw new Error(`Invalid category: ${categoryKey}`);
   }
 
-  console.log(`   📂 Category: ${category.label} (${category.labelEn})`);
-
   const radiusM = zone.radiusM || 3000;
 
-  // ✅ Handle multiple queries (if exists) or single query
+  // Handle multiple queries (if exists) or single query
   const queries = category.queries || [category.query];
   const queryLimit = category.queryLimit || [];
-  console.log(`   🔍 Queries (${queries.length}):`, queries);
 
-  // ✅ Search with each query and merge results
+  // Search with each query and merge results
   const allPOIs = [];
   const seenIds = new Set();
 
   for (let i = 0; i < queries.length; i++) {
     const query = queries[i];
     const limitForQuery = queryLimit[i] || Math.ceil(maxResults * 2 / queries.length);
-    console.log(`   🎯 Searching: "${query}" (limit ${limitForQuery})`);
 
     const pois = await searchPOIsByText(
       zone.center.lat,
@@ -98,8 +89,6 @@ async function findPOIsByCategory(zoneId, categoryKey, options = {}) {
       }
     );
 
-    console.log(`      📦 Found: ${pois.length} POIs`);
-
     // Deduplicate by ID
     for (const poi of pois) {
       const id = poi.place_id || poi.id;
@@ -110,32 +99,18 @@ async function findPOIsByCategory(zoneId, categoryKey, options = {}) {
     }
   }
 
-  console.log(`   📦 Total unique POIs: ${allPOIs.length}`);
-
   if (allPOIs.length === 0) {
-    console.log(`   ⚠️ No POIs found for ${category.label}`);
     return [];
   }
-
-  // Log sample
-  console.log(`   📋 Sample POIs:`);
-  allPOIs.slice(0, 3).forEach((p, i) => {
-    console.log(`      ${i + 1}. ${p.name} at (${p.lat.toFixed(4)}, ${p.lng.toFixed(4)})`);
-  });
 
   // Filter by zone boundary
   let filteredPOIs = allPOIs;
   
   if (zone.polygon && zone.polygon.length > 0) {
-    console.log(`   🔍 Filtering by zone polygon...`);
     filteredPOIs = allPOIs.filter(poi => isPointInZone(poi.lat, poi.lng, zone));
-    console.log(`   ✅ ${filteredPOIs.length}/${allPOIs.length} POIs inside zone`);
-  } else {
-    console.log(`   ⚠️ No polygon, keeping all POIs`);
   }
 
   if (filteredPOIs.length === 0) {
-    console.log(`   ⚠️ No POIs inside zone boundary for ${category.label}`);
     return [];
   }
 
@@ -150,11 +125,6 @@ async function findPOIsByCategory(zoneId, categoryKey, options = {}) {
     .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))
     .slice(0, maxResults);
 
-  console.log(`   ✅ Returning ${scored.length} POIs for ${category.label}`);
-  if (scored.length > 0) {
-    console.log(`      Top 3: ${scored.slice(0, 3).map(p => p.name).join(', ')}`);
-  }
-
   return scored;
 }
 
@@ -164,8 +134,6 @@ async function findPOIsByCategory(zoneId, categoryKey, options = {}) {
 async function loadPriorityPOIs(zoneId, options = {}) {
   const { limit: maxPerCategory = 7 } = options;
   
-  console.log(`\n🚀 Loading priority POIs for zone: ${zoneId}`);
-  
   const categories = getPriorityCategories();
   
   const results = await Promise.all(
@@ -173,7 +141,7 @@ async function loadPriorityPOIs(zoneId, options = {}) {
       limit(() =>
         findPOIsByCategory(zoneId, cat.key, { limit: maxPerCategory })
           .catch(err => {
-            console.error(`   ❌ Error loading ${cat.key}:`, err.message);
+            console.error(`❌ Error loading ${cat.key}:`, err.message);
             return [];
           })
       )
@@ -185,9 +153,6 @@ async function loadPriorityPOIs(zoneId, options = {}) {
     poisByCategory[cat.key] = results[idx];
   });
 
-  const totalPOIs = Object.values(poisByCategory).reduce((sum, arr) => sum + arr.length, 0);
-  console.log(`\n✅ Loaded ${totalPOIs} total POIs across ${categories.length} categories`);
-
   return poisByCategory;
 }
 
@@ -198,7 +163,6 @@ async function findPOIsForZone(zoneId, options = {}) {
   const { vibes = [], limit = 20 } = options;
   
   const category = getCategoryByVibes(vibes);
-  console.log(`   🔄 Mapping vibes [${vibes.join(', ')}] → category: ${category.key}`);
   
   return findPOIsByCategory(zoneId, category.key, { limit });
 }

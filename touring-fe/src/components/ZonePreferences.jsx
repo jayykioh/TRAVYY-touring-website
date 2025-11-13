@@ -1,5 +1,4 @@
-import React from "react";
-// eslint-disable-next-line no-unused-vars
+import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Sparkles,
@@ -8,15 +7,14 @@ import {
   Info as InfoIcon,
   Lightbulb,
 } from "lucide-react";
-
-// ⬇️ shadcn/ui
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
 
-export default function PreferencesSummary({ prefs, onEdit }) {
+// 👉 dùng React.memo để tránh re-render không cần thiết
+function PreferencesSummaryInner({ prefs, onEdit }) {
   const card =
     "bg-white/60 backdrop-blur-xl border border-white/20 rounded-lg p-4 shadow-sm";
   const sectionTitle =
@@ -29,28 +27,60 @@ export default function PreferencesSummary({ prefs, onEdit }) {
     "px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/40 border border-slate-200/60 text-slate-600 backdrop-blur-sm";
   const row = "flex items-center justify-between gap-3";
 
-  const hasVibes = Array.isArray(prefs?.vibes) && prefs.vibes.length > 0;
-  const missing = [
-    !hasVibes ? "vibes" : null,
-    !prefs?.pace ? "pace" : null,
-    !prefs?.budget ? "budget" : null,
-    !(prefs?.durationDays > 0) ? "durationDays" : null,
-  ].filter(Boolean);
+  // ⚙️ useMemo để tránh tính toán lại khi prefs không đổi
+  const hasVibes = useMemo(
+    () => Array.isArray(prefs?.vibes) && prefs.vibes.length > 0,
+    [prefs?.vibes]
+  );
+
+  const missingKeys = useMemo(
+    () =>
+      [
+        !hasVibes ? "vibes" : null,
+        !prefs?.pace ? "pace" : null,
+        !prefs?.budget ? "budget" : null,
+        !(prefs?.durationDays > 0) ? "durationDays" : null,
+      ].filter(Boolean),
+    [hasVibes, prefs?.pace, prefs?.budget, prefs?.durationDays]
+  );
+
+  const hasMissing = missingKeys.length > 0;
+
+  // 🎨 hoist style ra useMemo để không tạo object mới mỗi render
+  const noteStyles = useMemo(
+    () => ({
+      background: hasMissing
+        ? "rgba(2, 160, 170, 0.08)"
+        : "rgba(15, 23, 42, 0.04)",
+      borderColor: hasMissing ? "#7fdde2" : "rgba(203, 213, 225, 0.8)",
+      color: hasMissing ? "#0f3e41" : "#334155",
+    }),
+    [hasMissing]
+  );
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -14 }}
+      initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
-      className={`${card} h-full flex flex-col`}
+      // hover nhẹ, nhưng không quá “spring” để đỡ tốn
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.99 }}
+      transition={{ duration: 0.22, ease: "easeOut" }}
+      className={`${card} h-full flex flex-col transition-shadow duration-300 hover:shadow-lg`}
       role="region"
       aria-label="Tổng quan sở thích"
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
-          <div className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-slate-900 text-white">
+          <motion.div
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-slate-900 text-white"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
             <Sparkles className="w-4 h-4" />
-          </div>
+          </motion.div>
           <div>
             <h3 className="text-sm font-semibold text-slate-900">
               Hệ thống hiểu về bạn
@@ -74,11 +104,19 @@ export default function PreferencesSummary({ prefs, onEdit }) {
         <p className={sectionTitle}>Vibes</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {hasVibes ? (
-            prefs.vibes.map((v, i) => (
-              <span key={i} className={chip}>
-                {v}
-              </span>
-            ))
+            // 👉 animate nguyên cụm vibes, không animate từng chip để nhẹ hơn
+            <motion.div
+              initial={{ opacity: 0, y: 3 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="flex flex-wrap gap-1.5"
+            >
+              {prefs.vibes.map((v, i) => (
+                <span key={i} className={chip}>
+                  {v}
+                </span>
+              ))}
+            </motion.div>
           ) : (
             <span className={chipGhost}>Chưa có vibes</span>
           )}
@@ -127,19 +165,24 @@ export default function PreferencesSummary({ prefs, onEdit }) {
         </div>
       </div>
 
-      {/* Note — softened, teal accent (#02A0AA) */}
-      <div
-        className={`mt-3 p-3 rounded-md border text-[12px] flex items-start gap-2 backdrop-blur-md`}
-        style={{
-          background:
-            missing.length > 0 ? "rgba(2, 160, 170, 0.08)" : "rgba(15, 23, 42, 0.04)",
-          borderColor: missing.length > 0 ? "#7fdde2" : "rgba(203, 213, 225, 0.8)",
-          color: missing.length > 0 ? "#0f3e41" : "#334155",
+      {/* Note — chỉ animate nhẹ, không remount bằng key nữa */}
+      <motion.div
+        initial={{ opacity: 0, y: 4 }}
+        animate={{
+          opacity: 1,
+          y: 0,
+          scale: hasMissing ? 1.01 : 1,
         }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className="mt-3 p-3 rounded-md border text-[12px] flex items-start gap-2 backdrop-blur-md"
+        style={noteStyles}
       >
-        {missing.length > 0 ? (
+        {hasMissing ? (
           <>
-            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#02A0AA" }} />
+            <AlertTriangle
+              className="w-4 h-4 mt-0.5 flex-shrink-0"
+              style={{ color: "#02A0AA" }}
+            />
             <div className="space-y-1">
               <p className="font-semibold">Chưa hiểu ý bạn rõ ràng</p>
               <p>
@@ -166,7 +209,6 @@ export default function PreferencesSummary({ prefs, onEdit }) {
                   Bổ sung
                 </button>
 
-                {/* Tips Popover */}
                 <Popover>
                   <PopoverTrigger asChild>
                     <button
@@ -189,7 +231,10 @@ export default function PreferencesSummary({ prefs, onEdit }) {
                     style={{ borderColor: "#a6eaee" }}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <InfoIcon className="w-4 h-4" style={{ color: "#02A0AA" }} />
+                      <InfoIcon
+                        className="w-4 h-4"
+                        style={{ color: "#02A0AA" }}
+                      />
                       <p className="text-[13px] font-semibold text-slate-800">
                         Gợi ý để hệ thống hiểu tốt hơn
                       </p>
@@ -215,7 +260,10 @@ export default function PreferencesSummary({ prefs, onEdit }) {
           </>
         ) : (
           <>
-            <InfoIcon className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#02A0AA" }} />
+            <InfoIcon
+              className="w-4 h-4 mt-0.5 flex-shrink-0"
+              style={{ color: "#02A0AA" }}
+            />
             <div className="space-y-1">
               <p className="font-semibold">Mẹo</p>
               <p>
@@ -225,7 +273,12 @@ export default function PreferencesSummary({ prefs, onEdit }) {
             </div>
           </>
         )}
-      </div>
+      </motion.div>
     </motion.div>
   );
 }
+
+// ✅ bọc React.memo để tối ưu re-render
+const PreferencesSummary = React.memo(PreferencesSummaryInner);
+
+export default PreferencesSummary;

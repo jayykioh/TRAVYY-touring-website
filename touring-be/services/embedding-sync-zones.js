@@ -10,7 +10,7 @@ const Zone = require('../models/Zones');
 
 const EMBED_URL = 'http://localhost:8088';
 
-async function syncZones() {
+async function syncZones(isAutomatic = false) {
   try {
     console.log('🔄 Syncing zones to embedding service...\n');
     
@@ -27,21 +27,23 @@ async function syncZones() {
       process.exit(0);
     }
     
-    // Build embedding items
+    // Build embedding items with RICH semantic text
     const items = zones.map(zone => {
-      // Combine zone info for rich semantic matching
+      // ✅ COMPREHENSIVE semantic text for better matching
       const textParts = [
         zone.name,
-        zone.description || zone.desc || '',
-        zone.highlights?.join(', ') || '',
+        zone.desc || '',
+        zone.whyChoose?.join('. ') || '',
+        zone.funActivities?.join(', ') || '',
+        zone.mustSee?.join(', ') || '',
         zone.tags?.join(', ') || '',
-        zone.vibes?.join(', ') || '',
-        zone.keywords?.join(', ') || '' // ✅ Include keywords
+        zone.vibeKeywords?.join(', ') || '',
+        zone.tips?.join('. ') || ''
       ].filter(Boolean);
       
       // Limit text length (avoid too long embeddings)
       const fullText = textParts.join(' - ');
-      const text = fullText.length > 500 ? fullText.substring(0, 500) + '...' : fullText;
+      const text = fullText.length > 1000 ? fullText.substring(0, 1000) + '...' : fullText;
       
       return {
         id: zone.id,
@@ -51,9 +53,14 @@ async function syncZones() {
           name: zone.name,
           province: zone.province,
           tags: zone.tags || [],
-          vibes: zone.vibes || [],
-          keywords: zone.keywords || [],
-          rating: zone.rating || 0
+          vibes: zone.vibeKeywords || [],
+          rating: zone.rating || 0,
+          bestTime: zone.bestTime || 'anytime',
+          // ✅ Include coordinates for filtering in Python
+          center: zone.center ? {
+            lat: zone.center.lat,
+            lng: zone.center.lng
+          } : null
         }
       };
     });
@@ -123,13 +130,23 @@ async function syncZones() {
     }
     
     console.log('\n✅ Sync complete!');
-    process.exit(0);
+    if (!isAutomatic) {
+      process.exit(0);
+    }
     
   } catch (error) {
     console.error('\n❌ Error:', error.message);
     console.error('Stack:', error.stack);
-    process.exit(1);
+    if (!isAutomatic) {
+      process.exit(1);
+    }
   }
 }
 
-syncZones();
+// Export for use in server.js
+module.exports = { syncZones };
+
+// Run as CLI script if called directly
+if (require.main === module) {
+  syncZones(false);
+}

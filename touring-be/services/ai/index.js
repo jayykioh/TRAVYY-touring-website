@@ -4,14 +4,11 @@ const { matchZones } = require('../zones/matcher');
 
 async function parsePreferences(text) {
   try {
-    // Parse with AI or heuristic
     const parsed = await parsePrefsSmart(text);
-    
-    // Normalize
     const normalized = {
       vibes: parsed.interests || [],
       avoid: parsed.avoid || [],
-      keywords: parsed.keywords || [], // include LLM/heuristic keywords when available
+      keywords: parsed.keywords || [], 
       pace: parsed.pace,
       budget: parsed.budget,
       durationDays: parsed.durationDays,
@@ -29,14 +26,9 @@ async function parsePreferences(text) {
   }
 }
 
-/**
- * ✨ NEW: Match zones based on preferences
- */
 async function getMatchingZones(prefs, options = {}) {
   const { province = null } = options;
-  
   console.log('🎯 Matching zones:', prefs);
-  
   // Load zones
   const query = { isActive: true };
   if (province) query.province = province;

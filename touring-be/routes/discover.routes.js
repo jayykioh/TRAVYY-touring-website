@@ -1,104 +1,96 @@
 const { Router } = require("express");
-const { parsePreferences } = require("../services/ai");
-const { getMatchingZones } = require("../services/zones");
+const { getMatchingZones } = require("../services/zones/matcher");
+const { verifyToken } = require("../middlewares/authJwt");
+const { getUserLocation } = require("../services/user-location");
+const User = require("../models/Users");
 
 const router = Router();
-router.post("/parse", async (req, res) => {
+
+router.post("/parse", verifyToken, async (req, res) => {
   try {
-    // Accept both old and new formats
-    let combinedText = '';
-    let vibes = [];
-    let avoid = [];
-    
-    if (req.body.text) {
-      // Old format: single text field
-      combinedText = req.body.text;
-    } else {
-      // New format: structured vibes + freeText
-      vibes = req.body.vibes || [];
-      avoid = req.body.avoid || [];
-      const freeText = req.body.freeText || '';
-      combinedText = [...vibes, freeText].filter(Boolean).join(", ");
-    }
-    
-    if (!combinedText || combinedText.trim().length < 3) {
+    // ===== 1. INPUT VALIDATION =====
+    const vibes = Array.isArray(req.body.vibes) ? req.body.vibes : [];
+    const freeText = (req.body.freeText || '').trim();
+    const requestLocation = req.body.userLocation || null;
+
+    // Must have vibes OR freeText
+    if (vibes.length === 0 && freeText.length === 0) {
       return res.status(400).json({
         ok: false,
-        error: 'TEXT_TOO_SHORT',
-        message: 'Query must be at least 3 characters'
+        error: 'EMPTY_INPUT',
+        message: 'Please select vibes or type a description'
       });
     }
+
+    // ===== 2. GET USER LOCATION (Priority: GPS → Profile → None) =====
+    let userLocation = null;
+    let user = null;
     
-    console.log(`\n🔍 [Discover] Query: "${combinedText.slice(0, 60)}..."`);
-    console.log(`   Vibes: ${vibes.join(', ')}`);
-    console.log(`   Avoid: ${avoid.join(', ')}`);
+    // If user is logged in, fetch their profile for fallback location
+    if (req.user?.sub) {
+      try {
+        user = await User.findOne({ _id: req.user.sub }).lean();
+      } catch (err) {
+        console.warn('⚠️ Could not fetch user profile:', err.message);
+      }
+    }
     
-    const { province } = req.body;
-    
-    // 1. Parse with LLM (get structured preferences)
-    const prefs = await parsePreferences(combinedText);
-    
-    // Override with explicit vibes/avoid if provided
-    if (vibes.length > 0) prefs.vibes = [...new Set([...prefs.vibes, ...vibes])];
-    if (avoid.length > 0) prefs.avoid = [...new Set([...prefs.avoid, ...avoid])];
-    
-    console.log('📋 [Discover] Parsed preferences:', {
-      vibes: prefs.vibes?.slice(0, 5),
-      avoid: prefs.avoid?.slice(0, 3)
-    });
-    
-    // 2. Match zones (uses hybrid embedding + keyword)
-    const result = await getMatchingZones(prefs, {
-      province,
-      useEmbedding: true
-    });
-    
-    // 3. Check if zones found
+    // Use getUserLocation helper to get best available location
+    userLocation = getUserLocation(user, { userLocation: requestLocation });
+
+    // ===== 3. LOG INPUT =====
+    console.log(`\n🔍 [Discover/Parse] User request:`);
+    console.log(`   Vibes: ${vibes.join(', ') || '(none)'}`);
+    console.log(`   Text: ${freeText.slice(0, 50)}${freeText.length > 50 ? '...' : ''}`);
+    console.log(`   Location: ${userLocation ? `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)} (${userLocation.source})` : 'none'}`);
+    console.log(`   User: ${req.user?.sub || 'anonymous'}`);
+
+    // ===== 4. CALL MATCHER DIRECTLY (no intermediate wrapper) =====
+    const result = await getMatchingZones(
+      { 
+        vibes,
+        freeText: freeText  // Use actual freeText only (empty string if not provided)
+      },
+      { 
+        userLocation,
+        useEmbedding: true,
+        userId: req.user?.sub
+      }
+    );
+
+    // ===== 4. HANDLE NO RESULTS =====
     if (!result.zones || result.zones.length === 0) {
+      console.log('⚠️  [Discover] No matching zones found');
       return res.json({
         ok: true,
-        prefs,
-        strategy: 'none',
         zones: [],
-        reason: 'Không tìm thấy zone phù hợp',
-        noMatch: true
+        noMatch: true,
+        reason: 'Không tìm thấy zone phù hợp'
       });
     }
-    
-    // 4. Group by province
+
+    // ===== 5. LOG RESULTS =====
+    console.log(`✅ [Discover] Found ${result.zones.length} zones`);
+    result.zones.slice(0, 3).forEach((z, i) => {
+      console.log(`   ${i + 1}. ${z.name} (score: ${z.finalScore?.toFixed(3)})`);
+    });
+
+    // ===== 6. GROUP BY PROVINCE =====
     const byProvince = result.zones.reduce((acc, zone) => {
-      (acc[zone.province] = acc[zone.province] || []).push(zone);
+      if (!acc[zone.province]) acc[zone.province] = [];
+      acc[zone.province].push(zone);
       return acc;
     }, {});
 
-    console.log('[Discover] Zones to return:', {
-      count: result.zones?.length,
-      firstZone: result.zones?.[0]?.name,
-      hasFinalScore: !!result.zones?.[0]?.finalScore,
-      finalScore: result.zones?.[0]?.finalScore,
-      scores: result.zones?.slice(0, 3).map(z => ({
-        name: z.name,
-        finalScore: z.finalScore,
-        embedScore: z.embedScore,
-        ruleScore: z.ruleScore,
-        ruleReasons: z.ruleReasons,
-        ruleDetails: z.ruleDetails || z.ruleReasons?.details || null
-      }))
-    });
-
-
+    // ===== 7. RETURN RESULTS =====
     res.json({
       ok: true,
-      prefs,
-      strategy: result.strategy,
-      reason: result.reason,
       zones: result.zones,
-      byProvince,
-      fallback: result.strategy === 'keyword'
+      byProvince
     });
-    
+
   } catch (error) {
-    console.error('❌ [Discover] Error:', error);
+    console.error('❌ [Discover] Error:', error.message);
     res.status(500).json({
       ok: false,
       error: 'INTERNAL_ERROR',
