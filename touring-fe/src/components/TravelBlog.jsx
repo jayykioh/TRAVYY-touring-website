@@ -33,7 +33,7 @@ const TravelBlog = () => {
     : blogPosts.filter(post => post.category === selectedCategory);
 
   return (
-    <section className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <section id="blog" className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
        {/* Header Section */}
