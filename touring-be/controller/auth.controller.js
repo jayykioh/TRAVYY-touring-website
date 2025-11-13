@@ -111,11 +111,15 @@ exports.register = async (req, res) => {
     // cấp refresh cookie + access token (giống Google flow)
     const jti = newId();
     const refresh = signRefresh({ jti, userId: user.id });
+    // Set refresh cookie for entire site so it is available to refresh endpoints
+    // and websocket handshakes during development. Use SameSite=None to allow
+    // cross-origin requests from the frontend dev server; keep `secure` only
+    // in production where HTTPS is used.
     res.cookie("refresh_token", refresh, {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd ? "none" : "lax",
-      path: "/api/auth",
+      sameSite: "none",
+      path: "/",
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
@@ -196,11 +200,15 @@ exports.login = async (req, res) => {
     // ✅ tạo refresh cookie + access token như các flow khác
     const jti = newId();
     const refresh = signRefresh({ jti, userId: user.id });
+    // Set refresh cookie for entire site so it is available to refresh endpoints
+    // and websocket handshakes during development. Use SameSite=None to allow
+    // cross-origin requests from the frontend dev server; keep `secure` only
+    // in production where HTTPS is used.
     res.cookie("refresh_token", refresh, {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd ? "none" : "lax",
-      path: "/api/auth",
+      sameSite: "none",
+      path: "/",
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 

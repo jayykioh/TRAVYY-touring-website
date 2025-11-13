@@ -32,10 +32,12 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "http://localhost:5174"],
     credentials: true,
-    methods: ["GET", "POST"]
-  }
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+  },
+  transports: ['websocket', 'polling']
 });
 const isProd = process.env.NODE_ENV === "production";
 const MONGO_URI =
@@ -151,9 +153,9 @@ mongoose
   .then(() => {
     console.log("✅ MongoDB connected");
     
-    // Initialize WebSocket
-    const setupChatSocket = require('./socket/chatSocket');
-    setupChatSocket(io);
+  // Initialize WebSocket handlers and collection watchers
+  const setupSockets = require('./socket');
+  setupSockets(io);
     
     server.listen(PORT, () =>
       console.log(`🚀 API listening on http://localhost:${PORT}`)

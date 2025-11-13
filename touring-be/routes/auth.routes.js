@@ -59,11 +59,15 @@ router.get(
       const refreshToken = signRefresh({ jti, userId: user.id });
 
       // Set refresh cookie theo môi trường
+      // Make refresh cookie available site-wide during development so the
+      // frontend dev server and websocket handshakes can access it.
+      // In dev: use sameSite: "Lax" to allow cross-site (no https needed).
+      // In prod: use sameSite: "None" + secure: true.
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
-        secure: isProd, // dev: false, prod: true (HTTPS)
-        sameSite: isProd ? "none" : "lax", // dev: 'lax'
-        path: "/api/auth",
+        secure: isProd,
+        sameSite: isProd ? "none" : "lax",
+        path: "/",
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 ngày
       });
 
@@ -97,11 +101,15 @@ router.get(
 
       const refreshToken = signRefresh({ jti, userId: user.id });
 
+      // Make refresh cookie available site-wide during development so the
+      // frontend dev server and websocket handshakes can access it.
+      // In dev: use sameSite: "Lax" to allow cross-site (no https needed).
+      // In prod: use sameSite: "None" + secure: true.
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
         secure: isProd,
         sameSite: isProd ? "none" : "lax",
-        path: "/api/auth",
+        path: "/",
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 

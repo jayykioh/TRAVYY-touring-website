@@ -9,6 +9,7 @@ import { CartProvider } from "./context/CartContext";
 import ItineraryProvider from "./context/ItineraryContext";
 import { SocketProvider } from "./context/SocketContext";
 import { Toaster } from "sonner";
+import GlobalChatListener from '@/components/GlobalChatListener';
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -18,6 +19,7 @@ createRoot(document.getElementById("root")).render(
           <ItineraryProvider>
             <CartProvider>
               <App />
+              <GlobalChatListener />
               <Toaster richColors closeButton />
             </CartProvider>
           </ItineraryProvider>

@@ -982,10 +982,25 @@ export default function ItineraryResult() {
       )}
 
       {/* Reopen Chat Button - Show when chat is closed */}
+      {/* DEV helper: always show a debug button to open chat when developing */}
+      {import.meta.env.DEV && (
+        <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 mt-4 mb-4">
+          <button
+            onClick={() => { console.log('[ItineraryResult][DEV] Debug Open Chat clicked'); setShowChat(true); }}
+            className="w-full px-4 py-3 rounded-lg bg-yellow-400 text-black hover:bg-yellow-500 text-base font-semibold flex items-center gap-2"
+          >
+            Debug: Open Chat (DEV)
+          </button>
+        </div>
+      )}
+
       {!showChat && itinerary.isCustomTour && (itinerary.tourGuideRequest?.status === 'pending' || itinerary.tourGuideRequest?.status === 'accepted') && (
         <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 mt-8 mb-8">
           <button
-            onClick={() => setShowChat(true)}
+            onClick={() => {
+              console.log('[ItineraryResult] Reopen Chat button clicked');
+              setShowChat(true);
+            }}
             className="w-full px-6 py-4 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -4,8 +4,6 @@ const API_BASE = "http://localhost:4000";
 
 // helper fetch: luôn gửi cookie (để BE đọc refresh_token)
 
-export { useAuth } from "./context";
-
 const MOCK_ADMINS = [
   {
     id: 1,
@@ -47,7 +45,14 @@ async function api(input, init = {}) {
 
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState(null); // ⬅️ giữ access in-memory
+  // Initialize accessToken: check localStorage first, but sanitize invalid strings
+  const [accessToken, setAccessToken] = useState(() => {
+    const stored = localStorage.getItem('accessToken');
+    if (stored && stored !== 'null' && stored !== 'undefined') {
+      return stored;
+    }
+    return null;
+  });
   const [bannedInfo, setBannedInfo] = useState(() => {
     try {
       const raw = sessionStorage.getItem("bannedInfo");
@@ -119,7 +124,28 @@ export default function AuthProvider({ children }) {
       const url = !/^https?:\/\//.test(input) ? `${API_BASE}${input}` : input;
 
       const headers = { ...(init.headers || {}) };
-      if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+      // If we already have an access token, attach it. Otherwise try a
+      // proactive refresh to avoid an initial 401 that pollutes Network tab.
+      // Defensive: ignore string values 'null' or 'undefined' which sometimes
+      // get stored in localStorage by mistake and would result in `Bearer null`.
+      const validAccessToken = accessToken && accessToken !== 'null' && accessToken !== 'undefined' ? accessToken : null;
+      if (validAccessToken) {
+        headers.Authorization = `Bearer ${validAccessToken}`;
+      } else {
+        try {
+          const r = await api(`${API_BASE}/api/auth/refresh`, { method: "POST" }).catch(() => null);
+          if (r?.accessToken) {
+            setAccessToken(r.accessToken);
+            if (r.accessToken && r.accessToken !== 'null' && r.accessToken !== 'undefined') {
+              localStorage.setItem('accessToken', r.accessToken);
+            }
+            headers.Authorization = `Bearer ${r.accessToken}`;
+          }
+        } catch (e) {
+          // Log debug so we can see why refresh failed during proactive attempt
+          console.debug("withAuth: proactive refresh failed:", e && e.message ? e.message : e);
+        }
+      }
 
       try {
         return await api(url, { ...init, headers });
@@ -130,8 +156,10 @@ export default function AuthProvider({ children }) {
           }).catch(() => null);
           if (!r?.accessToken) throw e;
           setAccessToken(r.accessToken);
-          // Update localStorage as well
-          localStorage.setItem('accessToken', r.accessToken);
+          // Update localStorage as well (only if token is a valid string)
+          if (r.accessToken && r.accessToken !== 'null' && r.accessToken !== 'undefined') {
+            localStorage.setItem('accessToken', r.accessToken);
+          }
           return await api(url, {
             ...init,
             headers: { ...headers, Authorization: `Bearer ${r.accessToken}` },
@@ -172,7 +200,9 @@ export default function AuthProvider({ children }) {
             setBannedInfo(info);
             try {
               sessionStorage.setItem("bannedInfo", JSON.stringify(info));
-            } catch {}
+            } catch (err) {
+              console.warn("AuthContext: failed to save bannedInfo to sessionStorage", err && err.message ? err.message : err);
+            }
             // do not attempt to load /me for banned/locked accounts
             setUser(null);
             setBooting(false);
@@ -183,7 +213,9 @@ export default function AuthProvider({ children }) {
             setBannedInfo(null);
             try {
               sessionStorage.removeItem("bannedInfo");
-            } catch {}
+            } catch (err) {
+              console.warn("AuthContext: failed to remove bannedInfo from sessionStorage", err && err.message ? err.message : err);
+            }
           }
         }
 
@@ -210,7 +242,9 @@ export default function AuthProvider({ children }) {
               setBannedInfo(info);
               try {
                 sessionStorage.setItem("bannedInfo", JSON.stringify(info));
-              } catch {}
+              } catch (err) {
+                console.warn("AuthContext: failed to save bannedInfo during refresh flow", err && err.message ? err.message : err);
+              }
             }
             setUser(null);
           }

@@ -6,9 +6,11 @@ import Footer from "./Footer";
 import BottomNav from "./BottomNav";
 import ScrollToTop from "../common/ScrollToTop";
 import FloatingChatButton from "../chat/FloatingChatButton";
+import ChatPopup from "../chat/ChatPopup";
 
 const MainLayout = ({ title = "", subtitle = "" }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const closeSidebar = () => setSidebarOpen(false);
@@ -53,7 +55,10 @@ const MainLayout = ({ title = "", subtitle = "" }) => {
       </div>
 
       {/* Floating Chat Button */}
-      <FloatingChatButton />
+      <FloatingChatButton onClick={() => setChatOpen(true)} />
+
+      {/* Chat Popup */}
+      <ChatPopup isOpen={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   );
 };

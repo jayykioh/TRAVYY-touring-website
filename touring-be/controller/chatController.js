@@ -44,17 +44,19 @@ async function findTourRequest(requestId) {
 
 // Helper to check chat access
 function checkChatAccess(requestData, userId, role) {
+  if (!requestData || !userId) return false;
+  
   if (requestData.type === 'Itinerary') {
     const itinerary = requestData.request;
     return (
-      requestData.userId.toString() === userId || // Traveller who created
+      (requestData.userId && requestData.userId.toString() === userId) || // Traveller who created
       (requestData.guideId && requestData.guideId.toString() === userId) || // Guide who accepted
       (role === 'guide' && itinerary.tourGuideRequest?.status === 'pending') // Any guide for pending requests
     );
   } else {
     // TourCustomRequest - must be assigned guide or traveller
     return (
-      requestData.userId.toString() === userId ||
+      (requestData.userId && requestData.userId.toString() === userId) ||
       (requestData.guideId && requestData.guideId.toString() === userId)
     );
   }
@@ -268,26 +270,24 @@ exports.sendMessage = async (req, res) => {
       }
     }
 
-    // Emit to WebSocket room so other connected clients receive the new file message
+    // Emit standardized newMessage event to chat room
     try {
       const io = req.app && req.app.get && req.app.get('io');
       if (io) {
-        io.to(`chat-${requestId}`).emit('new-message', chatMessage);
-        console.log('[Chat] Emitted new-message (file) via HTTP for room:', `chat-${requestId}`);
+        io.to(`chat-${requestId}`).emit('newMessage', chatMessage);
+        // Also notify the recipient's user room so list views (which often join
+        // user-<id> rooms) can react immediately without requiring a DB
+        // notification document. recipientId may be an ObjectId/string.
+        if (recipientId) {
+          try {
+            io.to(`user-${recipientId}`).emit('newMessage', chatMessage);
+          } catch (e) {
+            console.warn('[Chat] emit newMessage to user room failed', e && e.message);
+          }
+        }
       }
     } catch (emitErr) {
-      console.error('[Chat] Error emitting new-message (file) via HTTP:', emitErr);
-    }
-
-    // Emit to WebSocket room so other connected clients receive the new message
-    try {
-      const io = req.app && req.app.get && req.app.get('io');
-      if (io) {
-        io.to(`chat-${requestId}`).emit('new-message', chatMessage);
-        console.log('[Chat] Emitted new-message via HTTP for room:', `chat-${requestId}`);
-      }
-    } catch (emitErr) {
-      console.error('[Chat] Error emitting new-message via HTTP:', emitErr);
+      console.warn('[Chat] socket emit newMessage failed', emitErr && emitErr.message);
     }
 
     res.json({
@@ -304,6 +304,7 @@ exports.sendMessage = async (req, res) => {
     });
   }
 };
+
 
 // Send message with file attachment
 exports.sendFileMessage = async (req, res) => {
@@ -500,6 +501,15 @@ exports.markAsRead = async (req, res) => {
     const { requestId } = req.params;
     const { messageIds } = req.body;
 
+    console.log('[Chat] markAsRead called:', { userId, role, requestId, messageIds });
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized: User ID not found'
+      });
+    }
+
     // Verify access
     const requestData = await findTourRequest(requestId);
     if (!requestData) {
@@ -539,25 +549,23 @@ exports.markAsRead = async (req, res) => {
 
     const unreadCount = await TourRequestChat.getUnreadCount(requestId, userId, role);
 
+    console.log('[Chat] marked as read, unreadCount:', unreadCount);
+
+    // Emit unread count update to socket room
+    try {
+      const io = req.app && req.app.get && req.app.get('io');
+      if (io) {
+        io.to(`chat-${requestId}`).emit('messagesRead', { requestId, userId, unreadCount });
+      }
+    } catch (emitErr) {
+      console.error('[Chat] Error emitting messagesRead via HTTP:', emitErr);
+    }
+
     res.json({
       success: true,
       unreadCount,
       message: 'Messages marked as read'
     });
-
-    // Emit read event to other clients in the socket room
-    try {
-      const io = req.app && req.app.get && req.app.get('io');
-      if (io) {
-        io.to(`chat-${requestId}`).emit('messages-read-by-other', {
-          userId,
-          messageIds: messageIds && Array.isArray(messageIds) && messageIds.length > 0 ? messageIds : 'all'
-        });
-        console.log('[Chat] Emitted messages-read-by-other via HTTP for room:', `chat-${requestId}`);
-      }
-    } catch (emitErr) {
-      console.error('[Chat] Error emitting messages-read-by-other via HTTP:', emitErr);
-    }
 
   } catch (error) {
     console.error('[Chat] Error marking messages as read:', error);
@@ -635,6 +643,16 @@ exports.editMessage = async (req, res) => {
     await message.editContent(content.trim());
     await message.populate('sender.userId', 'name avatar email');
 
+    // Emit update via socket
+    try {
+      const io = (req && req.app && req.app.get && req.app.get('io')) || null;
+      if (io) {
+        io.to(`chat-${message.tourRequestId}`).emit('messageUpdated', message);
+      }
+    } catch (e) {
+      console.warn('[Chat] socket emit messageUpdated failed', e && e.message);
+    }
+
     res.json({
       success: true,
       message
@@ -668,6 +686,16 @@ exports.deleteMessage = async (req, res) => {
     }
 
     await message.softDelete();
+
+    // Emit deletion via socket
+    try {
+      const io = (req && req.app && req.app.get && req.app.get('io')) || null;
+      if (io) {
+        io.to(`chat-${message.tourRequestId}`).emit('messageDeleted', { messageId });
+      }
+    } catch (e) {
+      console.warn('[Chat] socket emit messageDeleted failed', e && e.message);
+    }
 
     res.json({
       success: true,

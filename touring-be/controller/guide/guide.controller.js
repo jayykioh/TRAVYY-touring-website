@@ -319,8 +319,14 @@ const getCustomTourRequests = async (req, res) => {
     };
 
     // Filter by specific status if provided
+    // Support both single status and comma-separated list of statuses
     if (status) {
-      query.status = status;
+      const statusList = status.split(',').map(s => s.trim());
+      if (statusList.length === 1) {
+        query.status = statusList[0];
+      } else {
+        query.status = { $in: statusList };
+      }
     }
 
     const skip = (page - 1) * limit;
@@ -342,7 +348,8 @@ const getCustomTourRequests = async (req, res) => {
 
     res.json({
       success: true,
-      requests,
+      tourRequests: requests,  // ✅ FIX: Frontend expects 'tourRequests'
+      requests,                 // ✅ Keep for backward compat
       pagination: {
         total,
         page: parseInt(page),

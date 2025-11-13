@@ -4,6 +4,7 @@
 const getAccessToken = () => {
   // Try to get from localStorage as fallback (some pages may store it there)
   const token = localStorage.getItem('accessToken');
+  if (!token || token === 'null' || token === 'undefined') return null;
   return token;
 };
 

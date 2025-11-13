@@ -322,13 +322,13 @@ export default function VibeSelectPage() {
                     'group relative inline-flex items-center gap-2 px-4 py-3 rounded-2xl text-base font-semibold border transition focus:outline-none focus:ring-2 focus:ring-offset-2',
                     active
                       ? 'text-white border-transparent'
-                      : 'text-slate-800 bg-white border-slate-200',
+                        : 'text-slate-800 bg-white border-slate-200',
                     disabled ? 'opacity-50 cursor-not-allowed' : ''
                   ].join(' ')}
                   style={{
                     borderColor: active ? 'transparent' : hex,
                     background: undefined,
-                    backgroundColor: active ? rgba : 'white',
+                    backgroundColor: active ? rgba : 'rgba(255,255,255,1)',
                     boxShadow: active ? `0 8px 26px ${rgba}` : undefined
                   }}
                 >
@@ -447,7 +447,7 @@ export default function VibeSelectPage() {
                           <span
                             key={sv}
                             className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium"
-                            style={{ color: hex, backgroundColor: 'white', border: `1px solid ${hex}20` }}
+                            style={{ color: hex, backgroundColor: 'rgba(255,255,255,1)', border: `1px solid ${hex}20` }}
                           >
                             <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ backgroundColor: hex }} />
                             {sv}

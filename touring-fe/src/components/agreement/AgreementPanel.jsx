@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CheckCircle2, Circle, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
@@ -7,6 +7,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import axios from 'axios';
+import { useSocket } from '../../context/SocketContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
@@ -26,8 +27,10 @@ export default function AgreementPanel({ requestId, currentUser, tourRequest, on
 
   const isGuide = currentUser.role === 'guide';
 
+  const { joinRoom, leaveRoom, on } = useSocket() || {};
+
   // Fetch agreement status
-  const fetchAgreementStatus = async () => {
+  const fetchAgreementStatus = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
@@ -53,7 +56,7 @@ export default function AgreementPanel({ requestId, currentUser, tourRequest, on
     } finally {
       setLoading(false);
     }
-  };
+  }, [requestId, isGuide]);
 
   // Agree to terms
   const handleAgree = async () => {
@@ -102,12 +105,42 @@ export default function AgreementPanel({ requestId, currentUser, tourRequest, on
   };
 
   useEffect(() => {
+    let offAgreement, offRequest;
+    let pollInterval;
+
+    // fetch initial state
     fetchAgreementStatus();
-    // Poll for updates every 10 seconds
-    const interval = setInterval(fetchAgreementStatus, 10000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestId]);
+
+    if (joinRoom && on) {
+      try {
+        joinRoom(`request-${requestId}`);
+
+        offAgreement = on('agreementUpdated', (ag) => {
+          setAgreement(ag);
+          if (ag?.terms) setTerms(prev => ({ ...prev, ...ag.terms }));
+        });
+
+        offRequest = on('tourRequestUpdated', (doc) => {
+          if (doc?.agreement) {
+            setAgreement(doc.agreement);
+            if (doc.agreement.terms) setTerms(prev => ({ ...prev, ...doc.agreement.terms }));
+          }
+        });
+      } catch (e) {
+        console.warn('[AgreementPanel] socket handlers failed, falling back to polling', e?.message);
+        pollInterval = setInterval(fetchAgreementStatus, 10000);
+      }
+    } else {
+      pollInterval = setInterval(fetchAgreementStatus, 10000);
+    }
+
+    return () => {
+      if (offAgreement) offAgreement();
+      if (offRequest) offRequest();
+      if (leaveRoom) leaveRoom(`request-${requestId}`);
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [requestId, joinRoom, on, leaveRoom, fetchAgreementStatus]);
 
   if (loading && !agreement) {
     return (

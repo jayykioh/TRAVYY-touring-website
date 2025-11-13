@@ -27,7 +27,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../auth/context";
 import { toast } from "sonner";
-import ChatBox from "../components/chat/ChatBox";
 
 const GuideTourDetailPage = () => {
   const { id } = useParams();
@@ -197,7 +196,13 @@ const GuideTourDetailPage = () => {
   };
 
   const handleContactCustomer = () => {
-    console.log("Opening chat with customer");
+    // Open chat popup from MainLayout
+    const chatButton = document.querySelector('[aria-label="Open chat"]');
+    if (chatButton) {
+      chatButton.click();
+    } else {
+      toast.info('Sử dụng nút chat ở góc dưới bên phải để liên hệ khách hàng');
+    }
   };
 
   const handleNavigateToLocation = () => {
@@ -1050,24 +1055,6 @@ const GuideTourDetailPage = () => {
                 </button>
               </div>
             </Card>
-          )}
-
-          {/* Chat Box - Show for requests and ongoing/upcoming tours */}
-          {(isRequest || isUpcoming || isOngoing) && (
-            <ChatBox 
-              requestId={id} 
-              customerName={tour.customerName}
-              tourInfo={{
-                tourName: tour.tourName,
-                name: tour.tourName,
-                location: tour.location,
-                departureDate: tour.departureDate,
-                numberOfGuests: tour.numberOfGuests,
-                duration: tour.duration,
-                itinerary: tour.itinerary,
-                totalPrice: tour.totalPrice
-              }}
-            />
           )}
         </div>
       </div>

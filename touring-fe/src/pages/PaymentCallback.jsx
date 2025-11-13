@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/auth/context";
 import { useCart } from "@/hooks/useCart";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { useSocket } from '@/context/SocketContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -11,6 +12,7 @@ export default function PaymentCallback() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { refreshCart } = useCart(); // ✅ Add cart refresh
+  const { joinRoom, leaveRoom, on } = useSocket() || {};
   const [status, setStatus] = useState("pending");
   const [message, setMessage] = useState("Đang xử lý thanh toán...");
   const [bookingId, setBookingId] = useState(null);
@@ -109,8 +111,33 @@ export default function PaymentCallback() {
             console.error('[MoMo Callback] Mark-paid error:', e);
           }
           
-          // STEP 2: Poll booking creation via by-payment endpoint
+          // STEP 2: Try realtime detection via socket then fallback to polling
           let attempts = 0;
+          let offPay;
+          if (joinRoom && on) {
+            try {
+              joinRoom(`payment-${momoOrderId}`);
+              offPay = on('paymentSessionUpdated', async (doc) => {
+                try {
+                  // if backend provided bookingId directly on payment session
+                  if (doc && doc.bookingId) {
+                    setStatus('success');
+                    setMessage('Thanh toán MoMo thành công!');
+                    setBookingId(doc.bookingId);
+                    await refreshCart();
+                    if (offPay) offPay();
+                    if (leaveRoom) leaveRoom(`payment-${momoOrderId}`);
+                  }
+                } catch (e) {
+                  console.error('[MoMo Callback] socket handler error', e);
+                }
+              });
+            } catch (e) {
+              console.warn('[MoMo Callback] socket init failed, will fallback to polling', e?.message);
+            }
+          }
+
+          // STEP 2 (fallback): Poll booking creation via by-payment endpoint
           const poll = async () => {
             attempts++;
             try {
@@ -151,7 +178,20 @@ export default function PaymentCallback() {
               setMessage('Thanh toán MoMo thành công (đang cập nhật booking...)');
             }
           };
+          // ensure we cleanup socket listener when no longer needed
+          let socketCleanup = null;
+          if (offPay) {
+            socketCleanup = () => {
+              offPay();
+              if (leaveRoom) leaveRoom(`payment-${momoOrderId}`);
+            };
+          }
+
           poll();
+          // return cleanup to remove socket listener if effect unmounts
+          return () => {
+            if (socketCleanup) socketCleanup();
+          };
         } else {
           setStatus('error');
           setMessage(decodeURIComponent(momoMessage || 'Thanh toán MoMo thất bại'));
@@ -164,7 +204,7 @@ export default function PaymentCallback() {
       setMessage('Thiếu tham số nhận kết quả thanh toán');
     };
     run();
-  }, [searchParams, user, refreshCart]);
+  }, [searchParams, user, refreshCart, joinRoom, on, leaveRoom]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
