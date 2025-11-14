@@ -11,9 +11,15 @@ import ChatPopup from "../chat/ChatPopup";
 const MainLayout = ({ title = "", subtitle = "" }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  // Do not use location here to avoid triggering effects that reset chat state
+  // on navigation. Keep chat stable across route changes.
+  // const location = useLocation();
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const closeSidebar = () => setSidebarOpen(false);
+
+  // Do not reset chat popup state on every route change — keep chat state
+  // stable across navigation to avoid recreating Socket/Auth contexts.
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col gap-16">

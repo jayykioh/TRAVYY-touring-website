@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Calendar, Users, DollarSign } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Users } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import TourRequestChat from '../components/chat/TourRequestChat';
-import AgreementPanel from '../components/agreement/AgreementPanel';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
@@ -14,8 +13,6 @@ export default function TourRequestDetailsPage() {
   const [tourRequest, setTourRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
-  const [creatingBooking, setCreatingBooking] = useState(false);
-  const [activeTab, setActiveTab] = useState('chat');
 
   // Get current user info
   useEffect(() => {
@@ -57,37 +54,6 @@ export default function TourRequestDetailsPage() {
     }
   };
 
-  // Create booking from request
-  const handleCreateBooking = async () => {
-    if (!tourRequest?.agreement?.completedAt) {
-      alert('Both parties must agree to terms before creating booking!');
-      return;
-    }
-
-    try {
-      setCreatingBooking(true);
-      const token = localStorage.getItem('token');
-      
-      const response = await axios.post(
-        `${API_URL}/api/tour-requests/${requestId}/create-booking`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-
-      if (response.data.success) {
-        alert('🎉 Booking created successfully!');
-        navigate(`/payment/${response.data.booking._id}`);
-      }
-    } catch (error) {
-      console.error('Error creating booking:', error);
-      alert(error.response?.data?.error || 'Failed to create booking');
-    } finally {
-      setCreatingBooking(false);
-    }
-  };
-
   useEffect(() => {
     if (currentUser && requestId) {
       fetchTourRequest();
@@ -110,8 +76,6 @@ export default function TourRequestDetailsPage() {
       </div>
     );
   }
-
-  const bothAgreed = tourRequest.agreement?.userAgreed && tourRequest.agreement?.guideAgreed;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -220,49 +184,17 @@ export default function TourRequestDetailsPage() {
             </div>
           )}
 
-          {/* Tabs for Chat & Agreement */}
+          {/* Chat Section */}
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden">
-            <div className="grid grid-cols-2 border-b border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => setActiveTab('chat')}
-                className={`px-4 py-3 text-center font-medium transition-colors ${
-                  activeTab === 'chat'
-                    ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                }`}
-              >
-                💬 Chat
-              </button>
-              <button
-                onClick={() => setActiveTab('agreement')}
-                className={`px-4 py-3 text-center font-medium transition-colors ${
-                  activeTab === 'agreement'
-                    ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                }`}
-              >
-                📋 Thỏa thuận
-              </button>
+            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold">💬 Chat với Tour Guide</h3>
             </div>
             
             <div className="p-4">
-              {activeTab === 'chat' && (
-                <TourRequestChat
-                  requestId={requestId}
-                  currentUser={currentUser}
-                />
-              )}
-              
-              {activeTab === 'agreement' && (
-                <AgreementPanel
-                  requestId={requestId}
-                  currentUser={currentUser}
-                  tourRequest={tourRequest}
-                  onAgreementComplete={() => {
-                    fetchTourRequest();
-                  }}
-                />
-              )}
+              <TourRequestChat
+                requestId={requestId}
+                currentUser={currentUser}
+              />
             </div>
           </div>
         </div>
@@ -289,28 +221,10 @@ export default function TourRequestDetailsPage() {
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-semibold mb-4">Actions</h3>
               
-              {bothAgreed ? (
-                <Button
-                  onClick={handleCreateBooking}
-                  disabled={creatingBooking}
-                  className="w-full"
-                  size="lg"
-                >
-                  {creatingBooking ? (
-                    'Creating Booking...'
-                  ) : (
-                    <>
-                      <DollarSign className="w-4 h-4 mr-2" />
-                      Create Booking & Pay
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <div className="text-center text-gray-600 py-4">
-                  <p className="text-sm mb-2">Both parties must agree to terms before booking</p>
-                  <p className="text-xs text-gray-500">Go to Agreement tab to confirm</p>
-                </div>
-              )}
+              <div className="text-center text-gray-600 py-4">
+                <p className="text-sm mb-2">💬 Thanh toán trực tiếp trong chat</p>
+                <p className="text-xs text-gray-500">Sau khi thỏa thuận xong, nút thanh toán sẽ xuất hiện trong hộp chat</p>
+              </div>
             </div>
           )}
 

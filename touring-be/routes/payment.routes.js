@@ -100,4 +100,47 @@ router.post("/deposit/momo/callback", async (req, res) => {
   }
 });
 
+// Handle tour request payment callback (MoMo)
+router.post("/tour-request/momo/callback", async (req, res) => {
+  try {
+    const { orderId, resultCode, amount, extraData } = req.body;
+    
+    console.log('[TourRequest Payment] MoMo callback:', { orderId, resultCode, amount });
+    
+    if (String(resultCode) !== '0') {
+      console.log('[TourRequest Payment] Payment failed:', resultCode);
+      return res.status(200).json({ success: false });
+    }
+    
+    // Extract booking ID from extraData
+    const data = JSON.parse(extraData || '{}');
+    const bookingId = data.bookingId;
+    
+    if (!bookingId) {
+      console.error('[TourRequest Payment] Missing bookingId in extraData');
+      return res.status(400).json({ error: 'Missing bookingId' });
+    }
+    
+    // Mark booking as paid
+    const { markBookingAsPaid } = require('../utils/paymentHelpers');
+    const booking = await markBookingAsPaid(orderId, {
+      provider: 'momo',
+      transactionId: orderId,
+      amount: amount,
+      extraData: data
+    });
+    
+    if (!booking) {
+      console.error('[TourRequest Payment] Booking not found or update failed:', orderId);
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+    
+    console.log('[TourRequest Payment] Success for booking:', bookingId);
+    res.status(200).json({ success: true, bookingId: booking._id });
+  } catch (error) {
+    console.error('[TourRequest Payment] Callback error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

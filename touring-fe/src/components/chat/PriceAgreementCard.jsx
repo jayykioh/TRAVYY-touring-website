@@ -43,7 +43,16 @@ const PriceAgreementCard = ({
     const input = window.prompt('Enter offer amount (VND)', displayAmount || '0');
     if (!input) return;
     const amount = Number(input.replace(/[^0-9.-]+/g, '')) || 0;
-    await onSendOffer({ amount });
+    
+    try {
+      const success = await onSendOffer({ amount });
+      if (!success) {
+        alert('Gửi đề xuất thất bại. Vui lòng thử lại.');
+      }
+    } catch (err) {
+      // Show specific error message (e.g., minPrice validation)
+      alert(err.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+    }
   };
 
   const handleAgree = async () => {

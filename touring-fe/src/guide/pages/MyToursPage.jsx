@@ -4,6 +4,7 @@ import Card from "../components/common/Card";
 import Badge from "../components/common/Badge";
 import TourCard from "../components/home/TourCard";
 import { useAuth } from "../../auth/context";
+import { useSocket } from "../../context/SocketContext";
 import { toast } from "sonner";
 
 const MyToursPage = () => {
@@ -11,6 +12,7 @@ const MyToursPage = () => {
   const tabFromUrl = searchParams.get("tab") || "accepted";
   const [activeTab, setActiveTab] = useState(tabFromUrl);
   const { user, withAuth } = useAuth();
+  const { socket, on, joinRoom } = useSocket();
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,6 +45,42 @@ const MyToursPage = () => {
   useEffect(() => {
     fetchTours();
   }, [fetchTours]);
+
+  // Join socket room for real-time updates
+  useEffect(() => {
+    if (!socket || !user?._id) return;
+    
+    // Join user-specific room to receive payment and tour completion notifications
+    joinRoom(`user-${user._id}`);
+    
+    // Listen for payment success
+    const unsubscribePayment = on('paymentSuccessful', (data) => {
+      console.log('🔔 Payment successful:', data);
+      toast.success(`Khách hàng đã thanh toán cho ${data.tourTitle || 'tour'}`);
+      // Optionally refetch tours to update status
+      fetchTours();
+    });
+    
+    // Listen for tour marked as done
+    const unsubscribeTourDone = on('tourMarkedDone', (data) => {
+      console.log('🔔 Tour marked done:', data);
+      toast.success(`Tour "${data.tourTitle || 'Không xác định'}" đã hoàn thành!`);
+      fetchTours();
+    });
+    
+    // Listen for tour completion notification
+    const unsubscribeTourCompleted = on('tourCompleted', (data) => {
+      console.log('🔔 Tour completed:', data);
+      toast.info(`Tour "${data.tourTitle || 'Không xác định'}" được đánh dấu hoàn thành`);
+      fetchTours();
+    });
+    
+    return () => {
+      unsubscribePayment?.();
+      unsubscribeTourDone?.();
+      unsubscribeTourCompleted?.();
+    };
+  }, [socket, user?._id, joinRoom, fetchTours, on]);
 
   // Categorize tours by status/dates
   const categorizeTours = (tours) => {
@@ -169,7 +207,7 @@ const MyToursPage = () => {
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentTours.map((tour) => (
             <Card key={tour._id} hover className="p-4">
               <div className="mb-3">

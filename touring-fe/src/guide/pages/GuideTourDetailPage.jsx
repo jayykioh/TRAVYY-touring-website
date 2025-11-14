@@ -26,6 +26,7 @@ import {
   Download,
 } from "lucide-react";
 import { useAuth } from "../../auth/context";
+import { useSocket } from "../../context/SocketContext";
 import { toast } from "sonner";
 
 const GuideTourDetailPage = () => {
@@ -40,112 +41,152 @@ const GuideTourDetailPage = () => {
   const [completionNotes, setCompletionNotes] = useState("");
 
   const { withAuth } = useAuth();
+  const { socket, on, joinRoom } = useSocket();
   
   // Determine if this is a request or accepted tour based on current route
   const isRequestView = window.location.pathname.includes('/requests/');
   
-  useEffect(() => {
-    async function fetchTour() {
-      setLoading(true);
-      try {
-        // Use different endpoint based on whether viewing request or accepted tour
-        const endpoint = isRequestView 
-          ? `/api/guide/custom-requests/${id}`
-          : `/api/itinerary/guide/tours/${id}`;
+  // Extract tour fetching logic into reusable function
+  const fetchTourData = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Use different endpoint based on whether viewing request or accepted tour
+      const endpoint = isRequestView 
+        ? `/api/guide/custom-requests/${id}`
+        : `/api/itinerary/guide/tours/${id}`;
+      
+      const data = await withAuth(endpoint);
+      console.log('[GuideTourDetail] Raw data from API:', data);
+      
+      // API returns { success: true, tourRequest: {...} } for custom requests
+      if (data && (data.success || data._id)) {
+        const tourRequest = data.tourRequest || data; // Handle both wrapped and unwrapped responses
+        const itinerary = tourRequest.itineraryId || data;
+        const customer = tourRequest.userId || data.userId || data.customerInfo;
         
-        const data = await withAuth(endpoint);
-        console.log('[GuideTourDetail] Raw data from API:', data);
+        console.log('[GuideTourDetail] Parsed:', { tourRequest, itinerary, customer });
         
-        // API returns { success: true, tourRequest: {...} } for custom requests
-        if (data && (data.success || data._id)) {
-          const tourRequest = data.tourRequest || data; // Handle both wrapped and unwrapped responses
-          const itinerary = tourRequest.itineraryId || data;
-          const customer = tourRequest.userId || data.userId || data.customerInfo;
+        // Transform to UI format
+        const transformedTour = {
+          ...tourRequest,
+          id: tourRequest._id || data._id,
+          requestNumber: tourRequest.requestNumber,
           
-          console.log('[GuideTourDetail] Parsed:', { tourRequest, itinerary, customer });
+          // Tour info - prefer tourDetails from TourCustomRequest
+          tourName: tourRequest.tourDetails?.zoneName || itinerary?.zoneName || itinerary?.name || 'Tour',
+          location: tourRequest.tourDetails?.zoneName || itinerary?.zoneName || 'N/A',
+          numberOfGuests: tourRequest.tourDetails?.numberOfGuests || data.numberOfPeople || 1,
           
-          // Transform to UI format
-          const transformedTour = {
-            ...tourRequest,
-            id: tourRequest._id || data._id,
-            requestNumber: tourRequest.requestNumber,
-            
-            // Tour info - prefer tourDetails from TourCustomRequest
-            tourName: tourRequest.tourDetails?.zoneName || itinerary?.zoneName || itinerary?.name || 'Tour',
-            location: tourRequest.tourDetails?.zoneName || itinerary?.zoneName || 'N/A',
-            numberOfGuests: tourRequest.tourDetails?.numberOfGuests || data.numberOfPeople || 1,
-            
-            // Dates
-            departureDate: tourRequest.preferredDates?.[0]?.startDate || data.preferredDate,
-            startTime: tourRequest.preferredDates?.[0]?.startDate ? new Date(tourRequest.preferredDates[0].startDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '08:00',
-            endTime: tourRequest.preferredDates?.[0]?.endDate ? new Date(tourRequest.preferredDates[0].endDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '18:00',
-            
-            // Duration
-            duration: itinerary?.totalDuration ? `${Math.floor(itinerary.totalDuration / 60)}h ${itinerary.totalDuration % 60}m` : 
-                     tourRequest.tourDetails?.numberOfDays ? `${tourRequest.tourDetails.numberOfDays} ngày` : 'N/A',
-            
-            // Pricing
-            totalPrice: tourRequest.initialBudget?.amount || tourRequest.finalPrice?.amount || data.estimatedCost || 0,
-            currency: tourRequest.initialBudget?.currency || tourRequest.finalPrice?.currency || 'VND',
-            earnings: (tourRequest.initialBudget?.amount || 0) * 0.8, // 80% for guide
-            
-            // Customer info
-            customerName: customer?.name || 'Khách hàng',
-            customerId: customer?._id || (typeof customer === 'string' ? customer : 'N/A'),
-            customerAvatar: customer?.avatar?.url || customer?.avatar || 'https://via.placeholder.com/150',
-            customerEmail: customer?.email || tourRequest.contactInfo?.email || '',
-            contactPhone: customer?.phone || tourRequest.contactInfo?.phone || '',
-            
-            // Itinerary details - use tourDetails.items from TourCustomRequest
-            itinerary: (tourRequest.tourDetails?.items || itinerary?.items || []).map((item) => ({
-              title: item.name,
-              description: item.address || item.description || '',
-              time: item.startTime && item.endTime ? `${item.startTime} - ${item.endTime}` : item.timeSlot || '',
-              day: item.day,
-              duration: item.duration ? `${item.duration} phút` : '',
-              itemType: item.itemType
-            })),
-            
-            // Images
-            imageItems: (itinerary?.items || []).flatMap(item => 
-              item.imageUrl ? [{ imageUrl: item.imageUrl }] : 
-              item.photos ? item.photos.map(photo => ({ imageUrl: photo })) : []
-            ),
-            
-            // Special requests & notes
-            specialRequests: tourRequest.specialRequirements || data.notes || data.specialRequests || '',
-            
-            // Status
-            status: tourRequest.status || data.tourGuideRequest?.status || 'pending',
-            paymentStatus: data.paymentStatus || 'pending',
-            paymentMethod: data.paymentMethod || 'N/A',
-            
-            // Route info
-            pickupPoint: data.pickupLocation || itinerary?.items?.[0]?.address || null,
-            routePolyline: itinerary?.routePolyline,
-            totalDistance: itinerary?.totalDistance,
-            
-            // Keep raw data
-            rawData: data,
-            tourRequestData: tourRequest,
-            itineraryData: itinerary
-          };
+          // Dates
+          departureDate: tourRequest.preferredDates?.[0]?.startDate || data.preferredDate,
+          startTime: tourRequest.preferredDates?.[0]?.startDate ? new Date(tourRequest.preferredDates[0].startDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '08:00',
+          endTime: tourRequest.preferredDates?.[0]?.endDate ? new Date(tourRequest.preferredDates[0].endDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '18:00',
           
-          console.log('[GuideTourDetail] Transformed tour:', transformedTour);
-          setTour(transformedTour);
-        } else {
-          console.error('[GuideTourDetail] Invalid data format:', data);
-          setTour(null);
-        }
-      } catch (error) {
-        console.error('[GuideTourDetail] Error fetching tour:', error);
+          // Duration
+          duration: itinerary?.totalDuration ? `${Math.floor(itinerary.totalDuration / 60)}h ${itinerary.totalDuration % 60}m` : 
+                   tourRequest.tourDetails?.numberOfDays ? `${tourRequest.tourDetails.numberOfDays} ngày` : 'N/A',
+          
+          // Pricing
+          totalPrice: tourRequest.initialBudget?.amount || tourRequest.finalPrice?.amount || data.estimatedCost || 0,
+          currency: tourRequest.initialBudget?.currency || tourRequest.finalPrice?.currency || 'VND',
+          earnings: (tourRequest.initialBudget?.amount || 0) * 0.8, // 80% for guide
+          
+          // Customer info
+          customerName: customer?.name || 'Khách hàng',
+          customerId: customer?._id || (typeof customer === 'string' ? customer : 'N/A'),
+          customerAvatar: customer?.avatar?.url || customer?.avatar || 'https://via.placeholder.com/150',
+          customerEmail: customer?.email || tourRequest.contactInfo?.email || '',
+          contactPhone: customer?.phone || tourRequest.contactInfo?.phone || '',
+          
+          // Itinerary details - use tourDetails.items from TourCustomRequest
+          itinerary: (tourRequest.tourDetails?.items || itinerary?.items || []).map((item) => ({
+            title: item.name,
+            description: item.address || item.description || '',
+            time: item.startTime && item.endTime ? `${item.startTime} - ${item.endTime}` : item.timeSlot || '',
+            day: item.day,
+            duration: item.duration ? `${item.duration} phút` : '',
+            itemType: item.itemType
+          })),
+          
+          // Images
+          imageItems: (itinerary?.items || []).flatMap(item => 
+            item.imageUrl ? [{ imageUrl: item.imageUrl }] : 
+            item.photos ? item.photos.map(photo => ({ imageUrl: photo })) : []
+          ),
+          
+          // Special requests & notes
+          specialRequests: tourRequest.specialRequirements || data.notes || data.specialRequests || '',
+          
+          // Status
+          status: tourRequest.status || data.tourGuideRequest?.status || 'pending',
+          paymentStatus: tourRequest.paymentStatus || data.paymentStatus || 'unpaid',
+          paymentMethod: data.paymentMethod || 'N/A',
+          
+          // Route info
+          pickupPoint: data.pickupLocation || itinerary?.items?.[0]?.address || null,
+          routePolyline: itinerary?.routePolyline,
+          totalDistance: itinerary?.totalDistance,
+          
+          // Keep raw data
+          rawData: data,
+          tourRequestData: tourRequest,
+          itineraryData: itinerary
+        };
+        
+        console.log('[GuideTourDetail] Transformed tour:', transformedTour);
+        setTour(transformedTour);
+      } else {
+        console.error('[GuideTourDetail] Invalid data format:', data);
         setTour(null);
-      } finally {
-        setLoading(false);
       }
+    } catch (error) {
+      console.error('[GuideTourDetail] Error fetching tour:', error);
+      setTour(null);
+    } finally {
+      setLoading(false);
     }
-    fetchTour();
   }, [id, withAuth, isRequestView]);
+  
+  useEffect(() => {
+    fetchTourData();
+  }, [fetchTourData]);
+
+  // Join socket room and listen for real-time updates
+  useEffect(() => {
+    if (!socket || !tour?._id) return;
+    
+    // Join booking-specific room to receive payment and completion updates
+    joinRoom(`booking-${tour._id}`);
+    
+    // Join request room to receive payment updates
+    if (tour.id) {
+      joinRoom(`request-${tour.id}`);
+    }
+    
+    // Listen for payment updates
+    const unsubscribePayment = on('paymentUpdated', (data) => {
+      console.log('💰 Payment updated via socket:', data);
+      if (data.requestId === tour.id || data.bookingId === tour._id) {
+        // Refetch tour data to get updated payment status
+        fetchTourData();
+        toast.success('✅ Khách hàng đã thanh toán! Tour sắp sàng lên lịch.');
+      }
+    });
+    
+    // Listen for payment successful event
+    const unsubscribePaymentSuccess = on('paymentSuccessful', (data) => {
+      console.log('💳 Payment successful via socket:', data);
+      if (data.requestId === tour.id) {
+        fetchTourData();
+        toast.success('💰 Thanh toán thành công! Tour đã được cập nhật.');
+      }
+    });
+    
+    return () => {
+      unsubscribePayment?.();
+      unsubscribePaymentSuccess?.();
+    };
+  }, [socket, tour?.id, tour?._id, joinRoom, fetchTourData, on]);
 
   const handleAcceptRequest = async () => {
     try {
@@ -204,10 +245,34 @@ const GuideTourDetailPage = () => {
     }
   };
 
-  const handleCompleteTour = () => {
-    console.log("Completing tour:", id, completionNotes);
-    setShowCompleteModal(false);
-    navigate("/guide/tours");
+  const handleCompleteTour = async () => {
+    try {
+      console.log('[GuideTourDetail] Completing tour:', id, completionNotes);
+      
+      const response = await withAuth(`/api/guide/tours/${id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notes: completionNotes || 'Tour completed successfully'
+        })
+      });
+      
+      console.log('[GuideTourDetail] Complete response:', response);
+      
+      if (response.success) {
+        toast.success('🎉 Tour đã được đánh dấu hoàn thành!');
+        setShowCompleteModal(false);
+        // Wait a moment then navigate to allow toast to show
+        setTimeout(() => {
+          navigate("/guide/tours");
+        }, 1000);
+      } else {
+        toast.error(response.error || 'Không thể hoàn thành tour');
+      }
+    } catch (error) {
+      console.error('[GuideTourDetail] Error completing tour:', error);
+      toast.error('❌ Có lỗi xảy ra: ' + (error.message || 'Lỗi không xác định'));
+    }
   };
 
   const handleCancelTour = () => {

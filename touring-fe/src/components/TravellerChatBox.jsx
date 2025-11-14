@@ -14,6 +14,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
   const [editingMessage, setEditingMessage] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [error, setError] = useState(null);
+  const [showPaymentConfirmation, setShowPaymentConfirmation] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
@@ -35,7 +36,9 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
     sendTypingIndicator,
     editMessage,
     deleteMessage,
-    sendFileMessage
+    sendFileMessage,
+    socketError,
+    reconnectAttempts
   } = useTourRequestChat(requestId, '/api/chat');
 
   const scrollToBottom = useCallback(() => {
@@ -177,6 +180,12 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
   };
 
   const handleProceedToPayment = async () => {
+    // Validate status first
+    if (requestDetails?.status !== 'accepted' && requestDetails?.status !== 'agreement_pending') {
+      alert('⚠️ Yêu cầu chưa được guide chấp nhận chính thức. Vui lòng đợi.');
+      return;
+    }
+
     // Double check that both parties agreed
     if (!requestDetails?.agreement?.userAgreed || !requestDetails?.agreement?.guideAgreed) {
       alert('⚠️ Cả hai bên phải đồng ý trước khi thanh toán');
@@ -191,9 +200,24 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
       return;
     }
 
+    // Show confirmation modal
+    setShowPaymentConfirmation(true);
+  };
+
+  const confirmPayment = async () => {
+    setShowPaymentConfirmation(false);
+
+    const finalAmount = requestDetails?.finalPrice?.amount || requestDetails?.latestOffer?.amount || requestDetails?.initialBudget?.amount;
+    const itinerary = requestDetails?.tourDetails?.items || [];
+    const zoneName = requestDetails?.tourDetails?.zoneName || '';
+    const numberOfDays = requestDetails?.tourDetails?.numberOfDays || 1;
+
     console.log('[TravellerChatBox] Proceeding to payment:', {
       requestId,
       finalAmount,
+      itinerary: itinerary.length,
+      zoneName,
+      numberOfDays,
       agreement: requestDetails?.agreement,
       status: requestDetails?.status
     });
@@ -203,9 +227,21 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
         mode: 'tour-request',
         requestId: requestId,
         tourInfo: requestDetails,
-        itinerary: requestDetails?.tourDetails?.items || [],
-        zoneName: requestDetails?.tourDetails?.zoneName || '',
+        itinerary: itinerary,
+        zoneName: zoneName,
+        numberOfDays: numberOfDays,
+        numberOfGuests: requestDetails?.numberOfGuests || 1,
         totalAmount: finalAmount,
+        summaryItems: [{
+          id: requestId,
+          name: `Tour tùy chỉnh - ${zoneName}`,
+          image: itinerary[0]?.image || '',
+          price: finalAmount,
+          originalPrice: finalAmount,
+          numberOfDays: numberOfDays,
+          itinerary: itinerary,
+          zoneName: zoneName,
+        }]
       }
     });
   };
@@ -257,6 +293,17 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
           >
             <X className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {/* Socket Error Banner */}
+      {socketError && (
+        <div className="px-4 py-2 bg-orange-50 dark:bg-orange-900/20 border-b border-orange-200 dark:border-orange-800 flex items-center gap-2">
+          <WifiOff className="w-4 h-4 text-orange-500 flex-shrink-0" />
+          <span className="text-sm text-orange-700 dark:text-orange-400">
+            {socketError}
+            {reconnectAttempts > 0 && ` (Thử lần ${reconnectAttempts})`}
+          </span>
         </div>
       )}
 
@@ -452,107 +499,135 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
           />
         )}
 
-        {/* Payment Initiation Card - Shows when both agreed on price (agreement_pending status) */}
-        {requestDetails?.agreement?.userAgreed && requestDetails?.agreement?.guideAgreed && (
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border-2 border-green-300 dark:border-green-700 shadow-md">
-            {/* Status Badge */}
-            <div className="flex items-center gap-2 mb-4">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500 text-white">
-                <span>✅</span>
-              </div>
-              <div className="font-bold text-green-700 dark:text-green-300">
-                Cả hai bên đã đồng ý giá
-              </div>
-            </div>
-
-            {/* Order Summary */}
-            <div className="space-y-3">
-              {/* Tour Information */}
-              <div className="bg-white/70 dark:bg-gray-700/70 rounded-lg p-3 border-l-4 border-green-500">
-                <div className="font-semibold text-sm text-gray-900 dark:text-white mb-2">
-                  📍 Thông tin tour
+        {/* Payment Initiation Card - Always show when request details are available */}
+        {requestDetails && (() => {
+          const userAgreed = requestDetails?.agreement?.userAgreed;
+          const guideAgreed = requestDetails?.agreement?.guideAgreed;
+          const bothAgreed = userAgreed && guideAgreed;
+          const status = requestDetails?.status;
+          
+          console.log('[TravellerChatBox] Payment card check:', {
+            requestDetails: !!requestDetails,
+            agreement: requestDetails?.agreement,
+            userAgreed,
+            guideAgreed,
+            bothAgreed,
+            status
+          });
+          
+          return (
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border-2 border-green-300 dark:border-green-700 shadow-md">
+              {/* Status Badge */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500 text-white">
+                  <span>💳</span>
                 </div>
-                <div className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Địa điểm:</span>
-                    <span className="font-medium">{requestDetails.tourDetails?.zoneName || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Số ngày:</span>
-                    <span className="font-medium">{requestDetails.tourDetails?.numberOfDays || 1} ngày</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Số khách:</span>
-                    <span className="font-medium">{requestDetails.numberOfGuests || 1} người</span>
-                  </div>
+                <div className="font-bold text-green-700 dark:text-green-300">
+                  {bothAgreed ? 'Cả hai bên đã đồng ý giá' : 'Thanh toán tour'}
                 </div>
               </div>
 
-              {/* Itinerary Preview */}
-              {requestDetails.tourDetails?.items && requestDetails.tourDetails.items.length > 0 && (
-                <div className="bg-white/70 dark:bg-gray-700/70 rounded-lg p-3">
-                  <div className="font-semibold text-sm text-gray-900 dark:text-white mb-2">
-                    📋 Hành trình tour
+              {/* Agreement Status */}
+              {!bothAgreed && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-3 mb-4">
+                  <div className="text-sm text-yellow-800 dark:text-yellow-200">
+                    <div className="font-semibold mb-1">Trạng thái thỏa thuận:</div>
+                    <div className="flex flex-col gap-1 text-sm">
+                    <div>
+                      <span className="font-semibold">Bạn (Khách hàng):</span>
+                      {userAgreed ? ' ✅ Đã đồng ý' : ' ⏳ Chưa đồng ý'}
+                    </div>
+
+                    <div>
+                      <span className="font-semibold">Hướng dẫn viên:</span>
+                      {guideAgreed ? ' ✅ Đã đồng ý' : ' ⏳ Chưa đồng ý'}
+                    </div>
                   </div>
-                  <div className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
-                    {requestDetails.tourDetails.items.slice(0, 3).map((item, idx) => (
-                      <div key={idx} className="flex items-start gap-2">
-                        <span className="font-bold text-green-600 dark:text-green-400 min-w-4">
-                          {idx + 1}.
-                        </span>
-                        <span className="flex-1">
-                          {item.name || item.activity || `Điểm dừng ${idx + 1}`}
-                        </span>
-                      </div>
-                    ))}
-                    {requestDetails.tourDetails.items.length > 3 && (
-                      <div className="text-gray-600 dark:text-gray-400 italic">
-                        + {requestDetails.tourDetails.items.length - 3} điểm khác
-                      </div>
-                    )}
+
+                    <div className="mt-2 text-xs">
+                      Bạn có thể tiến hành thanh toán ngay khi đã thỏa thuận xong giá.
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Final Price */}
-              <div className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/40 rounded-lg p-3 border border-green-400 dark:border-green-600">
-                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                  Giá đã thỏa thuận
+              {/* Order Summary */}
+              <div className="space-y-3">
+                {/* Tour Information */}
+                <div className="bg-white/70 dark:bg-gray-700/70 rounded-lg p-3 border-l-4 border-green-500">
+                  <div className="font-semibold text-sm text-gray-900 dark:text-white mb-2">
+                    📍 Thông tin tour
+                  </div>
+                  <div className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Địa điểm:</span>
+                      <span className="font-medium">{requestDetails.tourDetails?.zoneName || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Số ngày:</span>
+                      <span className="font-medium">{requestDetails.tourDetails?.numberOfDays || 1} ngày</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Số khách:</span>
+                      <span className="font-medium">{requestDetails.numberOfGuests || 1} người</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-2xl font-bold text-green-700 dark:text-green-300">
-                  {(requestDetails.finalPrice?.amount || requestDetails.latestOffer?.amount || requestDetails.initialBudget?.amount)?.toLocaleString('vi-VN')} VND
+
+                {/* Itinerary Preview */}
+                {requestDetails.tourDetails?.items && requestDetails.tourDetails.items.length > 0 && (
+                  <div className="bg-white/70 dark:bg-gray-700/70 rounded-lg p-3">
+                    <div className="font-semibold text-sm text-gray-900 dark:text-white mb-2">
+                      📋 Hành trình tour
+                    </div>
+                    <div className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
+                      {requestDetails.tourDetails.items.slice(0, 3).map((item, idx) => (
+                        <div key={idx} className="flex items-start gap-2">
+                          <span className="font-bold text-green-600 dark:text-green-400 min-w-4">
+                            {idx + 1}.
+                          </span>
+                          <span className="flex-1">
+                            {item.name || item.activity || `Điểm dừng ${idx + 1}`}
+                          </span>
+                        </div>
+                      ))}
+                      {requestDetails.tourDetails.items.length > 3 && (
+                        <div className="text-gray-600 dark:text-gray-400 italic">
+                          + {requestDetails.tourDetails.items.length - 3} điểm khác
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Final Price */}
+                <div className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/40 rounded-lg p-3 border border-green-400 dark:border-green-600">
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                    Giá tour
+                  </div>
+                  <div className="text-2xl font-bold text-green-700 dark:text-green-300">
+                    {(requestDetails.finalPrice?.amount || requestDetails.latestOffer?.amount || requestDetails.initialBudget?.amount)?.toLocaleString('vi-VN')} VND
+                  </div>
                 </div>
-              </div>
 
-              {/* Payment Methods */}
-              <div className="space-y-2">
-                <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  💳 Tiến hành thanh toán
+                {/* Payment Button */}
+                <div className="space-y-2">
+                  <button
+                    onClick={handleProceedToPayment}
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 text-base"
+                  >
+                    <span>💳</span>
+                    Thanh toán
+                  </button>
                 </div>
-                
-                <button
-                  onClick={handleProceedToPayment}
-                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-2.5 px-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm"
-                >
-                  <span>💳</span>
-                  Thanh toán bằng thẻ tín dụng
-                </button>
 
-                <button
-                  onClick={handleProceedToPayment}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-semibold py-2.5 px-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm"
-                >
-                  <span>🏦</span>
-                  Chuyển khoản ngân hàng
-                </button>
-              </div>
-
-              <div className="text-xs text-gray-600 dark:text-gray-400 text-center mt-2 p-2 bg-white/50 dark:bg-gray-800/50 rounded">
-                Bạn sẽ được chuyển đến trang thanh toán để hoàn tất giao dịch
+                <div className="text-xs text-gray-600 dark:text-gray-400 text-center mt-2 p-2 bg-white/50 dark:bg-gray-800/50 rounded">
+                  Bạn sẽ được chuyển đến trang thanh toán để hoàn tất giao dịch
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {loading && messages.length === 0 ? (
           <div className="flex items-center justify-center h-32">
@@ -875,10 +950,91 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
         {!connected && (
           <div className="flex items-center justify-center gap-2 mt-2 text-xs text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-lg">
             <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-            Đang kết nối chat...
-          </div>
-        )}
+          Đang kết nối chat...
+        </div>
+      )}
       </form>
+
+      {/* Payment Confirmation Modal */}
+      {showPaymentConfirmation && (() => {
+        const finalAmount = requestDetails?.finalPrice?.amount || requestDetails?.latestOffer?.amount || requestDetails?.initialBudget?.amount;
+        return (
+          <>
+            <div 
+              className="fixed inset-0 bg-black/50 z-[10000]" 
+              onClick={() => setShowPaymentConfirmation(false)}
+            ></div>
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10001] w-[90%] max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Xác nhận thanh toán</h3>
+                <button
+                  onClick={() => setShowPaymentConfirmation(false)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <p className="text-gray-700 dark:text-gray-300">Bạn sắp thanh toán cho tour:</p>
+                
+                <div className="bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 rounded-xl border-2 border-teal-300 dark:border-teal-700">
+                  <div className="font-semibold text-gray-900 dark:text-white mb-2">
+                    {requestDetails?.tourDetails?.zoneName || 'Tour'}
+                  </div>
+                  <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Số khách:</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {requestDetails?.numberOfGuests || 1} người
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Số điểm tham quan:</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {requestDetails?.tourDetails?.items?.length || 0} điểm
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-teal-300 dark:border-teal-700">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Tổng tiền:</span>
+                      <span className="text-2xl font-bold text-teal-600 dark:text-teal-400">
+                        {finalAmount?.toLocaleString('vi-VN')} VND
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-300 dark:border-orange-700 rounded-xl p-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-orange-800 dark:text-orange-300">
+                      ⚠️ Sau khi thanh toán, yêu cầu sẽ được xác nhận và bạn không thể hủy. 
+                      Vui lòng đọc kỹ điều khoản trước khi xác nhận.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowPaymentConfirmation(false)}
+                  className="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-medium transition-all"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={confirmPayment}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg"
+                >
+                  Xác nhận thanh toán
+                </button>
+              </div>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 };

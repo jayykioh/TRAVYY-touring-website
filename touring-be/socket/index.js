@@ -50,6 +50,15 @@ module.exports = function setupSockets(io) {
               io.to(`request-${doc._id}`).emit('agreementUpdated', doc.agreement);
               io.to(`chat-${doc._id}`).emit('agreementUpdated', doc.agreement);
             }
+            // ✅ NEW: Emit payment update event
+            if (doc.paymentStatus === 'paid') {
+              io.to(`request-${doc._id}`).emit('paymentUpdated', {
+                requestId: doc._id,
+                paymentStatus: 'paid',
+                bookingId: doc.bookingId
+              });
+              console.log('[sockets] Emitted paymentUpdated for request', doc._id);
+            }
             if (doc.userId) io.to(`user-${doc.userId}`).emit('tourRequestUpdated', doc);
           } catch (e) { console.warn('[sockets] tourRequest emit failed', e && e.message); }
         }

@@ -130,6 +130,15 @@ const discoverRoutes = require("./routes/discover.routes");
 app.use("/api/discover", discoverRoutes);
 const zoneRoutes = require("./routes/zone.routes");
 app.use("/api/zones", zoneRoutes);
+
+// Guide Availability Routes
+const guideAvailabilityRoutes = require("./routes/guideAvailability.routes");
+app.use("/api", guideAvailabilityRoutes);
+
+// Tour Completion Routes
+const tourCompletionRoutes = require("./routes/tourCompletion.routes");
+app.use("/api", tourCompletionRoutes);
+
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 app.use("/api/paypal", paypalRoutes);
@@ -180,7 +189,8 @@ mongoose
     process.exit(1);
   });
 
-// Make io available to routes
+// Make io available globally and to routes
+global.io = io;
 app.set('io', io);
 
 module.exports = app;

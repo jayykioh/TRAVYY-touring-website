@@ -172,28 +172,115 @@ async function createBookingFromSession(session, additionalData = {}) {
         : Number(toUSD(bookingDoc.totalAmount));
     await bookingDoc.save();
 
-    // ✅ Update tour departure seats if booking is paid
-    if (isPaid) {
-      await updateTourSeats(bookingItems);
+    // ✅ NEW: Assign guide for regular tours after payment
+    if (isPaid && !session.customRequestId && !session.bookingId) {
+      try {
+        await assignGuideToBooking(bookingDoc);
+      } catch (guideError) {
+        console.error(`[Payment] ❌ Failed to assign guide to booking ${bookingDoc._id}:`, guideError);
+        // Don't fail payment if guide assignment fails
+      }
     }
 
     // ✅ NEW: Update TourCustomRequest status if this is a tour-request payment
     if (isPaid && session.customRequestId) {
       try {
         const TourCustomRequest = require("../models/TourCustomRequest");
-        const tourRequest = await TourCustomRequest.findById(session.customRequestId);
-        if (tourRequest) {
-          tourRequest.status = 'completed';
-          tourRequest.completedAt = new Date();
-          tourRequest.bookingId = bookingDoc._id; // Link booking to tour request
-          await tourRequest.save();
-          console.log(`[Payment] ✅ Updated TourCustomRequest ${session.customRequestId} to 'completed' with booking ${bookingDoc._id}`);
-        } else {
-          console.warn(`[Payment] ⚠️ TourCustomRequest ${session.customRequestId} not found, skipping update`);
+        const GuideAvailability = require("../models/guide/GuideAvailability");
+        const GuideNotification = require("../models/guide/GuideNotification");
+        const Guide = require("../models/guide/Guide");
+        const User = require("../models/Users");
+        
+        const tourRequest = await TourCustomRequest.findById(session.customRequestId)
+          .select('userId guideId preferredDates tourDetails status')
+          .populate('userId', 'name email')
+          .lean();
+        
+        if (!tourRequest) {
+          console.warn(`[Payment] ⚠️ TourCustomRequest ${session.customRequestId} not found`);
+          return bookingDoc;
+        }
+        
+        // Update tour request status (non-blocking atomic update)
+        TourCustomRequest.findByIdAndUpdate(
+          session.customRequestId,
+          { 
+            $set: { 
+              status: 'completed', 
+              completedAt: new Date(),
+              bookingId: bookingDoc._id 
+            }
+          },
+          { new: false } // Don't wait for result
+        ).catch(err => console.error('[Payment] Tour request update error:', err));
+        
+        console.log(`[Payment] ✅ Updated TourCustomRequest ${session.customRequestId} to 'completed'`);
+        
+        // 🔒 Lock guide availability for the tour dates
+        if (tourRequest.guideId && tourRequest.preferredDates?.length > 0) {
+          // Fire and forget guide locking to avoid blocking payment response
+          (async () => {
+            try {
+              const firstDate = tourRequest.preferredDates[0];
+              const startDate = new Date(firstDate.startDate);
+              const endDate = new Date(firstDate.endDate);
+              
+              // Find guide profile (with lean for speed)
+              const guideProfile = await Guide.findOne({ userId: tourRequest.guideId })
+                .select('_id availability')
+                .lean();
+              
+              if (!guideProfile) {
+                console.warn(`[Payment] Guide profile not found for user ${tourRequest.guideId}`);
+                return;
+              }
+              
+              // Lock guide and update availability in parallel
+              await Promise.all([
+                GuideAvailability.lockGuideForBooking(
+                  guideProfile._id,
+                  bookingDoc._id,
+                  startDate,
+                  endDate,
+                  {
+                    tourRequestId: tourRequest._id,
+                    zoneName: tourRequest.tourDetails?.zoneName,
+                    customerName: tourRequest.userId?.name,
+                    numberOfGuests: tourRequest.tourDetails?.numberOfGuests,
+                    bookingCode: bookingDoc.bookingCode
+                  }
+                ),
+                Guide.findByIdAndUpdate(
+                  guideProfile._id,
+                  { $set: { availability: 'Busy' } },
+                  { new: false }
+                )
+              ]);
+              
+              console.log(`[Payment] 🔒 Locked guide ${guideProfile._id} for ${startDate} to ${endDate}`);
+              
+              // 🔔 Notify guide (non-blocking)
+              GuideNotification.create({
+                guideId: guideProfile._id,
+                notificationId: `guide-${guideProfile._id}-${Date.now()}`,
+                type: 'payment_success',
+                title: '💰 Thanh toán thành công!',
+                message: `Khách hàng ${tourRequest.userId?.name || 'N/A'} đã thanh toán thành công cho tour ${tourRequest.tourDetails?.zoneName}. Booking: ${bookingDoc.bookingCode}. Bạn đã được xác nhận cho tour này.`,
+                relatedId: bookingDoc._id,
+                relatedModel: 'Booking',
+                priority: 'high',
+                read: false
+              }).catch(err => console.error('[Payment] Notification error:', err));
+              
+              console.log(`[Payment] 🔔 Sent payment notification to guide ${guideProfile._id}`);
+              
+            } catch (lockError) {
+              console.error(`[Payment] ❌ Guide locking error:`, lockError.message);
+            }
+          })(); // IIFE for fire-and-forget
         }
       } catch (tourReqError) {
-        console.error(`[Payment] ❌ Error updating TourCustomRequest ${session.customRequestId}:`, tourReqError);
-        // Don't fail the whole payment if tour request update fails
+        console.error(`[Payment] ❌ TourCustomRequest update error:`, tourReqError);
       }
     }
 
@@ -231,19 +318,58 @@ async function markBookingAsPaid(orderId, paymentData = {}) {
   try {
     const Booking = require("../models/Bookings");
     const User = require("../models/Users");
+    const TourCustomRequest = require("../models/TourCustomRequest");
+    const Guide = require("../models/guide/Guide");
+    const GuideAvailability = require("../models/guide/GuideAvailability");
+    const GuideNotification = require("../models/guide/GuideNotification");
+    const Notification = require("../models/Notification");
     const {
       sendPaymentSuccessNotification,
     } = require("../controller/notifyController");
 
     // try both common property names (orderId / orderID)
-    const booking = await Booking.findOne({
+    let foundBooking = await Booking.findOne({
       $or: [{ "payment.orderId": orderId }, { "payment.orderID": orderId }],
     });
 
-    if (!booking) {
-      console.warn(`[Payment] Booking not found for orderId=${orderId}`);
-      return null;
+    if (!foundBooking) {
+      console.warn(`[Payment] Booking not found for orderId=${orderId} - trying alternate lookups`);
+
+      // Try to locate booking by known alternate identifiers in paymentData
+      const altBookingId =
+        paymentData?.bookingId ||
+        (paymentData?.extraData && (paymentData.extraData.bookingId || paymentData.extraData.bookingId)) ||
+        paymentData?.retryBookingId ||
+        null;
+
+      if (altBookingId && mongoose.isValidObjectId(String(altBookingId))) {
+        try {
+          foundBooking = await Booking.findById(altBookingId);
+          if (foundBooking) console.log(`[Payment] Found booking by bookingId ${altBookingId}`);
+        } catch (e) {
+          console.warn(`[Payment] Failed to find booking by altBookingId=${altBookingId}:`, e.message);
+        }
+      }
+
+      // Fallback: try to find by orderRef (legacy for custom tour bookings)
+      if (!foundBooking) {
+        try {
+          const byRef = await Booking.findOne({ orderRef: orderId });
+          if (byRef) {
+            foundBooking = byRef;
+            console.log(`[Payment] Found booking by orderRef ${orderId}`);
+          }
+        } catch (e) {
+          console.warn(`[Payment] Failed to find booking by orderRef=${orderId}:`, e.message);
+        }
+      }
+
+      if (!foundBooking) {
+        console.warn(`[Payment] ⚠️ Booking still not found for orderId=${orderId}`);
+        return null;
+      }
     }
+    const booking = foundBooking;
 
     // Check if already paid to avoid duplicate notifications
     const wasAlreadyPaid = booking.status === "paid";
@@ -302,6 +428,109 @@ async function markBookingAsPaid(orderId, paymentData = {}) {
     console.log(
       `[Payment] ✅ Booking ${booking._id} marked as paid (orderId=${orderId})`
     );
+
+    // ===== UPDATE TOUR REQUEST IF THIS IS A CUSTOM TOUR BOOKING =====
+    if (booking.customTourRequest && booking.customTourRequest.requestId && !wasAlreadyPaid) {
+      try {
+        console.log(`[Payment] 🔄 Updating TourRequest ${booking.customTourRequest.requestId} for paid booking ${booking._id}`);
+
+        // Update tour request status to completed
+        const tourRequest = await TourCustomRequest.findByIdAndUpdate(
+          booking.customTourRequest.requestId,
+          {
+            $set: {
+              status: 'completed',
+              completedAt: new Date(),
+              paymentStatus: 'paid',
+              paymentAmount: booking.totalAmount,
+              paymentCurrency: booking.currency,
+              paymentMethod: booking.payment.provider,
+              bookingId: booking._id
+            }
+          },
+          { new: true }
+        ).populate('userId', 'name email').populate('guideId', 'name email userId');
+
+        if (tourRequest) {
+          console.log(`[Payment] ✅ Updated TourRequest ${tourRequest._id} to completed`);
+
+          // Update guide availability and status
+          if (tourRequest.guideId) {
+            try {
+              // Set guide to busy
+              await Guide.findByIdAndUpdate(tourRequest.guideId._id, { availability: 'Busy' });
+
+              // Lock guide availability for tour dates
+              if (tourRequest.preferredDates && tourRequest.preferredDates.length > 0) {
+                const firstDate = tourRequest.preferredDates[0];
+                const startDate = new Date(firstDate.startDate || firstDate);
+                const endDate = new Date(firstDate.endDate || startDate);
+                endDate.setDate(endDate.getDate() + (tourRequest.numberOfDays || 1));
+
+                await GuideAvailability.lockGuideForBooking(
+                  tourRequest.guideId._id,
+                  booking._id,
+                  startDate,
+                  endDate,
+                  {
+                    tourRequestId: tourRequest._id,
+                    zoneName: tourRequest.itineraryId?.zoneName || tourRequest.tourDetails?.zoneName,
+                    customerName: tourRequest.userId?.name,
+                    numberOfGuests: tourRequest.numberOfPeople || tourRequest.numberOfGuests,
+                    bookingCode: booking.bookingCode || booking._id.toString().substring(0, 8).toUpperCase()
+                  }
+                );
+
+                console.log(`[Payment] 🔒 Locked guide ${tourRequest.guideId._id} availability`);
+              }
+
+              // Notify guide
+              if (tourRequest.guideId.userId) {
+                await Notification.create({
+                  userId: tourRequest.guideId.userId,
+                  type: 'payment_received',
+                  title: '💰 Thanh toán thành công!',
+                  message: `Khách hàng ${tourRequest.userId?.name || 'N/A'} đã thanh toán ${booking.totalAmount.toLocaleString()} ${booking.currency} cho tour "${tourRequest.itineraryId?.zoneName || 'Custom Tour'}". Booking: ${booking.bookingCode || booking._id.toString().substring(0, 8).toUpperCase()}`,
+                  relatedId: booking._id,
+                  relatedModel: 'Booking',
+                  priority: 'high'
+                });
+
+                console.log(`[Payment] 🔔 Sent payment notification to guide ${tourRequest.guideId.userId}`);
+              }
+
+            } catch (guideError) {
+              console.error(`[Payment] ❌ Error updating guide for TourRequest ${tourRequest._id}:`, guideError);
+            }
+          }
+
+          // Update itinerary payment status if exists
+          if (tourRequest.itineraryId) {
+            try {
+              const Itinerary = require("../models/Itinerary");
+              await Itinerary.findByIdAndUpdate(tourRequest.itineraryId, {
+                $set: {
+                  'paymentInfo.status': 'paid',
+                  'paymentInfo.paidAt': new Date(),
+                  'paymentInfo.amount': booking.totalAmount,
+                  'paymentInfo.currency': booking.currency,
+                  'paymentInfo.method': booking.payment.provider
+                }
+              });
+              console.log(`[Payment] ✅ Updated Itinerary ${tourRequest.itineraryId} payment status`);
+            } catch (itineraryError) {
+              console.error(`[Payment] ❌ Error updating itinerary for TourRequest ${tourRequest._id}:`, itineraryError);
+            }
+          }
+
+        } else {
+          console.warn(`[Payment] ⚠️ TourRequest ${booking.customTourRequest.requestId} not found`);
+        }
+
+      } catch (tourReqError) {
+        console.error(`[Payment] ❌ Error updating TourRequest:`, tourReqError);
+      }
+    }
 
     // Send payment success notification if not already paid
     if (!wasAlreadyPaid) {
@@ -392,6 +621,144 @@ function toVND(usd) {
 }
 
 /**
+ * Assign a guide to a regular tour booking after payment
+ * @param {Object} booking - The booking document
+ */
+async function assignGuideToBooking(booking) {
+  try {
+    console.log(`[Payment] 🔍 Assigning guide to booking ${booking._id}`);
+
+    // Skip if already has a guide
+    if (booking.guideId) {
+      console.log(`[Payment] Booking ${booking._id} already has guide ${booking.guideId}`);
+      return;
+    }
+
+    // Get tour details to find location
+    const tourIds = booking.items.map(item => item.tourId).filter(Boolean);
+    if (tourIds.length === 0) {
+      console.warn(`[Payment] No tour IDs found in booking ${booking._id}`);
+      return;
+    }
+
+    const tours = await Tour.find({ _id: { $in: tourIds } }).select('location province zoneName').lean();
+    if (tours.length === 0) {
+      console.warn(`[Payment] No tours found for booking ${booking._id}`);
+      return;
+    }
+
+    // Use the first tour's location as primary location
+    const primaryTour = tours[0];
+    const location = primaryTour.location || primaryTour.province || primaryTour.zoneName;
+
+    if (!location) {
+      console.warn(`[Payment] No location found for tours in booking ${booking._id}`);
+      return;
+    }
+
+    console.log(`[Payment] Looking for guides in location: ${location}`);
+
+    // Find available guides in the location
+    const Guide = require("../models/guide/Guide");
+    const GuideAvailability = require("../models/guide/GuideAvailability");
+    const GuideNotification = require("../models/guide/GuideNotification");
+
+    // Get tour date from booking items
+    const tourDate = booking.items[0]?.date;
+    if (!tourDate) {
+      console.warn(`[Payment] No tour date found in booking ${booking._id}`);
+      return;
+    }
+
+    const tourStartDate = new Date(tourDate);
+    const tourEndDate = new Date(tourStartDate);
+    tourEndDate.setDate(tourEndDate.getDate() + 1); // Assume 1-day tour for now
+
+    // Find available guides
+    const availableGuides = await Guide.find({
+      isVerified: true,
+      profileComplete: true,
+      availability: 'Available',
+      $or: [
+        { location: new RegExp(location, 'i') },
+        { coverageAreas: { $elemMatch: { $regex: location, $options: 'i' } } },
+        { provinceId: new RegExp(location, 'i') }
+      ]
+    }).select('_id name email userId').lean();
+
+    console.log(`[Payment] Found ${availableGuides.length} available guides in ${location}`);
+
+    if (availableGuides.length === 0) {
+      console.warn(`[Payment] No available guides found for location ${location}`);
+      // Could send notification to admin here
+      return;
+    }
+
+    // Check availability for each guide and assign the first available one
+    for (const guide of availableGuides) {
+      try {
+        const isAvailable = await GuideAvailability.isGuideAvailable(
+          guide._id,
+          tourStartDate,
+          tourEndDate
+        );
+
+        if (isAvailable) {
+          console.log(`[Payment] ✅ Assigning guide ${guide._id} (${guide.name}) to booking ${booking._id}`);
+
+          // Assign guide to booking
+          booking.guideId = guide._id;
+          booking.guideAssignedAt = new Date();
+          booking.tourScheduledAt = tourStartDate;
+          await booking.save();
+
+          // Lock guide availability
+          await GuideAvailability.lockGuideForBooking(
+            guide._id,
+            booking._id,
+            tourStartDate,
+            tourEndDate,
+            {
+              tourName: booking.items[0]?.name || 'Tour',
+              customerName: 'Customer', // Could populate from user
+              numberOfGuests: booking.items.reduce((sum, item) => sum + (item.adults || 0) + (item.children || 0), 0),
+              bookingCode: booking.bookingCode || booking._id.toString().substring(0, 8).toUpperCase(),
+              location: location
+            }
+          );
+
+          // Update guide status to Busy
+          await Guide.findByIdAndUpdate(guide._id, { availability: 'Busy' });
+
+          // Notify guide
+          await GuideNotification.create({
+            guideId: guide._id,
+            notificationId: `guide-${guide._id}-${Date.now()}`,
+            type: 'new_booking',
+            title: '🎉 Bạn có tour mới!',
+            message: `Khách hàng đã thanh toán thành công cho tour "${booking.items[0]?.name || 'Tour'}" vào ngày ${tourDate}. Mã booking: ${booking.bookingCode || booking._id.toString().substring(0, 8).toUpperCase()}. Số khách: ${booking.items.reduce((sum, item) => sum + (item.adults || 0) + (item.children || 0), 0)}`,
+            relatedId: booking._id,
+            relatedModel: 'Booking',
+            priority: 'high',
+            read: false
+          });
+
+          console.log(`[Payment] 🔔 Notification sent to guide ${guide._id}`);
+          break; // Stop after assigning first available guide
+        }
+      } catch (guideCheckError) {
+        console.error(`[Payment] Error checking guide ${guide._id}:`, guideCheckError);
+        continue; // Try next guide
+      }
+    }
+
+  } catch (error) {
+    console.error(`[Payment] ❌ Error assigning guide to booking ${booking._id}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Update tour departure seats after successful booking
  * @param {Array} bookingItems - Array of booking items with tourId, date, adults, children
  */
@@ -460,4 +827,5 @@ module.exports = {
   toUSD,
   toVND,
   updateTourSeats,
+  assignGuideToBooking,
 };

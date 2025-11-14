@@ -4,6 +4,7 @@ const User = require('../models/Users');
 const Guide = require('../models/guide/Guide');
 const GuideNotification = require('../models/guide/GuideNotification');
 const Notification = require('../models/Notification');
+const NotificationService = require('../services/notificationService');
 
 // Helper function to get user ID from JWT
 function getUserId(user) {
@@ -189,18 +190,12 @@ exports.createTourRequest = async (req, res) => {
       isRead: false
     }).catch(err => console.error('[TourRequest] Chat room creation error:', err));
 
-    // 🔔 NOTIFY guide ASYNC (non-blocking - fire and forget)
-    GuideNotification.create({
-      guideId: guideProfile._id,
-      notificationId: `guide-${guideProfile._id}-${Date.now()}`,
-      type: 'new_request',
-      title: 'Yêu cầu tour mới',
-      message: `${user.name} đã chọn bạn cho tour ${tourDetails.zoneName}. Ngân sách: ${initialBudget.amount?.toLocaleString('vi-VN')} ${initialBudget.currency || 'VND'}`,
-      tourId: tourRequest._id.toString(),
-      relatedId: tourRequest._id,
-      relatedModel: 'TourCustomRequest',
-      priority: 'high'
-    }).catch(err => console.error('[TourRequest] Notification error:', err));
+    // 🔔 NOTIFY guide ASYNC (non-blocking - fire and forget with index hint)
+    NotificationService.onTourRequestCreated(
+      tourRequest,
+      guideProfile,
+      user
+    ).catch(err => console.error('[TourRequest] Notification error:', err));
 
     // 📤 RESPONSE: Return immediately without waiting for notification
     res.json({
@@ -214,6 +209,58 @@ exports.createTourRequest = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: error.message 
+    });
+  }
+};
+
+/**
+ * ⚡ FAST endpoint to check if user has active request for itinerary
+ * Used for pre-validation before submission (no transaction, no notifications)
+ */
+exports.checkActiveRequest = async (req, res) => {
+  try {
+    const userId = getUserId(req.user);
+    const { itineraryId } = req.params;
+
+    if (!itineraryId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'itineraryId is required' 
+      });
+    }
+
+    // ⚡ ULTRA-FAST: Only query for active requests (lean mode, no populate)
+    const activeRequest = await TourCustomRequest.findOne({
+      itineraryId,
+      userId,
+      status: { $in: ['pending', 'negotiating'] }
+    })
+    .select('_id status')
+    .lean()
+    .hint({ itineraryId: 1, userId: 1, status: 1 }); // Force index usage
+
+    console.log('[TourRequest] CHECK-ACTIVE:', {
+      itineraryId,
+      userId,
+      hasActive: !!activeRequest,
+      requestId: activeRequest?._id
+    });
+
+    res.json({
+      success: true,
+      hasActive: !!activeRequest,
+      requestId: activeRequest?._id || null,
+      status: activeRequest?.status || null
+    });
+
+  } catch (error) {
+    console.error('[TourRequest] Error checking active request:', error);
+    // Return empty response on error instead of error status
+    // This allows submission to proceed (backend will catch duplicate)
+    res.json({
+      success: true,
+      hasActive: false,
+      requestId: null
     });
   }
 };
@@ -238,13 +285,14 @@ exports.getUserTourRequests = async (req, res) => {
 
     const [requests, total] = await Promise.all([
       TourCustomRequest.find(query)
+        .select('-messages -priceOffers.message') // Exclude large fields for list view
         .populate('guideId', 'name email phone avatar')
         .populate('itineraryId', 'name zoneName')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
         .lean(),
-      TourCustomRequest.countDocuments(query)
+      TourCustomRequest.countDocuments(query).hint({ userId: 1, status: 1 }) // Use index hint
     ]);
 
     res.json({
@@ -329,6 +377,15 @@ exports.userMakeOffer = async (req, res) => {
       });
     }
 
+    // Validate against minPrice
+    if (tourRequest.minPrice?.amount && amount < tourRequest.minPrice.amount) {
+      return res.status(400).json({
+        success: false,
+        error: `Offer must be >= ${tourRequest.minPrice.amount.toLocaleString()} ${tourRequest.minPrice.currency}`,
+        minPrice: tourRequest.minPrice
+      });
+    }
+
     if (!['pending', 'negotiating'].includes(tourRequest.status)) {
       return res.status(400).json({
         success: false,
@@ -345,15 +402,13 @@ exports.userMakeOffer = async (req, res) => {
         // tourRequest.guideId stores User._id; find the Guide profile
         const guideProfile = await Guide.findOne({ userId: tourRequest.guideId });
         if (guideProfile) {
-          await GuideNotification.create({
-            guideId: guideProfile._id,
-            notificationId: `guide-${guideProfile._id}-${Date.now()}`,
-            type: 'price_offer',
-            title: 'New Price Offer',
-            message: `Customer offered ${amount.toLocaleString()} ${currency} for ${tourRequest.requestNumber}`,
-            relatedId: tourRequest._id,
-            relatedModel: 'TourCustomRequest'
-          });
+          await NotificationService.onUserPriceOffer(
+            tourRequest,
+            amount,
+            currency,
+            guideProfile
+          );
+          console.log(`[TourRequest] 🔔 Sent price offer notification to guide ${guideProfile._id}`);
         }
       } catch (notifError) {
         console.error('[TourRequest] Error creating notification:', notifError);
@@ -410,15 +465,13 @@ exports.userSendMessage = async (req, res) => {
       try {
         const guideProfile = await Guide.findOne({ userId: tourRequest.guideId });
         if (guideProfile) {
-          await GuideNotification.create({
-            guideId: guideProfile._id,
-            notificationId: `guide-${guideProfile._id}-${Date.now()}`,
-            type: 'new_message',
-            title: 'New Message',
-            message: `New message for request ${tourRequest.requestNumber}`,
-            relatedId: tourRequest._id,
-            relatedModel: 'TourCustomRequest'
-          });
+          await NotificationService.onNewMessage(
+            tourRequest,
+            { name: 'User' }, // sender
+            guideProfile, // recipient
+            false // isGuide = false (sender is user)
+          );
+          console.log(`[TourRequest] 🔔 Sent new message notification to guide ${guideProfile._id}`);
         }
       } catch (notifError) {
         console.error('[TourRequest] Error creating notification:', notifError);
@@ -480,15 +533,13 @@ exports.cancelTourRequest = async (req, res) => {
       try {
         const guideProfile = await Guide.findOne({ userId: tourRequest.guideId });
         if (guideProfile) {
-          await GuideNotification.create({
-            guideId: guideProfile._id,
-            notificationId: `guide-${guideProfile._id}-${Date.now()}`,
-            type: 'request_cancelled',
-            title: 'Request Cancelled',
-            message: `Customer cancelled request ${tourRequest.requestNumber}`,
-            relatedId: tourRequest._id,
-            relatedModel: 'TourCustomRequest'
-          });
+          await NotificationService.onRequestCancelled(
+            tourRequest,
+            { name: 'User' },
+            guideProfile,
+            reason
+          );
+          console.log(`[TourRequest] 🔔 Sent cancellation notification to guide ${guideProfile._id}`);
         }
       } catch (notifError) {
         console.error('[TourRequest] Error creating notification:', notifError);
@@ -563,11 +614,13 @@ exports.acceptGuideOffer = async (req, res) => {
             guideId: guideProfile._id,
             notificationId: `guide-${guideProfile._id}-${Date.now()}`,
             type: 'request_accepted',
-            title: 'Offer Accepted!',
-            message: `Customer accepted your offer for ${tourRequest.requestNumber}. Proceed to booking.`,
+            title: '🎉 Đề xuất được chấp nhận!',
+            message: `Khách hàng đã chấp nhận đề xuất của bạn cho ${tourRequest.requestNumber}. Hãy tiến hành booking.`,
             relatedId: tourRequest._id,
-            relatedModel: 'TourCustomRequest'
+            relatedModel: 'TourCustomRequest',
+            priority: 'high'
           });
+          console.log(`[TourRequest] 🔔 Sent offer accepted notification to guide ${guideProfile._id}`);
         }
       } catch (notifError) {
         console.error('[TourRequest] Error creating notification:', notifError);
@@ -649,39 +702,80 @@ exports.userAgreeToTerms = async (req, res) => {
       await tourRequest.userAgreeToTerms(terms);
     }
 
-    // Check if both parties agreed
-    const bothAgreed = tourRequest.isBothAgreed && tourRequest.isBothAgreed();
-
-    // Set completion status if both agreed
-    if (bothAgreed) {
-      if (!tourRequest.agreement) tourRequest.agreement = {};
-      tourRequest.agreement.completedAt = new Date();
-      tourRequest.status = 'agreement_pending';
-    }
-
     await tourRequest.save();
 
-    // Notify the other party
-    try {
-      const otherUserId = userRole === 'TourGuide' ? tourRequest.userId : tourRequest.guideId;
-      if (otherUserId) {
-        const Notification = require("../../models/Notification");
-        await Notification.create({
-          userId: otherUserId,
-          type: bothAgreed ? 'agreement_complete' : 'user_agreed',
-          title: bothAgreed ? 'Agreement Complete!' : `${userRole === 'TourGuide' ? 'Guide' : 'Customer'} Agreed to Terms`,
-          message: bothAgreed 
-            ? `Both parties agreed! Request ${tourRequest.requestNumber} is ready for final acceptance.`
-            : `${userRole === 'TourGuide' ? 'Guide' : 'Customer'} agreed to terms for ${tourRequest.requestNumber}.`,
-          relatedId: tourRequest._id,
-          relatedModel: 'TourCustomRequest'
-        });
-      }
-    } catch (notifError) {
-      console.error('[TourRequest] Error creating notification:', notifError);
-    }
+    // Check if both parties agreed
+    const bothAgreed = tourRequest.agreement?.userAgreed && tourRequest.agreement?.guideAgreed;
 
-    await tourRequest.populate('guideId userId', 'name email phone avatar');
+    if (bothAgreed && !tourRequest.agreement.completedAt) {
+      // Another atomic update to set completedAt and status
+      await TourCustomRequest.findByIdAndUpdate(
+        requestId,
+        {
+          $set: {
+            'agreement.completedAt': new Date(),
+            status: 'agreement_pending',
+            // Set finalPrice if not already set
+            ...(!tourRequest.finalPrice && {
+              'finalPrice.amount': tourRequest.latestOffer?.amount || tourRequest.initialBudget?.amount,
+              'finalPrice.currency': tourRequest.latestOffer?.currency || 'VND'
+            })
+          }
+        }
+      );
+
+      // Refetch to get updated data
+      await tourRequest.populate('guideId userId', 'name email phone avatar');
+
+      console.log('[TourRequest] Both parties agreed - sending notifications');
+
+      // Notify BOTH parties (async, non-blocking)
+      try {
+        // Fetch both user and guide profile in parallel
+        const [travellerUser, guideProfile] = await Promise.all([
+          User.findById(tourRequest.userId).select('email name').lean(),
+          Guide.findOne({ userId: tourRequest.guideId }).lean()
+        ]);
+
+        // Use NotificationService to notify both parties
+        if (travellerUser && guideProfile) {
+          NotificationService.onAgreementComplete(
+            tourRequest,
+            travellerUser,
+            guideProfile
+          ).catch(notifError => {
+            console.error('[TourRequest] Error creating agreement complete notifications:', notifError);
+          });
+        }
+
+        // Emit socket event to chat room
+        const io = req.app?.get('io');
+        if (io) {
+          io.to(`chat-${requestId}`).emit('agreementCompleted', {
+            requestId,
+            bothAgreed: true,
+            status: 'agreement_pending',
+            finalPrice: tourRequest.finalPrice,
+            completedAt: new Date()
+          });
+
+          // Also emit to individual user rooms
+          io.to(`user-${tourRequest.userId}`).emit('agreementCompleted', {
+            requestId,
+            bothAgreed: true,
+            message: 'Cả hai bên đã đồng ý! Bạn có thể tiến hành thanh toán.'
+          });
+
+          io.to(`user-${tourRequest.guideId}`).emit('agreementCompleted', {
+            requestId,
+            bothAgreed: true,
+            message: 'Cả hai bên đã đồng ý! Chờ khách hàng thanh toán.'
+          });
+        }
+      } catch (notifError) {
+        console.error('[TourRequest] Error creating agreement complete notifications:', notifError);
+      }
+    }
 
     res.json({
       success: true,

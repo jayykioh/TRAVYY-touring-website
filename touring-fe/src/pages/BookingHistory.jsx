@@ -3,6 +3,7 @@ import { useAuth } from "../auth/context";
 import {
   Calendar,
   Users,
+  User,
   Ticket,
   CreditCard,
   Loader2,
@@ -194,6 +195,11 @@ export default function BookingHistory() {
         return {
           text: "Thanh toán thất bại",
           className: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
+        };
+      case "completed":
+        return {
+          text: "Đã hoàn thành",
+          className: "bg-green-50 text-green-700 ring-1 ring-inset ring-green-200",
         };
       case "refunded":
         return {
@@ -574,6 +580,18 @@ export default function BookingHistory() {
                                   Xem Lý Do
                                 </Link>
                               )}
+
+                            {/* Write Review Button for Completed Tours */}
+                            {booking.status === "completed" && (
+                              <Link
+                                to="/profile/reviews"
+                                className="px-3 py-1.5 rounded-md bg-purple-500 hover:bg-purple-600 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
+                                title="Viết đánh giá cho tour"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                                Viết đánh giá
+                              </Link>
+                            )}
 
                             <div className="text-right">
                               {/* Hiển thị giá gốc và discount nếu có */}

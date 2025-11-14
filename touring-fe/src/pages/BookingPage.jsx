@@ -13,6 +13,8 @@ export default function BookingPage() {
   const requestId = location.state?.requestId;
   const itinerary = location.state?.itinerary || [];
   const zoneName = location.state?.zoneName || '';
+  const numberOfDays = location.state?.numberOfDays || 1;
+  const numberOfGuests = location.state?.numberOfGuests || 1;
   
   const { withAuth } = useAuth();
   const { items, loading } = useCart();
@@ -114,14 +116,15 @@ export default function BookingPage() {
     if (isTourRequest && location.state?.summaryItems) {
       return location.state.summaryItems.map((it) => ({
         id: requestId || 'tour-request',
-        name: it.name,
-        image: it.image || '',
+        name: it.name || `Tour tùy chỉnh - ${zoneName}`,
+        image: it.image || (itinerary[0]?.image) || '',
         price: it.price || 0,
         originalPrice: it.price || 0, // No discount for tour requests
-        numberOfDays: it.numberOfDays || 1,
+        numberOfDays: it.numberOfDays || numberOfDays,
+        numberOfGuests: numberOfGuests,
         description: it.description || '',
-        itinerary: itinerary, // Include itinerary for display
-        zoneName: zoneName,
+        itinerary: it.itinerary || itinerary, // Include itinerary for display
+        zoneName: it.zoneName || zoneName,
       }));
     }
 
@@ -214,6 +217,9 @@ export default function BookingPage() {
             summaryItems={summaryItems}
             totalAmount={summaryItems.reduce((s,it)=> s + (it.price||0), 0)}
             onVoucherChange={handleVoucherChange}
+            requestId={requestId}
+            itinerary={itinerary}
+            zoneName={zoneName}
           />
           {summaryItems.length > 0 ? (
             <PaymentSummary 

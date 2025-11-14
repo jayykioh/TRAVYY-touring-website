@@ -363,35 +363,37 @@ const GuideProfilePage = () => {
       </Card>
 
       {/* Profile Completion Status */}
-      {!guide.profileComplete && (
-        <Card className="mb-6 bg-gradient-to-r from-orange-50 to-yellow-50 border-orange-200">
+      {!guide.profileComplete && profileCompletionPercentage < 100 && (
+        <Card className="mb-6 bg-gradient-to-r from-orange-50 to-yellow-50 border-l-4 border-orange-400">
           <div className="flex items-start gap-4">
-            <AlertCircle className="w-6 h-6 text-orange-600 flex-shrink-0 mt-1" />
+            <div className="w-12 h-12 flex items-center justify-center bg-orange-100 rounded-full flex-shrink-0">
+              <AlertCircle className="w-6 h-6 text-orange-600" />
+            </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-orange-900 mb-2">
+              <h3 className="font-semibold text-orange-900 mb-2 text-lg">
                 Hoàn thiện hồ sơ để nhận yêu cầu tour
               </h3>
-              <div className="mb-3">
+              <div className="mb-4">
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-orange-700">Tiến độ hoàn thiện</span>
-                  <span className="font-semibold text-orange-900">
+                  <span className="text-orange-700 font-medium">Tiến độ hoàn thiện</span>
+                  <span className="font-bold text-orange-900 text-lg">
                     {profileCompletionPercentage}%
                   </span>
                 </div>
-                <div className="w-full bg-orange-200 rounded-full h-2.5">
+                <div className="w-full bg-orange-200 rounded-full h-3 overflow-hidden shadow-inner">
                   <div
-                    className="bg-orange-600 h-2.5 rounded-full transition-all"
+                    className="bg-gradient-to-r from-orange-500 to-orange-600 h-3 rounded-full transition-all duration-500 ease-out shadow-md"
                     style={{ width: `${profileCompletionPercentage}%` }}
                   ></div>
                 </div>
               </div>
-              <ul className="text-sm text-orange-800 space-y-1">
-                {!guide.bio && <li>• Thêm giới thiệu bản thân</li>}
-                {!guide.licenseNumber && <li>• Nhập số giấy phép hướng dẫn</li>}
-                {!guide.languages?.length && <li>• Thêm ngôn ngữ</li>}
-                {!guide.specialties?.length && <li>• Thêm chuyên môn</li>}
-                {!guide.coverageAreas?.length && <li>• Thêm khu vực hoạt động</li>}
-                {!guide.certifications?.length && <li>• Upload ít nhất 1 chứng chỉ</li>}
+              <ul className="text-sm text-orange-800 space-y-2 bg-white bg-opacity-50 rounded-lg p-3">
+                {!guide.bio && <li className="flex items-center gap-2"><span className="text-orange-600">•</span> Thêm giới thiệu bản thân</li>}
+                {!guide.licenseNumber && <li className="flex items-center gap-2"><span className="text-orange-600">•</span> Nhập số giấy phép hướng dẫn</li>}
+                {!guide.languages?.length && <li className="flex items-center gap-2"><span className="text-orange-600">•</span> Thêm ngôn ngữ</li>}
+                {!guide.specialties?.length && <li className="flex items-center gap-2"><span className="text-orange-600">•</span> Thêm chuyên môn</li>}
+                {!guide.coverageAreas?.length && <li className="flex items-center gap-2"><span className="text-orange-600">•</span> Thêm khu vực hoạt động</li>}
+                {!guide.certifications?.length && <li className="flex items-center gap-2"><span className="text-orange-600">•</span> Upload ít nhất 1 chứng chỉ</li>}
               </ul>
             </div>
           </div>
@@ -400,13 +402,44 @@ const GuideProfilePage = () => {
 
       {/* Verification Status */}
       {guide.verificationStatus && (
-        <Card className="mb-6">
+        <Card className={`mb-6 border-l-4 ${
+          guide.verificationStatus === "approved" 
+            ? "bg-green-50 border-green-500" 
+            : guide.verificationStatus === "pending"
+            ? "bg-yellow-50 border-yellow-500"
+            : guide.verificationStatus === "rejected"
+            ? "bg-red-50 border-red-500"
+            : "bg-gray-50 border-gray-500"
+        }`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Shield className="w-6 h-6 text-[#02A0AA]" />
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                guide.verificationStatus === "approved" 
+                  ? "bg-green-100" 
+                  : guide.verificationStatus === "pending"
+                  ? "bg-yellow-100"
+                  : guide.verificationStatus === "rejected"
+                  ? "bg-red-100"
+                  : "bg-gray-100"
+              }`}>
+                <Shield className={`w-6 h-6 ${
+                  guide.verificationStatus === "approved" 
+                    ? "text-green-600" 
+                    : guide.verificationStatus === "pending"
+                    ? "text-yellow-600"
+                    : guide.verificationStatus === "rejected"
+                    ? "text-red-600"
+                    : "text-gray-600"
+                }`} />
+              </div>
               <div>
-                <h3 className="font-semibold text-gray-900">Trạng thái xác thực</h3>
-                <p className="text-sm text-gray-500">Được xét duyệt bởi quản trị viên</p>
+                <h3 className="font-semibold text-gray-900 text-lg mb-1">Trạng thái xác thực</h3>
+                <p className="text-sm text-gray-600">
+                  {guide.verificationStatus === "approved" && "Hồ sơ của bạn đã được xác thực bởi quản trị viên"}
+                  {guide.verificationStatus === "pending" && "Hồ sơ đang chờ quản trị viên xem xét"}
+                  {guide.verificationStatus === "rejected" && "Hồ sơ cần được cập nhật thêm thông tin"}
+                  {guide.verificationStatus === "incomplete" && "Vui lòng hoàn thiện hồ sơ để được xét duyệt"}
+                </p>
               </div>
             </div>
             <Badge
@@ -420,6 +453,7 @@ const GuideProfilePage = () => {
                   : "default"
               }
               size="lg"
+              className="text-sm px-4 py-2 font-semibold"
             >
               {guide.verificationStatus === "approved" && "✓ Đã xác thực"}
               {guide.verificationStatus === "pending" && "⏳ Đang chờ duyệt"}
@@ -449,7 +483,7 @@ const GuideProfilePage = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Họ và tên *
@@ -595,7 +629,7 @@ const GuideProfilePage = () => {
       </Card>
 
       {/* Languages, Specialties, Coverage Areas */}
-      <div className="grid md:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
         {/* Languages */}
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -749,7 +783,7 @@ const GuideProfilePage = () => {
         {/* Certificate Upload Form */}
         {showCertForm && (
           <form onSubmit={handleUploadCertificate} className="mb-6 bg-gray-50 p-4 rounded-lg">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Tên chứng chỉ *

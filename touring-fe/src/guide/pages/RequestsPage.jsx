@@ -21,31 +21,37 @@ const RequestsPage = () => {
   const fetchRequests = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await withAuth("/api/guide/custom-requests");
+      const data = await withAuth("/api/guide/custom-requests?status=pending,negotiating");
       console.log('[RequestsPage] Raw API response:', data);
       
-      if (data.success && Array.isArray(data.requests)) {
-        // Filter out accepted/rejected requests - only show pending/negotiating
-        const pendingRequests = data.requests.filter(req => 
-          req.status === 'pending' || req.status === 'negotiating'
-        );
-        console.log('[RequestsPage] Filtered pending requests:', pendingRequests.length);
-        
+      const requestsArray = data.tourRequests || data.requests || [];
+      
+      if (Array.isArray(requestsArray)) {
         // Map TourCustomRequest to UI format
-        const mappedRequests = pendingRequests.map((req) => {
+        const mappedRequests = requestsArray.map((req) => {
           const itinerary = req.itineraryId || {};
           const customer = req.userId || {};
           
-          console.log('[RequestsPage] Mapping request:', { req, itinerary, customer });
+          // Get preferred date
+          const preferredDate = req.preferredDates?.[0] || {};
+          const startDate = preferredDate.startDate ? new Date(preferredDate.startDate) : null;
+          const endDate = preferredDate.endDate ? new Date(preferredDate.endDate) : null;
+          
+          // Calculate duration in days
+          let durationDays = 1;
+          if (startDate && endDate) {
+            durationDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) || 1;
+          }
           
           return {
             id: req._id,
-            requestNumber: req.requestNumber,
+            requestNumber: req.requestNumber || req._id.slice(-6),
             
-            // Tour info from tourDetails or itinerary
-            tourName: req.tourDetails?.zoneName || itinerary.zoneName || itinerary.name || 'Tour',
-            location: req.tourDetails?.zoneName || itinerary.zoneName || '',
-            numberOfGuests: req.tourDetails?.numberOfGuests || 1,
+            // Tour info
+            tourName: req.tourDetails?.zoneName || itinerary.zoneName || itinerary.name || 'Custom Tour',
+            location: req.tourDetails?.zoneName || itinerary.zoneName || req.tourDetails?.province || '',
+            numberOfGuests: req.tourDetails?.numberOfGuests || req.tourDetails?.numberOfPeople || 1,
+            numberOfDays: durationDays,
             
             // Customer info
             customerId: customer._id || '',
@@ -55,38 +61,38 @@ const RequestsPage = () => {
             contactPhone: customer.phone || req.contactInfo?.phone || '',
             
             // Dates
-            departureDate: req.preferredDates?.[0]?.startDate || '',
-            startTime: req.preferredDates?.[0]?.startDate ? new Date(req.preferredDates[0].startDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '',
-            endTime: req.preferredDates?.[0]?.endDate ? new Date(req.preferredDates[0].endDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '',
+            departureDate: startDate ? startDate.toISOString() : '',
+            returnDate: endDate ? endDate.toISOString() : '',
+            startTime: startDate ? startDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '',
+            endTime: endDate ? endDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '',
             
             // Pricing
             totalPrice: req.initialBudget?.amount || 0,
             currency: req.initialBudget?.currency || 'VND',
-            earnings: (req.initialBudget?.amount || 0) * 0.8,
+            earnings: Math.round((req.initialBudget?.amount || 0) * 0.8), // 80% commission
             
             // Duration
-            duration: itinerary.totalDuration ? `${Math.floor(itinerary.totalDuration / 60)}h ${itinerary.totalDuration % 60}m` : 
-                     req.tourDetails?.numberOfDays ? `${req.tourDetails.numberOfDays} ngày` : '',
+            duration: itinerary.totalDuration ? 
+              `${Math.floor(itinerary.totalDuration / 60)}h ${itinerary.totalDuration % 60}m` : 
+              `${durationDays} ngày`,
             
             // Other info
             requestedAt: req.createdAt,
-            specialRequests: req.specialRequirements || '',
+            specialRequests: req.specialRequirements || req.tourDetails?.specialRequirements || '',
             status: req.status,
+            negotiationHistory: req.negotiationHistory || [],
             
             // Itinerary items
-            itinerary: (req.tourDetails?.items || itinerary.items || []).map(item => ({
-              title: item.name,
+            itinerary: (itinerary.items || []).map(item => ({
+              title: item.name || item.placeName || 'Điểm tham quan',
               time: item.startTime && item.endTime ? `${item.startTime} - ${item.endTime}` : item.timeSlot || '',
-              description: item.address || ''
+              description: item.address || item.description || '',
+              duration: item.duration || ''
             })),
             
-            pickupPoint: itinerary.items?.[0]?.address || '',
-            imageItems: [],
-            paymentStatus: 'pending',
-            paymentMethod: '',
-            includedServices: [],
+            pickupPoint: itinerary.items?.[0]?.address || req.tourDetails?.pickupLocation || '',
             
-            // Keep raw data
+            // Keep raw data for detailed view
             raw: req,
             rawItinerary: itinerary
           };
@@ -272,7 +278,7 @@ const RequestsPage = () => {
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredRequests.map((request) => {
             const isNew = isNewRequest(request.requestedAt);
             const isProcessing = processingId === request.id;
@@ -288,14 +294,14 @@ const RequestsPage = () => {
               >
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <img
                       src={request.customerAvatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(request.customerName)}
                       alt={request.customerName}
-                      className="w-12 h-12 rounded-full object-cover"
+                      className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                     />
-                    <div>
-                      <p className="font-semibold text-gray-900">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900 truncate">
                         {request.customerName}
                       </p>
                       <p className="text-xs text-gray-500">
@@ -303,7 +309,7 @@ const RequestsPage = () => {
                       </p>
                     </div>
                   </div>
-                  {isNew && <Badge variant="warning">Mới</Badge>}
+                  {isNew && <Badge variant="warning" className="ml-2 flex-shrink-0">Mới</Badge>}
                 </div>
 
                 {/* Tour Info */}
@@ -311,7 +317,7 @@ const RequestsPage = () => {
                   {request.tourName}
                 </h3>
 
-                <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4 text-xs sm:text-sm">
                   <div className="flex items-center gap-2">
                     <span>�</span>
                     <span className="text-gray-600 line-clamp-1">
@@ -363,30 +369,62 @@ const RequestsPage = () => {
                 )}
 
                 {/* Price */}
-                {request.totalPrice && (
+                {request.totalPrice > 0 && (
                   <div className="bg-emerald-50 rounded-lg p-3 mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-gray-600">Ngân sách</span>
+                      <span className="text-lg font-bold text-emerald-600">
+                        {request.totalPrice.toLocaleString("vi-VN")} ₫
+                      </span>
+                    </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Tổng giá</span>
-                      <span className="text-lg font-bold text-[#02A0AA]">
-                        {request.totalPrice.toLocaleString("vi-VN")} VND
+                      <span className="text-xs text-gray-500">Thu nhập của bạn (80%)</span>
+                      <span className="text-sm font-semibold text-[#02A0AA]">
+                        ~{request.earnings.toLocaleString("vi-VN")} ₫
                       </span>
                     </div>
                   </div>
                 )}
+                
+                {/* Special Requests */}
+                {request.specialRequests && (
+                  <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-4">
+                    <p className="text-xs font-semibold text-yellow-800 mb-1">Yêu cầu đặc biệt:</p>
+                    <p className="text-xs text-yellow-700 line-clamp-2">{request.specialRequests}</p>
+                  </div>
+                )}
+                
+                {/* Contact Info */}
+                <div className="flex gap-2 mb-4 text-xs">
+                  {request.contactPhone && (
+                    <div className="flex items-center gap-1 text-gray-600">
+                      <span>📞</span>
+                      <span>{request.contactPhone}</span>
+                    </div>
+                  )}
+                  {request.customerEmail && (
+                    <div className="flex items-center gap-1 text-gray-600">
+                      <span>📧</span>
+                      <span className="line-clamp-1">{request.customerEmail}</span>
+                    </div>
+                  )}
+                </div>
 
                 {/* Actions */}
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     variant="outline"
                     fullWidth
                     onClick={() => navigate(`/guide/requests/${request.id}`)}
                     disabled={isProcessing}
+                    className="text-sm"
                   >
                     Xem chi tiết
                   </Button>
                   <Button
                     variant="danger"
-                    size="md"
+                    size="sm"
+                    className="px-3 py-2"
                     onClick={() => handleDecline(request.id)}
                     disabled={isProcessing}
                   >
@@ -394,7 +432,8 @@ const RequestsPage = () => {
                   </Button>
                   <Button
                     variant="success"
-                    size="md"
+                    size="sm"
+                    className="px-3 py-2"
                     onClick={() => handleAccept(request.id)}
                     disabled={isProcessing}
                   >

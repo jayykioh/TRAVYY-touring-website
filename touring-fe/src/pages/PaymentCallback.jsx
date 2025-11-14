@@ -6,6 +6,8 @@ import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { useSocket } from '@/context/SocketContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+// Normalize API base: some envs include trailing '/api', avoid '/api/api' when concatenating
+const API_BASE_ROOT = String(API_BASE).replace(/\/api\/?$/i, '');
 
 export default function PaymentCallback() {
   const [searchParams] = useSearchParams();
@@ -37,7 +39,7 @@ export default function PaymentCallback() {
           setStatus('processing');
           setProvider('paypal');
           setOrderRef(paypalOrderId);
-          const resp = await fetch(`${API_BASE}/api/paypal/capture`, {
+          const resp = await fetch(`${API_BASE_ROOT}/api/paypal/capture`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -82,7 +84,7 @@ export default function PaymentCallback() {
           // STEP 1: Call mark-paid to ensure session is marked as paid
           try {
             console.log('[MoMo Callback] Calling mark-paid for orderId:', momoOrderId);
-            const markPaidResp = await fetch(`${API_BASE}/api/payments/momo/mark-paid`, {  
+            const markPaidResp = await fetch(`${API_BASE_ROOT}/api/payments/momo/mark-paid`, {  
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -142,7 +144,7 @@ export default function PaymentCallback() {
             attempts++;
             try {
               console.log(`[MoMo Callback] Polling attempt ${attempts} for orderId: ${momoOrderId}`);
-              const r = await fetch(`${API_BASE}/api/bookings/by-payment/momo/${momoOrderId}`, {
+              const r = await fetch(`${API_BASE_ROOT}/api/bookings/by-payment/momo/${momoOrderId}`, {
                 headers: { 
                   'Authorization': `Bearer ${user?.token}`,
                   'Content-Type': 'application/json'

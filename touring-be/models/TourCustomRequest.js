@@ -219,6 +219,25 @@ const TourCustomRequestSchema = new mongoose.Schema({
     ref: 'Booking'
   },
   
+  // Payment status for custom tour
+  paymentStatus: {
+    type: String,
+    enum: ["unpaid", "deposit_paid", "paid"],
+    default: "unpaid",
+    index: true
+  },
+  
+  // Payment details
+  payment: {
+    provider: { type: String, enum: ["paypal", "momo", "cash"] },
+    orderId: String,
+    transactionId: String,
+    status: { type: String, enum: ["pending", "completed", "failed"] },
+    paidAt: Date,
+    amount: Number,
+    currency: String
+  },
+  
   // Expiry time for pending requests (24 hours default)
   expiresAt: {
     type: Date,

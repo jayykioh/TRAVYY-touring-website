@@ -4,6 +4,7 @@ const multer = require("multer");
 const {
   getAvailableGuides,
   getGuideProfile,
+  getGuideProfileById,
   updateGuideProfile,
   uploadCertificate,
   deleteCertificate,
@@ -21,7 +22,9 @@ const {
   guideAcceptDeal,
   guideRejectRequest,
   guideAgreeToTerms,
-  getGuideAgreementStatus
+  getGuideAgreementStatus,
+  completeGuideTour,
+  completeRegularTour
 } = require("../../controller/guide/guide.controller");
 
 // Setup multer for file uploads
@@ -40,6 +43,9 @@ const upload = multer({
 
 // Public route - get available guides (with location filter)
 router.get("/available", getAvailableGuides);
+
+// Public route - get guide profile by ID (for viewing reviews)
+router.get("/profile/:guideId", getGuideProfileById);
 
 // All other guide routes require authentication
 router.use(authJwt);
@@ -73,6 +79,8 @@ router.get("/custom-requests/:requestId/agreement", getGuideAgreementStatus);
 
 // Tours
 router.get("/tours", getGuideTours);
+router.post("/tours/:tourId/complete", completeGuideTour);
+router.post("/bookings/:bookingId/complete", completeRegularTour);
 
 // Earnings
 router.get("/earnings", getGuideEarnings);

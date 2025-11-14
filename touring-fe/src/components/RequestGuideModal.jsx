@@ -4,10 +4,13 @@ import { AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useAuth } from '@/auth/context';
 import { useNavigate } from 'react-router-dom';
+import { useCheckActiveRequest } from '@/hooks/useCheckActiveRequest';
 
 export default function RequestGuideModal({ isOpen, onClose, itineraryId, itineraryName, itineraryLocation }) {
   const { withAuth, user } = useAuth();
   const navigate = useNavigate();
+  const { checkActiveRequest } = useCheckActiveRequest();
+  
   const [step, setStep] = useState(1); // 1: Select guide, 2: Enter details
   const [guides, setGuides] = useState([]);
   const [loadingGuides, setLoadingGuides] = useState(false);
@@ -22,6 +25,7 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
     contactPhone: '',
   });
 
+  // Define loadGuides first (before useEffect that uses it)
   const loadGuides = useCallback(async () => {
     setLoadingGuides(true);
     try {
@@ -51,12 +55,40 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
     }
   }, [itineraryLocation, withAuth]);
 
-  // Load available guides
+  // Check if user has active request for this itinerary + Load guides
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+
+    const checkAndLoadGuides = async () => {
+      // 1. Check for active request (fast check first)
+      if (itineraryId) {
+        try {
+          const result = await checkActiveRequest(itineraryId);
+          if (result?.hasActive) {
+            toast.error('Bạn đã có yêu cầu đang chờ xử lý cho lộ trình này. Hãy xem trang "Yêu cầu của tôi".', {
+              duration: 4000,
+              action: {
+                label: 'Xem yêu cầu',
+                onClick: () => {
+                  onClose();
+                  navigate('/my-tour-requests');
+                }
+              }
+            });
+            return; // Don't load guides if already has active request
+          }
+        } catch (error) {
+          console.warn('[RequestGuide] Active request check failed:', error);
+          // Continue loading guides even if check fails
+        }
+      }
+
+      // 2. Load available guides in parallel
       loadGuides();
-    }
-  }, [isOpen, loadGuides]);
+    };
+
+    checkAndLoadGuides();
+  }, [isOpen, itineraryId, checkActiveRequest, loadGuides, onClose, navigate]);
 
   const handleGuideSelect = (guide) => {
     setSelectedGuide(guide);
@@ -107,19 +139,34 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
 
     setSubmitting(true);
     try {
+      // Check for active request again (race condition prevention)
+      const activeCheck = await checkActiveRequest(itineraryId);
+      if (activeCheck?.hasActive) {
+        toast.error('Bạn đã có yêu cầu đang chờ xử lý cho lộ trình này.', {
+          duration: 3000,
+          action: {
+            label: 'Xem yêu cầu',
+            onClick: () => navigate('/my-tour-requests')
+          }
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      // Build request body with minimal overhead
       const requestBody = {
         itineraryId,
-        guideId: selectedGuide._id, // Pre-assign to selected guide
+        guideId: selectedGuide._id,
         initialBudget: {
-          amount: parseFloat(formData.budget),
+          amount: budgetNum,
           currency: 'VND'
         },
         numberOfGuests: parseInt(formData.numberOfPeople),
-        preferredDates: [formData.preferredDate], // Always has value after validation
+        preferredDates: [formData.preferredDate],
         specialRequirements: formData.specialRequirements || '',
         contactInfo: {
           phone: formData.contactPhone || '',
-          email: user?.email || '', // Get email from auth context
+          email: user?.email || '',
         },
       };
 
@@ -145,7 +192,10 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
         duration: 2000,
       });
       
-      // Close modal
+      // Get the created request ID from response
+      const requestId = result.tourRequest?._id;
+
+      // Close modal immediately (don't wait for navigation)
       onClose();
       
       // Reset form
@@ -159,18 +209,15 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
         contactPhone: '',
       });
 
-      // Get the created request ID from response
-      const requestId = result.tourRequest?._id;
+      // Redirect to tour request details page with chat (non-blocking)
       if (requestId) {
-        // Redirect to tour request details page with chat
         setTimeout(() => {
           navigate(`/tour-request/${requestId}`);
-        }, 500);
+        }, 300); // Shorter delay for faster response
       } else {
-        // Fallback to my requests if no ID returned
         setTimeout(() => {
           navigate('/my-tour-requests');
-        }, 500);
+        }, 300);
       }
     } catch (error) {
       console.error('❌ [RequestGuide] Error submitting request:', {
@@ -201,7 +248,8 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
       // Handle specific error cases
       if (error.status === 400) {
         // Check if it's a duplicate request error (matches both English and Vietnamese)
-        if (error.body?.error?.includes('already have an active request') || 
+        if (error.body?.error?.includes('Active request exists') || 
+            error.body?.error?.includes('already have an active request') || 
             error.body?.error?.includes('đã có yêu cầu')) {
           toast.error('Bạn đã có yêu cầu đang chờ xử lý cho lộ trình này. Hãy xem trang "Yêu cầu của tôi".', {
             duration: 4000,

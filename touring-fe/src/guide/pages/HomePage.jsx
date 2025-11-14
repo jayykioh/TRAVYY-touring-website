@@ -4,57 +4,47 @@ import UpcomingTourList from "../components/home/UpcomingTourList";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import { useAuth } from "../../auth/context";
+import { useSocket } from "../../context/SocketContext";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 const HomePage = () => {
   const navigate = useNavigate();
 
 
   const { user, withAuth } = useAuth();
+  const { socket, on, joinRoom } = useSocket();
   const [tours, setTours] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [earnings, setEarnings] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       try {
-        const [requestData, tourData] = await Promise.all([
-          withAuth("/api/guide/custom-requests"),
+        const [requestData, tourData, earningsData] = await Promise.all([
+          withAuth("/api/guide/custom-requests?status=pending,negotiating"),
           withAuth("/api/itinerary/guide/accepted-tours"),
+          withAuth("/api/guide/earnings").catch(() => ({ summary: { thisWeek: 0 } }))
         ]);
         
         // Map requests
-        const reqs = requestData.success && Array.isArray(requestData.requests)
-          ? requestData.requests.map((it) => ({
+        const requestsArray = requestData.tourRequests || requestData.requests || [];
+        const reqs = Array.isArray(requestsArray) ? requestsArray.map((it) => ({
               id: it._id,
-              tourName: it.name || it.zoneName,
+              tourName: it.tourDetails?.zoneName || it.itineraryId?.zoneName || it.name || 'Custom Tour',
               customerId: it.userId?._id || it.userId,
               customerName: it.userId?.name || 'Khách hàng',
               customerAvatar: it.userId?.avatar?.url || '',
               customerEmail: it.userId?.email || '',
               contactPhone: it.userId?.phone || '',
-              departureDate: it.preferredDate || '',
-              startTime: it.startTime || '',
-              endTime: it.endTime || '',
-              location: it.zoneName,
-              pickupPoint: '',
-              numberOfGuests: it.numberOfPeople || '',
-              duration: it.totalDuration ? `${Math.floor(it.totalDuration / 60)}h${it.totalDuration % 60}m` : '',
-              totalPrice: it.estimatedCost || '',
-              earnings: '',
-              requestedAt: it.tourGuideRequest?.requestedAt,
-              specialRequests: '',
-              paymentStatus: '',
-              paymentMethod: '',
-              imageItems: [],
-              itinerary: it.items?.map(item => ({
-                title: item.name,
-                time: item.startTime && item.endTime ? `${item.startTime} - ${item.endTime}` : '',
-                description: item.address || ''
-              })) || [],
-              includedServices: [],
+              departureDate: it.preferredDates?.[0]?.startDate || '',
+              location: it.tourDetails?.zoneName || it.itineraryId?.zoneName || '',
+              numberOfGuests: it.tourDetails?.numberOfGuests || 1,
+              totalPrice: it.initialBudget?.amount || 0,
+              requestedAt: it.createdAt,
               raw: it
             }))
           : [];
@@ -65,10 +55,14 @@ const HomePage = () => {
           ? tourData.tours
           : [];
         setTours(myTours);
+        
+        // Set earnings
+        setEarnings(earningsData);
       } catch (error) {
         console.error('Error fetching data:', error);
         setTours([]);
         setRequests([]);
+        setEarnings({ summary: { thisWeek: 0 } });
       } finally {
         setLoading(false);
       }
@@ -77,6 +71,32 @@ const HomePage = () => {
       fetchData();
     }
   }, [user, withAuth]);
+
+  // Join socket room for real-time updates
+  useEffect(() => {
+    if (!socket || !user?._id) return;
+    
+    joinRoom(`user-${user._id}`);
+    
+    // Listen for payment success
+    const unsubscribePayment = on('paymentSuccessful', (data) => {
+      console.log('💰 Payment successful:', data);
+      toast.success(`💰 Khách hàng đã thanh toán cho ${data.tourTitle}`);
+      // Optionally refresh data
+      setTours(prev => prev); // Trigger re-render or fetch
+    });
+    
+    // Listen for tour marked as done
+    const unsubscribeTourDone = on('tourMarkedDone', (data) => {
+      console.log('✅ Tour marked done:', data);
+      toast.success(`✅ Tour "${data.tourTitle}" đã hoàn thành!`);
+    });
+    
+    return () => {
+      unsubscribePayment?.();
+      unsubscribeTourDone?.();
+    };
+  }, [socket, user?._id, joinRoom, on]);
 
   // Categorize tours
   const now = new Date();
@@ -152,7 +172,7 @@ const HomePage = () => {
       <WelcomeBanner />
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Yêu cầu mới */}
         <Card className="text-center relative">
           <div className="text-4xl mb-2">📬</div>
@@ -172,7 +192,7 @@ const HomePage = () => {
               </Button>
               {/* Dấu chấm than đỏ chỉ hiện khi có yêu cầu tour mới */}
               {newRequests.length > 0 && !hasViewedRequests && (
-                <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold animate-bounce">
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold animate-bounce text-xs">
                   !
                 </span>
               )}
@@ -212,7 +232,11 @@ const HomePage = () => {
         {/* Doanh thu */}
         <Card className="text-center">
           <div className="text-4xl mb-2">💰</div>
-          <div className="text-2xl font-bold text-[#02A0AA]">15.7M</div>
+          <div className="text-2xl font-bold text-[#02A0AA]">
+            {loading ? "..." : earnings?.summary?.thisWeek ? 
+              `${(earnings.summary.thisWeek / 1000000).toFixed(1)}M` : 
+              "0"}
+          </div>
           <div className="text-sm text-gray-500">Tuần này</div>
         </Card>
       </div>
@@ -220,9 +244,9 @@ const HomePage = () => {
       {/* Tour đang diễn ra */}
       {ongoingTours.length > 0 && !loading && (
         <Card className="border-gray-200 bg-white">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-[#02A0AA] text-white rounded-full flex items-center justify-center animate-pulse">
+              <div className="w-12 h-12 bg-[#02A0AA] text-white rounded-full flex items-center justify-center animate-pulse flex-shrink-0">
                 <span className="text-2xl">🚀</span>
               </div>
               <div>
@@ -235,6 +259,7 @@ const HomePage = () => {
             </div>
             <Button
               variant="primary"
+              className="sm:w-auto"
               onClick={() => navigate(`/guide/tours/${ongoingTours[0]._id || ongoingTours[0].id}`)}
             >
               Tiếp tục

@@ -21,10 +21,14 @@ export default function GlobalChatListener() {
   }, []);
 
   return (
-    <ChatPopup
-      isOpen={isPopupOpen}
-      onClose={() => setIsPopupOpen(false)}
-      userRole={user?.role}
-    />
+    <>
+      {isPopupOpen && (
+        <ChatPopup
+          isOpen={isPopupOpen}
+          onClose={() => setIsPopupOpen(false)}
+          userRole={user?.role}
+        />
+      )}
+    </>
   );
 }

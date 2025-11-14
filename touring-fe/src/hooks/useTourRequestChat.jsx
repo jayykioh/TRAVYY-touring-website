@@ -12,16 +12,33 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
   const [sending, setSending] = useState(false);
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [unreadCount, setUnreadCount] = useState(0);
+  const [socketError, setSocketError] = useState(null);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
   const mountedRef = useRef(true);
   const typingTimerRef = useRef(null);
   const isTypingSentRef = useRef(false);
   const socket = useSocket();
-  const { withAuth, user } = useAuth() || {};
+  const { withAuth, user, booting, accessToken } = useAuth() || {};
 
   // Helper to fetch request details and initial messages
   const loadRequest = useCallback(async () => {
+    // Defensive: don't attempt protected API calls while auth is booting or when
+    // we don't have a token. This prevents components from calling APIs with
+    // a null token during AuthContext remounts.
     if (!requestId || !withAuth) {
+      setLoading(false);
+      return;
+    }
+
+    if (booting) {
+      console.debug('[useTourRequestChat] Delaying loadRequest while auth is booting');
+      setLoading(true);
+      return;
+    }
+
+    if (!accessToken) {
+      console.debug('[useTourRequestChat] Skipping loadRequest - no access token');
       setLoading(false);
       return;
     }
@@ -64,7 +81,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [requestId, apiBase, withAuth]);
+  }, [requestId, apiBase, withAuth, accessToken, booting]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -78,6 +95,13 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
   // Socket handlers: join room, listen for newMessage/messageUpdated/typing
   useEffect(() => {
     if (!socket || !requestId) return;
+
+    // Validate requestId is a valid ObjectId (24 hex chars) and not an itineraryId
+    const isValidObjectId = /^[a-f\d]{24}$/i.test(requestId);
+    if (!isValidObjectId) {
+      console.warn('[useTourRequestChat] Invalid requestId format, skipping socket setup:', requestId);
+      return;
+    }
 
     const room = `chat-${requestId}`;
     // join the room for this request
@@ -158,12 +182,48 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
       });
     });
 
+    // Listen for agreement completed event
+    const offAgreementCompleted = socket.on?.('agreementCompleted', (payload) => {
+      if (!payload || payload.requestId !== requestId) return;
+      console.log('[useTourRequestChat] agreementCompleted received:', payload);
+      
+      // Refetch request details to get updated agreement status
+      loadRequest();
+      
+      // Show a notification to user (optional - you can customize this)
+      if (payload.message) {
+        console.log('[useTourRequestChat] Agreement message:', payload.message);
+      }
+    });
+
     // Re-join room on socket reconnects
     const offConnect = socket.on?.('connect', () => {
       console.log('[useTourRequestChat] Socket reconnected, rejoining room:', room);
+      setSocketError(null);
+      setReconnectAttempts(0);
       socket.joinRoom?.(room);
       // Reload messages on reconnect
       loadRequest();
+    });
+
+    // Handle disconnect
+    const offDisconnect = socket.on?.('disconnect', (reason) => {
+      console.warn('[useTourRequestChat] Socket disconnected:', reason);
+      setSocketError('Mất kết nối. Đang thử kết nối lại...');
+    });
+
+    // Handle reconnect attempts
+    const offReconnectAttempt = socket.on?.('reconnect_attempt', (attempt) => {
+      setReconnectAttempts(attempt);
+      if (attempt > 5) {
+        setSocketError('Không thể kết nối. Vui lòng kiểm tra internet của bạn.');
+      }
+    });
+
+    // Handle connect_error
+    const offConnectError = socket.on?.('connect_error', (error) => {
+      console.error('[useTourRequestChat] Socket connect error:', error);
+      setSocketError('Lỗi kết nối: ' + (error.message || 'Không xác định'));
     });
 
     return () => {
@@ -171,7 +231,11 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
       if (offNew) offNew();
       if (offUpdated) offUpdated();
       if (offTyping) offTyping();
+      if (offAgreementCompleted) offAgreementCompleted();
       if (offConnect) offConnect();
+      if (offDisconnect) offDisconnect();
+      if (offReconnectAttempt) offReconnectAttempt();
+      if (offConnectError) offConnectError();
     };
   }, [socket, requestId, loadRequest]);
 
@@ -249,6 +313,12 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
         msg = amountOrObj.message || amountOrObj.note || '';
       }
 
+      // Validate against minPrice
+      if (requestDetails?.minPrice?.amount && amount < requestDetails.minPrice.amount) {
+        console.error('[useTourRequestChat] Offer below minPrice:', { amount, minPrice: requestDetails.minPrice.amount });
+        throw new Error(`Giá đề xuất phải >= ${requestDetails.minPrice.amount.toLocaleString('vi-VN')} VND (giá tối thiểu của guide)`);
+      }
+
       const res = await withAuth(`${apiBase}/${requestId}/counter-offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -261,7 +331,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
       console.error('[useTourRequestChat] sendOffer error', err?.message || err);
       return false;
     }
-  }, [withAuth, requestId, apiBase]);
+  }, [withAuth, requestId, apiBase, requestDetails?.minPrice?.amount]);
 
   const agreeToTerms = useCallback(async (terms = {}) => {
     if (!withAuth || !requestId) return false;
@@ -435,6 +505,8 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
     sendFileMessage,
     setMinPrice,
     refetchRequest: loadRequest, // Expose loadRequest so components can refetch
+    socketError, // Expose socket error state
+    reconnectAttempts // Expose reconnect attempts
   };
 }
 

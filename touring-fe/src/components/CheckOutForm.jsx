@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Lock, CreditCard, Wallet, MapPin, User, Phone, Mail, Tag } from "lucide-react";
+import { Lock, CreditCard, Wallet, MapPin, User, Phone, Mail, Tag, Map, Calendar, Users, Clock } from "lucide-react";
 import { useAuth } from "@/auth/context";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import useLocationOptions from "../hooks/useLocation";
@@ -15,7 +15,10 @@ export default function CheckoutForm({
   retryBookingId: retryBookingIdProp,
   summaryItems = [], 
   totalAmount,
-  onVoucherChange 
+  onVoucherChange,
+  requestId: requestIdProp,
+  itinerary: itineraryProp,
+  zoneName: zoneNameProp,
 }) {
   const { user, withAuth } = useAuth() || {};
   const accessToken = user?.token; // hoặc user?.accessToken
@@ -39,11 +42,13 @@ export default function CheckoutForm({
   const retryBookingId = mode === "retry-payment" ? retryBookingIdProp : null;
   
   // ⬇️ NEW: Support for tour-request mode
-  const requestId = location.state?.requestId;
-  const itinerary = location.state?.itinerary || [];
-  const zoneName = location.state?.zoneName || '';
+  // Prefer props from parent, fallback to location.state
+  const requestId = requestIdProp || location.state?.requestId;
+  const itinerary = itineraryProp || location.state?.itinerary || [];
+  const zoneName = zoneNameProp || location.state?.zoneName || '';
   const tourInfo = location.state?.tourInfo || {};
-
+  const isTourRequest = mode === 'tour-request';
+  
   console.log("🔍 CheckoutForm loaded:");
   console.log("   location.state:", location.state);
   console.log("   mode:", mode);
@@ -51,6 +56,7 @@ export default function CheckoutForm({
   console.log("   requestId:", requestId);
   console.log("   itinerary items:", itinerary.length);
   console.log("   zone:", zoneName, "tourInfo:", tourInfo);
+  console.log("   isTourRequest:", isTourRequest);
 
 
   const [userInfo, setUserInfo] = useState({
@@ -473,6 +479,80 @@ export default function CheckoutForm({
           </div>
         )}
       </div>
+
+      {/* Tour Request Details Display */}
+      {isTourRequest && itinerary && itinerary.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Map className="w-5 h-5 text-blue-600" />
+            Thông tin tour tùy chỉnh
+          </h2>
+          
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-5 border-2 border-blue-200">
+            {/* Zone Info */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <MapPin className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-gray-900 text-lg">{zoneName || 'Tour tùy chỉnh'}</h3>
+              </div>
+              {tourInfo?.numberOfDays && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Calendar className="w-4 h-4" />
+                  <span>{tourInfo.numberOfDays} ngày</span>
+                  {tourInfo?.numberOfGuests && (
+                    <>
+                      <span className="text-gray-400">•</span>
+                      <Users className="w-4 h-4" />
+                      <span>{tourInfo.numberOfGuests} khách</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Itinerary List */}
+            <div className="bg-white rounded-xl p-4">
+              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <Map className="w-4 h-4 text-orange-500" />
+                Hành trình chi tiết ({itinerary.length} điểm)
+              </h4>
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {itinerary.map((item, idx) => (
+                  <div key={idx} className="flex gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white flex items-center justify-center text-sm font-bold">
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">{item.name || item.activity}</div>
+                      {item.address && (
+                        <div className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                          <MapPin className="w-3 h-3" />
+                          {item.address}
+                        </div>
+                      )}
+                      {(item.startTime || item.duration) && (
+                        <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-600">
+                          {item.startTime && (
+                            <span className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                              <Clock className="w-3 h-3" />
+                              {item.startTime}
+                            </span>
+                          )}
+                          {item.duration && (
+                            <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">
+                              {item.duration} phút
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Voucher Section - Shopee Style */}
       <div className="mb-8">

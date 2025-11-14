@@ -3,6 +3,7 @@ import { X, MessageCircle, ArrowLeft, Bell } from 'lucide-react';
 import { useAuth } from '../../../auth/context';
 import { useSocket } from '../../../context/SocketContext';
 import ChatBox from './ChatBox';
+import TravellerChatBox from '../../../components/TravellerChatBox';
 
 const ChatPopup = ({ isOpen, onClose, userRole }) => {
   const { user, withAuth } = useAuth();
@@ -38,6 +39,7 @@ const ChatPopup = ({ isOpen, onClose, userRole }) => {
       console.log('[ChatPopup] API response:', response);
       
       if (response.success) {
+        // ✅ FIX: Handle both 'requests' (traveller) and 'tourRequests' (guide) response formats
         const requests = response.requests || response.tourRequests || [];
         
         // Normalize the data: ensure all requests have required fields from tourDetails
@@ -285,25 +287,39 @@ const ChatPopup = ({ isOpen, onClose, userRole }) => {
 
         {/* Content */}
         {selectedRequest ? (
-          // Show chat for selected request
+          // Show chat for selected request - RENDER DIFFERENT COMPONENT BASED ON ROLE
           <div className="flex-1 overflow-hidden">
-            <ChatBox
-              requestId={selectedRequest._id}
-              customerName={
-                (userRole || user?.role) === 'TourGuide' 
-                  ? (selectedRequest.userId?.name || 'Khách hàng')
-                  : (selectedRequest.guideId?.name || 'Hướng dẫn viên')
-              }
-              tourInfo={{
-                tourName: selectedRequest.tourDetails?.zoneName || 'Tour',
-                name: selectedRequest.tourDetails?.zoneName,
-                location: selectedRequest.tourDetails?.zoneName,
-                departureDate: selectedRequest.startDate,
-                numberOfGuests: selectedRequest.tourDetails?.numberOfGuests || selectedRequest.numberOfGuests,
-                duration: `${selectedRequest.tourDetails?.numberOfDays || 0} ngày`,
-                totalPrice: selectedRequest.finalPrice?.amount || selectedRequest.initialBudget?.amount
-              }}
-            />
+            {(userRole || user?.role) === 'TourGuide' ? (
+              // Guide sees ChatBox (Guide UI with Accept/Decline buttons)
+              <ChatBox
+                requestId={selectedRequest._id}
+                customerName={selectedRequest.userId?.name || 'Khách hàng'}
+                tourInfo={{
+                  tourName: selectedRequest.tourDetails?.zoneName || 'Tour',
+                  name: selectedRequest.tourDetails?.zoneName,
+                  location: selectedRequest.tourDetails?.zoneName,
+                  departureDate: selectedRequest.startDate,
+                  numberOfGuests: selectedRequest.tourDetails?.numberOfGuests || selectedRequest.numberOfGuests,
+                  duration: `${selectedRequest.tourDetails?.numberOfDays || 0} ngày`,
+                  totalPrice: selectedRequest.finalPrice?.amount || selectedRequest.initialBudget?.amount
+                }}
+              />
+            ) : (
+              // Traveller sees TravellerChatBox (Traveller UI with Payment buttons)
+              <TravellerChatBox
+                requestId={selectedRequest._id}
+                guideName={selectedRequest.guideId?.name || 'Hướng dẫn viên'}
+                tourInfo={{
+                  tourName: selectedRequest.tourDetails?.zoneName || 'Tour',
+                  name: selectedRequest.tourDetails?.zoneName,
+                  location: selectedRequest.tourDetails?.zoneName,
+                  departureDate: selectedRequest.startDate,
+                  numberOfGuests: selectedRequest.tourDetails?.numberOfGuests || selectedRequest.numberOfGuests,
+                  duration: `${selectedRequest.tourDetails?.numberOfDays || 0} ngày`,
+                  totalPrice: selectedRequest.finalPrice?.amount || selectedRequest.initialBudget?.amount
+                }}
+              />
+            )}
           </div>
         ) : (
           // Show list of requests

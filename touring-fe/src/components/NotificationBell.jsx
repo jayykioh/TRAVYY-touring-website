@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, X, Check, CheckCheck, Trash2, Mail, DollarSign, Ticket, AlertCircle, MessageCircle } from 'lucide-react';
+import { 
+  Bell, Check, CheckCheck, Trash2, Mail, DollarSign, Ticket, 
+  AlertCircle, MessageCircle, HandshakeIcon, XCircle, CheckCircle,
+  TrendingUp, Users
+} from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
-import { useAuth } from '@/auth/context';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
 const NotificationBell = () => {
   const navigate = useNavigate();
-  const { withAuth } = useAuth();
   const {
     notifications,
     unreadCount,
@@ -20,58 +22,165 @@ const NotificationBell = () => {
 
   const [isOpen, setIsOpen] = useState(false);
 
-  const getNotificationIcon = (type) => {
+  // Memoize icon getter to avoid recreating on every render
+  const getNotificationIcon = useCallback((type) => {
     switch (type) {
       case 'payment_success':
       case 'booking_success':
+      case 'deposit_paid':
+      case 'payment_failed':
         return <DollarSign className="w-5 h-5 text-green-600" />;
+      
       case 'new_message':
         return <MessageCircle className="w-5 h-5 text-teal-600" />;
+      
       case 'register':
         return <Mail className="w-5 h-5 text-blue-600" />;
+      
       case 'new_tour':
+      case 'new_request':
+      case 'new_tour_request':
         return <Ticket className="w-5 h-5 text-purple-600" />;
+      
       case 'password_reset':
       case 'password_changed':
       case 'security_alert':
         return <AlertCircle className="w-5 h-5 text-amber-600" />;
+      
+      case 'tour_guide_accepted':
+      case 'request_accepted':
+      case 'user_agreed':
+      case 'guide_agreed':
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
+      
+      case 'tour_guide_rejected':
+      case 'request_cancelled':
+      case 'cancellation':
+        return <XCircle className="w-5 h-5 text-red-600" />;
+      
+      case 'agreement_complete':
+        return <HandshakeIcon className="w-5 h-5 text-blue-600" />;
+      
+      case 'price_offer':
+      case 'guide_price_offer':
+      case 'user_price_offer':
+        return <TrendingUp className="w-5 h-5 text-indigo-600" />;
+      
+      case 'tour_completed':
+        return <CheckCircle className="w-5 h-5 text-emerald-600" />;
+      
+      case 'tour_reminder':
+      case 'schedule_change':
+        return <AlertCircle className="w-5 h-5 text-orange-600" />;
+      
+      case 'review':
+      case 'refund_processed':
+        return <Users className="w-5 h-5 text-yellow-600" />;
+      
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
     }
-  };
+  }, []);
 
-  const handleNotificationClick = async (notification) => {
-    if (notification.status !== 'read') {
+  // Memoize notification click handler
+  const handleNotificationClick = useCallback(async (notification) => {
+    if (notification.status !== 'read' && !notification.read) {
       await markAsRead([notification._id]);
     }
     
-    // Navigate to chat if it's a new_message notification with relatedId
-    if (notification.type === 'new_message' && notification.relatedId) {
-      setIsOpen(false);
-      navigate(`/tour-request/${notification.relatedId}`);
+    // Navigate based on notification type and relatedId/relatedModel
+    const type = notification.type;
+    const relatedId = notification.relatedId;
+    const relatedModel = notification.relatedModel;
+    
+    setIsOpen(false);
+    
+    // Message notifications -> navigate to chat/tour request
+    if (type === 'new_message' && relatedId) {
+      if (relatedModel === 'TourCustomRequest' || notification.tourId) {
+        navigate(`/tour-request/${relatedId || notification.tourId}`);
+      } else {
+        navigate(`/chat/${relatedId}`);
+      }
+      return;
     }
-    // Navigate to relevant page based on notification type
-    else if (notification.data?.bookingId) {
-      setIsOpen(false);
+    
+    // Tour request related notifications -> navigate to request details
+    if (
+      ['new_request', 'new_tour_request', 'price_offer', 'guide_price_offer', 
+       'user_price_offer', 'user_agreed', 'guide_agreed', 'agreement_complete',
+       'request_accepted', 'request_cancelled'].includes(type) && 
+      (relatedId || notification.tourId)
+    ) {
+      navigate(`/tour-request/${relatedId || notification.tourId}`);
+      return;
+    }
+    
+    // Payment/Booking related -> navigate to booking history or booking detail
+    if (
+      ['payment_success', 'booking_success', 'deposit_paid', 'tour_completed', 
+       'cancellation', 'refund_processed', 'payment_failed'].includes(type)
+    ) {
+      if (notification.data?.bookingId || relatedId) {
+        navigate(`/profile/booking-history`);
+      } else {
+        navigate('/profile/booking-history');
+      }
+      return;
+    }
+    
+    // Guide acceptance/rejection -> navigate to tour requests
+    if (['tour_guide_accepted', 'tour_guide_rejected'].includes(type)) {
+      navigate('/tour-requests');
+      return;
+    }
+    
+    // Security/Password -> no navigation, just mark as read
+    if (['password_reset', 'password_changed', 'security_alert'].includes(type)) {
+      return;
+    }
+    
+    // Default: try to navigate based on data
+    if (notification.data?.bookingId) {
       navigate('/profile/booking-history');
+    } else if (relatedId) {
+      // Generic fallback
+      navigate(`/notifications`);
     }
-  };
+  }, [navigate, markAsRead]);
 
-  const handleMarkAllRead = async () => {
+  // Memoize mark all read handler
+  const handleMarkAllRead = useCallback(async () => {
     await markAllAsRead();
-  };
+  }, [markAllAsRead]);
 
-  const handleDelete = async (e, notificationId) => {
+  // Memoize delete handler
+  const handleDelete = useCallback(async (e, notificationId) => {
     e.stopPropagation();
     await deleteNotification(notificationId);
-  };
+  }, [deleteNotification]);
+
+  // Memoize toggle dropdown handler
+  const toggleDropdown = useCallback(() => {
+    setIsOpen(prev => !prev);
+  }, []);
+
+  const closeDropdown = useCallback(() => {
+    setIsOpen(false);
+  }, []);
+
+  // Memoize formatted notifications to avoid recalculating on every render
+  const hasNotifications = useMemo(() => notifications.length > 0, [notifications.length]);
+  const isLoading = useMemo(() => loading && notifications.length === 0, [loading, notifications.length]);
 
   return (
     <div className="relative">
       {/* Bell Icon with Badge */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleDropdown}
         className="relative p-2 text-gray-600 hover:text-teal-600 transition-colors"
+        aria-label="Thông báo"
+        aria-expanded={isOpen}
       >
         <Bell className="w-6 h-6" />
         {unreadCount > 0 && (
@@ -87,7 +196,8 @@ const NotificationBell = () => {
           {/* Backdrop */}
           <div 
             className="fixed inset-0 z-40" 
-            onClick={() => setIsOpen(false)}
+            onClick={closeDropdown}
+            aria-hidden="true"
           />
 
           {/* Panel */}
@@ -104,10 +214,11 @@ const NotificationBell = () => {
                 )}
               </div>
               
-              {notifications.length > 0 && (
+              {hasNotifications && (
                 <button
                   onClick={handleMarkAllRead}
                   className="text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1"
+                  aria-label="Đánh dấu tất cả đã đọc"
                 >
                   <CheckCheck className="w-4 h-4" />
                   Đánh dấu tất cả đã đọc
@@ -117,11 +228,11 @@ const NotificationBell = () => {
 
             {/* Notifications List */}
             <div className="flex-1 overflow-y-auto">
-              {loading && notifications.length === 0 ? (
+              {isLoading ? (
                 <div className="flex items-center justify-center p-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
                 </div>
-              ) : notifications.length === 0 ? (
+              ) : !hasNotifications ? (
                 <div className="flex flex-col items-center justify-center p-8 text-center">
                   <Bell className="w-12 h-12 text-gray-300 mb-3" />
                   <p className="text-gray-500">Chưa có thông báo nào</p>
@@ -202,14 +313,15 @@ const NotificationBell = () => {
             </div>
 
             {/* Footer */}
-            {notifications.length > 0 && (
+            {hasNotifications && (
               <div className="p-3 border-t border-gray-200">
                 <button
                   onClick={() => {
-                    setIsOpen(false);
+                    closeDropdown();
                     navigate('/notifications');
                   }}
                   className="w-full text-center text-sm text-teal-600 hover:text-teal-700 font-medium"
+                  aria-label="Xem tất cả thông báo"
                 >
                   Xem tất cả thông báo
                 </button>

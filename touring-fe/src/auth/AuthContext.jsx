@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useRef } from "react";
 import { AuthCtx } from "./context";
 const API_BASE = "http://localhost:4000";
 
@@ -70,6 +71,9 @@ export default function AuthProvider({ children }) {
     }
   }); // { message, reason }
   const [booting, setBooting] = useState(true);
+  // keep a ref of booting so callbacks can observe latest value without
+  // being recreated too often
+  const bootingRef = useRef(booting);
 
   const login = useCallback(async (username, password) => {
     const res = await api(`${API_BASE}/api/auth/login`, {
@@ -125,6 +129,30 @@ export default function AuthProvider({ children }) {
       }
 
       const url = !/^https?:\/\//.test(input) ? `${API_BASE}${input}` : input;
+
+      // If the auth system is still booting (refresh in progress), wait a
+      // short while for it to finish to avoid making calls without a token.
+      // This guards consumers from calling APIs mid-auth-reset.
+      const waitForBoot = async (timeout = 3000) => {
+        const start = Date.now();
+        while (bootingRef.current) {
+          if (Date.now() - start > timeout) return false;
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise((r) => setTimeout(r, 50));
+        }
+        return true;
+      };
+
+      if (bootingRef.current) {
+        try {
+          const ok = await waitForBoot(3000);
+          if (!ok) {
+            console.debug("withAuth: booting did not finish within timeout");
+          }
+        } catch (err) {
+          console.debug("withAuth: error waiting for boot", err);
+        }
+      }
 
       const headers = { ...(init.headers || {}) };
       // If we already have an access token, attach it. Otherwise try a
@@ -265,6 +293,26 @@ export default function AuthProvider({ children }) {
       cancelled = true;
     };
   }, [isLoggedOut]); // 👈 thêm dependency để khi logout => dừng refresh
+
+  // keep bootingRef in sync with booting state
+  useEffect(() => {
+    bootingRef.current = booting;
+  }, [booting]);
+
+  // Instrumentation: log accessToken/user/booting transitions to help
+  // diagnose mid-flow resets reported by users.
+  useEffect(() => {
+    try {
+      console.debug("AuthContext state", {
+        time: new Date().toISOString(),
+        booting,
+        user: user ? { id: user._id || user.id, role: user?.role } : null,
+        hasAccessToken: !!accessToken,
+      });
+    } catch (err) {
+      // non-fatal
+    }
+  }, [accessToken, user, booting]);
 
   // expose a helper to clear banned info (e.g., after logout)
   const clearBannedInfo = () => setBannedInfo(null);
