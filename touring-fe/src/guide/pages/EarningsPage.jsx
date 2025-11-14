@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import Card from "../components/common/Card";
 import Badge from "../components/common/Badge";
-import { getGuideEarnings } from "../data/guideAPI";
+import { getGuideEarnings } from "../data/guideAPI"; // <-- LOGIC TỪ FILE 1
 import {
   LineChart,
   Line,
@@ -13,8 +13,10 @@ import {
   Area,
   AreaChart,
 } from "recharts";
+import { Calendar, BarChart2, Star, Clock } from "lucide-react"; // <-- STYLE TỪ FILE 2
 
 const EarningsPage = () => {
+  // --- LOGIC TỪ FILE 1 ---
   const [earningsData, setEarningsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState("week");
@@ -28,11 +30,17 @@ const EarningsPage = () => {
         console.error("Failed to fetch earnings:", error);
         // Fallback data
         setEarningsData({
-          summary: { thisWeek: 0, thisMonth: 0, lastMonth: 0, totalEarnings: 0, pendingPayment: 0 },
+          summary: {
+            thisWeek: 0,
+            thisMonth: 0,
+            lastMonth: 0,
+            totalEarnings: 0,
+            pendingPayment: 0,
+          },
           weeklyData: [],
           recentPayments: [],
           monthlyStats: [],
-          yearlyStats: []
+          yearlyStats: [],
         });
       } finally {
         setLoading(false);
@@ -42,8 +50,15 @@ const EarningsPage = () => {
     fetchEarnings();
   }, []);
 
-  const summary = earningsData?.summary || { thisWeek: 0, thisMonth: 0, lastMonth: 0, totalEarnings: 0, pendingPayment: 0 };
+  const summary = earningsData?.summary || {
+    thisWeek: 0,
+    thisMonth: 0,
+    lastMonth: 0,
+    totalEarnings: 0,
+    pendingPayment: 0,
+  };
   const recentPayments = earningsData?.recentPayments || [];
+  // --- KẾT THÚC LOGIC FILE 1 ---
 
   const chartData = useMemo(() => {
     const weekly = earningsData?.weeklyData || [];
@@ -75,7 +90,7 @@ const EarningsPage = () => {
         value: d.earnings || 0,
       })),
     };
-  }, [range, earningsData]);
+  }, [range, earningsData]); // <-- Dùng earningsData từ state
 
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
@@ -90,96 +105,129 @@ const EarningsPage = () => {
     return null;
   };
 
+  // Thêm trạng thái loading
+  if (loading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto flex justify-center items-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Thu nhập</h1>
-        <p className="text-gray-500">
+    <div className="px-6 py-4 min-h-screen">
+      <div className="mb-6 ml-4">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">
+          Thu nhập
+        </h1>
+        <p className="text-gray-500 text-sm sm:text-base">
           Theo dõi thu nhập và các khoản thanh toán
         </p>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards (STYLE ICON TỪ FILE 2) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="hover:shadow-lg transition-shadow">
+        {/* Tuần này */}
+        <Card className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-gray-600">Tuần này</p>
-            <span className="text-2xl">📅</span>
+            <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center">
+              <Calendar className="w-5 h-5" />
+            </span>
           </div>
-          <p className="text-3xl font-bold text-[#02A0AA] mb-1">
+          <p className="text-3xl font-extrabold text-black mb-1">
             {summary.thisWeek.toLocaleString("vi-VN")}
           </p>
           <p className="text-xs text-gray-400">VND</p>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        {/* Tháng này */}
+        <Card className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-gray-600">Tháng này</p>
-            <span className="text-2xl">📊</span>
+            <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center">
+              <BarChart2 className="w-5 h-5" />
+            </span>
           </div>
-          <p className="text-3xl font-bold text-gray-900 mb-1">
+          <p className="text-3xl font-extrabold text-black mb-1">
             {summary.thisMonth.toLocaleString("vi-VN")}
           </p>
           <p className="text-xs text-gray-400">VND</p>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        {/* Tổng thu nhập */}
+        <Card className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-gray-600">Tổng thu nhập</p>
-            <span className="text-2xl">💎</span>
+            <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center">
+              <Star className="w-5 h-5" />
+            </span>
           </div>
-          <p className="text-3xl font-bold text-gray-900 mb-1">
+          <p className="text-3xl font-extrabold text-black mb-1">
             {summary.totalEarnings.toLocaleString("vi-VN")}
           </p>
           <p className="text-xs text-gray-400">VND</p>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow bg-gradient-to-br from-orange-50 to-yellow-50 border-orange-100">
+        {/* Chờ thanh toán (accent cảnh báo) */}
+        <Card className="bg-white border border-orange-200 rounded-2xl p-5 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-orange-700">
               Chờ thanh toán
             </p>
-            <span className="text-2xl">⏳</span>
+            <span className="w-9 h-9 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
+              <Clock className="w-5 h-5" />
+            </span>
           </div>
-          <p className="text-3xl font-bold text-orange-600 mb-1">
+          <p className="text-3xl font-extrabold text-orange-600 mb-1">
             {summary.pendingPayment.toLocaleString("vi-VN")}
           </p>
           <p className="text-xs text-orange-400">VND</p>
         </Card>
       </div>
 
-      {/* Chart with Recharts */}
+      {/* Chart with Recharts (Giống hệt ở cả 2 file) */}
       <Card className="mb-8 shadow-md">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-gray-900">{chartData.title}</h3>
-          <div className="flex gap-2">
+
+          {/* Segmented control */}
+          <div className="inline-flex items-center gap-1 bg-white border border-gray-200 rounded-full p-1">
             <button
               onClick={() => setRange("week")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              aria-pressed={range === "week"}
+              className={[
+                "h-9 px-4 rounded-full text-sm font-semibold transition-colors border",
                 range === "week"
-                  ? "bg-[#02A0AA] text-white shadow-md"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+                  ? "bg-[#02A0AA] text-white border-[#02A0AA] shadow"
+                  : "bg-white text-gray-700 border-transparent hover:bg-gray-50",
+              ].join(" ")}
             >
               Tuần
             </button>
+
             <button
               onClick={() => setRange("month")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              aria-pressed={range === "month"}
+              className={[
+                "h-9 px-4 rounded-full text-sm font-semibold transition-colors border",
                 range === "month"
-                  ? "bg-[#02A0AA] text-white shadow-md"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+                  ? "bg-[#02A0AA] text-white border-[#02A0AA] shadow"
+                  : "bg-white text-gray-700 border-transparent hover:bg-gray-50",
+              ].join(" ")}
             >
               Tháng
             </button>
+
             <button
               onClick={() => setRange("year")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              aria-pressed={range === "year"}
+              className={[
+                "h-9 px-4 rounded-full text-sm font-semibold transition-colors border",
                 range === "year"
-                  ? "bg-[#02A0AA] text-white shadow-md"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+                  ? "bg-[#02A0AA] text-white border-[#02A0AA] shadow"
+                  : "bg-white text-gray-700 border-transparent hover:bg-gray-50",
+              ].join(" ")}
             >
               Năm
             </button>
@@ -234,7 +282,7 @@ const EarningsPage = () => {
         </ResponsiveContainer>
       </Card>
 
-      {/* Recent Payments */}
+      {/* Recent Payments (Giống hệt ở cả 2 file, dùng data từ state) */}
       <Card>
         <h3 className="font-bold text-gray-900 mb-4 text-lg">
           Các khoản thanh toán gần đây

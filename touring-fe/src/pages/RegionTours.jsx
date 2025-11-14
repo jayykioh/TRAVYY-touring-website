@@ -1,178 +1,126 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { destinationList } from "../mockdata/destinationList";
 import TourCard from "../components/TourCard";
-import {
-  MapPin,
-  Package,
-  Filter,
-  SlidersHorizontal,
-  ChevronLeft,
-  Sparkles,
-} from "lucide-react";
-import { useAuth } from "../auth/context";
-import { toast } from "sonner";
+import { MapPin, Package, ChevronLeft } from "lucide-react";
+
+const API_BASE = "http://localhost:4000/api"; // như file 1
 
 export default function RegionTours() {
-  const { slug } = useParams();
+  const { slug } = useParams(); // slug = locationId trong MongoDB
   const navigate = useNavigate();
-  const { user } = useAuth();
+
   const [tours, setTours] = useState([]);
   const [favorites, setFavorites] = useState(new Set());
   const [sortBy, setSortBy] = useState("popular");
-  const [filterCategory] = useState("all"); // setFilterCategory available for future filter feature
+  const [filterCategory] = useState("all"); // để sau dùng filter nâng cao
   const [isOpen, setIsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const toursPerPage = 20;
+  const [loading, setLoading] = useState(true);
 
+  // Scroll to top khi VÀO trang RegionTours (không áp dụng khi quay lại)
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [slug]);
+  }, []); // chỉ chạy 1 lần khi mount
 
-  // Reset page when filters change
+  // Reset page khi đổi sort/filter/slug
   useEffect(() => {
     setCurrentPage(1);
   }, [sortBy, filterCategory, slug]);
 
-  // Lấy tour theo slug như file 1
+  // Gọi API giống file 1
   useEffect(() => {
-    if (slug && destinationList[slug]) {
-      // Filter out hidden tours
-      const visibleTours = destinationList[slug].filter(
-        (tour) => !tour.isHidden
-      );
-      setTours(visibleTours);
-    } else {
-      setTours([]);
-    }
+    if (!slug) return;
+    fetchToursByLocation(slug);
   }, [slug]);
 
-  // ✅ Load wishlist từ server
-  useEffect(() => {
-    if (!user?.token) return;
-
-    fetch("/api/wishlist", {
-      headers: { Authorization: `Bearer ${user.token}` },
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setFavorites(
-            new Set(data.data.map((item) => String(item.tourId._id)))
-          );
-        }
-      })
-      .catch((err) => console.error("Error fetching wishlist:", err));
-  }, [user?.token]);
-
-  // ✅ Toggle wishlist với Optimistic Update
-  const handleFavoriteToggle = async (tourId) => {
-    if (!user?.token) {
-      toast.error("Bạn cần đăng nhập để sử dụng wishlist");
-      return;
-    }
-
-    // 🚀 OPTIMISTIC UPDATE: Update UI ngay lập tức
-    const wasInWishlist = favorites.has(tourId);
-    setFavorites((prev) => {
-      const newSet = new Set(prev);
-      if (wasInWishlist) {
-        newSet.delete(tourId);
-      } else {
-        newSet.add(tourId);
-      }
-      return newSet;
-    });
-
+  async function fetchToursByLocation(locationId) {
     try {
-      const res = await fetch("/api/wishlist/toggle", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${user.token}`,
-        },
-        credentials: "include",
-        body: JSON.stringify({ tourId }),
-      });
+      setLoading(true);
+      console.log("🔍 [Frontend] Fetching tours for locationId:", locationId);
+
+      const res = await fetch(`${API_BASE}/location-tours/${locationId}`);
+      if (!res.ok) {
+        console.error(`❌ [Frontend] HTTP error! status: ${res.status}`);
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
 
       const data = await res.json();
+      console.log("✅ [Frontend] Received tours:", data);
+      console.log("📊 [Frontend] Tours count:", data.length);
 
-      if (data.success) {
-        // ✅ Confirm lại state từ server
-        setFavorites((prev) => {
-          const newSet = new Set(prev);
-          if (data.isFav) {
-            newSet.add(tourId);
-          } else {
-            newSet.delete(tourId);
-          }
-          return newSet;
-        });
-      } else {
-        // ❌ Nếu API fail, revert lại state cũ
-        setFavorites((prev) => {
-          const newSet = new Set(prev);
-          wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
-          return newSet;
-        });
-        toast.error("Không thể cập nhật wishlist");
-      }
+      setTours(Array.isArray(data) ? data : []);
+      setLoading(false);
     } catch (err) {
-      console.error("Error toggling wishlist:", err);
-
-      // ❌ Revert lại state cũ khi có lỗi
-      setFavorites((prev) => {
-        const newSet = new Set(prev);
-        wasInWishlist ? newSet.add(tourId) : newSet.delete(tourId);
-        return newSet;
-      });
-
-      toast.error("Có lỗi xảy ra, vui lòng thử lại");
+      console.error("❌ [Frontend] Fetch tours failed:", err);
+      setTours([]);
+      setLoading(false);
     }
+  }
+
+  const handleFavoriteToggle = (tourId) => {
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      next.has(tourId) ? next.delete(tourId) : next.add(tourId);
+      return next;
+    });
   };
 
-  // Lấy categories duy nhất
-  const categories = ["all", ...new Set(tours.map((tour) => tour.category))];
+  // Lấy tên khu vực từ tour (locations có thể là array hoặc object)
+  const getLocationName = () => {
+    if (!tours.length) return "";
+    const first = tours[0];
+    const loc = first.locations;
+    if (Array.isArray(loc)) {
+      return loc[0]?.name || "";
+    }
+    if (loc && typeof loc === "object") {
+      return loc.name || "";
+    }
+    return "";
+  };
 
-  // Filter + Sort
+  const locationName = getLocationName();
+
+  // Filter + Sort (style như file 2, nhưng dùng field của BE như file 1)
   const filteredTours = tours
-    .filter(
-      (tour) => filterCategory === "all" || tour.category === filterCategory
-    )
     .filter(
       (tour) => filterCategory === "all" || tour.category === filterCategory
     )
     .sort((a, b) => {
       switch (sortBy) {
         case "price-low":
-          return a.currentPrice - b.currentPrice;
+          return (a.basePrice || 0) - (b.basePrice || 0);
         case "price-high":
-          return b.currentPrice - a.currentPrice;
+          return (b.basePrice || 0) - (a.basePrice || 0);
         case "rating":
-          return b.rating - a.rating;
+          return (b.isRating || 0) - (a.isRating || 0);
         case "popular":
-          return parseInt(b.booked) - parseInt(a.booked);
-        case "newest":
-          return b.id - a.id; // mới nhất lên trước
+          return (b.usageCount || 0) - (a.usageCount || 0);
+        case "recently-added":
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        case "recommended": {
+          // Tạm thời coi "Đề xuất" = ưu tiên rating + usageCount
+          const scoreA = (a.isRating || 0) * 1000 + (a.usageCount || 0);
+          const scoreB = (b.isRating || 0) * 1000 + (b.usageCount || 0);
+          return scoreB - scoreA;
+        }
         default:
           return 0;
       }
     });
 
-  // Pagination logic
+  // Pagination logic (giữ y chang style file 2)
   const totalPages = Math.ceil(filteredTours.length / toursPerPage);
   const startIndex = (currentPage - 1) * toursPerPage;
   const endIndex = startIndex + toursPerPage;
   const currentTours = filteredTours.slice(startIndex, endIndex);
 
-  // Scroll to top when page changes
   const handlePageChange = (page) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Generate page numbers to display
   const getPageNumbers = () => {
     const pages = [];
     const maxPagesToShow = 5;
@@ -207,6 +155,16 @@ export default function RegionTours() {
     return pages;
   };
 
+  // Loading state (giữ style mềm của file 2)
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-teal-50/30 flex items-center justify-center">
+        <p className="text-gray-600 text-lg">Đang tải tour...</p>
+      </div>
+    );
+  }
+
+  // Không có tour
   if (!tours.length) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-teal-50/30 flex items-center justify-center">
@@ -233,10 +191,9 @@ export default function RegionTours() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/20 to-teal-50/30">
-      {/* Header */}
+      {/* Header (style giống file 2) */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          {/* Back button */}
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-1.5 text-gray-600 hover:text-[#007980] transition-colors duration-300 group mb-2"
@@ -245,26 +202,25 @@ export default function RegionTours() {
             <span className="font-medium">Quay lại</span>
           </button>
 
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-9 h-9 bg-gradient-to-r from-[#03B3BE] to-[#007980] rounded-lg flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-white" />
-            </div>
+          <div className="flex items-center gap-2 my-2 ml-5">
+            <MapPin className="w-5 h-7 text-gray-500 mb-5" />
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r bg-[#007980] bg-clip-text text-transparent leading-tight">
-                {slug.replace("-", " ").toUpperCase()}
-              </h1>
+              <h2 className="text-xl sm:text-3xl font-bold bg-gradient-to-r bg-gray-800 bg-clip-text text-transparent leading-tight">
+                Các tour tại {locationName || "khu vực này"}
+              </h2>
               <p className="text-gray-600 text-sm mt-0.5">
-                {filteredTours.length} tour & hoạt động
+                {filteredTours.length > 999 ? "999+" : filteredTours.length}{" "}
+                tour & hoạt động
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-        {/* Filters & Sort */}
+      {/* Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-1 py-3">
+        {/* Sort dropdown (giữ nguyên style file 2) */}
         <div className="flex flex-col lg:flex-row gap-2 sm:gap-3 items-end lg:items-center justify-end">
-          {/* Sort */}
           <span className="text-gray-600 font-medium">Sắp xếp:</span>
           <div className="relative inline-block my-2 mb-4">
             <button
@@ -354,7 +310,7 @@ export default function RegionTours() {
                   )}
                 </button>
 
-                {/* ✅ Giá cao đến thấp */}
+                {/* Giá cao đến thấp */}
                 <button
                   onClick={() => {
                     setSortBy("price-high");
@@ -469,68 +425,28 @@ export default function RegionTours() {
             )}
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-2 sm:p-3 mb-3 sm:mb-4">
-          <div className="flex flex-col lg:flex-row gap-2 sm:gap-3 items-start lg:items-center justify-between">
-            {/* Category Filter */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-1 text-gray-700 text-sm font-medium">
-                <Filter className="w-4 h-4 text-[#007980]" />
-                <span>Lọc:</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setFilterCategory(cat)}
-                    className={`px-3 py-1.5 rounded-md text-sm transition-all duration-300 ${
-                      filterCategory === cat
-                        ? "bg-[#03B3BE] text-white shadow-sm"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    {cat === "all" ? "Tất cả" : cat}
-                  </button>
-                ))}
-              </div>
-            </div>
 
-            {/* Sort */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 text-gray-700 text-sm font-medium">
-                <SlidersHorizontal className="w-4 h-4 text-[#007980]" />
-                <span>Sắp xếp:</span>
-              </div>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#03B3BE] bg-white"
-              >
-                <option value="popular">Phổ biến nhất</option>
-                <option value="rating">Đánh giá cao</option>
-                <option value="price-low">Giá thấp đến cao</option>
-                <option value="price-high">Giá cao đến thấp</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Tours Grid */}
+        {/* Tours Grid (style file 2, data BE) */}
         {currentTours.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-7">
             {currentTours.map((tour) => (
               <TourCard
-                key={tour.id}
-                to={`/tours/${tour.id}`}
-                image={tour.image}
+                key={tour._id}
+                to={`/tours/${tour._id}`}
+                image={tour.imageItems?.[0]?.imageUrl}
                 title={tour.title}
-                location={tour.location}
+                location={
+                  Array.isArray(tour.locations)
+                    ? tour.locations[0]?.name
+                    : tour.locations?.name || "Địa điểm"
+                }
                 tags={tour.tags}
-                rating={tour.rating}
-                reviews={tour.reviews}
-                bookedText={`${tour.booked} Đã được đặt`}
-                priceFrom={tour.currentPrice.toString()}
-                isFav={favorites.has(tour.id)}
-                onFav={() => handleFavoriteToggle(tour.id)}
+                rating={tour.isRating}
+                reviews={tour.isReview}
+                bookedText={`${tour.usageCount || 0} đã được đặt`}
+                priceFrom={tour.basePrice}
+                isFav={favorites.has(tour._id)}
+                onFav={() => handleFavoriteToggle(tour._id)}
               />
             ))}
           </div>
@@ -548,7 +464,7 @@ export default function RegionTours() {
           </div>
         )}
 
-        {/* Pagination */}
+        {/* Pagination (giữ nguyên style file 2) */}
         {filteredTours.length > toursPerPage && (
           <div className="flex justify-center items-center gap-2 mt-8">
             {/* Previous Button */}
@@ -622,26 +538,6 @@ export default function RegionTours() {
             </button>
           </div>
         )}
-
-        {/* Footer CTA */}
-        <div className="mt-10 bg-gradient-to-r from-[#03B3BE] to-[#007980] rounded-xl p-5 text-center text-white shadow-lg">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Sparkles className="w-5 h-5" />
-            <h3 className="text-lg sm:text-xl font-semibold">
-              Không tìm thấy tour phù hợp?
-            </h3>
-          </div>
-          <p className="text-white/90 mb-4 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-            Hãy để chúng tôi giúp bạn thiết kế hành trình du lịch độc đáo theo
-            phong cách riêng của bạn
-          </p>
-          <button
-            onClick={() => navigate("/experiences/custom")}
-            className="bg-white text-[#007980] px-5 py-2.5 rounded-lg font-semibold text-sm sm:text-base hover:shadow-xl hover:scale-105 transition-all duration-300 active:scale-95"
-          >
-            Tùy chỉnh tour của bạn
-          </button>
-        </div>
       </div>
     </div>
   );
