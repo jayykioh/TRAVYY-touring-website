@@ -316,7 +316,7 @@ function SortableItem({ item, index, onRemove }) {
         isTour ? 'bg-[#e6f7fa] border-[#02A0AA]' : 'bg-white border-slate-200 hover:border-slate-300'
       } ${isDragging ? 'shadow-lg scale-105' : ''}`}
     >
-      <div className="flex gap-3 p-3">
+      <div className="flex gap-3 p-3 items-center">
         <button
           {...attributes}
           {...listeners}
@@ -377,10 +377,10 @@ function SortableItem({ item, index, onRemove }) {
 
         <button
           onClick={() => onRemove(item.poiId)}
-          className="flex-shrink-0 w-8 h-8 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition grid place-items-center"
+          className="flex-shrink-0 w-8 h-8 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition flex items-center justify-center"
           aria-label="Xóa địa điểm"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-4 h-4" strokeWidth={2.5} />
         </button>
       </div>
     </div>
