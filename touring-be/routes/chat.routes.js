@@ -56,9 +56,18 @@ router.post('/:requestId/read', chatController.markAsRead);
 router.get('/:requestId/unread', chatController.getUnreadCount);
 
 // Edit a message
-router.patch('/message/:messageId', chatController.editMessage);
+router.patch('/:requestId/message/:messageId', chatController.editMessage);
 
 // Delete a message
-router.delete('/message/:messageId', chatController.deleteMessage);
+router.delete('/:requestId/message/:messageId', chatController.deleteMessage);
+
+// Set minimum price (guide only)
+router.post('/:requestId/set-min-price', chatController.setMinPrice);
+
+// User/guide makes a counter-offer or accepts agreement
+// This should use the tour request controller since it updates the TourCustomRequest
+const tourRequestController = require('../controller/tourRequestController');
+router.post('/:requestId/counter-offer', tourRequestController.userMakeOffer);
+router.post('/:requestId/agree', tourRequestController.userAgreeToTerms);
 
 module.exports = router;

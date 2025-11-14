@@ -37,11 +37,20 @@ export default function CheckoutForm({
   const buyNowItem = mode === "buy-now" ? (buyNowItemProp || location.state?.item) : null;
   const retryPaymentItems = mode === "retry-payment" ? retryPaymentItemsProp : null;
   const retryBookingId = mode === "retry-payment" ? retryBookingIdProp : null;
+  
+  // ⬇️ NEW: Support for tour-request mode
+  const requestId = location.state?.requestId;
+  const itinerary = location.state?.itinerary || [];
+  const zoneName = location.state?.zoneName || '';
+  const tourInfo = location.state?.tourInfo || {};
 
   console.log("🔍 CheckoutForm loaded:");
   console.log("   location.state:", location.state);
   console.log("   mode:", mode);
   console.log("   buyNowItem:", buyNowItem);
+  console.log("   requestId:", requestId);
+  console.log("   itinerary items:", itinerary.length);
+  console.log("   zone:", zoneName, "tourInfo:", tourInfo);
 
 
   const [userInfo, setUserInfo] = useState({
@@ -216,6 +225,9 @@ export default function CheckoutForm({
             retryItems: retryPaymentItems,
             retryBookingId: retryBookingId 
           }),
+          ...(mode === "tour-request" && { 
+            requestId: requestId
+          }),
           // Include voucher information
           ...(appliedVoucher && {
             promotionCode: appliedVoucher.code,
@@ -301,6 +313,10 @@ export default function CheckoutForm({
             ...(mode === 'retry-payment' && retryPaymentItems ? { 
               retryItems: retryPaymentItems,
               retryBookingId: retryBookingId 
+            } : {}),
+            // For tour-request, send request ID
+            ...(mode === 'tour-request' && requestId ? {
+              requestId: requestId
             } : {}),
             items: itemsSnapshot,
             // Include voucher information

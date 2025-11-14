@@ -21,9 +21,12 @@ const MOCK_ADMINS = [
 
 async function api(input, init = {}) {
   const isFormData = init.body instanceof FormData;
-  const headers = isFormData
-    ? { ...(init.headers || {}) }
-    : { Accept: "application/json", ...(init.headers || {}) };
+  const headers = { Accept: "application/json", ...(init.headers || {}) };
+  
+  // If body is a string (JSON stringified), ensure Content-Type is set
+  if (typeof init.body === 'string' && !isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   const r = await fetch(input, {
     credentials: "include",

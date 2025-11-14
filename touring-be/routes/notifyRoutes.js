@@ -7,6 +7,7 @@ const {
   notifyRegister,
   getUserNotifications,
   markNotificationsAsRead,
+  markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotification,
   getUnreadCount,
@@ -34,6 +35,7 @@ router.post("/password-reset-success", notifyPasswordResetSuccess);
 router.get("/", authJwt, getUserNotifications); // Default endpoint
 router.get("/my", authJwt, getUserNotifications); // Alias
 router.post("/mark-read", authJwt, markNotificationsAsRead); // Changed from PATCH to POST
+router.put("/:id/read", authJwt, markNotificationAsRead); // Mark single notification as read
 router.post("/mark-all-read", authJwt, markAllNotificationsAsRead);
 router.delete("/:id", authJwt, deleteNotification);
 router.get("/unread-count", authJwt, getUnreadCount);

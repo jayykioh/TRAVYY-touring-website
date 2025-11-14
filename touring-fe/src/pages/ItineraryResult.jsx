@@ -5,6 +5,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "@/auth/context";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   MapPin,
@@ -450,7 +451,13 @@ export default function ItineraryResult() {
             {/* Header Actions */}
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowRequestGuideModal(true)}
+                onClick={() => {
+                  if (!itinerary?.items || itinerary.items.length === 0) {
+                    toast.error('Vui lòng thêm các địa điểm vào lộ trình trước khi yêu cầu hướng dẫn viên');
+                    return;
+                  }
+                  setShowRequestGuideModal(true);
+                }}
                 className="px-3 py-2 text-xs rounded-lg bg-gradient-to-r from-[#02A0AA] to-[#029ca6] text-white hover:shadow-lg transition-all flex items-center gap-1.5 font-medium"
               >
                 <UserPlus className="w-3.5 h-3.5" /> Yêu cầu HDV
@@ -921,28 +928,7 @@ export default function ItineraryResult() {
               </div>
             </div>
                       {/* ===== Tour Guide Request Button at bottom ===== */}
-      {/* Tour Guide Request Button (active) at bottom */}
-      {itinerary.isCustomTour && (itinerary.tourGuideRequest?.status === 'none' || itinerary.tourGuideRequest?.status === 'rejected') && (
-        <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 mt-auto">
-          <div className="flex flex-col items-center justify-center">
-            <button
-              onClick={handleSendGuideRequest}
-              disabled={guideReqLoading}
-              className="px-4 py-3 rounded-lg bg-[#02A0AA] text-white hover:bg-[#018F99] text-base font-semibold flex items-center gap-2 disabled:opacity-60 shadow-md"
-            >
-              {guideReqLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Sparkles className="w-5 h-5" />
-              )}
-              Gửi yêu cầu tour guide
-            </button>
-            {guideReqMsg && (
-              <div className="mt-2 text-sm text-slate-700 font-medium">{guideReqMsg}</div>
-            )}
-          </div>
-        </div>
-      )}
+      
 
       {/* Tour Guide Request Pending Button below map */}
       {itinerary.isCustomTour && itinerary.tourGuideRequest?.status === 'pending' && (
@@ -983,16 +969,7 @@ export default function ItineraryResult() {
 
       {/* Reopen Chat Button - Show when chat is closed */}
       {/* DEV helper: always show a debug button to open chat when developing */}
-      {import.meta.env.DEV && (
-        <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 mt-4 mb-4">
-          <button
-            onClick={() => { console.log('[ItineraryResult][DEV] Debug Open Chat clicked'); setShowChat(true); }}
-            className="w-full px-4 py-3 rounded-lg bg-yellow-400 text-black hover:bg-yellow-500 text-base font-semibold flex items-center gap-2"
-          >
-            Debug: Open Chat (DEV)
-          </button>
-        </div>
-      )}
+    
 
       {!showChat && itinerary.isCustomTour && (itinerary.tourGuideRequest?.status === 'pending' || itinerary.tourGuideRequest?.status === 'accepted') && (
         <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 mt-8 mb-8">

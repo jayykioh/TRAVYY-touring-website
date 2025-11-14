@@ -610,36 +610,70 @@ const guideAcceptDeal = async (req, res) => {
     const { requestId } = req.params;
     const { finalAmount, currency = 'VND' } = req.body;
 
+    console.log('[guideAcceptDeal] Request:', { userId, requestId, finalAmount, currency });
+
     const tourRequest = await TourCustomRequest.findOne({
       _id: requestId,
       guideId: userId
     });
 
     if (!tourRequest) {
+      console.warn('[guideAcceptDeal] Tour request not found:', requestId);
       return res.status(404).json({
         success: false,
         error: 'Tour request not found or not assigned to you'
       });
     }
 
-    if (tourRequest.status !== 'negotiating') {
+    console.log('[guideAcceptDeal] Current status:', tourRequest.status);
+
+    // Allow accepting from pending or negotiating status
+    if (tourRequest.status !== 'negotiating' && tourRequest.status !== 'pending') {
       return res.status(400).json({
         success: false,
-        error: 'Request is not in negotiation phase'
+        error: `Request cannot be accepted from ${tourRequest.status} status`
       });
     }
 
-    // Accept request with final price
-    await tourRequest.acceptRequest(finalAmount, currency);
+    // Determine final amount to use
+    let amountToAccept = finalAmount;
+    if (!finalAmount || finalAmount === 0) {
+      // Use latest negotiated price or initial budget
+      if (tourRequest.priceOffers && tourRequest.priceOffers.length > 0) {
+        const latestOffer = tourRequest.priceOffers[tourRequest.priceOffers.length - 1];
+        amountToAccept = latestOffer.amount;
+        console.log('[guideAcceptDeal] Using latest price offer:', amountToAccept);
+      } else if (tourRequest.initialBudget?.amount) {
+        amountToAccept = tourRequest.initialBudget.amount;
+        console.log('[guideAcceptDeal] Using initial budget:', amountToAccept);
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: 'No price information available to accept'
+        });
+      }
+    }
 
-    // Update itinerary
+    console.log('[guideAcceptDeal] Final amount to accept:', amountToAccept);
+
+    // Accept request with final price
+    await tourRequest.acceptRequest(amountToAccept, currency);
+
+    // Update itinerary if exists
     const Itinerary = require("../../models/Itinerary");
-    const itinerary = await Itinerary.findById(tourRequest.itineraryId);
-    if (itinerary) {
-      itinerary.tourGuideRequest.status = 'accepted';
-      itinerary.tourGuideRequest.guideId = userId;
-      itinerary.tourGuideRequest.respondedAt = new Date();
-      await itinerary.save();
+    if (tourRequest.itineraryId) {
+      try {
+        const itinerary = await Itinerary.findById(tourRequest.itineraryId);
+        if (itinerary) {
+          itinerary.tourGuideRequest.status = 'accepted';
+          itinerary.tourGuideRequest.guideId = userId;
+          itinerary.tourGuideRequest.respondedAt = new Date();
+          await itinerary.save();
+          console.log('[guideAcceptDeal] Updated itinerary status to accepted');
+        }
+      } catch (itinError) {
+        console.warn('[guideAcceptDeal] Warning: Could not update itinerary:', itinError.message);
+      }
     }
 
     // Notify customer
@@ -648,25 +682,31 @@ const guideAcceptDeal = async (req, res) => {
       await Notification.create({
         userId: tourRequest.userId,
         type: 'request_accepted',
-        title: 'Tour Request Accepted!',
-        message: `Your guide accepted the deal for ${tourRequest.requestNumber}. Please proceed to payment.`,
+        title: '✅ Tour Request Accepted!',
+        message: `Your guide accepted the deal for ${tourRequest.requestNumber}. Final price: ${amountToAccept.toLocaleString('vi-VN')} ${currency}`,
         relatedId: tourRequest._id,
         relatedModel: 'TourCustomRequest'
       });
+      console.log('[guideAcceptDeal] Notification created for customer');
     } catch (notifError) {
-      console.error('[Guide] Error creating notification:', notifError);
+      console.error('[guideAcceptDeal] Error creating notification:', notifError.message);
+      // Don't fail the main operation if notification fails
     }
 
-    await tourRequest.populate('userId', 'name email phone avatar');
+    // Refetch updated document with populated customer info
+    const updatedRequest = await TourCustomRequest.findById(requestId)
+      .populate('userId', 'name email phone avatar');
+
+    console.log('[guideAcceptDeal] Success - request status now:', updatedRequest.status);
 
     res.json({
       success: true,
-      tourRequest,
+      tourRequest: updatedRequest,
       message: 'Deal accepted! Waiting for customer payment.'
     });
 
   } catch (error) {
-    console.error('[Guide] Error accepting deal:', error);
+    console.error('[guideAcceptDeal] Error:', error);
     res.status(500).json({ 
       success: false, 
       error: error.message 
@@ -679,7 +719,9 @@ const guideRejectRequest = async (req, res) => {
   try {
     const userId = req.user?.sub || req.user?._id || req.user?.id;
     const { requestId } = req.params;
-    const { reason } = req.body;
+    const { reason } = req.body || {};
+
+    console.log('[guideRejectRequest] Request:', { userId, requestId, reason });
 
     const tourRequest = await TourCustomRequest.findOne({
       _id: requestId,
@@ -687,28 +729,38 @@ const guideRejectRequest = async (req, res) => {
     });
 
     if (!tourRequest) {
+      console.warn('[guideRejectRequest] Tour request not found:', requestId);
       return res.status(404).json({
         success: false,
         error: 'Tour request not found or not assigned to you'
       });
     }
 
-    if (tourRequest.status === 'accepted') {
+    console.log('[guideRejectRequest] Current status:', tourRequest.status);
+
+    if (tourRequest.status === 'accepted' || tourRequest.status === 'rejected') {
       return res.status(400).json({
         success: false,
-        error: 'Cannot reject an accepted request'
+        error: `Cannot reject a ${tourRequest.status} request`
       });
     }
 
     await tourRequest.rejectRequest(reason);
 
-    // Update itinerary
+    // Update itinerary if exists
     const Itinerary = require("../../models/Itinerary");
-    const itinerary = await Itinerary.findById(tourRequest.itineraryId);
-    if (itinerary) {
-      itinerary.tourGuideRequest.status = 'rejected';
-      itinerary.tourGuideRequest.respondedAt = new Date();
-      await itinerary.save();
+    if (tourRequest.itineraryId) {
+      try {
+        const itinerary = await Itinerary.findById(tourRequest.itineraryId);
+        if (itinerary) {
+          itinerary.tourGuideRequest.status = 'rejected';
+          itinerary.tourGuideRequest.respondedAt = new Date();
+          await itinerary.save();
+          console.log('[guideRejectRequest] Updated itinerary status to rejected');
+        }
+      } catch (itinError) {
+        console.warn('[guideRejectRequest] Warning: Could not update itinerary:', itinError.message);
+      }
     }
 
     // Notify customer
@@ -717,14 +769,18 @@ const guideRejectRequest = async (req, res) => {
       await Notification.create({
         userId: tourRequest.userId,
         type: 'request_rejected',
-        title: 'Tour Request Rejected',
-        message: `Your guide rejected request ${tourRequest.requestNumber}${reason ? `: ${reason}` : ''}`,
+        title: '❌ Tour Request Rejected',
+        message: `Your guide rejected request ${tourRequest.requestNumber}${reason ? ': ' + reason : ''}`,
         relatedId: tourRequest._id,
         relatedModel: 'TourCustomRequest'
       });
+      console.log('[guideRejectRequest] Notification created for customer');
     } catch (notifError) {
-      console.error('[Guide] Error creating notification:', notifError);
+      console.error('[guideRejectRequest] Error creating notification:', notifError.message);
+      // Don't fail the main operation if notification fails
     }
+
+    console.log('[guideRejectRequest] Success - request status now: rejected');
 
     res.json({
       success: true,
@@ -732,7 +788,7 @@ const guideRejectRequest = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[Guide] Error rejecting request:', error);
+    console.error('[guideRejectRequest] Error:', error);
     res.status(500).json({ 
       success: false, 
       error: error.message 
@@ -931,11 +987,17 @@ const guideAgreeToTerms = async (req, res) => {
       });
     }
 
-    if (tourRequest.status !== 'negotiating') {
+    // Allow agreement on pending or negotiating status
+    if (!['pending', 'negotiating'].includes(tourRequest.status)) {
       return res.status(400).json({
         success: false,
-        error: 'Request must be in negotiating status to agree to terms'
+        error: `Cannot agree to terms on ${tourRequest.status} request`
       });
+    }
+
+    // Ensure status is set to negotiating if pending
+    if (tourRequest.status === 'pending') {
+      tourRequest.status = 'negotiating';
     }
 
     // Guide agrees to the terms

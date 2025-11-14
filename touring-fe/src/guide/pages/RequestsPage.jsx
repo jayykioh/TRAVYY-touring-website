@@ -25,8 +25,14 @@ const RequestsPage = () => {
       console.log('[RequestsPage] Raw API response:', data);
       
       if (data.success && Array.isArray(data.requests)) {
+        // Filter out accepted/rejected requests - only show pending/negotiating
+        const pendingRequests = data.requests.filter(req => 
+          req.status === 'pending' || req.status === 'negotiating'
+        );
+        console.log('[RequestsPage] Filtered pending requests:', pendingRequests.length);
+        
         // Map TourCustomRequest to UI format
-        const mappedRequests = data.requests.map((req) => {
+        const mappedRequests = pendingRequests.map((req) => {
           const itinerary = req.itineraryId || {};
           const customer = req.userId || {};
           
@@ -88,10 +94,14 @@ const RequestsPage = () => {
         
         console.log('[RequestsPage] Mapped requests:', mappedRequests);
         setRequests(mappedRequests);
+      } else {
+        console.warn('[RequestsPage] Invalid response format:', data);
+        setRequests([]);
       }
     } catch (e) {
-      console.error('Lỗi khi lấy yêu cầu tour guide:', e);
+      console.error('[RequestsPage] Error fetching requests:', e);
       toast.error('Không thể tải danh sách yêu cầu');
+      setRequests([]);
     } finally {
       setLoading(false);
     }
@@ -153,20 +163,34 @@ const RequestsPage = () => {
   const handleAccept = async (requestId) => {
     try {
       setProcessingId(requestId);
-      const response = await withAuth(`/api/itinerary/${requestId}/accept-tour-guide`, {
-        method: 'POST'
+      console.log('[RequestsPage] Accepting request:', requestId);
+      
+      const response = await withAuth(`/api/guide/custom-requests/${requestId}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          finalAmount: 0, // Will be set by backend based on negotiation
+          currency: 'VND'
+        })
       });
       
+      console.log('[RequestsPage] Accept response:', response);
+      
       if (response.success) {
-        toast.success('Đã chấp nhận yêu cầu tour!');
-        // Remove from list immediately
+        toast.success('✅ Đã chấp nhận yêu cầu tour!');
+        // Remove from list immediately for better UX
         setRequests(prev => prev.filter(r => r.id !== requestId));
+        // Refetch after short delay to ensure backend state is synchronized
+        setTimeout(() => {
+          console.log('[RequestsPage] Refetching after accept');
+          fetchRequests();
+        }, 800);
       } else {
         toast.error(response.error || 'Không thể chấp nhận yêu cầu');
       }
     } catch (error) {
-      console.error('Error accepting request:', error);
-      toast.error('Có lỗi xảy ra khi chấp nhận yêu cầu');
+      console.error('[RequestsPage] Error accepting request:', error);
+      toast.error('❌ Có lỗi xảy ra: ' + (error.message || 'Lỗi không xác định'));
     } finally {
       setProcessingId(null);
     }
@@ -175,20 +199,33 @@ const RequestsPage = () => {
   const handleDecline = async (requestId) => {
     try {
       setProcessingId(requestId);
-      const response = await withAuth(`/api/itinerary/${requestId}/reject-tour-guide`, {
-        method: 'POST'
+      console.log('[RequestsPage] Declining request:', requestId);
+      
+      const response = await withAuth(`/api/guide/custom-requests/${requestId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: 'Declined by guide'
+        })
       });
       
+      console.log('[RequestsPage] Decline response:', response);
+      
       if (response.success) {
-        toast.success('Đã từ chối yêu cầu');
-        // Remove from list immediately
+        toast.success('✅ Đã từ chối yêu cầu');
+        // Remove from list immediately for better UX
         setRequests(prev => prev.filter(r => r.id !== requestId));
+        // Refetch after short delay to ensure backend state is synchronized
+        setTimeout(() => {
+          console.log('[RequestsPage] Refetching after decline');
+          fetchRequests();
+        }, 800);
       } else {
         toast.error(response.error || 'Không thể từ chối yêu cầu');
       }
     } catch (error) {
-      console.error('Error declining request:', error);
-      toast.error('Có lỗi xảy ra khi từ chối yêu cầu');
+      console.error('[RequestsPage] Error declining request:', error);
+      toast.error('❌ Có lỗi xảy ra: ' + (error.message || 'Lỗi không xác định'));
     } finally {
       setProcessingId(null);
     }

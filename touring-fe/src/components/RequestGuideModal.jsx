@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, User, Star, DollarSign, MessageSquare, Send, Loader2, MapPin, CheckCircle } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -6,7 +6,7 @@ import { useAuth } from '@/auth/context';
 import { useNavigate } from 'react-router-dom';
 
 export default function RequestGuideModal({ isOpen, onClose, itineraryId, itineraryName, itineraryLocation }) {
-  const { withAuth } = useAuth();
+  const { withAuth, user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1); // 1: Select guide, 2: Enter details
   const [guides, setGuides] = useState([]);
@@ -22,14 +22,7 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
     contactPhone: '',
   });
 
-  // Load available guides
-  useEffect(() => {
-    if (isOpen) {
-      loadGuides();
-    }
-  }, [isOpen]);
-
-  const loadGuides = async () => {
+  const loadGuides = useCallback(async () => {
     setLoadingGuides(true);
     try {
       // Build query params with zoneName for accurate filtering
@@ -56,7 +49,14 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
     } finally {
       setLoadingGuides(false);
     }
-  };
+  }, [itineraryLocation, withAuth]);
+
+  // Load available guides
+  useEffect(() => {
+    if (isOpen) {
+      loadGuides();
+    }
+  }, [isOpen, loadGuides]);
 
   const handleGuideSelect = (guide) => {
     setSelectedGuide(guide);
@@ -78,13 +78,30 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
       return;
     }
 
-    if (!formData.budget || parseFloat(formData.budget) <= 0) {
-      toast.error('Vui lòng nhập ngân sách hợp lệ');
+    // Validate budget format and value
+    const budgetNum = parseFloat(formData.budget);
+    if (!formData.budget || isNaN(budgetNum) || budgetNum <= 0) {
+      toast.error('Ngân sách phải là số dương (VD: 2000000)');
+      return;
+    }
+    if (budgetNum > 999999999) {
+      toast.error('Ngân sách quá lớn');
       return;
     }
 
     if (!formData.preferredDate) {
       toast.error('Vui lòng chọn ngày khởi hành dự kiến');
+      return;
+    }
+
+    // Validate phone number (Vietnamese format: 10 digits starting with 0)
+    if (formData.contactPhone && !/^0\d{9}$/.test(formData.contactPhone.replace(/\s+/g, ''))) {
+      toast.error('Số điện thoại không hợp lệ (VD: 0912345678)');
+      return;
+    }
+
+    if (!itineraryId) {
+      toast.error('Lỗi: Không tìm thấy lộ trình. Vui lòng tạo lại lộ trình.');
       return;
     }
 
@@ -102,11 +119,16 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
         specialRequirements: formData.specialRequirements || '',
         contactInfo: {
           phone: formData.contactPhone || '',
-          email: '', // Will be filled by backend from user profile
+          email: user?.email || '', // Get email from auth context
         },
       };
 
       console.log('🔍 [RequestGuide] Sending request body:', requestBody);
+      console.log('📋 [RequestGuide] Selected guide details:', {
+        id: selectedGuide._id,
+        name: selectedGuide.name,
+        rating: selectedGuide.rating
+      });
 
       const result = await withAuth('/api/tour-requests/create', {
         method: 'POST',
@@ -119,7 +141,7 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
       console.log('✅ [RequestGuide] Success response:', result);
 
       // Show success message
-      toast.success('Đã gửi yêu cầu thành công! Đang chuyển đến trang quản lý yêu cầu...', {
+      toast.success('Đã gửi yêu cầu thành công! Đang mở trang chat...', {
         duration: 2000,
       });
       
@@ -137,10 +159,19 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
         contactPhone: '',
       });
 
-      // Redirect to My Tour Requests page after a short delay
-      setTimeout(() => {
-        navigate('/my-tour-requests');
-      }, 500);
+      // Get the created request ID from response
+      const requestId = result.tourRequest?._id;
+      if (requestId) {
+        // Redirect to tour request details page with chat
+        setTimeout(() => {
+          navigate(`/tour-request/${requestId}`);
+        }, 500);
+      } else {
+        // Fallback to my requests if no ID returned
+        setTimeout(() => {
+          navigate('/my-tour-requests');
+        }, 500);
+      }
     } catch (error) {
       console.error('❌ [RequestGuide] Error submitting request:', {
         message: error.message,
@@ -150,7 +181,42 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
       });
       
       // Show specific error message from backend if available
-      const errorMessage = error.body?.error || error.body?.message || error.message || 'Không thể gửi yêu cầu. Vui lòng thử lại.';
+      let errorMessage = 'Không thể gửi yêu cầu. Vui lòng thử lại.';
+      
+      if (error.body?.error) {
+        errorMessage = error.body.error;
+      } else if (error.body?.message) {
+        errorMessage = error.body.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Log the full error details for debugging
+      console.error('[RequestGuide] Full error details:', {
+        status: error.status,
+        body: JSON.stringify(error.body),
+        message: errorMessage
+      });
+      
+      // Handle specific error cases
+      if (error.status === 400) {
+        // Check if it's a duplicate request error (matches both English and Vietnamese)
+        if (error.body?.error?.includes('already have an active request') || 
+            error.body?.error?.includes('đã có yêu cầu')) {
+          toast.error('Bạn đã có yêu cầu đang chờ xử lý cho lộ trình này. Hãy xem trang "Yêu cầu của tôi".', {
+            duration: 4000,
+            action: {
+              label: 'Xem yêu cầu',
+              onClick: () => {
+                onClose();
+                navigate('/my-tour-requests');
+              }
+            }
+          });
+          return;
+        }
+      }
+      
       toast.error(errorMessage);
     } finally {
       setSubmitting(false);
@@ -450,7 +516,7 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
               <button
                 type="submit"
                 onClick={handleSubmit}
-                disabled={submitting}
+                disabled={submitting || !selectedGuide || !formData.budget || !formData.preferredDate}
                 className="flex items-center gap-2 px-6 py-2 bg-[#02A0AA] text-white rounded-lg hover:bg-[#029ca6] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? (

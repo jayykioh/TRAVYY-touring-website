@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { Bell, X, Check, CheckCheck, Trash2, Mail, DollarSign, Ticket, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, X, Check, CheckCheck, Trash2, Mail, DollarSign, Ticket, AlertCircle, MessageCircle } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useAuth } from '@/auth/context';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
 const NotificationBell = () => {
+  const navigate = useNavigate();
+  const { withAuth } = useAuth();
   const {
     notifications,
     unreadCount,
@@ -21,6 +25,8 @@ const NotificationBell = () => {
       case 'payment_success':
       case 'booking_success':
         return <DollarSign className="w-5 h-5 text-green-600" />;
+      case 'new_message':
+        return <MessageCircle className="w-5 h-5 text-teal-600" />;
       case 'register':
         return <Mail className="w-5 h-5 text-blue-600" />;
       case 'new_tour':
@@ -39,9 +45,15 @@ const NotificationBell = () => {
       await markAsRead([notification._id]);
     }
     
+    // Navigate to chat if it's a new_message notification with relatedId
+    if (notification.type === 'new_message' && notification.relatedId) {
+      setIsOpen(false);
+      navigate(`/tour-request/${notification.relatedId}`);
+    }
     // Navigate to relevant page based on notification type
-    if (notification.data?.bookingId) {
-      window.location.href = '/profile/booking-history';
+    else if (notification.data?.bookingId) {
+      setIsOpen(false);
+      navigate('/profile/booking-history');
     }
   };
 
@@ -195,7 +207,7 @@ const NotificationBell = () => {
                 <button
                   onClick={() => {
                     setIsOpen(false);
-                    window.location.href = '/notifications'; // Can create a full notifications page
+                    navigate('/notifications');
                   }}
                   className="w-full text-center text-sm text-teal-600 hover:text-teal-700 font-medium"
                 >

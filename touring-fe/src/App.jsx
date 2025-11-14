@@ -30,6 +30,7 @@ import HelpArticleView from "./components/HelpArticleView";
 import Cart from "./pages/Cart";
 import WishlistPage from "./pages/WishlistPage";
 import MyTourRequests from "./pages/MyTourRequests";
+import TourRequestDetailsPage from "./pages/TourRequestDetailsPage";
 import CustomTourPaymentPage from "./pages/CustomTourPaymentPage";
 import LoadingScreen from "./components/LoadingScreen";
 import NotFoundPage from "./pages/NotFound";
@@ -253,6 +254,16 @@ export default function App() {
           element={
             <ProtectedRoute>
               <MyTourRequests />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ ADD: Tour Request Details with Chat */}
+        <Route
+          path="/tour-request/:requestId"
+          element={
+            <ProtectedRoute>
+              <TourRequestDetailsPage />
             </ProtectedRoute>
           }
         />

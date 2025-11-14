@@ -277,25 +277,6 @@ export default function BookingHistory() {
     }
   };
 
-  const requestStatusUI = (status) => {
-    switch (status) {
-      case "pending":
-        return { text: "Chờ xác nhận", className: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200", icon: "⏳" };
-      case "negotiating":
-        return { text: "Đang thương lượng", className: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200", icon: "💬" };
-      case "accepted":
-        return { text: "Đã chấp nhận", className: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200", icon: "✅" };
-      case "rejected":
-        return { text: "Đã từ chối", className: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200", icon: "❌" };
-      case "cancelled":
-        return { text: "Đã hủy", className: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200", icon: "🚫" };
-      case "expired":
-        return { text: "Đã hết hạn", className: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200", icon: "⏰" };
-      default:
-        return { text: status, className: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200", icon: "❓" };
-    }
-  };
-
   if (loading) {
     return (
       <div className="h-screen bg-neutral-50 flex items-center justify-center">

@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Calendar, Users, DollarSign } from 'lucide-react';
-import { Button } from '../../components/ui/button';
-import { Card } from '../../components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import TourRequestChat from '../../components/chat/TourRequestChat';
-import AgreementPanel from '../../components/agreement/AgreementPanel';
+import { Button } from '../components/ui/button';
+import TourRequestChat from '../components/chat/TourRequestChat';
+import AgreementPanel from '../components/agreement/AgreementPanel';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
@@ -17,6 +15,7 @@ export default function TourRequestDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [creatingBooking, setCreatingBooking] = useState(false);
+  const [activeTab, setActiveTab] = useState('chat');
 
   // Get current user info
   useEffect(() => {
@@ -168,7 +167,7 @@ export default function TourRequestDetailsPage() {
         {/* Left Column - Details */}
         <div className="lg:col-span-2 space-y-6">
           {/* Budget & Price */}
-          <Card className="p-6">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
             <h3 className="text-lg font-semibold mb-4">Budget & Price</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
@@ -186,10 +185,10 @@ export default function TourRequestDetailsPage() {
                 </div>
               )}
             </div>
-          </Card>
+          </div>
 
           {/* Itinerary Details */}
-          <Card className="p-6">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
             <h3 className="text-lg font-semibold mb-4">Itinerary</h3>
             <div className="space-y-3">
               {tourRequest.tourDetails.items?.map((item, index) => (
@@ -209,49 +208,69 @@ export default function TourRequestDetailsPage() {
                 </div>
               ))}
             </div>
-          </Card>
+          </div>
 
           {/* Special Requirements */}
           {tourRequest.specialRequirements && (
-            <Card className="p-6">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-semibold mb-4">Special Requirements</h3>
               <p className="text-gray-700 whitespace-pre-wrap">
                 {tourRequest.specialRequirements}
               </p>
-            </Card>
+            </div>
           )}
 
           {/* Tabs for Chat & Agreement */}
-          <Tabs defaultValue="chat" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="chat">Chat</TabsTrigger>
-              <TabsTrigger value="agreement">Agreement</TabsTrigger>
-            </TabsList>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden">
+            <div className="grid grid-cols-2 border-b border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setActiveTab('chat')}
+                className={`px-4 py-3 text-center font-medium transition-colors ${
+                  activeTab === 'chat'
+                    ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 bg-blue-50 dark:bg-blue-900/20'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                }`}
+              >
+                💬 Chat
+              </button>
+              <button
+                onClick={() => setActiveTab('agreement')}
+                className={`px-4 py-3 text-center font-medium transition-colors ${
+                  activeTab === 'agreement'
+                    ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 bg-blue-50 dark:bg-blue-900/20'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                }`}
+              >
+                📋 Thỏa thuận
+              </button>
+            </div>
             
-            <TabsContent value="chat" className="mt-4">
-              <TourRequestChat
-                requestId={requestId}
-                currentUser={currentUser}
-              />
-            </TabsContent>
-            
-            <TabsContent value="agreement" className="mt-4">
-              <AgreementPanel
-                requestId={requestId}
-                currentUser={currentUser}
-                tourRequest={tourRequest}
-                onAgreementComplete={() => {
-                  fetchTourRequest();
-                }}
-              />
-            </TabsContent>
-          </Tabs>
+            <div className="p-4">
+              {activeTab === 'chat' && (
+                <TourRequestChat
+                  requestId={requestId}
+                  currentUser={currentUser}
+                />
+              )}
+              
+              {activeTab === 'agreement' && (
+                <AgreementPanel
+                  requestId={requestId}
+                  currentUser={currentUser}
+                  tourRequest={tourRequest}
+                  onAgreementComplete={() => {
+                    fetchTourRequest();
+                  }}
+                />
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Right Column - Actions */}
         <div className="space-y-6">
           {/* Contact Info */}
-          <Card className="p-6">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
             <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
             <div className="space-y-2 text-sm">
               <div>
@@ -263,11 +282,11 @@ export default function TourRequestDetailsPage() {
                 <div className="font-medium">{tourRequest.contactInfo?.email}</div>
               </div>
             </div>
-          </Card>
+          </div>
 
           {/* Action Buttons */}
           {currentUser.role === 'user' && (
-            <Card className="p-6">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-semibold mb-4">Actions</h3>
               
               {bothAgreed ? (
@@ -292,11 +311,11 @@ export default function TourRequestDetailsPage() {
                   <p className="text-xs text-gray-500">Go to Agreement tab to confirm</p>
                 </div>
               )}
-            </Card>
+            </div>
           )}
 
           {/* Stats */}
-          <Card className="p-6">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
             <h3 className="text-lg font-semibold mb-4">Request Stats</h3>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
@@ -314,7 +333,7 @@ export default function TourRequestDetailsPage() {
                 </span>
               </div>
             </div>
-          </Card>
+          </div>
         </div>
       </div>
     </div>

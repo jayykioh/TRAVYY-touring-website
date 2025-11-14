@@ -1,5 +1,4 @@
-import { Facebook, Instagram, Youtube, Twitter, MapPin, Wallet, Mail, Phone } from "lucide-react";
-import { SiPaypal } from "react-icons/si";
+import { Facebook, Instagram, Youtube, Twitter, MapPin, Wallet, Mail, Phone, CreditCard } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Footer() {
@@ -99,7 +98,7 @@ export default function Footer() {
                 </a>
 
                 <a href="/payment/paypal" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-400/30 transition group" aria-label="PayPal">
-                  <SiPaypal className="w-4 h-4 text-white/60 group-hover:text-cyan-400 transition" />
+                  <CreditCard className="w-4 h-4 text-white/60 group-hover:text-cyan-400 transition" />
                   <span className="text-sm font-semibold text-white/80 group-hover:text-white transition">PayPal</span>
                 </a>
               </div>

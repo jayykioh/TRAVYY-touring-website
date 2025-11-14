@@ -158,6 +158,14 @@ const TourCustomRequestSchema = new mongoose.Schema({
     amount: Number,
     currency: { type: String, default: 'VND' }
   },
+
+  // Minimum price set by guide
+  minPrice: {
+    amount: Number,
+    currency: { type: String, default: 'VND' },
+    setBy: { type: String, enum: ['guide'] },
+    setAt: Date
+  },
   
   // Messages between user and guide
   messages: [MessageSchema],

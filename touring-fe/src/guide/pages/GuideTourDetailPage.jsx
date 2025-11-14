@@ -149,37 +149,58 @@ const GuideTourDetailPage = () => {
 
   const handleAcceptRequest = async () => {
     try {
-      const response = await withAuth(`/api/itinerary/${id}/accept-tour-guide`, {
-        method: 'POST'
+      console.log('[GuideTourDetail] Accepting request:', id);
+      const response = await withAuth(`/api/guide/custom-requests/${id}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          finalAmount: 0, // Will be set by backend based on negotiation
+          currency: 'VND'
+        })
       });
       
+      console.log('[GuideTourDetail] Accept response:', response);
+      
       if (response.success) {
-        toast.success('Đã chấp nhận yêu cầu tour!');
-        navigate("/guide/tours");
+        toast.success('✅ Đã chấp nhận yêu cầu tour!');
+        // Wait a moment then navigate to allow toast to show
+        setTimeout(() => {
+          navigate("/guide/tours");
+        }, 1000);
       } else {
         toast.error(response.error || 'Không thể chấp nhận yêu cầu');
       }
     } catch (error) {
-      console.error('Error accepting request:', error);
-      toast.error('Có lỗi xảy ra khi chấp nhận yêu cầu');
+      console.error('[GuideTourDetail] Error accepting request:', error);
+      toast.error('❌ Có lỗi xảy ra: ' + (error.message || 'Lỗi không xác định'));
     }
   };
 
   const handleDeclineRequest = async () => {
     try {
-      const response = await withAuth(`/api/itinerary/${id}/reject-tour-guide`, {
-        method: 'POST'
+      console.log('[GuideTourDetail] Declining request:', id);
+      const response = await withAuth(`/api/guide/custom-requests/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: 'Declined by guide'
+        })
       });
       
+      console.log('[GuideTourDetail] Decline response:', response);
+      
       if (response.success) {
-        toast.success('Đã từ chối yêu cầu');
-        navigate("/guide/requests");
+        toast.success('✅ Đã từ chối yêu cầu');
+        // Wait a moment then navigate to allow toast to show
+        setTimeout(() => {
+          navigate("/guide/requests");
+        }, 1000);
       } else {
         toast.error(response.error || 'Không thể từ chối yêu cầu');
       }
     } catch (error) {
-      console.error('Error declining request:', error);
-      toast.error('Có lỗi xảy ra khi từ chối yêu cầu');
+      console.error('[GuideTourDetail] Error declining request:', error);
+      toast.error('❌ Có lỗi xảy ra: ' + (error.message || 'Lỗi không xác định'));
     }
   };
 

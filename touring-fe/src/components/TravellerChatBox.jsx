@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, MapPin, Calendar, Users, Clock, X, Paperclip, Download, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { Send, MapPin, Calendar, Users, Clock, X, Paperclip, Download, MoreVertical, Edit2, Trash2, CheckCheck, Check, AlertCircle, Wifi, WifiOff, DollarSign, Map } from 'lucide-react';
 import { useAuth } from '../auth/context';
 import { useNavigate } from 'react-router-dom';
 import { useTourRequestChat } from '../hooks/useTourRequestChat';
 import PriceAgreementCard from './chat/PriceAgreementCard';
+import { format } from 'date-fns';
 
 const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
   const [newMessage, setNewMessage] = useState('');
   const [showTourInfo, setShowTourInfo] = useState(true);
+  const [showItinerary, setShowItinerary] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [editingMessage, setEditingMessage] = useState(null);
   const [editContent, setEditContent] = useState('');
+  const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
@@ -25,6 +28,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
     sending,
     connected,
     typingUsers,
+    unreadCount,
     sendMessage: sendMessageAPI,
     sendOffer,
     agreeToTerms,
@@ -43,9 +47,18 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
   }, [messages, scrollToBottom]);
 
   useEffect(() => {
-    console.log('[TravellerChatBox] mounted for requestId:', requestId);
-    return () => console.log('[TravellerChatBox] unmounted for requestId:', requestId);
-  }, [requestId]);
+    console.log('[TravellerChatBox] Component state:', {
+      requestId,
+      hasRequestDetails: !!requestDetails,
+      requestDetailsKeys: requestDetails ? Object.keys(requestDetails) : [],
+      hasTourDetails: !!requestDetails?.tourDetails,
+      tourDetailsItemsCount: requestDetails?.tourDetails?.items?.length || 0,
+      hasMinPrice: !!requestDetails?.minPrice,
+      minPriceAmount: requestDetails?.minPrice?.amount,
+      agreement: requestDetails?.agreement,
+      bothAgreed: requestDetails?.agreement?.userAgreed && requestDetails?.agreement?.guideAgreed
+    });
+  }, [requestId, requestDetails]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -54,16 +67,24 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
     const messageText = newMessage.trim();
     let success = false;
 
-    if (selectedFiles.length > 0) {
-      success = await sendFileMessage(messageText || `Sent ${selectedFiles.length} file(s)`, selectedFiles);
-    } else {
-      success = await sendMessageAPI(messageText);
-    }
-    
-    if (success) {
-      setNewMessage('');
-      setSelectedFiles([]);
-      scrollToBottom();
+    try {
+      if (selectedFiles.length > 0) {
+        success = await sendFileMessage(messageText || `Sent ${selectedFiles.length} file(s)`, selectedFiles);
+      } else {
+        success = await sendMessageAPI(messageText);
+      }
+      
+      if (success) {
+        setNewMessage('');
+        setSelectedFiles([]);
+        setError(null);
+        scrollToBottom();
+      } else {
+        setError('Gửi tin nhắn thất bại. Vui lòng thử lại.');
+      }
+    } catch (err) {
+      setError(err.message || 'Gửi tin nhắn thất bại. Vui lòng thử lại.');
+      console.error('Error sending message:', err);
     }
   };
 
@@ -76,7 +97,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
   };
 
   const handleDeleteMessage = async (messageId) => {
-    if (window.confirm('Are you sure you want to delete this message?')) {
+    if (window.confirm('Bạn chắc chắn muốn xóa tin nhắn này?')) {
       await deleteMessage(messageId);
     }
   };
@@ -128,6 +149,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
   // Handle typing indicator
   const handleInputChange = (e) => {
     setNewMessage(e.target.value);
+    setError(null);
     
     // Send typing indicator
     if (e.target.value.trim()) {
@@ -154,80 +176,89 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
     setEditContent('');
   };
 
-  const handleProceedToPayment = () => {
-    navigate(`/payment/tour-request/${requestId}`, {
+  const handleProceedToPayment = async () => {
+    // Double check that both parties agreed
+    if (!requestDetails?.agreement?.userAgreed || !requestDetails?.agreement?.guideAgreed) {
+      alert('⚠️ Cả hai bên phải đồng ý trước khi thanh toán');
+      return;
+    }
+
+    // Get final agreed price (should use finalPrice if available, otherwise latestOffer or initialBudget)
+    const finalAmount = requestDetails?.finalPrice?.amount || requestDetails?.latestOffer?.amount || requestDetails?.initialBudget?.amount;
+    
+    if (!finalAmount || finalAmount <= 0) {
+      alert('❌ Không có giá hợp lệ để thanh toán');
+      return;
+    }
+
+    console.log('[TravellerChatBox] Proceeding to payment:', {
+      requestId,
+      finalAmount,
+      agreement: requestDetails?.agreement,
+      status: requestDetails?.status
+    });
+
+    navigate('/booking', {
       state: {
-        requestId,
-        amount: requestDetails?.latestOffer?.amount || requestDetails?.initialBudget?.amount,
-        tourInfo: requestDetails
+        mode: 'tour-request',
+        requestId: requestId,
+        tourInfo: requestDetails,
+        itinerary: requestDetails?.tourDetails?.items || [],
+        zoneName: requestDetails?.tourDetails?.zoneName || '',
+        totalAmount: finalAmount,
       }
     });
   };
 
-  const formatTime = (timestamp) => {
-    try {
-      const date = new Date(timestamp);
-      return date.toLocaleTimeString('vi-VN', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-    } catch {
-      return '';
-    }
-  };
-
   return (
-    <>
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateX(-20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-        .animate-slideIn {
-          animation: slideIn 0.3s ease-out;
-        }
-        .animate-pulse-custom {
-          animation: pulse 2s infinite;
-        }
-      `}</style>
-      <div className="flex flex-col h-full bg-white dark:bg-gray-900 overflow-hidden rounded-lg shadow-xl">
-      {/* Header - Minimal since popup already has header */}
-      <div className="p-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-900 overflow-hidden rounded-lg shadow-xl">
+      {/* Header */}
+      <div className="p-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md border-b-2 border-teal-400">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {connected ? (
-              <>
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" aria-label="Connected"></div>
-                <span className="text-xs font-medium">Đang hoạt động</span>
-              </>
-            ) : (
-              <>
-                <div className="w-2 h-2 bg-gray-400 rounded-full" aria-label="Connecting"></div>
-                <span className="text-xs font-medium">Đang kết nối...</span>
-              </>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              {connected ? (
+                <Wifi className="w-4 h-4 text-green-400" />
+              ) : (
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              )}
+              <span className="text-sm font-medium">
+                {connected ? 'Online' : 'Connecting...'}
+              </span>
+            </div>
+            {unreadCount > 0 && (
+              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                {unreadCount}
+              </span>
             )}
           </div>
-          <button
-            onClick={() => setShowTourInfo(!showTourInfo)}
-            className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
-            aria-label={showTourInfo ? "Hide tour details" : "Show tour details"}
-            aria-expanded={showTourInfo}
-          >
-            {showTourInfo ? '🔼' : '🔽'} Chi tiết tour
-          </button>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold">Chat với {guideName || 'Tour Guide'}</h3>
+            <button
+              onClick={() => setShowTourInfo(!showTourInfo)}
+              className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
+              aria-label={showTourInfo ? "Hide tour details" : "Show tour details"}
+              aria-expanded={showTourInfo}
+            >
+              {showTourInfo ? '🔼' : '🔽'} Chi tiết tour
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="px-4 py-2 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+          <span className="text-sm text-red-700 dark:text-red-400">{error}</span>
+          <button
+            onClick={() => setError(null)}
+            className="ml-auto text-red-500 hover:text-red-700 dark:hover:text-red-300"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50 dark:bg-gray-800" role="log" aria-live="polite" aria-label="Chat messages">
@@ -283,15 +314,245 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
           </div>
         )}
 
+        {/* Itinerary Toggle Button - Always Available */}
+        {(tourInfo || requestDetails?.tourDetails?.items) && (
+          <button
+            onClick={() => setShowItinerary(!showItinerary)}
+            className="w-full px-3 py-2 bg-white dark:bg-gray-700 hover:bg-teal-50 dark:hover:bg-teal-900/20 border-2 border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-2"
+          >
+            <Map className="w-4 h-4" />
+            {showItinerary ? 'Ẩn hành trình' : 'Xem hành trình chi tiết'}
+          </button>
+        )}
+
+        {/* Itinerary Details - Collapsible */}
+        {showItinerary && requestDetails?.tourDetails?.items && (
+          <div className="bg-white dark:bg-gray-700 rounded-xl p-3 border-2 border-blue-200 dark:border-blue-700 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                <Map className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                Hành trình ({requestDetails.tourDetails.items.length} điểm)
+              </h4>
+            </div>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {requestDetails.tourDetails.items.map((item, idx) => (
+                <div key={idx} className="bg-gray-50 dark:bg-gray-600 rounded-lg p-2 border border-gray-200 dark:border-gray-500">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                        {item.name}
+                      </div>
+                      {item.address && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3" />
+                          {item.address}
+                        </div>
+                      )}
+                      {(item.startTime || item.duration) && (
+                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-600 dark:text-gray-300">
+                          {item.startTime && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {item.startTime}
+                            </span>
+                          )}
+                          {item.duration && (
+                            <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
+                              {item.duration} phút
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Request Details & Price Info Card */}
+        {requestDetails && (
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-3 border-2 border-amber-200 dark:border-amber-700 shadow-sm">
+            <div className="space-y-2 text-sm">
+              <div className="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                💰 Thông tin giá
+              </div>
+              
+              {/* Initial Budget */}
+              <div className="flex items-center justify-between bg-white/70 dark:bg-gray-700/70 p-2 rounded-lg">
+                <span className="text-xs text-gray-600 dark:text-gray-400">Giá bạn đề xuất:</span>
+                <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                  {requestDetails.initialBudget?.amount?.toLocaleString('vi-VN')} {requestDetails.initialBudget?.currency || 'VND'}
+                </span>
+              </div>
+
+              {/* Guide's Counter Offer */}
+              {requestDetails.latestOffer && (
+                <div className="flex items-center justify-between bg-white/70 dark:bg-gray-700/70 p-2 rounded-lg border-l-4 border-green-500">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Giá guide đề xuất:</span>
+                  <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                    {requestDetails.latestOffer.amount?.toLocaleString('vi-VN')} {requestDetails.latestOffer.currency || 'VND'}
+                  </span>
+                </div>
+              )}
+
+              {/* Number of Guests */}
+              {requestDetails.numberOfGuests && (
+                <div className="flex items-center justify-between bg-white/70 dark:bg-gray-700/70 p-2 rounded-lg">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Số lượng khách:</span>
+                  <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
+                    {requestDetails.numberOfGuests} người
+                  </span>
+                </div>
+              )}
+
+              {/* Agreement Status */}
+              {requestDetails.status && (
+                <div className="flex items-center justify-between bg-white/70 dark:bg-gray-700/70 p-2 rounded-lg">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Trạng thái:</span>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                    requestDetails.status === 'confirmed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                    requestDetails.status === 'agreed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                    requestDetails.status === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                    'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
+                  }`}>
+                    {requestDetails.status === 'confirmed' ? '✅ Đã xác nhận' :
+                     requestDetails.status === 'agreed' ? '✅ Đã thỏa thuận' :
+                     requestDetails.status === 'pending' ? '⏳ Chờ xử lý' :
+                     requestDetails.status}
+                  </span>
+                </div>
+              )}
+
+              {/* Minimum Price (set by guide) */}
+              {requestDetails.minPrice?.amount && (
+                <div className="flex items-center justify-between bg-orange-100/70 dark:bg-orange-900/30 p-2 rounded-lg border-l-4 border-orange-500">
+                  <span className="text-xs text-orange-700 dark:text-orange-300 font-medium">🔐 Giá tối thiểu guide:</span>
+                  <span className="text-sm font-bold text-orange-700 dark:text-orange-300">
+                    {requestDetails.minPrice.amount.toLocaleString('vi-VN')} {requestDetails.minPrice.currency || 'VND'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Price Agreement Card */}
-        <PriceAgreementCard
-          requestDetails={requestDetails}
-          userRole="user"
-          onSendOffer={sendOffer}
-          onAgree={agreeToTerms}
-          onProceedToPayment={handleProceedToPayment}
-          loading={sending}
-        />
+        {requestDetails && (
+          <PriceAgreementCard
+            requestDetails={requestDetails}
+            userRole="user"
+            onSendOffer={sendOffer}
+            onAgree={agreeToTerms}
+            loading={sending}
+          />
+        )}
+
+        {/* Payment Initiation Card - Shows when both agreed on price (agreement_pending status) */}
+        {requestDetails?.agreement?.userAgreed && requestDetails?.agreement?.guideAgreed && (
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border-2 border-green-300 dark:border-green-700 shadow-md">
+            {/* Status Badge */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500 text-white">
+                <span>✅</span>
+              </div>
+              <div className="font-bold text-green-700 dark:text-green-300">
+                Cả hai bên đã đồng ý giá
+              </div>
+            </div>
+
+            {/* Order Summary */}
+            <div className="space-y-3">
+              {/* Tour Information */}
+              <div className="bg-white/70 dark:bg-gray-700/70 rounded-lg p-3 border-l-4 border-green-500">
+                <div className="font-semibold text-sm text-gray-900 dark:text-white mb-2">
+                  📍 Thông tin tour
+                </div>
+                <div className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Địa điểm:</span>
+                    <span className="font-medium">{requestDetails.tourDetails?.zoneName || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Số ngày:</span>
+                    <span className="font-medium">{requestDetails.tourDetails?.numberOfDays || 1} ngày</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Số khách:</span>
+                    <span className="font-medium">{requestDetails.numberOfGuests || 1} người</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Itinerary Preview */}
+              {requestDetails.tourDetails?.items && requestDetails.tourDetails.items.length > 0 && (
+                <div className="bg-white/70 dark:bg-gray-700/70 rounded-lg p-3">
+                  <div className="font-semibold text-sm text-gray-900 dark:text-white mb-2">
+                    📋 Hành trình tour
+                  </div>
+                  <div className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
+                    {requestDetails.tourDetails.items.slice(0, 3).map((item, idx) => (
+                      <div key={idx} className="flex items-start gap-2">
+                        <span className="font-bold text-green-600 dark:text-green-400 min-w-4">
+                          {idx + 1}.
+                        </span>
+                        <span className="flex-1">
+                          {item.name || item.activity || `Điểm dừng ${idx + 1}`}
+                        </span>
+                      </div>
+                    ))}
+                    {requestDetails.tourDetails.items.length > 3 && (
+                      <div className="text-gray-600 dark:text-gray-400 italic">
+                        + {requestDetails.tourDetails.items.length - 3} điểm khác
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Final Price */}
+              <div className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/40 rounded-lg p-3 border border-green-400 dark:border-green-600">
+                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                  Giá đã thỏa thuận
+                </div>
+                <div className="text-2xl font-bold text-green-700 dark:text-green-300">
+                  {(requestDetails.finalPrice?.amount || requestDetails.latestOffer?.amount || requestDetails.initialBudget?.amount)?.toLocaleString('vi-VN')} VND
+                </div>
+              </div>
+
+              {/* Payment Methods */}
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  💳 Tiến hành thanh toán
+                </div>
+                
+                <button
+                  onClick={handleProceedToPayment}
+                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-2.5 px-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm"
+                >
+                  <span>💳</span>
+                  Thanh toán bằng thẻ tín dụng
+                </button>
+
+                <button
+                  onClick={handleProceedToPayment}
+                  className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-semibold py-2.5 px-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm"
+                >
+                  <span>🏦</span>
+                  Chuyển khoản ngân hàng
+                </button>
+              </div>
+
+              <div className="text-xs text-gray-600 dark:text-gray-400 text-center mt-2 p-2 bg-white/50 dark:bg-gray-800/50 rounded">
+                Bạn sẽ được chuyển đến trang thanh toán để hoàn tất giao dịch
+              </div>
+            </div>
+          </div>
+        )}
 
         {loading && messages.length === 0 ? (
           <div className="flex items-center justify-center h-32">
@@ -310,15 +571,27 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
           <>
             {messages.map((msg) => {
               // Check if message is from current user (traveller)
-              const isMyMessage = msg.sender?.role === 'user' || msg.sender?.userId === user?.sub;
+              // Handle both ObjectId and string formats for userId comparison
+              const senderUserId = msg.sender?.userId?._id || msg.sender?.userId?.toString() || msg.sender?.userId;
+              const currentUserId = user?._id?.toString() || user?._id;
+              const isMyMessage = msg.sender?.role === 'user' && senderUserId === currentUserId;
               const senderName = isMyMessage 
                 ? 'Bạn' 
                 : (msg.sender?.name || guideName || 'Tour Guide');
               
+              console.log('[TravellerChatBox] Rendering message:', {
+                id: msg._id,
+                isMyMessage,
+                role: msg.sender?.role,
+                senderUserId,
+                currentUserId,
+                senderName
+              });
+              
               return (
                 <div
                   key={msg._id}
-                  className={`flex gap-2 group ${isMyMessage ? 'justify-end' : 'justify-start'} animate-fadeIn`}
+                  className={`flex gap-2 group ${isMyMessage ? 'justify-end' : 'justify-start'}`}
                   role="article"
                   aria-label={`Message from ${senderName}`}
                 >
@@ -383,6 +656,15 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
                             {msg.content}
                           </p>
 
+                          {/* Edited indicator */}
+                          {msg.edited && (
+                            <span className={`text-xs italic ${
+                              isMyMessage ? 'text-teal-100' : 'text-gray-400 dark:text-gray-500'
+                            }`}>
+                              (đã chỉnh sửa)
+                            </span>
+                          )}
+
                           {/* File attachments */}
                           {msg.messageType === 'file' && msg.attachments?.length > 0 && (
                             <div className="mt-3 space-y-2">
@@ -415,7 +697,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
                             <div className={`text-xs ${
                               isMyMessage ? 'text-teal-100' : 'text-gray-400 dark:text-gray-500'
                             }`}>
-                              {formatTime(msg.createdAt || msg.timestamp)}
+                              {format(new Date(msg.createdAt || msg.timestamp), 'HH:mm')}
                             </div>
                             
                             {/* Message actions for own messages */}
@@ -438,8 +720,15 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
                               </div>
                             )}
                             
-                            {isMyMessage && !editingMessage && (
-                              <span className="text-teal-100" aria-label="Message sent">✓✓</span>
+                            {/* Read status */}
+                            {isMyMessage && (
+                              <div className="flex items-center">
+                                {msg.isRead ? (
+                                  <CheckCheck className="w-3 h-3 text-teal-100" />
+                                ) : (
+                                  <Check className="w-3 h-3 text-teal-200" />
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>
@@ -459,7 +748,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
             
             {/* Typing indicator */}
             {typingUsers.size > 0 && (
-              <div className="flex gap-2 justify-start animate-fadeIn" aria-label="Someone is typing">
+              <div className="flex gap-2 justify-start" aria-label="Someone is typing">
                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow-md">
                   {guideName?.charAt(0).toUpperCase() || 'G'}
                 </div>
@@ -574,6 +863,15 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
           </div>
         )}
         
+        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center justify-between">
+          <span>Max 5 files, 10MB each. Supported: Images, PDF, DOC, XLS, TXT</span>
+          {newMessage.length > 0 && (
+            <span className={`${newMessage.length > 1000 ? 'text-red-500' : 'text-gray-400'}`}>
+              {newMessage.length}/1000
+            </span>
+          )}
+        </div>
+        
         {!connected && (
           <div className="flex items-center justify-center gap-2 mt-2 text-xs text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-lg">
             <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
@@ -582,7 +880,6 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
         )}
       </form>
     </div>
-    </>
   );
 };
 

@@ -21,6 +21,8 @@ const guideNotificationSchema = new mongoose.Schema(
     title: { type: String, required: true },
     message: { type: String, required: true },
     tourId: String,
+    relatedId: { type: mongoose.Schema.Types.ObjectId }, // For linking to TourCustomRequest or other resources
+    relatedModel: { type: String }, // Model name for relatedId (e.g., 'TourCustomRequest')
     timestamp: Date,
     read: { type: Boolean, default: false },
     icon: String,

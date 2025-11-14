@@ -420,6 +420,59 @@ async function buildMoMoCharge(userId, body) {
       bookingId
     };
   }
+
+  // ✅ NEW: Support for tour-request mode (custom tour requests with guide negotiation)
+  if (mode === "tour-request") {
+    const TourCustomRequest = require("../models/TourCustomRequest");
+    const requestId = body?.requestId;
+    
+    if (!requestId) {
+      throw Object.assign(new Error("MISSING_REQUEST_ID"), { status: 400 });
+    }
+
+    // Load tour custom request
+    const tourRequest = await TourCustomRequest.findById(requestId).populate('userId', 'name email');
+    if (!tourRequest) {
+      throw Object.assign(new Error("REQUEST_NOT_FOUND"), { status: 404 });
+    }
+
+    // Verify request belongs to user and is accepted by guide
+    if (tourRequest.userId._id.toString() !== userId.toString()) {
+      throw Object.assign(new Error("UNAUTHORIZED_REQUEST"), { status: 403 });
+    }
+
+    if (tourRequest.status !== 'accepted') {
+      throw Object.assign(new Error("REQUEST_NOT_ACCEPTED"), { status: 400 });
+    }
+
+    // Get the final amount (either from latest offer or initial budget)
+    const finalAmount = tourRequest.latestOffer?.amount || tourRequest.initialBudget?.amount;
+    if (!finalAmount) {
+      throw Object.assign(new Error("NO_VALID_AMOUNT"), { status: 400 });
+    }
+
+    const items = [{
+      name: tourRequest.title || 'Custom Tour Request',
+      price: finalAmount,
+      originalPrice: undefined,
+      tourId: null, // Tour request doesn't have tourId
+      meta: {
+        date: tourRequest.startDate ? normDate(tourRequest.startDate) : '',
+        adults: tourRequest.numberOfAdults || 0,
+        children: tourRequest.numberOfChildren || 0,
+        unitPriceAdult: 0,
+        unitPriceChild: 0,
+        image: tourRequest.thumbnail || '',
+      },
+    }];
+
+    return {
+      items,
+      totalVND: finalAmount,
+      mode,
+      customRequestId: requestId
+    };
+  }
   
   // fallback: empty
   return {
@@ -453,7 +506,7 @@ exports.createMoMoPayment = async (req, res) => {
 
     // Authoritatively recompute amount from server-side state
     const userId = req.user?.sub || req.user?._id;
-    const { items: serverItems, totalVND, retryBookingId: serverRetryBookingId } = await buildMoMoCharge(userId, {
+    const { items: serverItems, totalVND, retryBookingId: serverRetryBookingId, customRequestId } = await buildMoMoCharge(userId, {
       mode,
       item: buyNowItem,
       retryItems,
@@ -601,6 +654,7 @@ exports.createMoMoPayment = async (req, res) => {
         status: "pending",
         mode: mode || (buyNowItem ? "buy-now" : "cart"),
         retryBookingId: serverRetryBookingId, // For retry payments
+        customRequestId: customRequestId, // For tour-request or custom-tour payments
         items: (Array.isArray(serverItems) ? serverItems : []).map((it) => ({
           name: it.name,
           price: Number(it.price) || 0,

@@ -10,9 +10,13 @@ const mongoose = require('mongoose');
 
 // Helper to get user ID and role
 function getUserContext(user) {
-  const userId = user?.sub || user?._id || user?.id;
-  const role = user?.role === 'TourGuide' ? 'guide' : 'user';
-  return { userId, role };
+  return {
+    userId: user?.id?.toString()
+         || user?._id?.toString()
+         || user?.sub?.toString(),
+
+    role: user?.role === 'TourGuide' ? 'guide' : 'user'
+  };
 }
 
 // Helper to find tour request from either TourCustomRequest or Itinerary
@@ -123,9 +127,70 @@ exports.getChatHistory = async (req, res) => {
       currentPage: parseInt(page)
     });
 
+    // Get request details (tour info, pricing, etc.)
+    let tourRequest = null;
+    if (requestData.type === 'TourCustomRequest') {
+      const req = await TourCustomRequest.findById(requestId)
+        .select('userId guideId status initialBudget priceOffers finalPrice agreement minPrice tourDetails numberOfGuests')
+        .lean();
+      
+      if (req) {
+        // Get latest offer
+        const latestOffer = req.priceOffers && req.priceOffers.length > 0 
+          ? req.priceOffers[req.priceOffers.length - 1] 
+          : null;
+        
+        tourRequest = {
+          _id: req._id,
+          status: req.status,
+          initialBudget: req.initialBudget,
+          latestOffer: latestOffer,
+          finalPrice: req.finalPrice,
+          agreement: req.agreement,
+          minPrice: req.minPrice,
+          tourDetails: req.tourDetails,
+          numberOfGuests: req.numberOfGuests
+        };
+        
+        console.log('[Chat] TourCustomRequest details loaded:', {
+          hasInitialBudget: !!tourRequest.initialBudget,
+          hasLatestOffer: !!tourRequest.latestOffer,
+          hasMinPrice: !!tourRequest.minPrice,
+          hasTourDetails: !!tourRequest.tourDetails,
+          tourDetailsItems: tourRequest.tourDetails?.items?.length || 0
+        });
+      }
+    } else if (requestData.type === 'Itinerary') {
+      const itinerary = await Itinerary.findById(requestId)
+        .select('status name items numberOfGuests startDate')
+        .lean();
+      
+      if (itinerary) {
+        tourRequest = {
+          _id: itinerary._id,
+          status: itinerary.status,
+          tourDetails: {
+            items: itinerary.items || [],
+            numberOfGuests: itinerary.numberOfGuests
+          },
+          numberOfGuests: itinerary.numberOfGuests
+        };
+        
+        console.log('[Chat] Itinerary details loaded:', {
+          tourDetailsItems: tourRequest.tourDetails?.items?.length || 0
+        });
+      }
+    }
+
+    console.log('[Chat] Returning tourRequest:', {
+      hasTourRequest: !!tourRequest,
+      tourRequestType: requestData.type
+    });
+
     res.json({
       success: true,
-      messages: messages.reverse(), // Show oldest first
+      messages: messages.map(m => m.toObject()).reverse(), // Show oldest first
+      tourRequest: tourRequest,
       unreadCount,
       pagination: {
         total: totalCount,
@@ -151,13 +216,14 @@ exports.sendMessage = async (req, res) => {
     const { requestId } = req.params;
     const { content, message, replyTo } = req.body;
     
+    console.log('===== [Chat.sendMessage] START =====');
     console.log('[Chat] sendMessage called:', {
       requestId,
       userId,
       role,
-      content,
-      message,
-      hasContent: !!(content || message)
+      hasContent: !!(content || message),
+      contentLength: content?.length || message?.length || 0,
+      timestamp: new Date().toISOString()
     });
     
     // Support both 'content' and 'message' field names
@@ -174,21 +240,32 @@ exports.sendMessage = async (req, res) => {
     // Verify user has access
     const requestData = await findTourRequest(requestId);
     if (!requestData) {
-      console.log('[Chat] Tour request not found:', requestId);
+      console.log('[Chat] ⚠️ Tour request not found:', requestId);
+      console.log('[Chat] Available data - userId:', userId, 'role:', role);
       return res.status(404).json({
         success: false,
         error: 'Tour request not found'
       });
     }
+    
+    console.log('[Chat] ✅ Tour request found:', { type: requestData.type, hasUserId: !!requestData.userId, hasGuideId: !!requestData.guideId });
 
     // Check access rights (same logic as getChatHistory)
     if (!checkChatAccess(requestData, userId, role)) {
-      console.log('[Chat] Send access denied:', { userId, role, requestData: requestData.type });
+      console.log('[Chat] ⚠️ ACCESS DENIED:', { 
+        userId, 
+        role, 
+        requestType: requestData.type,
+        requestUserId: requestData.userId?.toString(),
+        requestGuideId: requestData.guideId?.toString(),
+        currentUserId: userId
+      });
       return res.status(403).json({
         success: false,
         error: 'Access denied'
       });
     }
+    console.log('[Chat] ✅ Access granted');
 
     // Get sender name
     const senderUser = await User.findById(userId).select('name');
@@ -197,22 +274,30 @@ exports.sendMessage = async (req, res) => {
     // Create message
     const chatMessage = new TourRequestChat({
       tourRequestId: requestId,
-      sender: {
-        userId,
-        role,
-        name: senderUser.name
-      },
+     sender: {
+  userId: userId?.toString(),
+  role,
+  name: senderUser?.name || 'Unknown'
+},
       messageType: 'text',
       content: messageContent.trim(),
       replyTo: replyTo || null
     });
 
     await chatMessage.save();
-    await chatMessage.populate('sender.userId', 'name avatar email');
+    // Populate sender.userId with full user data including _id
+    await chatMessage.populate({
+      path: 'sender.userId',
+      select: '_id name avatar email'
+    });
     
-    console.log('[Chat] Message saved:', {
+    console.log('[Chat] Message saved and populated:', {
       messageId: chatMessage._id,
-      sender: chatMessage.sender,
+      sender: {
+        userId: chatMessage.sender.userId,
+        role: chatMessage.sender.role,
+        name: chatMessage.sender.name
+      },
       content: chatMessage.content
     });
 
@@ -244,6 +329,8 @@ exports.sendMessage = async (req, res) => {
               title: 'New Message',
               message: `${senderUser.name}: ${messageContent.substring(0, 50)}${messageContent.length > 50 ? '...' : ''}`,
               tourId: requestId,
+              relatedId: requestId,
+              relatedModel: 'TourCustomRequest',
               priority: 'medium'
             });
             console.log('[Chat] GuideNotification created for guide:', guideProfile._id);
@@ -274,13 +361,13 @@ exports.sendMessage = async (req, res) => {
     try {
       const io = req.app && req.app.get && req.app.get('io');
       if (io) {
-        io.to(`chat-${requestId}`).emit('newMessage', chatMessage);
-        // Also notify the recipient's user room so list views (which often join
-        // user-<id> rooms) can react immediately without requiring a DB
-        // notification document. recipientId may be an ObjectId/string.
+        // Convert to plain object to ensure nested populated fields are included
+        const messageObj = chatMessage.toObject();
+        io.to(`chat-${requestId}`).emit('newMessage', messageObj);
+        // Also notify the recipient's user room
         if (recipientId) {
           try {
-            io.to(`user-${recipientId}`).emit('newMessage', chatMessage);
+            io.to(`user-${recipientId}`).emit('newMessage', messageObj);
           } catch (e) {
             console.warn('[Chat] emit newMessage to user room failed', e && e.message);
           }
@@ -290,13 +377,17 @@ exports.sendMessage = async (req, res) => {
       console.warn('[Chat] socket emit newMessage failed', emitErr && emitErr.message);
     }
 
+    // Convert to plain object for response to ensure nested fields are serialized
+    const messageObj = chatMessage.toObject();
     res.json({
       success: true,
-      message: chatMessage,
+      message: messageObj,
       messageId: chatMessage._id
     });
+    console.log('===== [Chat.sendMessage] SUCCESS =====');
 
   } catch (error) {
+    console.error('===== [Chat.sendMessage] ERROR =====');
     console.error('[Chat] Error sending message:', error);
     res.status(500).json({
       success: false,
@@ -376,18 +467,23 @@ exports.sendFileMessage = async (req, res) => {
     // Create message
     const chatMessage = new TourRequestChat({
       tourRequestId: requestId,
-      sender: {
-        userId,
-        role,
-        name: senderUser.name
-      },
+   sender: {
+  userId: userId?.toString(),
+  role,
+  name: senderUser?.name || 'Unknown'
+},
+
       messageType: 'file',
       content: content || `Sent ${files.length} file(s)`,
       attachments
     });
 
     await chatMessage.save();
-    await chatMessage.populate('sender.userId', 'name avatar email');
+    // Populate sender.userId with full user data including _id
+    await chatMessage.populate({
+      path: 'sender.userId',
+      select: '_id name avatar email'
+    });
 
     // Notify the other party
     const recipientId = role === 'user' ? requestData.guideId : requestData.userId;
@@ -406,6 +502,8 @@ exports.sendFileMessage = async (req, res) => {
               title: 'New File(s)',
               message: notifMessage,
               tourId: requestId,
+              relatedId: requestId,
+              relatedModel: 'TourCustomRequest',
               priority: 'medium'
             });
           }
@@ -429,7 +527,7 @@ exports.sendFileMessage = async (req, res) => {
 
     res.json({
       success: true,
-      message: chatMessage,
+      message: chatMessage.toObject(),
       messageId: chatMessage._id
     });
 
@@ -704,6 +802,97 @@ exports.deleteMessage = async (req, res) => {
 
   } catch (error) {
     console.error('[Chat] Error deleting message:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+// Set minimum price for tour request (guide only)
+exports.setMinPrice = async (req, res) => {
+  try {
+    const { userId, role } = getUserContext(req.user);
+    const { requestId } = req.params;
+    const { amount, currency = 'VND' } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid minimum price is required'
+      });
+    }
+
+    // Only guide can set min price
+    if (role !== 'guide') {
+      return res.status(403).json({
+        success: false,
+        error: 'Only guide can set minimum price'
+      });
+    }
+
+    // Find tour request
+    const requestData = await findTourRequest(requestId);
+    if (!requestData) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tour request not found'
+      });
+    }
+
+    // Verify guide owns this request
+    if (!requestData.guideId || requestData.guideId.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied: You are not the assigned guide for this request'
+      });
+    }
+
+    // Update min price
+    await TourCustomRequest.findByIdAndUpdate(
+      requestId,
+      {
+        $set: {
+          'minPrice.amount': amount,
+          'minPrice.currency': currency,
+          'minPrice.setBy': 'guide',
+          'minPrice.setAt': new Date()
+        }
+      },
+      { new: true }
+    );
+
+    console.log('[Chat] Min price set:', { requestId, userId, amount, currency });
+
+    // Notify traveller via socket
+    try {
+      const io = req.app && req.app.get && req.app.get('io');
+      if (io) {
+        io.to(`chat-${requestId}`).emit('minPriceUpdated', {
+          requestId,
+          minPrice: { amount, currency },
+          setAt: new Date()
+        });
+        if (requestData.userId) {
+          io.to(`user-${requestData.userId}`).emit('minPriceUpdated', {
+            requestId,
+            minPrice: { amount, currency },
+            setAt: new Date()
+          });
+        }
+      }
+    } catch (emitErr) {
+      console.warn('[Chat] socket emit minPriceUpdated failed', emitErr && emitErr.message);
+    }
+
+    res.json({
+      success: true,
+      message: 'Minimum price set successfully',
+      minPrice: { amount, currency }
+    });
+
+  } catch (error) {
+    console.error('[Chat] Error setting min price:', error);
     res.status(500).json({
       success: false,
       error: error.message

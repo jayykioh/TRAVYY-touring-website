@@ -224,6 +224,53 @@ async function buildChargeForUser(userId, body) {
     };
   }
 
+  // ✅ NEW: Support for tour-request mode (custom tour requests with guide negotiation)
+  if (mode === "tour-request") {
+    const TourCustomRequest = require("../models/TourCustomRequest");
+    const requestId = body?.requestId;
+    
+    if (!requestId) {
+      throw Object.assign(new Error("MISSING_REQUEST_ID"), { status: 400 });
+    }
+
+    // Load tour custom request
+    const tourRequest = await TourCustomRequest.findById(requestId).populate('userId', 'name email');
+    if (!tourRequest) {
+      throw Object.assign(new Error("REQUEST_NOT_FOUND"), { status: 404 });
+    }
+
+    // Verify request belongs to user and is accepted by guide
+    if (tourRequest.userId._id.toString() !== userId.toString()) {
+      throw Object.assign(new Error("UNAUTHORIZED_REQUEST"), { status: 403 });
+    }
+
+    if (tourRequest.status !== 'accepted') {
+      throw Object.assign(new Error("REQUEST_NOT_ACCEPTED"), { status: 400 });
+    }
+
+    // Get the final amount (either from latest offer or initial budget)
+    const finalAmount = tourRequest.latestOffer?.amount || tourRequest.initialBudget?.amount;
+    if (!finalAmount) {
+      throw Object.assign(new Error("NO_VALID_AMOUNT"), { status: 400 });
+    }
+
+    const items = [{
+      sku: `tour-request-${requestId}`,
+      name: tourRequest.title || 'Custom Tour Request',
+      quantity: 1,
+      unit_amount_vnd: finalAmount,
+      image: tourRequest.thumbnail || '',
+    }];
+
+    return {
+      currency: "USD",
+      items,
+      totalVND: finalAmount,
+      cartItems: [], // No cart items for tour request
+      customRequestId: requestId
+    };
+  }
+
   throw Object.assign(new Error("UNSUPPORTED_MODE"), { status: 400 });
 }
 
@@ -239,7 +286,7 @@ exports.createOrder = async (req, res) => {
     console.log("   body:", JSON.stringify(req.body, null, 2));
 
   stage = 'buildCharge';
-  const { items, totalVND, currency, _buyNowMeta, cartItems } = await buildChargeForUser(userId, req.body);
+  const { items, totalVND, currency, _buyNowMeta, cartItems, customRequestId } = await buildChargeForUser(userId, req.body);
 
     // Apply discount from voucher/promotion
     const discountAmount = Number(req.body.discountAmount) || 0;
@@ -368,6 +415,7 @@ exports.createOrder = async (req, res) => {
         status: "pending",
         mode: mode || 'cart',
   retryBookingId: req.body?.retryBookingId, // For retry payments
+        customRequestId: customRequestId, // For tour-request or custom-tour payments
         items: items.map((i, idx) => {
           const tourId = i.sku?.split('-')[0];
           const date = _buyNowMeta?.date || i.sku?.substring(tourId?.length + 1);

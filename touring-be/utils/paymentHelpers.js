@@ -177,6 +177,26 @@ async function createBookingFromSession(session, additionalData = {}) {
       await updateTourSeats(bookingItems);
     }
 
+    // ✅ NEW: Update TourCustomRequest status if this is a tour-request payment
+    if (isPaid && session.customRequestId) {
+      try {
+        const TourCustomRequest = require("../models/TourCustomRequest");
+        const tourRequest = await TourCustomRequest.findById(session.customRequestId);
+        if (tourRequest) {
+          tourRequest.status = 'completed';
+          tourRequest.completedAt = new Date();
+          tourRequest.bookingId = bookingDoc._id; // Link booking to tour request
+          await tourRequest.save();
+          console.log(`[Payment] ✅ Updated TourCustomRequest ${session.customRequestId} to 'completed' with booking ${bookingDoc._id}`);
+        } else {
+          console.warn(`[Payment] ⚠️ TourCustomRequest ${session.customRequestId} not found, skipping update`);
+        }
+      } catch (tourReqError) {
+        console.error(`[Payment] ❌ Error updating TourCustomRequest ${session.customRequestId}:`, tourReqError);
+        // Don't fail the whole payment if tour request update fails
+      }
+    }
+
     return bookingDoc;
   } catch (err) {
     console.error("[Payment] ❌ createBookingFromSession failed:", err);

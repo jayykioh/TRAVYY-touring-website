@@ -5,12 +5,13 @@ import { useAuth } from '../auth/context';
 // Minimal shim hook for tour request chat used by UI components.
 // This implementation is intentionally simple: it provides the
 // same shape the components expect so the dev server can run.
-export function useTourRequestChat(requestId, apiBase = '/api/tour-requests') {
+export function useTourRequestChat(requestId, apiBase = '/api/chat') {
   const [messages, setMessages] = useState([]);
   const [requestDetails, setRequestDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [typingUsers, setTypingUsers] = useState(new Set());
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const mountedRef = useRef(true);
   const typingTimerRef = useRef(null);
@@ -27,14 +28,31 @@ export function useTourRequestChat(requestId, apiBase = '/api/tour-requests') {
 
     setLoading(true);
     try {
-      const data = await withAuth(`${apiBase}/${requestId}`);
+      // Fetch messages from TourRequestChat collection
+      const response = await withAuth(`${apiBase}/${requestId}/messages?page=1&limit=50`);
       if (!mountedRef.current) return;
-      // API returns { success: true, tourRequest } in some guide endpoints
-      const details = data?.tourRequest || data?.tourRequest || data || null;
-      setRequestDetails(details);
-      // messages may be under details.messages or messages property
-      const msgs = details?.messages || data?.messages || [];
+      
+      const msgs = response?.messages || [];
+      console.log('[useTourRequestChat] Loaded messages:', msgs.length, 'messages for requestId:', requestId);
+      console.log('[useTourRequestChat] Response keys:', Object.keys(response || {}));
+      
       setMessages(Array.isArray(msgs) ? msgs : []);
+      setUnreadCount(response?.unreadCount || 0);
+      
+      // If response includes request details (tour info, pricing), store them
+      if (response?.tourRequest) {
+        console.log('[useTourRequestChat] Setting requestDetails:', {
+          hasTourRequest: !!response.tourRequest,
+          keys: Object.keys(response.tourRequest),
+          hasTourDetails: !!response.tourRequest.tourDetails,
+          tourDetailsItems: response.tourRequest.tourDetails?.items?.length || 0,
+          hasMinPrice: !!response.tourRequest.minPrice,
+          minPriceAmount: response.tourRequest.minPrice?.amount
+        });
+        setRequestDetails(response.tourRequest);
+      } else {
+        console.warn('[useTourRequestChat] No tourRequest in response');
+      }
     } catch (err) {
       // Fallback: if API fails (404/error), still allow chat to work locally
       // Messages won't persist but traveller can still type and send via socket
@@ -64,27 +82,74 @@ export function useTourRequestChat(requestId, apiBase = '/api/tour-requests') {
     const room = `chat-${requestId}`;
     // join the room for this request
     socket.joinRoom?.(room);
+    console.log('[useTourRequestChat] Joined room:', room);
 
     const offNew = socket.on?.('newMessage', (doc) => {
-      if (!doc) return;
+      if (!doc) {
+        console.warn('[useTourRequestChat] Received empty newMessage');
+        return;
+      }
       // Only accept messages for this requestId
       const docRoom = doc?.tourRequestId ? `chat-${doc.tourRequestId}` : null;
-      if (docRoom && docRoom !== room) return;
+      if (docRoom && docRoom !== room) {
+        console.log('[useTourRequestChat] Message for different room:', docRoom, 'current:', room);
+        return;
+      }
+      
+      console.log('[useTourRequestChat] newMessage received:', {
+        messageId: doc._id,
+        content: doc.content?.substring(0, 50),
+        sender: doc.sender?.role,
+        senderUserId: doc.sender?.userId,
+        requestId: doc.tourRequestId,
+        createdAt: doc.createdAt
+      });
+      
       setMessages((prev) => {
-        // ignore duplicate messages (by _id)
-        if (prev.some((m) => m._id === doc._id)) return prev;
-        return [...prev, doc];
+        // Deduplication: check by multiple fields to catch duplicates from different sources
+        const isDuplicate = prev.some((m) => {
+          // By exact _id
+          if (m._id === doc._id && !m._id.toString().startsWith('local-')) return true;
+          // By content + sender + timestamp (for when IDs might differ)
+          if (m.content === doc.content && 
+              m.sender?.role === doc.sender?.role && 
+              m.createdAt === doc.createdAt) return true;
+          return false;
+        });
+        
+        if (isDuplicate) {
+          console.log('[useTourRequestChat] Duplicate message ignored:', doc._id);
+          return prev;
+        }
+        
+        // Remove optimistic message if this is the real version
+        let updated = prev.filter((m) => {
+          // Remove optimistic message that matches this real message
+          if (m._id.toString().startsWith('local-') && 
+              m.content === doc.content && 
+              m.sender?.role === doc.sender?.role) {
+            console.log('[useTourRequestChat] Removing optimistic message:', m._id);
+            return false;
+          }
+          return true;
+        });
+        
+        updated = [...updated, doc];
+        console.log('[useTourRequestChat] Message added. Total messages:', updated.length);
+        return updated;
       });
     });
 
     const offUpdated = socket.on?.('messageUpdated', (doc) => {
       if (!doc) return;
+      console.log('[useTourRequestChat] messageUpdated received:', doc._id);
       setMessages((prev) => prev.map((m) => (m._id === doc._id ? doc : m)));
     });
 
     const offTyping = socket.on?.('typing', (payload) => {
       if (!payload || payload.requestId !== requestId) return;
       const uid = payload.userId || payload.id || 'other';
+      console.log('[useTourRequestChat] typing indicator:', { uid, isTyping: payload.isTyping });
       setTypingUsers((prev) => {
         const next = new Set(prev);
         if (payload.isTyping) next.add(uid);
@@ -95,7 +160,10 @@ export function useTourRequestChat(requestId, apiBase = '/api/tour-requests') {
 
     // Re-join room on socket reconnects
     const offConnect = socket.on?.('connect', () => {
+      console.log('[useTourRequestChat] Socket reconnected, rejoining room:', room);
       socket.joinRoom?.(room);
+      // Reload messages on reconnect
+      loadRequest();
     });
 
     return () => {
@@ -105,7 +173,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/tour-requests') {
       if (offTyping) offTyping();
       if (offConnect) offConnect();
     };
-  }, [socket, requestId]);
+  }, [socket, requestId, loadRequest]);
 
   // Send message via API (server will persist and socket will broadcast)
   const sendMessage = useCallback(async (text) => {
@@ -116,9 +184,15 @@ export function useTourRequestChat(requestId, apiBase = '/api/tour-requests') {
       const optimistic = {
         _id: `local-${Date.now()}`,
         content: text,
-        sender: { role: user?.role || 'traveller', userId: user?.id || user?.sub || 'local', name: user?.name || 'You' },
+        sender: { 
+          role: user?.role === 'TourGuide' ? 'guide' : 'user', 
+          userId: user?._id, 
+          name: user?.name || 'You' 
+        },
         createdAt: new Date().toISOString(),
       };
+      
+      console.log('[useTourRequestChat] sendMessage - optimistic update:', optimistic);
       setMessages((m) => [...m, optimistic]);
 
       // Try to send to server, but don't fail if API returns error
@@ -130,18 +204,31 @@ export function useTourRequestChat(requestId, apiBase = '/api/tour-requests') {
           body: JSON.stringify({ content: text }),
         });
 
-        // server may return updated messages; if so, replace
-        if (res?.messages && Array.isArray(res.messages)) {
-          setMessages(res.messages);
+        console.log('[useTourRequestChat] sendMessage API response:', {
+          success: res?.success,
+          messageId: res?.message?._id,
+          content: res?.message?.content?.substring(0, 50)
+        });
+
+        // Server returns { message, messageId, success }
+        // Replace optimistic message with real one if available
+        if (res?.message) {
+          setMessages((prev) => {
+            const updated = prev.map((m) => 
+              m._id === optimistic._id ? res.message : m
+            );
+            console.log('[useTourRequestChat] Replaced optimistic message:', res.message._id);
+            return updated;
+          });
         }
       } catch (apiErr) {
         // API failed, but optimistic message is already in state
         // Traveller still sees their message, socket may sync later
-        console.warn('[useTourRequestChat] sendMessage API failed (using optimistic)', apiErr?.message);
+        console.warn('[useTourRequestChat] sendMessage API failed (using optimistic)', apiErr?.message || apiErr);
       }
 
       // emit typing stop
-      socket?.emit && socket.emit('typing', { requestId, isTyping: false, userId: user?.id });
+      socket?.emit && socket.emit('typing', { requestId, isTyping: false, userId: user?._id });
 
       return true;
     } catch (err) {
@@ -184,7 +271,14 @@ export function useTourRequestChat(requestId, apiBase = '/api/tour-requests') {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ terms }),
       });
-      if (res?.tourRequest) setRequestDetails(res.tourRequest);
+      if (res?.tourRequest) {
+        setRequestDetails(res.tourRequest);
+        console.log('[useTourRequestChat] Agreement updated:', {
+          userAgreed: res.tourRequest.agreement?.userAgreed,
+          guideAgreed: res.tourRequest.agreement?.guideAgreed,
+          bothAgreed: res.bothAgreed
+        });
+      }
       return res?.success ?? true;
     } catch (err) {
       console.error('[useTourRequestChat] agreeToTerms error', err?.message || err);
@@ -192,15 +286,106 @@ export function useTourRequestChat(requestId, apiBase = '/api/tour-requests') {
     }
   }, [withAuth, requestId, apiBase]);
 
+  const editMessage = useCallback(async (messageId, newContent) => {
+    if (!newContent || !withAuth || !requestId) return false;
+    setSending(true);
+    try {
+      const res = await withAuth(`${apiBase}/${requestId}/message/${messageId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newContent }),
+      });
+      
+      if (res?.message) {
+        setMessages((prev) => prev.map((m) => (m._id === messageId ? res.message : m)));
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('[useTourRequestChat] editMessage error', err?.message || err);
+      return false;
+    } finally {
+      setSending(false);
+    }
+  }, [withAuth, requestId, apiBase]);
+
+  const deleteMessage = useCallback(async (messageId) => {
+    if (!withAuth || !requestId) return false;
+    try {
+      await withAuth(`${apiBase}/${requestId}/message/${messageId}`, {
+        method: 'DELETE',
+      });
+      
+      setMessages((prev) => prev.filter((m) => m._id !== messageId));
+      return true;
+    } catch (err) {
+      console.error('[useTourRequestChat] deleteMessage error', err?.message || err);
+      return false;
+    }
+  }, [withAuth, requestId, apiBase]);
+
+  const sendFileMessage = useCallback(async (text, files) => {
+    if (!files || files.length === 0 || !withAuth || !requestId) return false;
+    setSending(true);
+    try {
+      const formData = new FormData();
+      formData.append('content', text || 'File(s)');
+      files.forEach((file) => formData.append('files', file));
+
+      const res = await withAuth(`${apiBase}/${requestId}/message`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res?.messages && Array.isArray(res.messages)) {
+        setMessages(res.messages);
+      }
+      
+      return true;
+    } catch (err) {
+      console.error('[useTourRequestChat] sendFileMessage error', err?.message || err);
+      return false;
+    } finally {
+      setSending(false);
+    }
+  }, [withAuth, requestId, apiBase]);
+
+  const setMinPrice = useCallback(async (amount, currency = 'VND') => {
+    if (!amount || amount <= 0 || !withAuth || !requestId) return false;
+    try {
+      const res = await withAuth(`${apiBase}/${requestId}/set-min-price`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, currency }),
+      });
+      return res?.success ?? true;
+    } catch (err) {
+      console.error('[useTourRequestChat] setMinPrice error', err?.message || err);
+      return false;
+    }
+  }, [withAuth, requestId, apiBase]);
+
+  // Calculate unread count when messages change
+  useEffect(() => {
+    const count = messages.filter((m) => {
+      // Compare user IDs - handle both ObjectId and string formats
+      const senderUserId = m.sender?.userId?._id || m.sender?.userId?.toString() || m.sender?.userId;
+      const currentUserId = user?._id?.toString() || user?._id;
+      const isFromOther = senderUserId !== currentUserId;
+      return isFromOther && !m.isRead;
+    }).length;
+    setUnreadCount(count);
+  }, [messages, user]);
+
   const sendTypingIndicator = useCallback((isTyping) => {
     if (!socket || !requestId) return;
 
     const emitTyping = (flag) => {
-      socket.emit('typing', { requestId, isTyping: flag, userId: user?.id || user?.sub, name: user?.name });
+      socket.emit('typing', { requestId, isTyping: flag, userId: user?._id, name: user?.name });
       // update local typing set for immediate UI feedback
       setTypingUsers((prev) => {
         const next = new Set(prev);
-        const id = user?.id || user?.sub || 'me';
+        const id = user?._id || 'me';
         if (flag) next.add(id);
         else next.delete(id);
         return next;
@@ -240,10 +425,16 @@ export function useTourRequestChat(requestId, apiBase = '/api/tour-requests') {
     sending,
     connected: !!socket?.connected,
     typingUsers,
+    unreadCount,
     sendMessage,
     sendOffer,
     agreeToTerms,
     sendTypingIndicator,
+    editMessage,
+    deleteMessage,
+    sendFileMessage,
+    setMinPrice,
+    refetchRequest: loadRequest, // Expose loadRequest so components can refetch
   };
 }
 

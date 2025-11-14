@@ -1,10 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Paperclip, X, Download, Edit2, Trash2, CheckCheck, Check, AlertCircle, Wifi, WifiOff } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Textarea } from '../ui/textarea';
-import { Card } from '../ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { format } from 'date-fns';
 import axios from 'axios';
 import { useSocket } from '../../context/SocketContext';
@@ -342,7 +338,7 @@ export default function TourRequestChat({ requestId, currentUser }) {
           animation: fadeIn 0.3s ease-out;
         }
       `}</style>
-      <Card className="flex flex-col h-[600px] bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
+      <div className="flex flex-col h-[600px] bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b-2 border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -416,12 +412,9 @@ export default function TourRequestChat({ requestId, currentUser }) {
                 >
                   <div className={`flex gap-2 max-w-[70%] sm:max-w-[80%] ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
                     {/* Avatar */}
-                    <Avatar className="w-8 h-8 flex-shrink-0">
-                      <AvatarImage src={message.sender.userId?.avatar} />
-                      <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white">
-                        {message.sender.name?.charAt(0) || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="w-8 h-8 flex-shrink-0 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                      {message.sender.name?.charAt(0) || 'U'}
+                    </div>
 
                     {/* Message Content */}
                     <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
@@ -650,7 +643,7 @@ export default function TourRequestChat({ requestId, currentUser }) {
           )}
         </div>
       </div>
-    </Card>
+      </div>
     </>
   );
 }

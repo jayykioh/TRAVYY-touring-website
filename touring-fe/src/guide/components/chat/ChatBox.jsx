@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, MapPin, Calendar, Users, Clock, DollarSign, CheckCircle, XCircle, Map } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Send, MapPin, Calendar, Users, Clock, DollarSign, CheckCircle, XCircle, Map, X, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../../auth/context';
 import { useTourRequestChat } from '../../../hooks/useTourRequestChat';
+import PriceAgreementCard from '../../../components/chat/PriceAgreementCard';
+import { toast } from 'sonner';
 
 const ChatBox = ({ requestId, customerName, tourInfo }) => {
   const [newMessage, setNewMessage] = useState('');
@@ -10,8 +12,11 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [offerAmount, setOfferAmount] = useState('');
   const [offerMessage, setOfferMessage] = useState('');
+  const [showMinPriceModal, setShowMinPriceModal] = useState(false);
+  const [minPriceAmount, setMinPriceAmount] = useState('');
+  const [processingAction, setProcessingAction] = useState(null); // 'accept', 'decline', 'agree', or null
   const messagesEndRef = useRef(null);
-  const { user } = useAuth();
+  const { user, withAuth } = useAuth();
 
   // Use custom hook for chat operations
   const {
@@ -24,16 +29,24 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
     sendMessage: sendMessageAPI,
     sendOffer,
     agreeToTerms,
-    sendTypingIndicator
-  } = useTourRequestChat(requestId, '/api/guide/custom-requests');
+    sendTypingIndicator,
+    setMinPrice,
+    refetchRequest
+  } = useTourRequestChat(requestId, '/api/chat');
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    console.log('[ChatBox] mounted for requestId:', requestId);
+    console.log('[ChatBox] Messages loaded:', messages.length);
+    return () => console.log('[ChatBox] unmounted for requestId:', requestId);
+  }, [requestId, messages.length]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -94,43 +107,90 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
     }
   };
 
-  // Handle agreement
-  const handleAgree = async () => {
-    if (!window.confirm('Bạn chắc chắn đồng ý với giá này?')) return;
-    const success = await agreeToTerms();
+  // Handle setting min price
+  const handleSetMinPrice = async () => {
+    const amount = parseFloat(minPriceAmount.replace(/[^0-9.]/g, ''));
+    if (!amount || amount <= 0) {
+      alert('Vui lòng nhập số tiền hợp lệ');
+      return;
+    }
+
+    const success = await setMinPrice(amount, 'VND');
     if (success) {
-      alert('Đã đồng ý thành công!');
+      setShowMinPriceModal(false);
+      setMinPriceAmount('');
+      alert('Đã đặt giá tối thiểu thành công!');
     }
   };
 
-  // Get current price info
-  const getCurrentPrice = () => {
-    if (requestDetails?.finalPrice?.amount) {
-      return {
-        amount: requestDetails.finalPrice.amount,
-        status: 'agreed',
-        agreedBy: requestDetails.agreement?.userAgreed && requestDetails.agreement?.guideAgreed ? 'both' : null
-      };
+  // Handle accepting request
+  const handleAcceptRequest = async () => {
+    if (!window.confirm('Bạn chắc chắn đồng ý chấp nhận yêu cầu này?')) return;
+    
+    try {
+      setProcessingAction('accept');
+      console.log('[ChatBox] Accepting request:', requestId);
+      
+      const response = await withAuth(`/api/guide/custom-requests/${requestId}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          finalAmount: 0,
+          currency: 'VND'
+        })
+      });
+      
+      if (response.success) {
+        toast.success('✅ Đã chấp nhận yêu cầu tour!');
+        // Refetch request details to update status
+        setTimeout(async () => {
+          await refetchRequest();
+          setProcessingAction(null);
+        }, 800);
+      } else {
+        toast.error(response.error || 'Không thể chấp nhận yêu cầu');
+        setProcessingAction(null);
+      }
+    } catch (error) {
+      console.error('[ChatBox] Error accepting request:', error);
+      toast.error('❌ Có lỗi xảy ra: ' + (error.message || 'Lỗi không xác định'));
+      setProcessingAction(null);
     }
-    if (requestDetails?.priceOffers && requestDetails.priceOffers.length > 0) {
-      const latest = requestDetails.priceOffers[requestDetails.priceOffers.length - 1];
-      return {
-        amount: latest.amount,
-        offeredBy: latest.offeredBy,
-        message: latest.message,
-        status: 'negotiating'
-      };
-    }
-    if (requestDetails?.initialBudget?.amount) {
-      return {
-        amount: requestDetails.initialBudget.amount,
-        status: 'initial'
-      };
-    }
-    return null;
   };
 
-  const priceInfo = getCurrentPrice();
+  // Handle declining request
+  const handleDeclineRequest = async () => {
+    if (!window.confirm('Bạn chắc chắn muốn từ chối yêu cầu này?')) return;
+    
+    try {
+      setProcessingAction('decline');
+      console.log('[ChatBox] Declining request:', requestId);
+      
+      const response = await withAuth(`/api/guide/custom-requests/${requestId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: 'Declined by guide'
+        })
+      });
+      
+      if (response.success) {
+        toast.success('✅ Đã từ chối yêu cầu');
+        // Refetch request details to update status
+        setTimeout(async () => {
+          await refetchRequest();
+          setProcessingAction(null);
+        }, 800);
+      } else {
+        toast.error(response.error || 'Không thể từ chối yêu cầu');
+        setProcessingAction(null);
+      }
+    } catch (error) {
+      console.error('[ChatBox] Error declining request:', error);
+      toast.error('❌ Có lỗi xảy ra: ' + (error.message || 'Lỗi không xác định'));
+      setProcessingAction(null);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden">
@@ -222,7 +282,18 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
           </div>
         )}
 
-        {/* Itinerary Details - Collapsible */}
+        {/* Price Agreement Card - New unified component for both guide and traveller */}
+        {requestDetails && (
+          <PriceAgreementCard
+            requestDetails={requestDetails}
+            userRole="guide"
+            onSendOffer={sendOffer}
+            onAgree={agreeToTerms}
+            loading={sending}
+          />
+        )}
+
+        {/* Messages from chat */}
         {showItinerary && requestDetails?.tourDetails?.items && (
           <div className="bg-white rounded-xl p-3 border-2 border-blue-200 shadow-sm">
             <div className="flex items-center justify-between mb-3">
@@ -271,73 +342,79 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
           </div>
         )}
 
-        {/* Price Negotiation Card */}
-        {priceInfo && (
-          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-3 border-2 border-purple-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
+        {/* Request Status & Accept/Decline Card */}
+        {requestDetails && requestDetails.status && requestDetails.status !== 'accepted' && requestDetails.status !== 'rejected' && (
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-3 border-2 border-blue-200 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-purple-600" />
-                Thương lượng giá
+                <AlertCircle className="w-4 h-4 text-blue-600" />
+                Quyết định yêu cầu
               </h4>
-              <div className="text-right">
-                <div className="text-lg font-bold text-purple-600">
-                  {priceInfo.amount.toLocaleString('vi-VN')} VND
-                </div>
-                <div className="text-xs text-gray-500">
-                  {priceInfo.status === 'agreed' && '✅ Đã thỏa thuận'}
-                  {priceInfo.status === 'negotiating' && `💬 ${priceInfo.offeredBy === 'guide' ? 'Bạn đề xuất' : 'Khách đề xuất'}`}
-                  {priceInfo.status === 'initial' && '📝 Ngân sách ban đầu'}
-                </div>
-              </div>
+              <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">
+                {requestDetails.status === 'pending' ? '⏳ Chờ xử lý' : '💬 Đang thương lượng'}
+              </span>
             </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={handleAcceptRequest}
+                disabled={processingAction !== null}
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {processingAction === 'accept' ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  <>
+                    ✅ Chấp nhận
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleDeclineRequest}
+                disabled={processingAction !== null}
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white rounded-lg text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {processingAction === 'decline' ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  <>
+                    ❌ Từ chối
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
 
-            {priceInfo.message && (
-              <div className="mb-3 p-2 bg-white/70 rounded-lg border border-purple-200">
-                <p className="text-xs text-gray-700 italic">"{priceInfo.message}"</p>
-              </div>
-            )}
+        {/* Request Status - Accepted */}
+        {requestDetails && requestDetails.status === 'accepted' && (
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-3 border-2 border-green-300 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-green-900 text-sm flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                ✅ Yêu cầu đã được chấp nhận
+              </h4>
+            </div>
+            <p className="text-xs text-green-700 mt-2">Chờ khách hàng tiến hành thanh toán.</p>
+          </div>
+        )}
 
-            {/* Agreement status */}
-            {requestDetails?.agreement && (
-              <div className="mb-3 grid grid-cols-2 gap-2">
-                <div className={`p-2 rounded-lg border-2 text-xs ${
-                  requestDetails.agreement.guideAgreed 
-                    ? 'bg-green-50 border-green-300 text-green-700' 
-                    : 'bg-gray-50 border-gray-300 text-gray-500'
-                }`}>
-                  {requestDetails.agreement.guideAgreed ? <CheckCircle className="w-3 h-3 inline mr-1" /> : <XCircle className="w-3 h-3 inline mr-1" />}
-                  Guide {requestDetails.agreement.guideAgreed ? 'đã đồng ý' : 'chưa đồng ý'}
-                </div>
-                <div className={`p-2 rounded-lg border-2 text-xs ${
-                  requestDetails.agreement.userAgreed 
-                    ? 'bg-green-50 border-green-300 text-green-700' 
-                    : 'bg-gray-50 border-gray-300 text-gray-500'
-                }`}>
-                  {requestDetails.agreement.userAgreed ? <CheckCircle className="w-3 h-3 inline mr-1" /> : <XCircle className="w-3 h-3 inline mr-1" />}
-                  Khách {requestDetails.agreement.userAgreed ? 'đã đồng ý' : 'chưa đồng ý'}
-                </div>
-              </div>
-            )}
-
-            {/* Action buttons */}
-            {priceInfo.status !== 'agreed' && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowOfferModal(true)}
-                  disabled={sending}
-                  className="flex-1 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg text-xs font-medium transition-all disabled:opacity-50"
-                >
-                  💰 Đề xuất giá mới
-                </button>
-                <button
-                  onClick={handleAgree}
-                  disabled={sending || requestDetails?.agreement?.guideAgreed}
-                  className="flex-1 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg text-xs font-medium transition-all disabled:opacity-50"
-                >
-                  ✓ Đồng ý giá này
-                </button>
-              </div>
-            )}
+        {/* Request Status - Rejected */}
+        {requestDetails && requestDetails.status === 'rejected' && (
+          <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-3 border-2 border-red-300 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-red-900 text-sm flex items-center gap-2">
+                <XCircle className="w-4 h-4 text-red-600" />
+                ❌ Yêu cầu đã bị từ chối
+              </h4>
+            </div>
+            <p className="text-xs text-red-700 mt-2">Cuộc trò chuyện này đã kết thúc.</p>
           </div>
         )}
 
@@ -358,10 +435,24 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
           <>
             {messages.map((msg) => {
               // Check if message is from current user (guide)
-              const isMyMessage = msg.sender?.role === 'guide' || msg.sender?.userId === user?.sub;
+              // Handle both ObjectId and string formats for userId comparison
+              const senderUserId = msg.sender?.userId?._id || msg.sender?.userId?.toString() || msg.sender?.userId;
+              const currentUserId = user?._id?.toString() || user?._id;
+              
+              // Require BOTH role match AND userId match to identify sender correctly
+              const isMyMessage = msg.sender?.role === 'guide' && senderUserId === currentUserId;
               const senderName = isMyMessage 
                 ? 'Bạn' 
                 : (msg.sender?.name || customerName || 'Khách hàng');
+              
+              console.log('[ChatBox] Rendering message:', {
+                id: msg._id,
+                isMyMessage,
+                role: msg.sender?.role,
+                senderUserId,
+                currentUserId,
+                senderName
+              });
               
               return (
                 <div
@@ -481,10 +572,7 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
       {/* Offer Modal */}
       {showOfferModal && (
         <>
-          <div 
-            className="fixed inset-0 bg-black/50 z-[10000]"
-            onClick={() => setShowOfferModal(false)}
-          />
+          <div className="fixed inset-0 bg-black/40 z-[10000]" onClick={() => setShowOfferModal(false)}></div>
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10001] w-[90%] max-w-md bg-white rounded-2xl shadow-2xl p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-purple-600" />
@@ -534,6 +622,67 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
                   className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {sending ? 'Đang gửi...' : 'Gửi đề xuất'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Min Price Modal */}
+      {showMinPriceModal && (
+        <>
+          <div className="fixed inset-0 bg-black/40 z-[10000]" onClick={() => setShowMinPriceModal(false)}></div>
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10001] w-[90%] max-w-md bg-white rounded-2xl shadow-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-orange-600" />
+                Đặt giá tối thiểu
+              </h3>
+              <button
+                onClick={() => setShowMinPriceModal(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Giá tối thiểu (VND) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={minPriceAmount}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    setMinPriceAmount(value ? parseInt(value).toLocaleString('vi-VN') : '');
+                  }}
+                  placeholder="Ví dụ: 5,000,000"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg font-semibold"
+                />
+              </div>
+
+              <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-3">
+                <p className="text-xs text-orange-700">
+                  💡 Khách hàng sẽ thấy giá tối thiểu này và không thể đề xuất giá thấp hơn.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowMinPriceModal(false)}
+                  className="flex-1 px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-medium transition-all"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleSetMinPrice}
+                  disabled={!minPriceAmount || sending}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {sending ? 'Đang đặt...' : 'Đặt giá'}
                 </button>
               </div>
             </div>

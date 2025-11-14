@@ -162,7 +162,16 @@ mongoose
   .connect(MONGO_URI)
   .then(() => {
     console.log("✅ MongoDB connected");
-    app.listen(PORT, () =>
+
+    // Setup refund scheduler after MongoDB is connected
+    setupRefundScheduler();
+
+    
+  // Initialize WebSocket handlers and collection watchers
+  const setupSockets = require('./socket');
+  setupSockets(io);
+    
+    server.listen(PORT, () =>
       console.log(`🚀 API listening on http://localhost:${PORT}`)
     );
   })

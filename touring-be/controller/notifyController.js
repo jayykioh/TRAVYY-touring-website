@@ -547,21 +547,66 @@ const notifyPasswordResetSuccess = async (req, res) => {
   }
 };
 
-module.exports = {
-  notifyBookingSuccess,
-  notifyPaymentSuccess,
-  sendPaymentSuccessNotification,
-  notifyNewTour,
-  notifyRegister,
-  getUserNotifications,
-  markNotificationsAsRead,
-  getNotificationStats,
-  notifyPasswordChanged,
-  notifyPasswordReset,
-  notifyPasswordResetSuccess,
-};
+/**
+ * Mark a single notification as read
+ * PUT /api/notify/:id/read
+ */
+const markNotificationAsRead = async (req, res) => {
+  try {
+    const userId = req.user?.sub || req.user?._id;
+    const userRole = req.user?.role;
+    const { id } = req.params;
 
-// ===== ADDITIONAL API ENDPOINTS =====
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    let result;
+
+    // If user is TourGuide, mark in GuideNotification
+    if (userRole === 'TourGuide') {
+      const GuideNotification = require('../models/guide/GuideNotification');
+      result = await GuideNotification.findByIdAndUpdate(
+        id,
+        { $set: { read: true } },
+        { new: true }
+      );
+
+      // Verify ownership
+      if (result && result.guideId.toString() !== userId.toString()) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+    } else {
+      // For regular users (travellers)
+      result = await Notification.findByIdAndUpdate(
+        id,
+        { $set: { read: true, readAt: new Date() } },
+        { new: true }
+      );
+
+      // Verify ownership
+      if (result && result.userId.toString() !== userId.toString()) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+    }
+
+    if (!result) {
+      return res.status(404).json({ error: "Notification not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Notification marked as read",
+      notification: result
+    });
+  } catch (error) {
+    console.error("[Notifications] Mark read error:", error);
+    res.status(500).json({ 
+      error: "Failed to mark notification as read",
+      message: error.message 
+    });
+  }
+};
 
 /**
  * Mark all notifications as read for user
@@ -675,6 +720,7 @@ module.exports = {
   notifyRegister,
   getUserNotifications,
   markNotificationsAsRead,
+  markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotification,
   getUnreadCount,

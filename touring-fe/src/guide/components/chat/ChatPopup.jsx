@@ -4,7 +4,7 @@ import { useAuth } from '../../../auth/context';
 import { useSocket } from '../../../context/SocketContext';
 import ChatBox from './ChatBox';
 
-const ChatPopup = ({ isOpen, onClose }) => {
+const ChatPopup = ({ isOpen, onClose, userRole }) => {
   const { user, withAuth } = useAuth();
   const { socket, joinRoom, leaveRoom, on } = useSocket() || {};
   const [activeRequests, setActiveRequests] = useState([]);
@@ -18,14 +18,18 @@ const ChatPopup = ({ isOpen, onClose }) => {
   const fetchActiveRequests = useCallback(async () => {
     try {
       setLoading(true);
-      // Debug: log auth state before API call
-      console.log('[ChatPopup] fetchActiveRequests - auth context:', { user: user?.id, hasWithAuth: !!withAuth });
+      console.log('[ChatPopup] fetchActiveRequests - auth context:', { user: user?.id, hasWithAuth: !!withAuth, userRole });
       
-      // Check if user is a guide
-      const isGuide = user?.role === 'TourGuide';
+      // Determine user role from props or user object
+      const roleToCheck = userRole || user?.role;
+      const isGuide = roleToCheck === 'TourGuide';
+      
+      console.log('[ChatPopup] Role detection: roleToCheck=', roleToCheck, 'isGuide=', isGuide);
+      
+      // ✅ INCLUDE 'pending' so guide can chat about request details before accepting
       const endpoint = isGuide 
-        ? '/api/guide/custom-requests?status=accepted,negotiating,agreement_pending'
-        : '/api/tourRequest/?status=accepted,negotiating,agreement_pending';
+        ? '/api/guide/custom-requests?status=pending,accepted,negotiating,agreement_pending'
+        : '/api/tour-requests/?status=pending,accepted,negotiating,agreement_pending';
       
       console.log('[ChatPopup] Fetching from endpoint:', endpoint, 'isGuide:', isGuide);
       
@@ -34,14 +38,32 @@ const ChatPopup = ({ isOpen, onClose }) => {
       console.log('[ChatPopup] API response:', response);
       
       if (response.success) {
-        const requests = response.tourRequests || response.requests || [];
-        console.log('[ChatPopup] Loaded requests:', requests.length, 'data:', requests);
-        setActiveRequests(requests);
-        activeRequestsRef.current = requests;
+        const requests = response.requests || response.tourRequests || [];
+        
+        // Normalize the data: ensure all requests have required fields from tourDetails
+        const normalizedRequests = requests.map(req => {
+          const tourDetails = req.tourDetails || {
+            zoneName: req.itineraryId?.zoneName || req.itineraryId?.name || 'Tour',
+            numberOfGuests: req.numberOfGuests || 0,
+            numberOfDays: req.itineraryId?.items?.length || 0
+          };
+          
+          return {
+            ...req,
+            tourDetails,
+            startDate: req.preferredDates?.[0] || req.startDate,
+            initialBudget: req.initialBudget,
+            finalPrice: req.finalPrice
+          };
+        });
+        
+        console.log('[ChatPopup] Loaded requests:', normalizedRequests.length, 'normalized:', normalizedRequests);
+        setActiveRequests(normalizedRequests);
+        activeRequestsRef.current = normalizedRequests;
         
         // Fetch unread counts for each request
         const counts = {};
-        for (const req of requests) {
+        for (const req of normalizedRequests) {
           try {
             const chatRes = await withAuth(`/api/chat/${req._id}/unread`);
             if (chatRes.success) {
@@ -58,7 +80,7 @@ const ChatPopup = ({ isOpen, onClose }) => {
       } finally {
         setLoading(false);
       }
-    }, [withAuth, user]);
+    }, [withAuth, user, userRole]);
 
   // Fetch active tour requests with chat
   useEffect(() => {
@@ -81,16 +103,28 @@ const ChatPopup = ({ isOpen, onClose }) => {
 
     // Listen for new messages across all chat rooms
     const handleNewMessage = (msg) => {
-      if (!msg || !msg.tourRequestId) return;
+      if (!msg || !msg.tourRequestId) {
+        console.warn('[ChatPopup] Received invalid message event:', msg);
+        return;
+      }
       
       // Check if this message is for one of our active requests
       const requestId = msg.tourRequestId.toString();
       const hasRequest = activeRequestsRef.current.some(req => req._id === requestId);
 
+      console.log('[ChatPopup] newMessage event received:', {
+        messageId: msg._id,
+        requestId,
+        senderRole: msg.sender?.role,
+        hasMatchingRequest: hasRequest,
+        content: msg.content?.substring(0, 50)
+      });
+
       // Only count as unread for guide when sender is not guide
       if (hasRequest && msg.sender?.role !== 'guide') {
         // Increment unread count if not already in that chat
         if (!selectedRequestRef.current || selectedRequestRef.current._id !== requestId) {
+          console.log('[ChatPopup] Incrementing unread count for request:', requestId);
           setUnreadCounts(prev => ({
             ...prev,
             [requestId]: (prev[requestId] || 0) + 1
@@ -214,7 +248,7 @@ const ChatPopup = ({ isOpen, onClose }) => {
       />
       
       {/* Popup */}
-      <div className="fixed bottom-20 right-6 w-[450px] max-w-[calc(100vw-3rem)] h-[650px] max-h-[80vh] bg-white rounded-2xl shadow-2xl z-[9999] flex flex-col overflow-hidden animate-slideUp">
+      <div className="fixed bottom-24 right-8 w-[420px] max-w-[calc(100vw-2rem)] h-[600px] max-h-[85vh] bg-white rounded-2xl shadow-2xl z-[9999] flex flex-col overflow-hidden animate-slideUp">
         {/* Header */}
         <div className="flex items-center justify-between p-4 bg-gradient-to-r from-teal-500 to-cyan-500 text-white">
           <div className="flex items-center gap-2">
@@ -229,10 +263,10 @@ const ChatPopup = ({ isOpen, onClose }) => {
             <MessageCircle className="w-5 h-5" />
             <h3 className="font-semibold">
               {selectedRequest ? (
-                user?.role === 'TourGuide' 
+                (userRole || user?.role) === 'TourGuide' 
                   ? (selectedRequest.userId?.name || 'Khách hàng')
                   : (selectedRequest.guideId?.name || 'Hướng dẫn viên')
-              ) : (user?.role === 'TourGuide' ? 'Chat với Khách hàng' : 'Chat với Hướng dẫn viên')}
+              ) : ((userRole || user?.role) === 'TourGuide' ? 'Chat với Khách hàng' : 'Chat với Hướng dẫn viên')}
             </h3>
             {!selectedRequest && totalUnread > 0 && (
               <div className="flex items-center gap-1 bg-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold animate-pulse">
@@ -256,7 +290,7 @@ const ChatPopup = ({ isOpen, onClose }) => {
             <ChatBox
               requestId={selectedRequest._id}
               customerName={
-                user?.role === 'TourGuide' 
+                (userRole || user?.role) === 'TourGuide' 
                   ? (selectedRequest.userId?.name || 'Khách hàng')
                   : (selectedRequest.guideId?.name || 'Hướng dẫn viên')
               }
@@ -265,7 +299,7 @@ const ChatPopup = ({ isOpen, onClose }) => {
                 name: selectedRequest.tourDetails?.zoneName,
                 location: selectedRequest.tourDetails?.zoneName,
                 departureDate: selectedRequest.startDate,
-                numberOfGuests: selectedRequest.tourDetails?.numberOfGuests,
+                numberOfGuests: selectedRequest.tourDetails?.numberOfGuests || selectedRequest.numberOfGuests,
                 duration: `${selectedRequest.tourDetails?.numberOfDays || 0} ngày`,
                 totalPrice: selectedRequest.finalPrice?.amount || selectedRequest.initialBudget?.amount
               }}
@@ -283,7 +317,7 @@ const ChatPopup = ({ isOpen, onClose }) => {
                 <MessageCircle className="w-16 h-16 mb-4 opacity-50" />
                 <p className="text-center">Chưa có yêu cầu tour nào đang hoạt động</p>
                 <p className="text-sm text-center mt-2">
-                  {user?.role === 'TourGuide' 
+                  {(userRole || user?.role) === 'TourGuide' 
                     ? 'Chấp nhận yêu cầu để bắt đầu chat với khách hàng'
                     : 'Tạo yêu cầu tour để bắt đầu chat với hướng dẫn viên'
                   }
@@ -293,6 +327,12 @@ const ChatPopup = ({ isOpen, onClose }) => {
               <div className="space-y-3">
                 {activeRequests.map((request) => {
                   const requestUnread = unreadCounts[request._id] || 0;
+                  const displayName = (userRole || user?.role) === 'TourGuide' 
+                    ? (request.userId?.name || 'Khách hàng')
+                    : (request.guideId?.name || 'Hướng dẫn viên');
+                  const tourName = request.tourDetails?.zoneName || 'Tour Request';
+                  const days = request.tourDetails?.numberOfDays || 0;
+                  const guests = request.tourDetails?.numberOfGuests || request.numberOfGuests || 0;
                   
                   return (
                     <button
@@ -309,13 +349,10 @@ const ChatPopup = ({ isOpen, onClose }) => {
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-900 group-hover:text-teal-600 transition-colors">
-                            {request.tourDetails?.zoneName || 'Tour Request'}
+                            {tourName}
                           </h4>
                           <p className="text-sm text-gray-600 mt-1">
-                            {user?.role === 'TourGuide' 
-                              ? (request.userId?.name || 'Khách hàng')
-                              : (request.guideId?.name || 'Hướng dẫn viên')
-                            }
+                            {displayName}
                           </p>
                         </div>
                         {requestUnread > 0 && (
@@ -327,10 +364,10 @@ const ChatPopup = ({ isOpen, onClose }) => {
                     
                     <div className="flex items-center gap-4 text-xs text-gray-500 mt-3">
                       <span className="flex items-center gap-1">
-                        📅 {request.tourDetails?.numberOfDays || 0} ngày
+                        📅 {days} ngày
                       </span>
                       <span className="flex items-center gap-1">
-                        👥 {request.tourDetails?.numberOfGuests || 0} khách
+                        👥 {guests} khách
                       </span>
                     </div>
 

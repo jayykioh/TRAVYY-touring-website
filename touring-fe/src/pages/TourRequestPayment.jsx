@@ -52,15 +52,15 @@ export default function TourRequestPayment() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             mode: "tour-request",
-            requestId: request._id,
-            amount: request?.payment?.totalVND || request?.finalPrice || 0
+            requestId: request._id
           })
         });
 
-        if (response.approvalUrl) {
-          window.location.href = response.approvalUrl;
+        if (response.orderID) {
+          // Redirect to PayPal approval URL
+          window.location.href = `${API_BASE}/api/paypal/approval?orderID=${response.orderID}`;
         } else {
-          throw new Error("Không nhận được URL thanh toán từ PayPal");
+          throw new Error("Không nhận được Order ID từ PayPal");
         }
 
       } else if (selectedPayment === "momo") {
@@ -69,8 +69,7 @@ export default function TourRequestPayment() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             mode: "tour-request",
-            requestId: request._id,
-            amount: request?.payment?.totalVND || request?.finalPrice || 0
+            requestId: request._id
           })
         });
 
