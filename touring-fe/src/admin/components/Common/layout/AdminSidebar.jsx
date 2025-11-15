@@ -22,6 +22,15 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
   const [expandedMenu, setExpandedMenu] = useState(null);
   const [profileOpen, setProfileOpen] = useState(false);
 
+  // Auto-expand menu if a submenu item is active
+  React.useEffect(() => {
+    menuItems.forEach((item) => {
+      if (item.subItems?.some((sub) => activePage === sub.id)) {
+        setExpandedMenu(item.id);
+      }
+    });
+  }, [activePage]);
+
   const handleNavigation = (path) => {
     navigate(path);
     // Close sidebar on mobile after navigation
@@ -53,7 +62,7 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
       id: "customers",
       label: "Customer Management",
       icon: Users,
-      path: "/admin/customers",
+      path: "/admin/customers/accounts",
       subItems: [
         {
           id: "customer-accounts",
@@ -100,6 +109,7 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
   };
 
   const handleNavigate = (path) => {
+    console.log("🔄 Navigating to:", path);
     navigate(path);
     if (window.innerWidth < 1024) {
       setIsOpen(false);
@@ -145,18 +155,25 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
           <div className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activePage === item.id;
               const hasSubItems = item.subItems && item.subItems.length > 0;
+              // Check if this menu or any of its subitems is active
+              const isActive =
+                activePage === item.id ||
+                (hasSubItems &&
+                  item.subItems.some((sub) => activePage === sub.id));
               const isExpanded = expandedMenu === item.id;
 
               return (
                 <div key={item.id} className="relative">
                   <button
                     onClick={() => {
+                      // Luôn navigate đến path khi click vào menu item
+                      if (item.path) {
+                        handleNavigate(item.path);
+                      }
+                      // Nếu có submenu, toggle expand/collapse
                       if (hasSubItems) {
                         toggleSubmenu(item.id);
-                      } else {
-                        handleNavigate(item.path);
                       }
                     }}
                     className={`group w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 ${
@@ -165,7 +182,7 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
                         : "text-gray-700 hover:bg-white hover:shadow-md"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1">
                       <Icon
                         className={`w-5 h-5 transition-transform duration-200 ${
                           isActive
@@ -183,37 +200,59 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
                         {item.label}
                       </span>
                     </div>
-                    {hasSubItems &&
-                      (isExpanded ? (
-                        <ChevronDown
-                          className={`w-4 h-4 transition-transform duration-200 ${
-                            isActive ? "text-white" : "text-gray-400"
-                          }`}
-                        />
-                      ) : (
-                        <ChevronRight
-                          className={`w-4 h-4 transition-transform duration-200 ${
-                            isActive ? "text-white" : "text-gray-400"
-                          }`}
-                        />
-                      ))}
+                    {hasSubItems && (
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSubmenu(item.id);
+                        }}
+                        className="p-1"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown
+                            className={`w-4 h-4 transition-transform duration-200 ${
+                              isActive ? "text-white" : "text-gray-400"
+                            }`}
+                          />
+                        ) : (
+                          <ChevronRight
+                            className={`w-4 h-4 transition-transform duration-200 ${
+                              isActive ? "text-white" : "text-gray-400"
+                            }`}
+                          />
+                        )}
+                      </div>
+                    )}
                   </button>
 
                   {/* Sub Items */}
                   {hasSubItems && isExpanded && (
                     <div className="mt-1 ml-4 pl-4 border-l-2 border-gray-200 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                      {item.subItems.map((subItem) => (
-                        <button
-                          key={subItem.id}
-                          onClick={() => handleNavigate(subItem.path)}
-                          className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:text-[#007980] hover:bg-[#007980]/10 rounded-lg transition-all duration-150 hover:translate-x-1"
-                        >
-                          <span className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 group-hover:bg-[#007980]"></span>
-                            {subItem.label}
-                          </span>
-                        </button>
-                      ))}
+                      {item.subItems.map((subItem) => {
+                        const isSubItemActive = activePage === subItem.id;
+                        return (
+                          <button
+                            key={subItem.id}
+                            onClick={() => handleNavigate(subItem.path)}
+                            className={`w-full text-left px-4 py-2.5 text-sm rounded-lg transition-all duration-150 hover:translate-x-1 ${
+                              isSubItemActive
+                                ? "bg-[#007980]/10 text-[#007980] font-semibold"
+                                : "text-gray-600 hover:text-[#007980] hover:bg-[#007980]/10"
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  isSubItemActive
+                                    ? "bg-[#007980]"
+                                    : "bg-gray-400"
+                                }`}
+                              ></span>
+                              {subItem.label}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

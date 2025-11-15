@@ -3,7 +3,7 @@ const API_URL = "http://localhost:4000/api";
 
 // Helper to get auth token
 const getAuthToken = () => {
-  return sessionStorage.getItem("admin_token");
+  return localStorage.getItem("admin_token");
 };
 
 // Helper to make authenticated requests
@@ -21,8 +21,8 @@ const fetchWithAuth = async (url, options = {}) => {
 
   if (response.status === 401) {
     // Token expired, redirect to login
-    sessionStorage.removeItem("admin_token");
-    sessionStorage.removeItem("admin_user");
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_user");
     window.location.href = "/admin/login";
     throw new Error("Authentication failed");
   }

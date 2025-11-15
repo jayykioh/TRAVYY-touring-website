@@ -155,6 +155,11 @@ exports.requestPreTripRefund = async (req, res) => {
     await refund.save();
     console.log("Refund saved successfully:", refund._id);
 
+    // ✅ Update booking status to pending_refund
+    booking.status = "pending_refund";
+    await booking.save();
+    console.log(`✅ Booking ${booking._id} status updated to 'pending_refund'`);
+
     res.status(201).json({
       success: true,
       message: "Pre-trip cancellation refund request created successfully",
@@ -282,6 +287,11 @@ exports.requestPostTripRefund = async (req, res) => {
     );
 
     await refund.save();
+
+    // ✅ Update booking status to pending_refund for post-trip refunds too
+    booking.status = "pending_refund";
+    await booking.save();
+    console.log(`✅ Booking ${booking._id} status updated to 'pending_refund'`);
 
     res.status(201).json({
       success: true,
@@ -750,7 +760,7 @@ exports.reviewRefund = async (req, res) => {
         requiresBankInfo: true,
       });
     } else {
-      // Rejection flow (unchanged)
+      // Rejection flow
       refund.status = "rejected";
       refund.rejectedAt = new Date();
       refund.addTimelineEntry(
@@ -761,9 +771,30 @@ exports.reviewRefund = async (req, res) => {
 
       await refund.save();
 
+      // ✅ Update booking status back to 'paid' when refund is rejected
+      // This ensures the tour will proceed as normal
+      const booking = await Booking.findById(refund.bookingId);
+      if (booking) {
+        console.log(
+          `🔄 [Refund Rejected] Restoring booking ${booking._id} status from ${booking.status} to paid`
+        );
+        // Only update if booking is in a refund-related status
+        if (
+          booking.status === "pending_refund" ||
+          booking.status === "refunded"
+        ) {
+          booking.status = "paid";
+          await booking.save();
+          console.log(
+            `✅ Booking ${booking._id} restored to 'paid' status - tour will proceed`
+          );
+        }
+      }
+
       res.json({
         success: true,
-        message: "Refund rejected successfully",
+        message:
+          "Refund rejected successfully. Booking remains active and tour will proceed as scheduled.",
         data: refund,
       });
     }

@@ -3,7 +3,7 @@ const API_URL = "http://localhost:4000/api";
 
 // Helper to get auth token
 const getAuthToken = () => {
-  return sessionStorage.getItem("admin_token");
+  return localStorage.getItem("admin_token");
 };
 
 // Helper to make authenticated requests
@@ -17,12 +17,13 @@ const fetchWithAuth = async (url, options = {}) => {
       Authorization: `Bearer ${token}`,
       ...options.headers,
     },
+    signal: options.signal, // Support abort signal
   });
 
   if (response.status === 401) {
     // Token expired, redirect to login
-    sessionStorage.removeItem("admin_token");
-    sessionStorage.removeItem("admin_user");
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_user");
     window.location.href = "/admin/login";
     throw new Error("Authentication failed");
   }
@@ -32,8 +33,10 @@ const fetchWithAuth = async (url, options = {}) => {
 
 /**
  * Get all customers (Travelers)
+ * @param {Object} filters - Filter options
+ * @param {AbortSignal} signal - Abort signal for cancelling requests
  */
-export const getCustomers = async (filters = {}) => {
+export const getCustomers = async (filters = {}, signal = null) => {
   try {
     const params = new URLSearchParams();
     params.append("role", "Traveler");
@@ -46,7 +49,7 @@ export const getCustomers = async (filters = {}) => {
     const queryString = params.toString();
     const url = `${API_URL}/admin/users${queryString ? `?${queryString}` : ""}`;
 
-    const response = await fetchWithAuth(url);
+    const response = await fetchWithAuth(url, { signal });
     const data = await response.json();
 
     return {
@@ -54,6 +57,10 @@ export const getCustomers = async (filters = {}) => {
       data: data.data || [],
     };
   } catch (error) {
+    // Don't log abort errors
+    if (error.name === "AbortError") {
+      throw error;
+    }
     console.error("❌ Get customers error:", error);
     return {
       success: false,

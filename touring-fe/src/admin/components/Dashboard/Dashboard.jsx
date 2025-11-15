@@ -8,8 +8,8 @@ import RevenueChart from "./RevenueChart";
 import CategoryPieChart from "./CategoryPieChart";
 import BookingTrendsChart from "./BookingTrendsChart";
 import ToursByRegionChart from "./ToursByRegionChart";
-import RecentToursTable from "./RecentToursTable";
-import AvailableGuides from "./AvailableGuidesTable.jsx";
+import TopPopularToursTable from "./TopPopularToursTable";
+import RecentReviewsTable from "./RecentReviewsTable";
 import AgeDistributionChart from "./AgeDistributionChart";
 import TopTravelersTable from "./TopTravelersTable";
 import { adminAPI } from "../../services/adminAPI";
@@ -19,8 +19,6 @@ import {
   detailedMetrics,
   revenueData,
   tourCategoryData,
-  recentTours,
-  availableGuides,
 } from "../../data/mockData";
 import { useAdminAuth } from "../../context/AdminAuthContext";
 
@@ -33,6 +31,8 @@ const Dashboard = () => {
   const [toursByRegionData, setToursByRegionData] = useState([]);
   const [ageDistributionData, setAgeDistributionData] = useState([]);
   const [topTravelersData, setTopTravelersData] = useState([]);
+  const [topPopularToursData, setTopPopularToursData] = useState([]);
+  const [recentReviewsData, setRecentReviewsData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [lastRefresh, setLastRefresh] = useState(new Date());
@@ -179,11 +179,28 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
+        // Fetch main dashboard stats
         const result = await adminAPI.getDashboardStats();
+
+        // Fetch refund stats
+        const refundResult = await adminAPI.getRefundStats();
+
+        // Fetch available guides
+        const guidesResult = await adminAPI.getAvailableGuides();
 
         if (result.success && result.data) {
           const { totalUsers, totalTours, totalBookings, totalRevenue } =
             result.data;
+
+          // Get refund data
+          const refundData = refundResult.success
+            ? refundResult.data
+            : { pending: 0, total: 0 };
+
+          // Get guides data
+          const guidesData = guidesResult.success
+            ? guidesResult.data
+            : { totalGuides: 0 };
 
           // Update stats with real data
           const updatedStats = [
@@ -191,39 +208,26 @@ const Dashboard = () => {
             {
               ...summaryStats[0],
               value: String(totalTours || 0),
-              // NOTE: ⚠️ Không có API để tính % thay đổi so với kỳ trước
-              // TODO: Backend cần thêm logic so sánh với tháng/tuần trước
             },
             // ❌ Card 2: Custom Tours - NO API YET
             {
               ...summaryStats[1],
-              // NOTE: ⚠️ Chưa có model CustomTour trong backend
-              // TODO: Backend cần tạo model CustomTour và API endpoint
-              // Endpoint đề xuất: GET /api/admin/custom-tours-stats
-              // Response: { pending: number, approved: number, rejected: number }
             },
             // ✅ Card 3: New Users - HAS API
             {
               ...summaryStats[2],
               value: String(totalUsers || 0),
-              // NOTE: ⚠️ Đây là TOTAL users, không phải "new users"
-              // TODO: Backend cần filter users created trong kỳ gần đây (7 days, 30 days)
             },
-            // ❌ Card 4: Active Guides - NO API YET
+            // ✅ Card 4: Active Guides - NOW HAS API
             {
               ...summaryStats[3],
-              // NOTE: ⚠️ Backend có role "TourGuide" nhưng chưa có API stats
-              // TODO: Backend cần thêm endpoint GET /api/admin/guides-stats
-              // Response: { total: number, active: number, pending: number }
-              // Active = guides có tour trong 30 ngày gần đây
+              value: String(guidesData.totalGuides || 0),
             },
             // ✅ Card 5: Revenue - HAS API (partial)
             {
               ...summaryStats[4],
               value: `${(totalRevenue / 1000000000).toFixed(1)}B đ`,
               breakdown: [
-                // NOTE: ⚠️ Chưa có API tách revenue theo nguồn (API tours vs Custom tours)
-                // TODO: Backend cần thêm breakdown trong getDashboardStats
                 { label: "API", value: "1.5B" }, // Placeholder
                 { label: "Custom", value: "0.9B" }, // Placeholder
               ],
@@ -231,18 +235,14 @@ const Dashboard = () => {
             // ❌ Card 6: Cancellation Rate - NO API YET
             {
               ...summaryStats[5],
-              // NOTE: ⚠️ Backend có status "cancelled" trong Bookings nhưng chưa có API stats
-              // TODO: Backend cần thêm cancellation rate calculation
-              // Formula: (cancelled bookings / total bookings) * 100
-              // Endpoint: GET /api/admin/cancellation-stats
             },
-            // ❌ Card 7: Refund Requests - NO API YET
+            // ✅ Card 7: Refund Requests - NOW HAS API
             {
               ...summaryStats[6],
-              // NOTE: ⚠️ Không có model Refund/Complaint trong backend
-              // TODO: Backend cần tạo model Refund và API endpoint
-              // Endpoint: GET /api/admin/refund-stats
-              // Response: { pending: number, approved: number, rejected: number }
+              value: String(refundData.total || 0),
+              subtitle: `${refundData.pending || 0} chờ xử lý, ${
+                refundData.approved || 0
+              } đã duyệt`,
             },
           ];
 
@@ -406,6 +406,18 @@ const Dashboard = () => {
         const topTravelersResult = await adminAPI.getTopTravelers();
         if (topTravelersResult.success && topTravelersResult.data) {
           setTopTravelersData(topTravelersResult.data);
+        }
+
+        // Fetch top popular tours
+        const topToursResult = await adminAPI.getTopPopularTours();
+        if (topToursResult.success && topToursResult.data) {
+          setTopPopularToursData(topToursResult.data);
+        }
+
+        // Fetch recent reviews
+        const reviewsResult = await adminAPI.getRecentReviews();
+        if (reviewsResult.success && reviewsResult.data) {
+          setRecentReviewsData(reviewsResult.data);
         }
       } catch (error) {
         console.error("Error fetching chart data:", error);
@@ -571,10 +583,10 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* Tables */}
+        {/* Tables - Top Popular Tours & Recent Reviews */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <RecentToursTable data={recentTours} />
-          <AvailableGuides data={availableGuides} />
+          <TopPopularToursTable data={topPopularToursData} />
+          <RecentReviewsTable data={recentReviewsData} />
         </div>
 
         {/* Footer Info */}
