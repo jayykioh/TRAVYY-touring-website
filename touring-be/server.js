@@ -75,6 +75,8 @@ try {
   console.warn("Diag paypal keys failed", e);
 }
 
+// --- location tour for RegionTour ---
+const locationTourRoutes = require("./routes/locationTour.routes");
 // --- Core middlewares ---
 app.use(helmet());
 app.use(compression());
@@ -96,6 +98,7 @@ app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   next();
 });
+app.use("/api/location-tours", locationTourRoutes);
 
 if (isProd) app.set("trust proxy", 1);
 

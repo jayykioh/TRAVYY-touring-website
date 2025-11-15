@@ -14,7 +14,7 @@ const NotificationsPage = () => {
       try {
         setLoading(true);
         setError(null);
-  const data = await withAuth("/api/notify/my");
+        const data = await withAuth("/api/notify/my");
         if (data.success) {
           setNotifications(data.notifications || []);
           setUnreadCount(data.unreadCount || 0);
@@ -39,9 +39,11 @@ const NotificationsPage = () => {
   if (error) return <div className="p-6 text-red-500">Lỗi: {error}</div>;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Thông báo</h1>
+    <div className="px-6 py-4 min-h-screen">
+      <div className="mb-6 ml-4">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">
+          Thông báo
+        </h1>
         <p className="text-gray-500">
           {unreadCount > 0
             ? `Bạn có ${unreadCount} thông báo chưa đọc`
