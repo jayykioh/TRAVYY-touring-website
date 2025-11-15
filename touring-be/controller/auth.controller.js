@@ -337,72 +337,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Nếu cần Email Verification, gửi mã và return
-    if (requiresEmailVerification) {
-      // Generate 6-digit code
-      const verificationCode = Math.floor(
-        100000 + Math.random() * 900000
-      ).toString();
-      user.emailVerificationCode = verificationCode;
-      user.emailVerificationCodeExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-      await user.save();
-
-      // Send email
-      try {
-        await sendMail(
-          user.email,
-          "Mã xác thực đăng nhập - TRAVYY",
-          `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
-                <h1 style="color: white; margin: 0; font-size: 28px;">🔐 Xác thực đăng nhập</h1>
-              </div>
-              
-              <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">
-                  Xin chào <strong>${user.name || user.username}</strong>,
-                </p>
-                
-                <p style="font-size: 16px; color: #374151; margin-bottom: 30px;">
-                  Mã xác thực đăng nhập của bạn là:
-                </p>
-                
-                <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 30px;">
-                  <h2 style="color: #1f2937; font-size: 36px; letter-spacing: 8px; margin: 0; font-family: monospace;">
-                    ${verificationCode}
-                  </h2>
-                </div>
-                
-                <p style="font-size: 14px; color: #6b7280; margin-bottom: 20px;">
-                  ⏰ Mã này sẽ hết hạn sau <strong>10 phút</strong>
-                </p>
-                
-                <p style="font-size: 14px; color: #6b7280; margin-bottom: 0;">
-                  Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.
-                </p>
-              </div>
-              
-              <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-                <p style="font-size: 12px; color: #9ca3af; margin: 0;">
-                  © ${new Date().getFullYear()} TRAVYY. All rights reserved.
-                </p>
-              </div>
-            </div>
-          `
-        );
-      } catch (emailError) {
-        console.error("❌ Email sending error:", emailError);
-        return res.status(500).json({
-          message: "Không thể gửi mã xác thực. Vui lòng thử lại sau.",
-        });
-      }
-
-      return res.json({
-        requiresEmailVerification: true,
-        userId: user.id,
-        message: "Vui lòng kiểm tra email để lấy mã xác thực",
-      });
-    }
+    // Email verification removed - only 2FA is supported
 
     // ✅ Nếu không cần verification, tạo refresh cookie + access token ngay
     const jti = newId();

@@ -1,11 +1,62 @@
-# TRAVYY - Touring Website
+# TRAVYY - User Manual & Step-by-Step Workflow Guide
 
-## Final Project Deliverables & Documentation
+## Project Information
 
 **Project Code**: TRAVYY-2025  
 **Version**: 1.0  
-**Last Updated**: November 14, 2025  
+**Last Updated**: November 16, 2025  
 **Team**: G1-TRAVYY
+
+---
+
+## Table of Contents
+
+1. [Authentication Workflows](#1-authentication-workflows)
+   - 1.1 User Registration
+   - 1.2 User Login
+   - 1.3 OAuth Login (Google/Facebook)
+   - 1.4 Forgot Password
+   - 1.5 Reset Password
+2. [Tour Discovery & Booking Workflows](#2-tour-discovery--booking-workflows)
+   - 2.1 Discover Zones with AI
+   - 2.2 View Zone Details
+   - 2.3 Browse Tours
+   - 2.4 View Tour Details
+   - 2.5 Add to Cart
+   - 2.6 Add to Wishlist
+3. [Payment Workflows](#3-payment-workflows)
+   - 3.1 Checkout with MoMo
+   - 3.2 Checkout with PayPal
+   - 3.3 Payment Success
+   - 3.4 Payment Failed
+4. [Booking Management Workflows](#4-booking-management-workflows)
+   - 4.1 View Booking History
+   - 4.2 View Booking Details
+   - 4.3 Retry Failed Payment
+5. [Refund Request Workflows](#5-refund-request-workflows)
+   - 5.1 Request Pre-Trip Refund (Cancellation)
+   - 5.2 Request Post-Trip Refund (Issue Report)
+   - 5.3 Provide Bank Information
+   - 5.4 View Refund Status
+   - 5.5 Cancel Refund Request
+6. [User Profile Workflows](#6-user-profile-workflows)
+   - 6.1 View Profile
+   - 6.2 Edit Profile
+   - 6.3 Change Password
+   - 6.4 Enable 2FA
+   - 6.5 Disable 2FA
+7. [Admin - User Management Workflows](#7-admin---user-management-workflows)
+   - 7.1 View All Users
+   - 7.2 View User Details
+   - 7.3 Ban User
+   - 7.4 Unban User
+8. [Admin - Refund Management Workflows](#8-admin---refund-management-workflows)
+   - 8.1 View All Refunds
+   - 8.2 Review Refund Request
+   - 8.3 Approve Refund
+   - 8.4 Reject Refund
+   - 8.5 Process Refund Payment
+   - 8.6 Manual Refund Processing
 
 ---
 
@@ -477,221 +528,1276 @@ lsof -ti:8088 | xargs kill -9
 
 ---
 
-## III. User Manual
+## III. Step-by-Step Workflow Guide
 
-### 1. Overview
+### System Overview
 
-**TRAVYY** là hệ thống website đặt tour du lịch toàn diện, cung cấp trải nghiệm từ khám phá điểm đến, lên lịch trình AI, đặt tour, thanh toán trực tuyến đến quản lý booking và hoàn tiền.
+**TRAVYY** là hệ thống website đặt tour du lịch toàn diện với các tính năng chính:
 
-#### Key Features
-
-- **🔐 Authentication**: Đăng ký/Đăng nhập (Email, Google, Facebook), Two-Factor Authentication (2FA), Email Verification
-- **🗺️ Discovery**: AI-powered zone recommendations based on vibes & preferences
-- **📅 Itinerary Planning**: AI tự động tạo lịch trình du lịch
-- **🛒 Shopping Cart & Wishlist**: Quản lý tours yêu thích và giỏ hàng
-- **💳 Payment**: Thanh toán qua MoMo (VND) và PayPal (USD)
-- **📖 Booking Management**: Xem lịch sử đặt tour, retry failed payments
-- **💰 Refund System**: Yêu cầu hoàn tiền (pre-trip cancellation & post-trip issues)
-- **👤 User Profile**: Quản lý thông tin cá nhân, đổi mật khẩu, bảo mật tài khoản
-- **🛡️ Admin Dashboard**: Quản lý users, bookings, refunds, statistics
-
-#### System Actors
-
-| Actor                | Role                      | Description                                                                                    |
-| -------------------- | ------------------------- | ---------------------------------------------------------------------------------------------- |
-| **Traveler** (User)  | End user                  | Người dùng cuối, tìm kiếm tour, đặt booking, thanh toán, yêu cầu refund                        |
-| **Admin**            | System administrator      | Quản trị viên hệ thống, quản lý users, approve/reject refunds, xem statistics                  |
-| **TourGuide**        | Tour guide (Future)       | Hướng dẫn viên du lịch (hiện chưa có chức năng riêng, được quản lý qua TravelAgency)           |
-| **TravelAgency**     | Travel agency (Data only) | Công ty du lịch - CHỈ LÀ FAKE API để fetch dữ liệu tour/agency, không có login/dashboard riêng |
-| **External Systems** | Third-party APIs          | MoMo Payment Gateway, PayPal, Email Service, AI/OpenAI                                         |
-
-**Lưu ý**: `TravelAgency` chỉ là data model để lưu thông tin công ty du lịch và guides, không phải actor có thể login vào hệ thống.
+- **🔐 Authentication**: Email/OAuth login, 2FA security
+- **🗺️ AI Discovery**: Tìm zones & tours theo preferences
+- **💳 Payment**: MoMo (VND) & PayPal (USD)
+- **💰 Refund System**: Pre-trip cancellation & Post-trip issue report
+- **🛡️ Admin**: User & Refund management
 
 ---
 
-### 2. Workflow: User Registration & Login
+## 1. Authentication Workflows
 
-#### Purpose
+### 1.1 User Registration
 
-Cho phép người dùng tạo tài khoản mới hoặc đăng nhập vào hệ thống bằng email/password hoặc OAuth (Google, Facebook).
+**Purpose**: Tạo tài khoản mới trong hệ thống
 
-#### Steps
+**Step 1**: Click button "Đăng ký" ở header
 
-##### 2.1. Registration (Đăng ký)
+- **Screenshot**: `[Screenshot: Header with Đăng ký button highlighted]`
+- Người dùng nhấn vào nút "Đăng ký" góc phải trên màn hình trang chủ
 
-**Screen**: Registration Page (`/register`)
+**Step 2**: Điền form đăng ký
 
-![Registration Form](screenshots/register-form.png)
+- **Screenshot**: `[Screenshot: Registration form with all fields]`
+- Form hiển thị các trường:
+  - Email (required)
+  - Password (required, min 8 characters)
+  - Confirm Password (required)
+  - Full Name (required)
+  - Phone Number (optional)
 
-1. Người dùng truy cập trang chủ → Click **"Đăng ký"** ở góc phải trên
-2. Điền form đăng ký:
-   - **Email**: Nhập email hợp lệ (required)
-   - **Password**: Tối thiểu 8 ký tự, có chữ hoa, chữ thường, số, ký tự đặc biệt (required)
-   - **Confirm Password**: Nhập lại mật khẩu (required)
-   - **Full Name**: Họ và tên (required)
-   - **Phone**: Số điện thoại (optional)
-3. Click **"Đăng ký"**
-4. Hệ thống validation:
-   - ✅ Email chưa tồn tại
-   - ✅ Password đủ mạnh
-   - ✅ Confirm password khớp
-5. Nếu thành công:
-   - Tạo tài khoản với `role: "Traveler"`, `accountStatus: "active"`
-   - Tự động đăng nhập
-   - Redirect đến trang chủ
-   - Toast hiển thị: "Đăng ký thành công! Chào mừng bạn đến TRAVYY 🎉"
+**Step 3**: Click button "Đăng ký"
 
-**Alternative Flows**:
+- **Screenshot**: `[Screenshot: Completed form with submit button]`
+- Sau khi điền đầy đủ thông tin, nhấn nút "Đăng ký"
 
-- **OAuth Registration**: Click "Đăng ký với Google" hoặc "Facebook" → Redirect đến OAuth provider → Auto-create account sau khi authorize
+**Step 4**: Xác thực thành công
 
-##### 2.2. Login (Đăng nhập)
+- **Screenshot**: `[Screenshot: Success toast notification]`
+- Toast message hiển thị: "Đăng ký thành công! Chào mừng bạn đến TRAVYY 🎉"
+- Tự động redirect về trang chủ với trạng thái đã đăng nhập
 
-**Screen**: Login Page (`/login`)
+**Alternative Flow - OAuth Registration**:
 
-![Login Form](screenshots/login-form.png)
+**Step 1**: Click "Đăng ký với Google/Facebook"
 
-1. Người dùng truy cập trang chủ → Click **"Đăng nhập"**
-2. Điền thông tin:
-   - **Email/Username**: Nhập email đã đăng ký
-   - **Password**: Nhập mật khẩu
-3. (Optional) Check **"Ghi nhớ đăng nhập"** để lưu session dài hạn
-4. Click **"Đăng nhập"**
-5. Hệ thống kiểm tra:
-   - ✅ Email tồn tại
-   - ✅ Password đúng
-   - ✅ Account không bị banned (`accountStatus !== "banned"`)
-6. Nếu **2FA enabled**:
-   - Hiển thị modal nhập OTP (6 digits)
-   - User nhập code từ Google Authenticator
-   - Verify OTP → Nếu đúng → Login thành công
-7. Nếu thành công:
-   - Backend tạo Access Token (15 phút) + Refresh Token (30 ngày)
-   - Lưu tokens vào HttpOnly cookies
-   - Redirect đến trang trước đó hoặc Home
-   - Toast: "Đăng nhập thành công! Chào mừng trở lại 👋"
+- **Screenshot**: `[Screenshot: OAuth buttons on registration page]`
+
+**Step 2**: Authorize với provider
+
+- **Screenshot**: `[Screenshot: Google/Facebook consent screen]`
+
+**Step 3**: Auto-create account và redirect về home
+
+- **Screenshot**: `[Screenshot: Homepage after OAuth registration]`
+
+---
+
+### 1.2 User Login
+
+**Purpose**: Đăng nhập vào hệ thống
+
+**Step 1**: Click button "Đăng nhập" ở header
+
+- **Screenshot**: `[Screenshot: Header with Đăng nhập button]`
+- Nhấn vào nút "Đăng nhập" góc phải trên
+
+**Step 2**: Điền thông tin đăng nhập
+
+- **Screenshot**: `[Screenshot: Login form]`
+- Form hiển thị:
+  - Email
+  - Password
+  - Checkbox "Ghi nhớ đăng nhập" (optional)
+
+**Step 3**: Click button "Đăng nhập"
+
+- **Screenshot**: `[Screenshot: Filled login form with submit button]`
+- Nhấn nút "Đăng nhập"
+
+**Step 4**: Xác thực thành công
+
+- **Screenshot**: `[Screenshot: Success redirect to homepage]`
+- Toast: "Đăng nhập thành công! Chào mừng trở lại 👋"
+- Redirect về trang trước đó hoặc homepage
+
+**Alternative Flow - Login with 2FA Enabled**:
+
+**Step 4a**: Modal nhập OTP xuất hiện
+
+- **Screenshot**: `[Screenshot: 2FA OTP modal]`
+- Hiển thị modal yêu cầu nhập mã OTP 6 số
+
+**Step 4b**: Nhập OTP code từ email
+
+- **Screenshot**: `[Screenshot: Email with OTP code]`
+- Kiểm tra email để lấy mã OTP
+
+**Step 4c**: Nhập OTP vào modal
+
+- **Screenshot**: `[Screenshot: OTP input filled]`
+- Nhập 6 chữ số vào ô input
+
+**Step 4d**: Click "Xác nhận"
+
+- **Screenshot**: `[Screenshot: OTP verified successfully]`
+- OTP đúng → Login thành công
+- OTP sai → Hiển thị lỗi "Mã OTP không hợp lệ"
+
+---
+
+### 1.3 OAuth Login (Google/Facebook)
+
+**Purpose**: Đăng nhập nhanh bằng tài khoản Google/Facebook
+
+**Step 1**: Click button "Đăng nhập với Google" hoặc "Facebook"
+
+- **Screenshot**: `[Screenshot: OAuth buttons on login page]`
+
+**Step 2**: Redirect đến OAuth provider
+
+- **Screenshot**: `[Screenshot: Google/Facebook login screen]`
+
+**Step 3**: Nhập credentials và authorize
+
+- **Screenshot**: `[Screenshot: OAuth consent screen]`
+- Chọn tài khoản và cho phép quyền truy cập
+
+**Step 4**: Redirect về TRAVYY đã đăng nhập
+
+- **Screenshot**: `[Screenshot: Homepage after OAuth login]`
+- Nếu lần đầu → Tự động tạo account
+- Nếu đã có account → Login thành công
+
+---
+
+### 1.4 Forgot Password
+
+**Purpose**: Khôi phục mật khẩu khi quên
+
+**Step 1**: Click link "Quên mật khẩu?" ở trang login
+
+- **Screenshot**: `[Screenshot: Login page with forgot password link]`
+
+**Step 2**: Nhập email để nhận link reset
+
+- **Screenshot**: `[Screenshot: Forgot password form]`
+- Điền email đã đăng ký
+
+**Step 3**: Click "Gửi link khôi phục"
+
+- **Screenshot**: `[Screenshot: Email sent confirmation]`
+- Toast: "Link khôi phục đã được gửi đến email của bạn"
+
+**Step 4**: Kiểm tra email
+
+- **Screenshot**: `[Screenshot: Password reset email]`
+- Email chứa link reset có dạng: `/reset-password?token=xxx`
+
+**Step 5**: Click link trong email
+
+- **Screenshot**: `[Screenshot: Reset password page with token in URL]`
+- Redirect đến trang reset password
+
+---
+
+### 1.5 Reset Password
+
+**Purpose**: Đặt lại mật khẩu mới
+
+**Step 1**: Trang reset password hiển thị
+
+- **Screenshot**: `[Screenshot: Reset password form]`
+- Form có 2 trường:
+  - New Password
+  - Confirm New Password
+
+**Step 2**: Nhập mật khẩu mới
+
+- **Screenshot**: `[Screenshot: Password fields filled]`
+- Password phải đủ mạnh (min 8 chars, uppercase, lowercase, number, special char)
+
+**Step 3**: Click "Đặt lại mật khẩu"
+
+- **Screenshot**: `[Screenshot: Success message]`
+- Toast: "Mật khẩu đã được đặt lại thành công"
+
+**Step 4**: Redirect về trang login
+
+- **Screenshot**: `[Screenshot: Login page]`
+- Có thể đăng nhập bằng mật khẩu mới
+
+---
+
+## 2. Tour Discovery & Booking Workflows
+
+### 2.1 Discover Zones with AI
+
+**Purpose**: Tìm zones phù hợp dựa trên preferences
+
+**Step 1**: Click "Khám phá" trên navigation
+
+- **Screenshot**: `[Screenshot: Navigation bar with Khám phá menu]`
+
+**Step 2**: Trang Discover hiển thị
+
+- **Screenshot**: `[Screenshot: Discover page with AI search bar]`
+- Có search bar: "Tôi muốn đi..."
+
+**Step 3**: Nhập preferences (vibes)
+
+- **Screenshot**: `[Screenshot: Search input filled with preferences]`
+- Ví dụ: "đi một tuần với người yêu, thích yên tĩnh, hoàng hôn"
+
+**Step 4**: Click "Tìm kiếm" hoặc Enter
+
+- **Screenshot**: `[Screenshot: Loading state]`
+- Hiển thị loading spinner
+
+**Step 5**: Kết quả zones hiển thị
+
+- **Screenshot**: `[Screenshot: Zone cards grid with AI recommendations]`
+- Danh sách zones được sort theo relevance score
+- Mỗi card hiển thị: ảnh, tên zone, province, điểm nổi bật
+
+**Step 6**: Click vào zone card để xem chi tiết
+
+- **Screenshot**: `[Screenshot: Zone card hover state]`
+
+---
+
+### 2.2 View Zone Details
+
+**Purpose**: Xem thông tin chi tiết của một zone
+
+**Step 1**: Click vào zone card
+
+- **Screenshot**: `[Screenshot: Zone detail page]`
+- Page hiển thị:
+  - Hero image
+  - Zone name & location
+  - Description
+  - List of POIs (Points of Interest)
+  - List of tours available
+
+**Step 2**: Scroll xem các POIs
+
+- **Screenshot**: `[Screenshot: POI cards section]`
+- Mỗi POI có: ảnh, tên, mô tả ngắn
+
+**Step 3**: Scroll xem danh sách tours
+
+- **Screenshot**: `[Screenshot: Tours section in zone detail]`
+- Hiển thị tours thuộc zone này
+
+---
+
+### 2.3 Browse Tours
+
+**Purpose**: Xem danh sách tất cả tours
+
+**Step 1**: Click "Tours" trên navigation
+
+- **Screenshot**: `[Screenshot: Tours navigation link]`
+
+**Step 2**: Trang Tours hiển thị
+
+- **Screenshot**: `[Screenshot: Tours listing page]`
+- Grid layout với tour cards
+- Filter sidebar (price, duration, rating)
+
+**Step 3**: Apply filters (optional)
+
+- **Screenshot**: `[Screenshot: Filter sidebar with options selected]`
+- Chọn price range, duration, rating
+
+**Step 4**: Danh sách tours được filter
+
+- **Screenshot**: `[Screenshot: Filtered tour results]`
+
+---
+
+### 2.4 View Tour Details
+
+**Purpose**: Xem chi tiết một tour
+
+**Step 1**: Click vào tour card
+
+- **Screenshot**: `[Screenshot: Tour detail page header]`
+- Page hiển thị:
+  - Image gallery
+  - Tour name
+  - Price (VND/USD)
+  - Rating & reviews
+  - Duration, group size
+  - Itinerary details
+
+**Step 2**: Scroll xem itinerary
+
+- **Screenshot**: `[Screenshot: Itinerary timeline section]`
+- Timeline hiển thị từng ngày với activities
+
+**Step 3**: Scroll xem reviews
+
+- **Screenshot**: `[Screenshot: Reviews section]`
+- Các đánh giá từ users khác
+
+**Step 4**: Click button "Đặt tour" hoặc "Thêm vào giỏ"
+
+- **Screenshot**: `[Screenshot: Action buttons at bottom]`
+
+---
+
+### 2.5 Add to Cart
+
+**Purpose**: Thêm tour vào giỏ hàng
+
+**Step 1**: Ở tour detail page, click "Thêm vào giỏ"
+
+- **Screenshot**: `[Screenshot: Add to cart button]`
+
+**Step 2**: Modal chọn số lượng người xuất hiện
+
+- **Screenshot**: `[Screenshot: Quantity selection modal]`
+- Chọn số người tham gia
+- Hiển thị tổng giá
+
+**Step 3**: Click "Xác nhận"
+
+- **Screenshot**: `[Screenshot: Cart item added toast]`
+- Toast: "Đã thêm vào giỏ hàng"
+- Icon giỏ hàng ở header cập nhật số lượng
+
+**Step 4**: Click vào icon giỏ hàng để xem
+
+- **Screenshot**: `[Screenshot: Cart dropdown/page]`
+- Hiển thị danh sách tours trong giỏ
+
+---
+
+### 2.6 Add to Wishlist
+
+**Purpose**: Lưu tour yêu thích để xem sau
+
+**Step 1**: Ở tour card hoặc detail page, click icon ❤️
+
+- **Screenshot**: `[Screenshot: Heart icon on tour card]`
+
+**Step 2**: Icon chuyển sang filled heart ❤️ đỏ
+
+- **Screenshot**: `[Screenshot: Filled heart icon]`
+- Toast: "Đã thêm vào danh sách yêu thích"
+
+**Step 3**: Click "Wishlist" ở navigation
+
+- **Screenshot**: `[Screenshot: Wishlist page]`
+- Hiển thị tất cả tours đã save
+
+**Step 4**: Click icon ❤️ lại để remove
+
+- **Screenshot**: `[Screenshot: Removed from wishlist]`
+- Toast: "Đã xóa khỏi danh sách yêu thích"
+
+---
+
+## 3. Payment Workflows
+
+### 3.1 Checkout with MoMo
+
+**Purpose**: Thanh toán tour bằng MoMo (VND)
+
+**Step 1**: Ở giỏ hàng, click "Thanh toán"
+
+- **Screenshot**: `[Screenshot: Cart page with checkout button]`
+
+**Step 2**: Trang Checkout hiển thị
+
+- **Screenshot**: `[Screenshot: Checkout page]`
+- Hiển thị:
+  - Tour summary
+  - Total amount (VND)
+  - Payment method selection
+
+**Step 3**: Chọn "MoMo" làm payment method
+
+- **Screenshot**: `[Screenshot: MoMo option selected]`
+
+**Step 4**: Click "Xác nhận thanh toán"
+
+- **Screenshot**: `[Screenshot: Redirect to MoMo]`
+- Redirect đến MoMo payment page
+
+**Step 5**: Quét QR hoặc login MoMo app
+
+- **Screenshot**: `[Screenshot: MoMo QR code page]`
+
+**Step 6**: Xác nhận thanh toán trong app
+
+- **Screenshot**: `[Screenshot: MoMo app confirmation]`
+
+**Step 7**: Redirect về TRAVYY
+
+- **Screenshot**: `[Screenshot: Payment success page]`
+- Nếu thành công → Hiển thị success page
+- Nếu thất bại → Hiển thị failed page với button "Thử lại"
+
+---
+
+### 3.2 Checkout with PayPal
+
+**Purpose**: Thanh toán tour bằng PayPal (USD)
+
+**Step 1**: Ở trang Checkout, chọn "PayPal"
+
+- **Screenshot**: `[Screenshot: PayPal option selected]`
+
+**Step 2**: Click "Xác nhận thanh toán"
+
+- **Screenshot**: `[Screenshot: Redirect to PayPal]`
+- Redirect đến PayPal login page
+
+**Step 3**: Login PayPal account
+
+- **Screenshot**: `[Screenshot: PayPal login screen]`
+
+**Step 4**: Review payment details
+
+- **Screenshot**: `[Screenshot: PayPal payment review]`
+- Hiển thị amount (USD), merchant name
+
+**Step 5**: Click "Pay Now"
+
+- **Screenshot**: `[Screenshot: PayPal processing]`
+
+**Step 6**: Redirect về TRAVYY success page
+
+- **Screenshot**: `[Screenshot: Payment success page]`
+
+---
+
+### 3.3 Payment Success
+
+**Purpose**: Xác nhận booking đã được tạo thành công
+
+**Step 1**: Success page hiển thị
+
+- **Screenshot**: `[Screenshot: Payment success page with booking details]`
+- Hiển thị:
+  - Checkmark icon ✓
+  - "Thanh toán thành công!"
+  - Booking ID
+  - Tour details
+  - Payment amount
+
+**Step 2**: Click "Xem booking"
+
+- **Screenshot**: `[Screenshot: Button to view booking]`
+
+**Step 3**: Redirect đến Booking Detail page
+
+- **Screenshot**: `[Screenshot: Booking detail page]`
+
+---
+
+### 3.4 Payment Failed
+
+**Purpose**: Xử lý khi thanh toán thất bại
+
+**Step 1**: Failed page hiển thị
+
+- **Screenshot**: `[Screenshot: Payment failed page]`
+- Hiển thị:
+  - Error icon ✗
+  - "Thanh toán thất bại"
+  - Lý do lỗi
+
+**Step 2**: Click "Thử lại thanh toán"
+
+- **Screenshot**: `[Screenshot: Retry payment button]`
+
+**Step 3**: Redirect lại đến payment gateway
+
+- **Screenshot**: `[Screenshot: Back to payment selection]`
+
+---
+
+## 4. Booking Management Workflows
+
+### 4.1 View Booking History
+
+**Purpose**: Xem tất cả bookings đã đặt
+
+**Step 1**: Click vào avatar → Chọn "Bookings của tôi"
+
+- **Screenshot**: `[Screenshot: User dropdown menu]`
+
+**Step 2**: Trang Booking History hiển thị
+
+- **Screenshot**: `[Screenshot: Booking history page]`
+- Tabs:
+  - All Bookings
+  - Upcoming
+  - Completed
+  - Cancelled
+
+**Step 3**: Click vào tab để filter
+
+- **Screenshot**: `[Screenshot: Filtered bookings by status]`
+
+---
+
+### 4.2 View Booking Details
+
+**Purpose**: Xem chi tiết một booking
+
+**Step 1**: Click vào booking card
+
+- **Screenshot**: `[Screenshot: Booking card in list]`
+
+**Step 2**: Booking detail page hiển thị
+
+- **Screenshot**: `[Screenshot: Booking detail page full]`
+- Hiển thị:
+  - Booking status badge
+  - Tour information
+  - Travel dates
+  - Number of people
+  - Total payment
+  - Payment method & status
+  - QR code (if needed)
+  - Action buttons
+
+---
+
+### 4.3 Retry Failed Payment
+
+**Purpose**: Thanh toán lại cho booking failed
+
+**Step 1**: Ở booking detail (status: payment_failed), click "Thanh toán lại"
+
+- **Screenshot**: `[Screenshot: Retry payment button on booking detail]`
+
+**Step 2**: Modal chọn payment method xuất hiện
+
+- **Screenshot**: `[Screenshot: Payment method selection modal]`
+
+**Step 3**: Chọn MoMo hoặc PayPal
+
+- **Screenshot**: `[Screenshot: Selected payment method]`
+
+**Step 4**: Click "Xác nhận thanh toán"
+
+- **Screenshot**: `[Screenshot: Redirect to payment gateway]`
+
+**Step 5**: Hoàn tất thanh toán
+
+- **Screenshot**: `[Screenshot: Payment success, booking updated]`
+- Booking status chuyển từ `payment_failed` → `confirmed`
+
+---
+
+## 5. Refund Request Workflows
+
+### 5.1 Request Pre-Trip Refund (Cancellation)
+
+**Purpose**: Hủy tour và yêu cầu hoàn tiền trước ngày khởi hành
+
+**Step 1**: Ở Booking Detail page, click "Hủy tour"
+
+- **Screenshot**: `[Screenshot: Booking detail with Cancel button]`
+- Button "Hủy tour" hiển thị ở booking có status `confirmed` hoặc `paid`
+
+**Step 2**: Modal xác nhận hủy xuất hiện
+
+- **Screenshot**: `[Screenshot: Cancellation confirmation modal]`
+- Hiển thị:
+  - Ngày khởi hành
+  - Số ngày còn lại đến tour
+  - % Hoàn tiền (dựa trên policy)
+  - Số tiền được hoàn
+
+**Policy hiển thị**:
+
+- > 30 ngày: Hoàn 100%
+- 15-30 ngày: Hoàn 70%
+- 7-14 ngày: Hoàn 50%
+- 3-6 ngày: Hoàn 30%
+- < 3 ngày: Không hoàn tiền
+
+**Step 3**: Nhập lý do hủy (optional)
+
+- **Screenshot**: `[Screenshot: Reason textarea]`
+- Textarea để user giải thích lý do
+
+**Step 4**: Click "Xác nhận hủy tour"
+
+- **Screenshot**: `[Screenshot: Refund request created]`
+- Toast: "Yêu cầu hoàn tiền đã được gửi"
+- Booking status → `refund_requested`
+
+**Step 5**: Redirect về trang Refund Status
+
+- **Screenshot**: `[Screenshot: Refund status page]`
+- Hiển thị refund với status `pending`
+
+---
+
+### 5.2 Request Post-Trip Refund (Issue Report)
+
+**Purpose**: Báo cáo vấn đề sau tour và yêu cầu hoàn tiền
+
+**Step 1**: Ở Booking Detail page (tour đã hoàn thành), click "Báo cáo vấn đề"
+
+- **Screenshot**: `[Screenshot: Report issue button]`
+- Button hiển thị với bookings có status `completed`
+
+**Step 2**: Form báo cáo vấn đề xuất hiện
+
+- **Screenshot**: `[Screenshot: Issue report form]`
+- Form có các trường:
+  - **Loại vấn đề**: Dropdown (Dịch vụ không đúng, Hướng dẫn viên, An toàn, Khác)
+  - **Mô tả chi tiết**: Textarea (required)
+  - **Upload ảnh minh chứng**: Image upload (optional, max 5 files)
+  - **Số tiền yêu cầu hoàn**: Input (max = tour price)
+
+**Step 3**: Điền đầy đủ thông tin
+
+- **Screenshot**: `[Screenshot: Filled issue form]`
+- Upload ảnh minh chứng (nếu có)
+
+**Step 4**: Click "Gửi yêu cầu hoàn tiền"
+
+- **Screenshot**: `[Screenshot: Issue submitted]`
+- Toast: "Báo cáo của bạn đã được gửi. Admin sẽ xem xét trong 3-5 ngày"
+
+**Step 5**: Refund tạo với status `pending`
+
+- **Screenshot**: `[Screenshot: Post-trip refund pending]`
+- Hiển thị trong danh sách refunds
+
+---
+
+### 5.3 Provide Bank Information
+
+**Purpose**: Cung cấp thông tin tài khoản ngân hàng để nhận tiền hoàn
+
+**Step 1**: Admin approve refund → User nhận notification
+
+- **Screenshot**: `[Screenshot: Notification - refund approved]`
+- Email: "Yêu cầu hoàn tiền đã được chấp thuận. Vui lòng cung cấp thông tin ngân hàng"
+
+**Step 2**: Click vào refund trong danh sách
+
+- **Screenshot**: `[Screenshot: Refund detail - needs bank info]`
+- Status: `approved_pending_bank_info`
+- Button: "Cung cấp thông tin ngân hàng"
+
+**Step 3**: Modal nhập thông tin ngân hàng xuất hiện
+
+- **Screenshot**: `[Screenshot: Bank info modal]`
+- Form có các trường:
+  - **Tên chủ tài khoản** (required)
+  - **Số tài khoản** (required, number only)
+  - **Tên ngân hàng** (required, dropdown hoặc autocomplete)
+  - **Chi nhánh** (optional)
+
+**Step 4**: Điền thông tin và click "Xác nhận"
+
+- **Screenshot**: `[Screenshot: Bank info filled]`
+- Validation:
+  - Tên chủ TK: Chỉ chữ cái và khoảng trắng
+  - Số TK: 9-20 chữ số
+  - Tên ngân hàng: Chọn từ danh sách
+
+**Step 5**: Bank info được lưu
+
+- **Screenshot**: `[Screenshot: Bank info saved successfully]`
+- Toast: "Thông tin tài khoản đã được lưu. Tiền sẽ được chuyển trong 5-7 ngày làm việc"
+- Refund status → `processing`
+
+---
+
+### 5.4 View Refund Status
+
+**Purpose**: Theo dõi trạng thái xử lý refund
+
+**Step 1**: Click "Refunds" trong user menu
+
+- **Screenshot**: `[Screenshot: User menu with Refunds link]`
+
+**Step 2**: Trang danh sách refunds hiển thị
+
+- **Screenshot**: `[Screenshot: Refunds list page]`
+- Tabs:
+  - All
+  - Pending (chờ admin review)
+  - Approved (đã chấp thuận)
+  - Rejected (bị từ chối)
+  - Completed (đã hoàn tiền)
+
+**Step 3**: Click vào refund card để xem chi tiết
+
+- **Screenshot**: `[Screenshot: Refund detail page]`
+- Hiển thị:
+  - Refund ID
+  - Booking info (tour name, dates)
+  - Refund type (pre_trip / post_trip)
+  - Requested amount
+  - Status badge
+  - Timeline (created → reviewed → processed)
+  - Admin comments (nếu có)
+
+**Step 4**: Xem timeline chi tiết
+
+- **Screenshot**: `[Screenshot: Refund timeline]`
+- Timeline hiển thị từng bước:
+  - ✓ Yêu cầu đã gửi (thời gian)
+  - ⏳ Chờ admin xem xét
+  - ✓ Đã chấp thuận (thời gian + admin name)
+  - ✓ Thông tin ngân hàng đã cung cấp
+  - ⏳ Đang xử lý thanh toán
+  - ✓ Đã hoàn tiền (thời gian)
+
+---
+
+### 5.5 Cancel Refund Request
+
+**Purpose**: Hủy yêu cầu hoàn tiền (chỉ khi status = pending)
+
+**Step 1**: Ở Refund Detail page (status: pending), click "Hủy yêu cầu"
+
+- **Screenshot**: `[Screenshot: Cancel refund button]`
+
+**Step 2**: Modal xác nhận xuất hiện
+
+- **Screenshot**: `[Screenshot: Cancel confirmation modal]`
+- "Bạn có chắc muốn hủy yêu cầu hoàn tiền này?"
+
+**Step 3**: Click "Xác nhận hủy"
+
+- **Screenshot**: `[Screenshot: Refund cancelled]`
+- Refund status → `cancelled`
+- Booking status quay về `confirmed`
+- Toast: "Yêu cầu hoàn tiền đã được hủy"
+
+---
+
+## 6. User Profile Workflows
+
+### 6.1 View Profile
+
+**Purpose**: Xem thông tin cá nhân
+
+**Step 1**: Click vào avatar ở header
+
+- **Screenshot**: `[Screenshot: User dropdown menu]`
+
+**Step 2**: Chọn "Thông tin cá nhân"
+
+- **Screenshot**: `[Screenshot: Profile page]`
+- Hiển thị:
+  - Avatar
+  - Full name
+  - Email
+  - Phone
+  - Member since
+  - Account type (Traveler/Admin)
+
+---
+
+### 6.2 Edit Profile
+
+**Purpose**: Cập nhật thông tin cá nhân
+
+**Step 1**: Ở Profile page, click "Chỉnh sửa"
+
+- **Screenshot**: `[Screenshot: Edit profile button]`
+
+**Step 2**: Form chỉnh sửa hiển thị
+
+- **Screenshot**: `[Screenshot: Edit profile form]`
+- Các trường có thể sửa:
+  - Full name
+  - Phone
+  - Avatar (upload ảnh mới)
+
+**Step 3**: Thay đổi thông tin
+
+- **Screenshot**: `[Screenshot: Modified profile fields]`
+
+**Step 4**: Click "Lưu thay đổi"
+
+- **Screenshot**: `[Screenshot: Profile updated]`
+- Toast: "Thông tin đã được cập nhật"
+
+---
+
+### 6.3 Change Password
+
+**Purpose**: Đổi mật khẩu tài khoản
+
+**Step 1**: Ở Profile page, click tab "Bảo mật"
+
+- **Screenshot**: `[Screenshot: Security tab]`
+
+**Step 2**: Section "Đổi mật khẩu" hiển thị
+
+- **Screenshot**: `[Screenshot: Change password section]`
+
+**Step 3**: Click "Đổi mật khẩu"
+
+- **Screenshot**: `[Screenshot: Change password form]`
+- Form có các trường:
+  - Current Password
+  - New Password
+  - Confirm New Password
+
+**Step 4**: Điền thông tin và click "Xác nhận"
+
+- **Screenshot**: `[Screenshot: Password changed]`
+- Toast: "Mật khẩu đã được thay đổi thành công"
+
+---
+
+### 6.4 Enable 2FA
+
+**Purpose**: Bật xác thực hai yếu tố để tăng bảo mật
+
+**Step 1**: Ở tab "Bảo mật", tìm section "Two-Factor Authentication"
+
+- **Screenshot**: `[Screenshot: 2FA section - disabled]`
+- Toggle switch hiển thị OFF
+
+**Step 2**: Click vào toggle để enable
+
+- **Screenshot**: `[Screenshot: Enable 2FA confirmation]`
+- Modal: "Bật xác thực hai yếu tố?"
+
+**Step 3**: Click "Xác nhận"
+
+- **Screenshot**: `[Screenshot: Email confirmation sent]`
+- Toast: "Email xác nhận đã được gửi. Vui lòng kiểm tra hộp thư"
+
+**Step 4**: Mở email và click link xác nhận
+
+- **Screenshot**: `[Screenshot: 2FA confirmation email]`
+- Email chứa link: `/confirm-2fa?token=xxx`
+
+**Step 5**: Click link trong email
+
+- **Screenshot**: `[Screenshot: 2FA enabled success page]`
+- Redirect về profile
+- 2FA toggle → ON
+- Toast: "Xác thực hai yếu tố đã được bật"
+
+**Step 6**: Lần đăng nhập tiếp theo sẽ yêu cầu OTP
+
+- **Screenshot**: `[Screenshot: Login with 2FA - OTP input]`
+- Sau khi nhập email/password đúng → Modal nhập OTP xuất hiện
+- Nhập 6 chữ số từ email → Login thành công
+
+---
+
+### 6.5 Disable 2FA
+
+**Purpose**: Tắt xác thực hai yếu tố
+
+**Step 1**: Ở tab "Bảo mật", toggle 2FA từ ON → OFF
+
+- **Screenshot**: `[Screenshot: Disable 2FA toggle]`
+
+**Step 2**: Modal yêu cầu nhập password xuất hiện
+
+- **Screenshot**: `[Screenshot: Password confirmation modal]`
+- "Nhập mật khẩu để tắt 2FA"
+
+**Step 3**: Nhập password và click "Xác nhận"
+
+- **Screenshot**: `[Screenshot: 2FA disabled]`
+- Toggle → OFF
+- Toast: "Xác thực hai yếu tố đã được tắt"
+
+---
+
+## 7. Admin - User Management Workflows
+
+### 7.1 View All Users
+
+**Purpose**: Admin xem danh sách tất cả users
+
+**Step 1**: Login với tài khoản admin
+
+- **Screenshot**: `[Screenshot: Admin login]`
+
+**Step 2**: Click "Admin Dashboard" trong menu
+
+- **Screenshot**: `[Screenshot: Admin menu]`
+
+**Step 3**: Click tab "Users"
+
+- **Screenshot**: `[Screenshot: Users management page]`
+- Table hiển thị:
+  - User ID
+  - Name
+  - Email
+  - Role (Traveler/Admin)
+  - Status (Active/Banned)
+  - Registered date
+  - Actions (View/Ban/Unban)
+
+**Step 4**: Search/filter users (optional)
+
+- **Screenshot**: `[Screenshot: User search and filters]`
+- Search by email, name
+- Filter by role, status
+
+---
+
+### 7.2 View User Details
+
+**Purpose**: Admin xem chi tiết một user
+
+**Step 1**: Ở Users table, click "View" trên user row
+
+- **Screenshot**: `[Screenshot: View button on user row]`
+
+**Step 2**: User detail modal/page hiển thị
+
+- **Screenshot**: `[Screenshot: User detail modal]`
+- Hiển thị:
+  - Full profile info
+  - Booking history
+  - Refund history
+  - Account status
+  - Login history (if available)
+
+---
+
+### 7.3 Ban User
+
+**Purpose**: Admin khóa tài khoản user vi phạm
+
+**Step 1**: Ở User detail hoặc Users table, click "Ban User"
+
+- **Screenshot**: `[Screenshot: Ban user button]`
+
+**Step 2**: Modal nhập lý do ban xuất hiện
+
+- **Screenshot**: `[Screenshot: Ban reason modal]`
+- Textarea: "Lý do khóa tài khoản"
+
+**Step 3**: Nhập lý do và click "Xác nhận"
+
+- **Screenshot**: `[Screenshot: User banned]`
+- User status → `banned`
+- Toast: "Tài khoản đã được khóa"
+- User không thể login nữa
+
+---
+
+### 7.4 Unban User
+
+**Purpose**: Admin mở khóa tài khoản
+
+**Step 1**: Ở Users table (filter status: Banned), click "Unban"
+
+- **Screenshot**: `[Screenshot: Unban button]`
+
+**Step 2**: Modal xác nhận
+
+- **Screenshot**: `[Screenshot: Unban confirmation]`
+- "Mở khóa tài khoản này?"
+
+**Step 3**: Click "Xác nhận"
+
+- **Screenshot**: `[Screenshot: User unbanned]`
+- User status → `active`
+- Toast: "Tài khoản đã được mở khóa"
+
+---
+
+## 8. Admin - Refund Management Workflows
+
+### 8.1 View All Refunds
+
+**Purpose**: Admin xem tất cả yêu cầu hoàn tiền
+
+**Step 1**: Ở Admin Dashboard, click tab "Refunds"
+
+- **Screenshot**: `[Screenshot: Refunds management page]`
+- Table hiển thị:
+  - Refund ID
+  - User name
+  - Booking ID
+  - Tour name
+  - Refund type (Pre-trip/Post-trip)
+  - Amount
+  - Status
+  - Request date
+  - Actions
+
+**Step 2**: Filter refunds (optional)
+
+- **Screenshot**: `[Screenshot: Refund filters]`
+- Filter by:
+  - Status (Pending/Approved/Rejected/Completed)
+  - Type (Pre-trip/Post-trip)
+  - Date range
+
+---
+
+### 8.2 Review Refund Request
+
+**Purpose**: Admin xem chi tiết yêu cầu hoàn tiền để review
+
+**Step 1**: Ở Refunds table, click "Review" trên refund row
+
+- **Screenshot**: `[Screenshot: Review button]`
+
+**Step 2**: Refund detail modal hiển thị
+
+- **Screenshot**: `[Screenshot: Refund review modal]`
+- Hiển thị đầy đủ:
+  - Booking info
+  - Tour details
+  - Refund type & reason
+  - Requested amount
+  - Refund policy calculation (nếu pre-trip)
+  - Issue details + ảnh minh chứng (nếu post-trip)
+  - User history (số lần refund trước đó)
+
+**Step 3**: Admin đánh giá hợp lệ
+
+- **Screenshot**: `[Screenshot: Admin reviewing details]`
+- Kiểm tra:
+  - Lý do có hợp lý không
+  - Policy refund đúng chưa
+  - Minh chứng (nếu post-trip) có đủ không
+
+---
+
+### 8.3 Approve Refund
+
+**Purpose**: Admin chấp thuận yêu cầu hoàn tiền
+
+**Step 1**: Ở Refund review modal, click "Approve"
+
+- **Screenshot**: `[Screenshot: Approve button]`
+
+**Step 2**: Modal xác nhận với điều chỉnh amount (optional)
+
+- **Screenshot**: `[Screenshot: Approve confirmation modal]`
+- Admin có thể:
+  - Giữ nguyên số tiền requested
+  - Hoặc điều chỉnh amount (nếu cần)
+  - Nhập comment cho user
+
+**Step 3**: Click "Xác nhận chấp thuận"
+
+- **Screenshot**: `[Screenshot: Refund approved]`
+- Refund status → `approved_pending_bank_info`
+- Email gửi đến user: "Yêu cầu hoàn tiền đã được chấp thuận. Vui lòng cung cấp thông tin ngân hàng"
+- Toast (admin): "Đã chấp thuận yêu cầu hoàn tiền"
+
+---
+
+### 8.4 Reject Refund
+
+**Purpose**: Admin từ chối yêu cầu hoàn tiền
+
+**Step 1**: Ở Refund review modal, click "Reject"
+
+- **Screenshot**: `[Screenshot: Reject button]`
+
+**Step 2**: Modal nhập lý do từ chối
+
+- **Screenshot**: `[Screenshot: Reject reason modal]`
+- Textarea: "Lý do từ chối" (required)
+
+**Step 3**: Nhập lý do và click "Xác nhận"
+
+- **Screenshot**: `[Screenshot: Refund rejected]`
+- Refund status → `rejected`
+- Booking status quay về `confirmed`
+- Email gửi user: "Yêu cầu hoàn tiền đã bị từ chối. Lý do: [admin comment]"
+- Toast (admin): "Đã từ chối yêu cầu hoàn tiền"
+
+---
+
+### 8.5 Process Refund Payment
+
+**Purpose**: Admin xử lý thanh toán hoàn tiền tự động qua gateway
+
+**Step 1**: Sau khi user cung cấp bank info, refund có status `processing`
+
+- **Screenshot**: `[Screenshot: Refund with bank info provided]`
+
+**Step 2**: Admin click "Process Payment"
+
+- **Screenshot**: `[Screenshot: Process payment button]`
+
+**Step 3**: Chọn payment gateway để refund
+
+- **Screenshot**: `[Screenshot: Gateway selection modal]`
+- Options:
+  - MoMo (nếu payment method ban đầu là MoMo)
+  - PayPal (nếu PayPal)
+
+**Step 4**: Click "Confirm Process"
+
+- **Screenshot**: `[Screenshot: Processing refund]`
+- Hệ thống call API gateway để refund
+- Loading state hiển thị
+
+**Step 5**: Refund thành công
+
+- **Screenshot**: `[Screenshot: Refund completed]`
+- Refund status → `completed`
+- Email gửi user: "Tiền hoàn đã được chuyển vào tài khoản của bạn"
+- Toast (admin): "Hoàn tiền thành công"
 
 **Error Handling**:
 
-- Email không tồn tại → "Email không tồn tại trong hệ thống"
-- Password sai → "Mật khẩu không chính xác"
-- Account banned → "Tài khoản đã bị khóa. Lý do: [reason]"
-- 2FA OTP sai → "Mã xác thực không chính xác, vui lòng thử lại"
+- Nếu gateway API fail → Status vẫn là `processing`
+- Admin có thể retry hoặc chuyển sang manual processing
 
 ---
 
-### 3. Workflow: AI Discovery & Tour Booking
+### 8.6 Manual Refund Processing
 
-#### Purpose
+**Purpose**: Admin đánh dấu refund đã hoàn tiền thủ công (ngoài hệ thống)
 
-Cho phép user khám phá điểm đến phù hợp dựa trên sở thích (vibes), xem chi tiết tours, thêm vào cart và đặt booking.
+**Step 1**: Ở refund có status `processing`, click "Mark as Completed Manually"
 
-#### Steps
+- **Screenshot**: `[Screenshot: Manual completion button]`
 
-##### 3.1. AI-Powered Zone Discovery
+**Step 2**: Modal nhập thông tin giao dịch
 
-**Screen**: Discover Page (`/discover`)
+- **Screenshot**: `[Screenshot: Manual completion modal]`
+- Nhập:
+  - Confirmation code (mã GD ngân hàng)
+  - Notes (ghi chú)
 
-![Discover Vibes](screenshots/discover-vibes.png)
+**Step 3**: Click "Confirm"
 
-1. User truy cập **"Khám phá"** từ menu
-2. Chọn vibes (tags) phù hợp với sở thích:
-   - 🏖️ Beach (Biển)
-   - 🍜 Food (Ẩm thực)
-   - 🌄 Mountain (Núi)
-   - 🌆 City (Thành phố)
-   - 🎭 Culture (Văn hóa)
-   - 🌅 Sunset (Hoàng hôn)
-   - ... (tổng 20+ vibes)
-3. (Optional) Nhập free text mô tả chi tiết: "Tôi muốn đi biển yên tĩnh, có hải sản ngon, view đẹp chụp ảnh"
-4. Click **"Tìm kiếm"**
-5. Hệ thống gửi request đến AI service:
-   - Parse vibes + free text
-   - Tính embedding vector
-   - So sánh với zone embeddings trong database
-   - Rank theo match score (embedding + rule-based)
-6. Hiển thị kết quả:
-   - Top 10-20 zones phù hợp nhất
-   - Mỗi zone card hiển thị: Ảnh, tên, match score, vibes tags, short description
-7. User click vào zone card → Redirect đến **Zone Detail Page**
-
-##### 3.2. Zone Detail & Available Tours
-
-**Screen**: Zone Detail Page (`/zones/:zoneId`)
-
-![Zone Detail](screenshots/zone-detail.png)
-
-1. Hiển thị thông tin chi tiết zone:
-   - Banner image
-   - Zone name & description
-   - Location (province, region)
-   - Highlights
-   - Vibes/tags
-2. Section **"Available Tours"**:
-   - Danh sách các tours thuộc zone này
-   - Filter: Price range, duration, start date
-   - Sort: Price (low→high, high→low), Rating, Duration
-3. User click vào tour card → Redirect đến **Tour Detail Page**
-
-##### 3.3. Tour Detail & Add to Cart
-
-**Screen**: Tour Detail Page (`/tours/:tourId`)
-
-![Tour Detail](screenshots/tour-detail.png)
-
-1. Hiển thị đầy đủ thông tin tour:
-   - Tour name, images, price (per person)
-   - Duration, max group size
-   - Itinerary (day-by-day schedule)
-   - Inclusions & Exclusions
-   - Reviews & ratings
-2. User chọn:
-   - **Start Date**: Chọn ngày khởi hành từ calendar
-   - **Number of Tickets**: Số lượng vé (1-10)
-3. Click **"Thêm vào giỏ hàng"**
-4. Hệ thống:
-   - Check seat availability: `tour.availableSeats >= quantity`
-   - Calculate price: `pricePerPerson * quantity`
-   - Add to cart (hoặc update quantity nếu đã có)
-   - Toast: "Đã thêm vào giỏ hàng ✅"
-5. User có thể:
-   - **Continue shopping**: Quay lại tìm tour khác
-   - **Go to Cart**: Click icon giỏ hàng → Redirect `/cart`
-
-##### 3.4. Cart & Checkout
-
-**Screen**: Cart Page (`/cart`)
-
-![Shopping Cart](screenshots/cart.png)
-
-1. Hiển thị danh sách tours trong cart:
-   - Tour name, image, start date
-   - Price per person × quantity = Subtotal
-   - Actions: Update quantity, Remove item
-2. User có thể:
-   - Apply **voucher code**: Nhập code → Click "Áp dụng" → Discount tính tự động
-   - View **Total Amount**: Subtotal - Discount = Final Total
-3. Click **"Thanh toán"**
-4. Chọn payment method:
-   - **MoMo** (thanh toán bằng VND)
-   - **PayPal** (thanh toán bằng USD)
-5. Click **"Xác nhận thanh toán"**
-6. Redirect đến payment gateway:
-   - **MoMo**: QR code hoặc deeplink mở app MoMo
-   - **PayPal**: PayPal checkout popup
-7. User hoàn tất thanh toán:
-   - MoMo: Nhập OTP → Xác nhận
-   - PayPal: Login PayPal → Confirm
-8. Sau khi thanh toán thành công:
-   - Redirect về `/payment/callback?status=success`
-   - Tạo booking với `status: "paid"`
-   - Clear cart
-   - Send email confirmation
-   - Toast: "Thanh toán thành công! Booking của bạn đã được xác nhận 🎉"
+- **Screenshot**: `[Screenshot: Manually completed refund]`
+- Refund status → `completed`
+- Admin note được lưu
+- Email gửi user
+- Toast: "Đã đánh dấu hoàn tiền thành công"
 
 ---
 
-### 4. Workflow: Booking Management & Refund Request
+## IV. Screen Flow Diagram
+
+### High-Level User Flow
+
+```
+User Journey:
+┌─────────────┐
+│   Landing   │ (/)
+└──────┬──────┘
+       │
+   ┌───┴────┐
+   │        │
+[Browse] [Register/Login]
+   │        │
+   │    ┌───┴───────┐
+   │    │ 2FA Check?│
+   │    └───┬───────┘
+   │        │ Yes
+   │    [Enter OTP]
+   │        │
+   ├────────┴─────────┐
+   │                  │
+[Discover]       [Tours List]
+   │                  │
+   ├──────────────────┤
+   │   Zone/Tour      │
+   │   Detail Page    │
+   └─────────┬────────┘
+             │
+      [Add to Cart]
+             │
+        [Checkout]
+             │
+    ┌────────┴─────────┐
+    │                  │
+ [MoMo]           [PayPal]
+    │                  │
+    └────────┬─────────┘
+             │
+    [Payment Callback]
+             │
+      [Booking Created]
+             │
+      ┌──────┴──────┐
+      │             │
+[View Bookings]  [Request Refund]
+                     │
+              ┌──────┴───────┐
+              │              │
+        [Pre-trip]     [Post-trip]
+              │              │
+              └──────┬───────┘
+                     │
+            [Admin Reviews]
+                     │
+              ┌──────┴──────┐
+              │             │
+          [Approve]    [Reject]
+              │
+      [Provide Bank Info]
+              │
+       [Admin Process]
+              │
+          [Completed]
+```
+
+### Authentication Flow
+
+```
+┌──────────────┐
+│ Landing Page │
+└──────┬───────┘
+       │
+   ┌───┴────┐
+   │        │
+[Login]  [Register]
+   │        │
+   │    [Fill Form]
+   │        │
+   │    [Submit]
+   │        │
+   │    [Create Account]
+   │        │
+   ├────────┤
+   │
+[Enter Credentials]
+   │
+[Validate]
+   │
+┌──┴───┐
+│ 2FA? │
+└──┬───┘
+   │ No
+   ├──────┐
+   │ Yes  │
+   │   [Send OTP Email]
+   │      │
+   │   [Enter OTP]
+   │      │
+   │   [Verify]
+   │      │
+   └──────┤
+          │
+   [Login Success]
+          │
+    [Home Page]
+```
+
+---
+
+## V. Key Screens Reference
+
+### Frontend Pages (touring-fe/src/pages/)
 
 #### Purpose
 
@@ -1066,189 +2172,6 @@ Tạo lịch trình du lịch tự động dựa trên destinations, dates, budg
    - **Save Itinerary**: Lưu vào "My Itineraries"
    - **Export PDF**: Download itinerary
    - **Book Tours**: Link đến các tours liên quan
-
----
-
-## IV. Screen Flow Diagram
-
-### User Journey Flowchart
-
-```mermaid
-graph TD
-    A[Landing Page] --> B{User Logged In?}
-    B -->|No| C[Register/Login]
-    B -->|Yes| D[Home Dashboard]
-
-    C --> C1[Register Form]
-    C --> C2[Login Form]
-    C --> C3[OAuth Login]
-    C1 --> D
-    C2 --> D
-    C3 --> D
-
-    D --> E[Discover Zones]
-    D --> F[Browse Tours]
-    D --> G[View Bookings]
-    D --> H[Profile]
-
-    E --> E1[Select Vibes]
-    E1 --> E2[AI Recommendations]
-    E2 --> E3[Zone Detail]
-    E3 --> F1[Tour List]
-
-    F --> F1[Tour List]
-    F1 --> F2[Tour Detail]
-    F2 --> F3{Add to Cart/Wishlist}
-    F3 -->|Cart| I[Shopping Cart]
-    F3 -->|Wishlist| J[Wishlist Page]
-
-    I --> K[Select Payment]
-    K --> K1{Payment Method}
-    K1 -->|MoMo| L1[MoMo Gateway]
-    K1 -->|PayPal| L2[PayPal Gateway]
-
-    L1 --> M[Payment Callback]
-    L2 --> M
-    M --> M1{Payment Success?}
-    M1 -->|Yes| N[Booking Confirmed]
-    M1 -->|No| O[Payment Failed]
-
-    N --> G
-    O --> P[Retry Payment]
-    P --> K
-
-    G --> Q{Booking Action}
-    Q -->|View Details| Q1[Booking Detail]
-    Q -->|Request Refund| R[Refund Request]
-
-    R --> R1{Refund Type}
-    R1 -->|Pre-Trip| R2[Cancellation Form]
-    R1 -->|Post-Trip| R3[Issue Report Form]
-    R2 --> S[Submit Refund]
-    R3 --> S
-    S --> T[Admin Review]
-
-    T --> T1{Admin Decision}
-    T1 -->|Approve| U[Provide Bank Info]
-    T1 -->|Reject| V[Refund Rejected]
-    U --> W[Admin Process]
-    W --> X[Refund Completed]
-
-    H --> H1[Profile Info]
-    H --> H2[Security Settings]
-    H2 --> H3[Change Password]
-    H2 --> H4[Enable 2FA]
-
-    %% Admin Flow
-    D --> Y{Role = Admin?}
-    Y -->|Yes| Z[Admin Dashboard]
-    Z --> Z1[User Management]
-    Z --> Z2[Refund Management]
-    Z --> Z3[Statistics]
-
-    Z1 --> Z4[View Users]
-    Z4 --> Z5[Ban/Unban User]
-
-    Z2 --> Z6[Pending Refunds]
-    Z6 --> T
-
-    style A fill:#e1f5ff
-    style D fill:#ffe1e1
-    style N fill:#c8e6c9
-    style X fill:#c8e6c9
-    style V fill:#ffcdd2
-    style Z fill:#fff9c4
-```
-
-### Admin Workflow
-
-```mermaid
-graph TD
-    AA[Admin Login] --> AB[Admin Dashboard]
-    AB --> AC[Users Tab]
-    AB --> AD[Refunds Tab]
-    AB --> AE[Stats Tab]
-
-    AC --> AC1[Filter Users]
-    AC1 --> AC2[View User Details]
-    AC2 --> AC3{Action}
-    AC3 -->|Ban| AC4[Ban User Modal]
-    AC3 -->|Unban| AC5[Unban User]
-    AC4 --> AC6[Confirm Ban]
-
-    AD --> AD1[Filter by Status]
-    AD1 --> AD2{Refund Status}
-    AD2 -->|Pending| AD3[Review Refund]
-    AD2 -->|Approved| AD4[Process Refund]
-
-    AD3 --> AD5{Decision}
-    AD5 -->|Approve| AD6[Send Email: Provide Bank Info]
-    AD5 -->|Reject| AD7[Send Rejection Email]
-
-    AD4 --> AD8{Auto Process}
-    AD8 -->|Success| AD9[Mark Completed]
-    AD8 -->|Fail| AD10[Manual Processing]
-    AD10 --> AD11[Create Manual Payment]
-    AD11 --> AD12[Check Payment Status]
-    AD12 --> AD9
-
-    AE --> AE1[View Statistics]
-    AE1 --> AE2[Total Users]
-    AE1 --> AE3[Total Refunds]
-    AE1 --> AE4[Revenue Charts]
-
-    style AB fill:#fff9c4
-    style AD9 fill:#c8e6c9
-    style AD7 fill:#ffcdd2
-```
-
----
-
-## V. Key Screens Reference
-
-### Frontend Pages (touring-fe/src/pages/)
-
-| Screen           | Route               | Description                             | Auth Required |
-| ---------------- | ------------------- | --------------------------------------- | ------------- |
-| Landing Page     | `/`                 | Trang chủ, hero section, featured tours | ❌            |
-| Register         | `/register`         | Form đăng ký tài khoản mới              | ❌            |
-| Login            | `/login`            | Form đăng nhập                          | ❌            |
-| OAuth Callback   | `/oauth/callback`   | Xử lý Google/Facebook OAuth redirect    | ❌            |
-| Main Home        | `/home`             | Dashboard sau khi login                 | ✅            |
-| Discover         | `/discover`         | AI-powered zone discovery               | ❌            |
-| Discover Results | `/discover/results` | Kết quả zone recommendations            | ❌            |
-| Zone Detail      | `/zones/:id`        | Chi tiết zone + available tours         | ❌            |
-| Tour Detail      | `/tours/:id`        | Chi tiết tour + add to cart             | ❌            |
-| Cart             | `/cart`             | Giỏ hàng + checkout                     | ✅            |
-| Wishlist         | `/wishlist`         | Danh sách tours yêu thích               | ✅            |
-| Payment Callback | `/payment/callback` | Xử lý kết quả thanh toán MoMo/PayPal    | ✅            |
-| Booking History  | `/bookings`         | Lịch sử đặt tour                        | ✅            |
-| Booking Page     | `/booking/:id`      | Chi tiết 1 booking                      | ✅            |
-| Refund Request   | `/refunds/request`  | Form yêu cầu hoàn tiền                  | ✅            |
-| User Profile     | `/profile`          | Thông tin cá nhân                       | ✅            |
-| Profile Security | `/profile/security` | Đổi mật khẩu, 2FA                       | ✅            |
-| Change Password  | `/change-password`  | Đổi mật khẩu (standalone)               | ✅            |
-| Forgot Password  | `/forgot-password`  | Quên mật khẩu                           | ❌            |
-| Reset Password   | `/reset-password`   | Reset mật khẩu (từ email link)          | ❌            |
-| AI Tour Creator  | `/ai-tour-creator`  | Tạo itinerary tự động                   | ✅            |
-| Itinerary Result | `/itinerary/result` | Kết quả itinerary AI                    | ✅            |
-| Itinerary View   | `/itinerary/:id`    | Xem itinerary đã lưu                    | ✅            |
-| Blogs            | `/blogs`            | Danh sách blog posts                    | ❌            |
-| Blog Detail      | `/blogs/:id`        | Chi tiết 1 blog post                    | ❌            |
-| Search Results   | `/search`           | Kết quả tìm kiếm tours                  | ❌            |
-| Region Tours     | `/regions/:region`  | Tours theo vùng miền                    | ❌            |
-| Available Tours  | `/tours`            | Danh sách tất cả tours                  | ❌            |
-| Not Found        | `*`                 | 404 page                                | ❌            |
-
-### Admin Screens (Future - not in current frontend)
-
-| Screen             | Route             | Description          | Auth Required |
-| ------------------ | ----------------- | -------------------- | ------------- |
-| Admin Dashboard    | `/admin`          | Tổng quan statistics | Admin only    |
-| User Management    | `/admin/users`    | Quản lý users        | Admin only    |
-| Refund Management  | `/admin/refunds`  | Quản lý refunds      | Admin only    |
-| Booking Management | `/admin/bookings` | Quản lý bookings     | Admin only    |
-| Tour Management    | `/admin/tours`    | CRUD tours (nếu có)  | Admin only    |
 
 ---
 

@@ -73,29 +73,42 @@ function Login() {
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Login failed");
+      // ✅ Better error handling for non-JSON responses
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error("Failed to parse response:", parseError);
+        throw new Error("Server trả về phản hồi không hợp lệ");
       }
 
-      console.log("Login response:", data);
+      if (!response.ok) {
+        throw new Error(data.message || "Đăng nhập thất bại");
+      }
+
+      console.log("✅ Login response:", data);
 
       // Check if 2FA is required
       if (data.requires2FA) {
+        console.log("🔐 2FA required - showing modal");
         setPendingUserId(data.userId);
         setPendingUserData(data);
         setShow2FAModal(true);
         setIsLoading(false);
+        toast.info("🔐 Vui lòng kiểm tra email và nhập mã 2FA để đăng nhập", {
+          duration: 6000,
+        });
         return;
       }
 
       // ✅ No 2FA needed - Check if it's because of trusted device
       if (data.trustedDevice) {
+        console.log("✅ Trusted device - skipping 2FA");
         toast.success("✅ Thiết bị đã tin cậy - Bỏ qua xác thực 2FA!");
       }
 
       // No 2FA needed - proceed with login
+      console.log("✅ Proceeding to complete login");
       await completeLogin(data);
     } catch (err) {
       toast.error(err?.message || "Login failed");
@@ -105,9 +118,19 @@ function Login() {
 
   const completeLogin = async (data) => {
     try {
-      // Data from backend should contain: accessToken, user
-      if (!data.accessToken || !data.user) {
-        throw new Error("Invalid login response from server");
+      // ✅ Better validation with detailed error message
+      if (!data) {
+        throw new Error("Không nhận được phản hồi từ server");
+      }
+
+      if (!data.accessToken) {
+        console.error("Missing accessToken in response:", data);
+        throw new Error("Phản hồi không hợp lệ: thiếu access token");
+      }
+
+      if (!data.user) {
+        console.error("Missing user data in response:", data);
+        throw new Error("Phản hồi không hợp lệ: thiếu thông tin người dùng");
       }
 
       // ✅ Save trusted device token to localStorage (persists after browser close)
@@ -147,6 +170,8 @@ function Login() {
     try {
       setIsLoading(true);
 
+      console.log('🔐 Verifying 2FA code...');
+
       const response = await fetch(`${API}/api/security/2fa/verify`, {
         method: "POST",
         credentials: "include", // ✅ CRITICAL: Include cookies
@@ -162,10 +187,10 @@ function Login() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Mã 2FA không đúng");
+        throw new Error(data.message || 'Mã 2FA không đúng');
       }
 
-      toast.success("✅ Xác thực 2FA thành công!");
+      toast.success('✅ Xác thực 2FA thành công!');
       setShow2FAModal(false);
       setTwoFACode("");
 

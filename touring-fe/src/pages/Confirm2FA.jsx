@@ -52,9 +52,9 @@ const Confirm2FA = () => {
               "2FA đã được bật thành công! Từ giờ bạn sẽ nhận mã xác thực qua email khi đăng nhập."
           );
 
-          // Auto redirect after 3 seconds
+          // ✅ Use window.location.href for hard reload to refresh security settings
           setTimeout(() => {
-            navigate("/profile/security");
+            window.location.href = "/profile/security";
           }, 3000);
         } else {
           setStatus("error");
@@ -96,7 +96,7 @@ const Confirm2FA = () => {
               </button>
             ) : (
               <button
-                onClick={() => navigate("/profile/security")}
+                onClick={() => window.location.href = "/profile/security"}
                 className="mt-6 px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
               >
                 Quay lại Bảo mật
@@ -125,7 +125,7 @@ const Confirm2FA = () => {
             </p>
 
             <button
-              onClick={() => navigate("/profile/security")}
+              onClick={() => window.location.href = "/profile/security"}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               Quay lại ngay
