@@ -395,25 +395,16 @@ export default function ItineraryView() {
             </div>
             
             <p className="text-sm text-slate-600 mb-3 line-clamp-2 leading-relaxed">
-              {currentItem.description || currentItem.address || 'Khám phá điểm đến tuyệt vời này trong hành trình của bạn'}
+              {currentItem.description || 'Khám phá điểm đến tuyệt vời này trong hành trình của bạn'}
             </p>
 
-            {/* Additional details */}
-            <div className="space-y-1.5">
-              {currentItem.address && (
-                <div className="flex items-center gap-2 text-xs text-slate-600">
-                  <MapPin className="w-3.5 h-3.5 text-sky-600" />
-                  <span className="line-clamp-1">{currentItem.address}</span>
-                </div>
-              )}
-              
-              {currentItem.rating && (
-                <div className="flex items-center gap-2 text-xs text-slate-600">
-                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                  <span>{currentItem.rating} / 5.0</span>
-                </div>
-              )}
-            </div>
+            {/* Address with icon */}
+            {currentItem.address && (
+              <div className="flex items-center gap-2 text-sm text-slate-600 mb-3">
+                <MapPin className="w-3.5 h-3.5 text-sky-600 flex-shrink-0" />
+                <span className="line-clamp-1">{currentItem.address}</span>
+              </div>
+            )}
 
             {/* Agency Info (if tour) */}
             {currentItem.itemType === 'tour' && currentItem.agency && (

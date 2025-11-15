@@ -21,59 +21,281 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// small inline svg
-// --- Add these helpers near the top of the file ---
 const getAddress = (it) =>
   it?.address || it?.formatted_address || it?.vicinity || "—";
 
 const getTypes = (it) =>
   Array.isArray(it?.types) && it.types.length
-    ? it.types.slice(0, 3) // show first 3
+    ? it.types.slice(0, 3)
     : [];
 
 const getDuration = (it) =>
-  typeof it?.duration === "number" && it.duration > 0 ? it.duration : 60; // default 60'
+  typeof it?.duration === "number" && it.duration > 0 ? it.duration : 60;
 
-// Optional tiny icons (lightweight SVG)
 const ClockMini = (props) => (
   <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden {...props}>
     <path fill="currentColor" d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2Zm.75 5h-1.5v5l4.25 2.55.75-1.23-3.5-2.07V7Z"/>
   </svg>
 );
+
 const PinMini = (props) => (
   <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden {...props}>
     <path fill="currentColor" d="M12 2C8.69 2 6 4.69 6 8c0 4.35 5.22 10.47 5.44 10.72.3.34.82.34 1.12 0C12.78 18.47 18 12.35 18 8c0-3.31-2.69-6-6-6Zm0 8.5A2.5 2.5 0 1 1 12 5.5a2.5 2.5 0 0 1 0 5Z"/>
   </svg>
 );
 
+const CafeIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M20 8h-2V6c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v12c0 3.3 2.7 6 6 6h4c3.1 0 5.6-2.3 5.9-5.3 1.7-.4 3.1-2 3.1-3.7v-3c0-1.1-.9-2-2-2h-3zm3 7c0 .6-.4 1-1 1v-4h1v3zM8 18V8h8v10c0 2.2-1.8 4-4 4h-4c-2.2 0-4-1.8-4-4V8h4v10z"/>
+    <line x1="11" y1="3" x2="11" y2="5" strokeWidth="1.5" stroke="currentColor" strokeLinecap="round"/>
+    <line x1="14" y1="2" x2="14" y2="4.5" strokeWidth="1.5" stroke="currentColor" strokeLinecap="round"/>
+    <line x1="17" y1="3" x2="17" y2="5" strokeWidth="1.5" stroke="currentColor" strokeLinecap="round"/>
+    <rect x="5" y="26" width="14" height="2" rx="1"/>
+  </svg>
+);
 
-/* ===== Sortable item ===== */
+const RestaurantIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <circle cx="16" cy="16" r="10" fill="none" stroke="currentColor" strokeWidth="2.5"/>
+    <path d="M10 11v5c0 .5.4 1 1 1v9h1.5V17c.5 0 1-.4 1-1v-5h-.8v4.5h-.4v-4.5h-.8v4.5h-.4V11H10z"/>
+    <path d="M20.5 11c-.5 0-1 .4-1 1v4.5c0 1 .7 1.8 1.5 2v7.5h1.5v-7.5c.8-.2 1.5-1 1.5-2V12c0-.6-.5-1-1-1h-2.5z"/>
+  </svg>
+);
+
+const BarIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M8 8l4 6v9c0 .6.4 1 1 1h6c.6 0 1-.4 1-1v-9l4-6H8zm10.5 13h-5v-7l-2.8-4h10.6l-2.8 4v7z"/>
+    <circle cx="12" cy="5" r="1.2"/>
+    <circle cx="16" cy="4" r="1.2"/>
+    <circle cx="20" cy="5" r="1.2"/>
+    <path d="M11 25h10v2H11z"/>
+  </svg>
+);
+
+const TempleIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M16 3l-8 5v2h16V8l-8-5zm-6 8v14c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V11H10zm4 12h-2v-6h2v6zm4 0h-2v-6h2v6zm4 0h-2v-6h2v6z"/>
+  </svg>
+);
+
+const ChurchIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M17 3h-2v2h-2v2h2v2l-6 4v14h14V13l-6-4V7h2V5h-2V3zm-5 22v-8h8v8h-8zm4-18c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1z"/>
+  </svg>
+);
+
+const MosqueIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M16 3l-2 2h4l-2-2zm-6 6c-1.1 0-2 .9-2 2v14h20V11c0-1.1-.9-2-2-2h-4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2h-4zm2 4h12v10H12V13zm4 2h4v6h-4v-6z"/>
+  </svg>
+);
+
+const MuseumIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M16 4L4 10v2h24v-2L16 4zm-12 8v12h2V14H8zm4 0v12h2V14h-2zm4 0v12h2V14h-2zm4 0v12h2V14h-2zm4 0v12h2V14h-2zm4 0v12h2V14h-2zM4 26v2h24v-2H4z"/>
+  </svg>
+);
+
+const ParkIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M16 4l-6 8h4v12h4V12h4l-6-8zm-2 20h4v4h-4v-4z"/>
+  </svg>
+);
+
+const BeachIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M28 20c-2.8-3.7-7-6-12-6s-9.2 2.3-12 6v2h24v-2zm-12-8c3.9 0 7.4 1.6 10 4.2v.8H6v-.8C8.6 13.6 12.1 12 16 12zM8 24h16v2H8v-2z"/>
+  </svg>
+);
+
+const HotelIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M26 6H6c-1.1 0-2 .9-2 2v16h2v-2h20v2h2V8c0-1.1-.9-2-2-2zm-16 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm16 8H6v-4c0-2.2 2.7-4 6-4h8c3.3 0 6 1.8 6 4v4z"/>
+  </svg>
+);
+
+const ShoppingIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M24 8h-4V6c0-2.2-1.8-4-4-4s-4 1.8-4 4v2H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-10-2c0-1.1.9-2 2-2s2 .9 2 2v2h-4V6zm10 18H8V10h2v2h2v-2h8v2h2v-2h2v14z"/>
+  </svg>
+);
+
+const PharmacyIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M24 6H8c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 14h-4v-4h-4v-4h4v-4h4v4h4v4h-4v4z"/>
+  </svg>
+);
+
+const HospitalIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M24 4H8c-1.1 0-2 .9-2 2v20c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-6 18h-4v-4h-4v-4h4v-4h4v4h4v4h-4v4z"/>
+  </svg>
+);
+
+const MovieIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M26 6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h20c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM8 8h2v2H8V8zm0 4h2v2H8v-2zm0 4h2v2H8v-2zm0 4h2v2H8v-2zm14 2H12V10h10v12zm2-2h2v2h-2v-2zm0-4h2v2h-2v-2zm0-4h2v2h-2v-2zm0-4h2v2h-2V8z"/>
+  </svg>
+);
+
+const TouristIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M16 4c-3.3 0-6 2.7-6 6 0 4.5 6 12 6 12s6-7.5 6-12c0-3.3-2.7-6-6-6zm0 8c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm-4 12c-2.2 0-4 1.8-4 4v4h16v-4c0-2.2-1.8-4-4-4h-8z"/>
+  </svg>
+);
+
+const AirportIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M28 14l-12-8V2l-2 2-2-2v4L0 14v2l12-4v6l-4 2v2l6-2 6 2v-2l-4-2v-6l12 4v-2z"/>
+  </svg>
+);
+
+const TrainIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M20 4H12C9.8 4 8 5.8 8 8v12c0 2.2 1.8 4 4 4l-2 2v2h12v-2l-2-2c2.2 0 4-1.8 4-4V8c0-2.2-1.8-4-4-4zm-8 18c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm0-6V8h8v8h-8zm8 6c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1z"/>
+  </svg>
+);
+
+const BusIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M22 6H10C7.8 6 6 7.8 6 10v10c0 2.2 1.8 4 4 4l-1 2v2h2l2-2h6l2 2h2v-2l-1-2c2.2 0 4-1.8 4-4V10c0-2.2-1.8-4-4-4zm-12 16c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm0-6V10h12v6H10zm12 6c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1z"/>
+  </svg>
+);
+
+const StadiumIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <ellipse cx="16" cy="10" rx="12" ry="4"/>
+    <path d="M4 10v8c0 2.2 5.4 4 12 4s12-1.8 12-4v-8c0 2.2-5.4 4-12 4S4 12.2 4 10zm0 8v4c0 2.2 5.4 4 12 4s12-1.8 12-4v-4c0 2.2-5.4 4-12 4s-12-1.8-12-4z"/>
+  </svg>
+);
+
+const GymIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M28 14h-2v-2c0-1.1-.9-2-2-2h-2V8c0-1.1-.9-2-2-2h-8c-1.1 0-2 .9-2 2v2H8c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h2v2c0 1.1.9 2 2 2h2v2c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2v-2h2c1.1 0 2-.9 2-2v-2h2c1.1 0 2-.9 2-2v-4c0-1.1-.9-2-2-2z"/>
+  </svg>
+);
+
+const SpaIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M16 2l2.5 7.5L26 12l-7.5 2.5L16 22l-2.5-7.5L6 12l7.5-2.5L16 2z"/>
+    <path d="M8 20l1.5 4L14 26l-4.5 1.5L8 32l-1.5-4.5L2 26l4.5-1.5L8 20z"/>
+    <path d="M26 18l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z"/>
+  </svg>
+);
+
+const LibraryIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M26 4H10c-2.2 0-4 1.8-4 4v16c0 2.2 1.8 4 4 4h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-16 20c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2h14v18H10zm4-14h8v2h-8v-2zm0 4h8v2h-8v-2zm0 4h6v2h-6v-2z"/>
+  </svg>
+);
+
+const UniversityIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M16 2L2 10v2h2v12H2v2h28v-2h-2V12h2v-2L16 2zm-6 22v-8h12v8H10zm14 0v-8h2v8h-2zM6 24v-8h2v8H6zm10-18c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1z"/>
+  </svg>
+);
+
+const SchoolIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M16 4L2 12l4 2.2V22c0 2.2 4.5 4 10 4s10-1.8 10-4v-7.8l2-1.1V20h2V12L16 4zm0 18c-4.4 0-8-1.3-8-2v-5.5l8 4.4 8-4.4V20c0 .7-3.6 2-8 2z"/>
+  </svg>
+);
+
+const BankIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M16 2L2 10v2h28v-2L16 2zm-10 12v8h2v-8H6zm4 0v8h2v-8h-2zm4 0v8h2v-8h-2zm4 0v8h2v-8h-2zm4 0v8h2v-8h-2zm4 0v8h2v-8h-2zM2 24v2h28v-2H2z"/>
+  </svg>
+);
+
+const LocationIcon = () => (
+  <svg viewBox="0 0 32 32" fill="currentColor" className="w-8 h-8">
+    <path d="M16 4C11.6 4 8 7.6 8 12c0 6 8 16 8 16s8-10 8-16c0-4.4-3.6-8-8-8zm0 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/>
+  </svg>
+);
+
+const getPoiIcon = (types = []) => {
+  if (!types || types.length === 0) return <LocationIcon />;
+  
+  const typeString = types.join(' ').toLowerCase();
+  
+  const iconMap = {
+    cafe: <CafeIcon />,
+    coffee: <CafeIcon />,
+    restaurant: <RestaurantIcon />,
+    food: <RestaurantIcon />,
+    meal: <RestaurantIcon />,
+    bar: <BarIcon />,
+    night_club: <BarIcon />,
+    liquor: <BarIcon />,
+    temple: <TempleIcon />,
+    hindu_temple: <TempleIcon />,
+    church: <ChurchIcon />,
+    mosque: <MosqueIcon />,
+    museum: <MuseumIcon />,
+    art_gallery: <MuseumIcon />,
+    park: <ParkIcon />,
+    natural_feature: <ParkIcon />,
+    campground: <ParkIcon />,
+    beach: <BeachIcon />,
+    hotel: <HotelIcon />,
+    lodging: <HotelIcon />,
+    resort: <HotelIcon />,
+    shopping_mall: <ShoppingIcon />,
+    store: <ShoppingIcon />,
+    department_store: <ShoppingIcon />,
+    supermarket: <ShoppingIcon />,
+    pharmacy: <PharmacyIcon />,
+    drugstore: <PharmacyIcon />,
+    hospital: <HospitalIcon />,
+    doctor: <HospitalIcon />,
+    clinic: <HospitalIcon />,
+    movie_theater: <MovieIcon />,
+    cinema: <MovieIcon />,
+    tourist_attraction: <TouristIcon />,
+    point_of_interest: <TouristIcon />,
+    landmark: <TouristIcon />,
+    airport: <AirportIcon />,
+    train_station: <TrainIcon />,
+    subway_station: <TrainIcon />,
+    bus_station: <BusIcon />,
+    transit_station: <BusIcon />,
+    stadium: <StadiumIcon />,
+    sports: <StadiumIcon />,
+    gym: <GymIcon />,
+    fitness: <GymIcon />,
+    spa: <SpaIcon />,
+    beauty_salon: <SpaIcon />,
+    beauty: <SpaIcon />,
+    hair_care: <SpaIcon />,
+    barbershop: <SpaIcon />,
+    library: <LibraryIcon />,
+    book_store: <LibraryIcon />,
+    university: <UniversityIcon />,
+    college: <UniversityIcon />,
+    school: <SchoolIcon />,
+    bank: <BankIcon />,
+    atm: <BankIcon />,
+    finance: <BankIcon />
+  };
+
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (typeString.includes(key)) return icon;
+  }
+  
+  return <LocationIcon />;
+};
+
 function SortableItem({ item, index, onRemove }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.poiId });
+  const sortableProps = useSortable({ id: item.poiId });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortableProps;
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: transition,
     opacity: isDragging ? 0.4 : 1,
-    zIndex: isDragging ? 1000 : 1,
+    zIndex: isDragging ? 1000 : 1
   };
 
-  // ✅ Debug: Log item data
-  console.log('🔍 Item data:', {
-    name: item.name,
-    address: item.address,
-    location: item.location,
-    types: item.types
-  });
-
-  // ✅ Helper: Get photo URL
   const getPhotoUrl = (photoRef) => {
     if (!photoRef) return null;
     if (photoRef.startsWith('http')) return photoRef;
@@ -84,8 +306,8 @@ function SortableItem({ item, index, onRemove }) {
   const firstPhoto = item.photos?.[0];
   const photoUrl = getPhotoUrl(firstPhoto);
   const primaryType = item.types?.[0]?.replace(/_/g, ' ') || '';
-
   const isTour = item.itemType === 'tour';
+
   return (
     <div
       ref={setNodeRef}
@@ -94,8 +316,7 @@ function SortableItem({ item, index, onRemove }) {
         isTour ? 'bg-[#e6f7fa] border-[#02A0AA]' : 'bg-white border-slate-200 hover:border-slate-300'
       } ${isDragging ? 'shadow-lg scale-105' : ''}`}
     >
-      <div className="flex gap-3 p-3">
-        {/* ✅ Drag Handle */}
+      <div className="flex gap-3 p-3 items-center">
         <button
           {...attributes}
           {...listeners}
@@ -110,8 +331,7 @@ function SortableItem({ item, index, onRemove }) {
           </span>
         </button>
 
-        {/* ✅ Thumbnail (if photo exists) */}
-        {photoUrl && (
+        {photoUrl ? (
           <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
             <img 
               src={photoUrl} 
@@ -120,9 +340,12 @@ function SortableItem({ item, index, onRemove }) {
               loading="lazy"
             />
           </div>
+        ) : (
+          <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-cyan-100 to-teal-100 flex items-center justify-center text-[#02A0AA] border-2 border-[#02A0AA]">
+            {getPoiIcon(item.types)}
+          </div>
         )}
 
-        {/* ✅ Info Section */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-sm text-slate-900 line-clamp-1">
@@ -132,20 +355,12 @@ function SortableItem({ item, index, onRemove }) {
               <span className="ml-1 px-2 py-0.5 text-[10px] rounded-full bg-[#02A0AA] text-white font-semibold uppercase">TOUR</span>
             )}
           </div>
-          {/* ✅ Address - ALWAYS SHOW */}
           <p className="text-xs text-slate-600 mt-0.5 flex items-center gap-1 line-clamp-1">
             <PinMini className="text-slate-500 flex-shrink-0" />
             <span className="truncate">
               {item.address || 'Địa chỉ không xác định'}
             </span>
           </p>
-          {/* ✅ Location Coordinates (for debugging) */}
-          {item.location && (
-            <p className="text-[10px] text-slate-400 mt-0.5">
-              📍 {item.location.lat?.toFixed(4)}, {item.location.lng?.toFixed(4)}
-            </p>
-          )}
-          {/* ✅ Type & Rating */}
           <div className="flex items-center gap-2 mt-1">
             {primaryType && !isTour && (
               <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full capitalize">
@@ -160,13 +375,12 @@ function SortableItem({ item, index, onRemove }) {
           </div>
         </div>
 
-        {/* ✅ Remove button */}
         <button
           onClick={() => onRemove(item.poiId)}
-          className="flex-shrink-0 w-8 h-8 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition grid place-items-center"
+          className="flex-shrink-0 w-8 h-8 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition flex items-center justify-center"
           aria-label="Xóa địa điểm"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-4 h-4" strokeWidth={2.5} />
         </button>
       </div>
     </div>
@@ -177,61 +391,43 @@ export default function ItineraryCart() {
   const navigate = useNavigate();
   const {
     currentItinerary,
-    setCurrentItinerary, // fallback
+    setCurrentItinerary,
     isOpen,
     getCartCount,
     toggleCart,
     closeCart,
     removePOI,
-    reorderPOIs,        // prefer dùng cái này
+    reorderPOIs
   } = useItinerary();
 
   const cartCount = getCartCount();
   const items = currentItinerary?.items || [];
   const itemIds = useMemo(() => items.map(i => i.poiId), [items]);
 
-  // sensors
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
   function handleDragEnd(event) {
     const { active, over } = event;
-    
-    console.log('🎯 Drag event:', { 
-      active: active?.id, 
-      over: over?.id 
-    });
 
     if (!over || active.id === over.id) {
-      console.log('⏭️ Skipping: dropped on same position or outside');
       return;
     }
 
     const oldIndex = itemIds.indexOf(active.id);
     const newIndex = itemIds.indexOf(over.id);
-    
-    console.log('📍 Indexes:', { oldIndex, newIndex });
 
     if (oldIndex === -1 || newIndex === -1) {
-      console.warn('❌ Invalid indexes');
       return;
     }
 
     const nextItems = arrayMove(items, oldIndex, newIndex);
     const nextIds = nextItems.map(i => i.poiId);
 
-    console.log('🔄 Reordering:', { 
-      from: oldIndex, 
-      to: newIndex,
-      order: nextIds 
-    });
-
     if (typeof reorderPOIs === 'function') {
       reorderPOIs(nextIds);
     } else {
-      console.error('❌ reorderPOIs is not a function!');
-      // Fallback
       setCurrentItinerary?.({ ...currentItinerary, items: nextItems });
     }
   }
@@ -242,15 +438,15 @@ export default function ItineraryCart() {
   };
 
   const handleRemovePOI = async (poiId) => {
-    try { await removePOI(poiId); } catch (e) { /* show toast if cần */ }
+    try {
+      await removePOI(poiId);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  // Banner for custom tour/tour guide request
-  const isCustomTour = currentItinerary?.isCustomTour;
-  const tourGuideRequest = currentItinerary?.tourGuideRequest;
   return (
     <>
-      {/* Floating button — bottom-right */}
       <motion.button
         onClick={toggleCart}
         className="fixed bottom-6 right-6 z-[10000] flex items-center gap-2 rounded-full bg-[#02A0AA] text-white px-4 py-3 shadow-2xl hover:bg-[#028a94] transition-all"
@@ -267,7 +463,6 @@ export default function ItineraryCart() {
         )}
       </motion.button>
 
-      {/* Panel */}
       <AnimatePresence>
         {isOpen && (
           <>
@@ -287,7 +482,6 @@ export default function ItineraryCart() {
               role="dialog"
               aria-label="Giỏ hành trình"
             >
-              {/* Header */}
               <div className="bg-gradient-to-r from-[#02A0AA] to-[#028a94] text-white px-6 py-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -306,7 +500,6 @@ export default function ItineraryCart() {
                 </div>
               </div>
 
-              {/* List + DnD */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {items.length > 0 ? (
                   <DndContext
@@ -332,7 +525,6 @@ export default function ItineraryCart() {
                 )}
               </div>
 
-              {/* Footer */}
               <div className="border-t border-slate-200 p-4 space-y-3 bg-white">
                 <button
                   onClick={handleViewItinerary}
