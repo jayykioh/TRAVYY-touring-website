@@ -27,7 +27,34 @@ const RequestCard = ({ request, highlightNew, onActionClick }) => {
     tourName,
     totalPrice,
     departureDate,
+    raw,
+    rawItinerary,
   } = request;
+
+  // Extract image from TourCustomRequest data - priority: itinerary items > coverImage
+  const getRequestImage = () => {
+    // Try to get from itinerary items (from backend)
+    if (rawItinerary?.items && Array.isArray(rawItinerary.items)) {
+      for (const item of rawItinerary.items) {
+        if (item.imageUrl) return item.imageUrl;
+        if (
+          item.photos &&
+          Array.isArray(item.photos) &&
+          item.photos.length > 0
+        ) {
+          return item.photos[0];
+        }
+      }
+    }
+
+    // Fallback to coverImage if exists
+    if (request.coverImage) return request.coverImage;
+
+    // No image available
+    return null;
+  };
+
+  const requestImage = getRequestImage();
 
   const handleCardClick = () => {
     // Điều hướng sang trang chi tiết – chỉnh path nếu route khác
@@ -54,16 +81,28 @@ const RequestCard = ({ request, highlightNew, onActionClick }) => {
         isHighlighted ? "ring-2 ring-[#02A0AA]/60" : "",
       ].join(" ")}
     >
-      {/* Ảnh header full chiều ngang */}
-      <div className="overflow-hidden rounded-t-3xl">
-        <img
-          src={
-            request.coverImage ||
-            "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg"
-          }
-          alt={location || tourName || "Request"}
-          className="h-48 w-full object-cover"
-        />
+      {/* Ảnh header full chiều ngang - lấy từ BE */}
+      <div className="overflow-hidden rounded-t-3xl bg-gray-200">
+        {requestImage ? (
+          <img
+            src={requestImage}
+            alt={location || tourName || "Request"}
+            className="h-48 w-full object-cover"
+            onError={(e) => {
+              // If image fails to load, show Travyy logo
+              e.target.src = "/logo.png";
+              e.target.className = "h-48 w-full object-contain p-8";
+            }}
+          />
+        ) : (
+          <div className="h-48 w-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+            <img
+              src="/logo.png"
+              alt="Travyy Logo"
+              className="h-24 w-auto object-contain opacity-40"
+            />
+          </div>
+        )}
       </div>
 
       {/* Nội dung */}

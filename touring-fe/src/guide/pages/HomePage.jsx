@@ -67,21 +67,11 @@ const HomePage = () => {
           : [];
         setRequests(reqs);
 
-        // Map tours - now from tour requests instead of itinerary
+        // Map tours with images like MyToursPage - now from tour requests instead of itinerary
         const tourRequestsArray = tourData.tourRequests || tourData.requests || [];
         const myTours =
-          Array.isArray(tourRequestsArray)
-            ? tourRequestsArray.map((tourReq) => ({
-                ...tourReq,
-                _id: tourReq._id,
-                name: tourReq.tourDetails?.zoneName || tourReq.itineraryId?.zoneName || "Tour",
-                zoneName: tourReq.tourDetails?.zoneName || tourReq.itineraryId?.zoneName || "Tour",
-                numberOfPeople: tourReq.tourDetails?.numberOfGuests || 1,
-                preferredDate: tourReq.preferredDates?.[0]?.startDate,
-                totalPrice: tourReq.initialBudget?.amount || 0,
-                agreement: tourReq.agreement || {},
-                bothAgreed: tourReq.agreement?.userAgreed && tourReq.agreement?.guideAgreed,
-              }))
+          tourData.success && Array.isArray(tourData.tours)
+            ? tourData.tours
             : [];
         setTours(myTours);
 

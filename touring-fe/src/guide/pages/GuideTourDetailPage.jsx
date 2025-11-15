@@ -340,7 +340,7 @@ const GuideTourDetailPage = () => {
       console.log("[GuideTourDetail] Accept response:", response);
 
       if (response.success) {
-        toast.success("✅ Đã chấp nhận yêu cầu tour!");
+        toast.success("Đã chấp nhận yêu cầu tour!");
         setTimeout(() => {
           navigate("/guide/tours");
         }, 1000);
@@ -382,7 +382,7 @@ const GuideTourDetailPage = () => {
       console.log("[GuideTourDetail] Decline response:", response);
 
       if (response.success) {
-        toast.success("✅ Đã từ chối yêu cầu");
+        toast.success(" Đã từ chối yêu cầu");
         setTimeout(() => {
           navigate("/guide/requests");
         }, 1000);
@@ -391,9 +391,7 @@ const GuideTourDetailPage = () => {
       }
     } catch (error) {
       console.error("[GuideTourDetail] Error declining request:", error);
-      toast.error(
-        "❌ Có lỗi xảy ra: " + (error.message || "Lỗi không xác định")
-      );
+      toast.error("Có lỗi xảy ra: " + (error.message || "Lỗi không xác định"));
     }
   };
 
@@ -484,12 +482,17 @@ const GuideTourDetailPage = () => {
     );
   }
 
-  // STATUS
+  // STATUS - Map to correct TourCustomRequest statuses
   const isRequest =
-    tour.status === "pending" || tour.status === "awaiting_guide";
+    tour.status === "pending" || 
+    tour.status === "negotiating" || 
+    tour.status === "agreement_pending";
   const isOngoing = tour.status === "ongoing" || tour.status === "in_progress";
-  const isUpcoming = tour.status === "accepted" || tour.status === "confirmed";
+  const isUpcoming = tour.status === "accepted";
   const isCompleted = tour.status === "completed";
+  const isRejected = tour.status === "rejected";
+  const isCancelled = tour.status === "cancelled";
+  const isExpired = tour.status === "expired";
 
   console.log("[GuideTourDetail] Status check:", {
     tourStatus: tour.status,
@@ -497,14 +500,22 @@ const GuideTourDetailPage = () => {
     isOngoing,
     isUpcoming,
     isCompleted,
+    isRejected,
+    isCancelled,
+    isExpired,
   });
 
   const statusColors = {
     pending: "warning",
+    negotiating: "info",
+    agreement_pending: "info",
     ongoing: "success",
-    accepted: "info",
+    accepted: "success",
     completed: "default",
     canceled: "danger",
+    cancelled: "danger",
+    rejected: "danger",
+    expired: "warning",
   };
 
   return (
@@ -537,7 +548,9 @@ const GuideTourDetailPage = () => {
               variant="warning"
               className="text-xs px-3 py-1.5 rounded-full"
             >
-              Yêu cầu mới
+              {tour.status === "pending" && "Yêu cầu mới"}
+              {tour.status === "negotiating" && "Đang đàm phán"}
+              {tour.status === "agreement_pending" && "Chờ xác nhận"}
             </Badge>
           ) : (
             tour.status && (
@@ -546,9 +559,13 @@ const GuideTourDetailPage = () => {
                 className="text-xs px-3 py-1.5 rounded-full"
               >
                 {tour.status === "ongoing" && "Đang diễn ra"}
-                {tour.status === "accepted" && "Sắp diễn ra"}
+                {tour.status === "in_progress" && "Đang diễn ra"}
+                {tour.status === "accepted" && "Đã chấp nhận"}
                 {tour.status === "completed" && "Đã hoàn thành"}
                 {tour.status === "canceled" && "Đã hủy"}
+                {tour.status === "cancelled" && "Đã hủy"}
+                {tour.status === "rejected" && "Đã từ chối"}
+                {tour.status === "expired" && "Đã hết hạn"}
               </Badge>
             )
           )}
@@ -1076,19 +1093,18 @@ const GuideTourDetailPage = () => {
                     <Button
                       variant="primary"
                       fullWidth
-                      onClick={handleAcceptRequest}
+                      onClick={handleNavigateToLocation}
                       className="rounded-full px-4 py-2.5 text-sm font-semibold"
                       style={{ backgroundColor: PRIMARY, color: "#fff" }}
                     >
-                      Chấp nhận yêu cầu
+                      Chỉ đường
                     </Button>
                     <Button
-                      variant="danger"
                       fullWidth
-                      onClick={handleDeclineRequest}
-                      className="rounded-full px-4 py-2.5 text-sm font-semibold"
+                      onClick={() => setShowCancelModal(true)}
+                      className="rounded-full px-4 py-2.5 text-sm font-semibold border-2 bg-red border-red-600 text-red-600 hover:bg-red-50"
                     >
-                      Từ chối yêu cầu
+                      Hủy Tour
                     </Button>
                   </>
                 )}

@@ -63,12 +63,20 @@ const TourCard = ({ tour, status = "accepted" }) => {
             alt={title}
             className="w-full h-full object-cover"
             onError={(e) => {
-              e.target.style.display = "none";
+              // Switch to Travyy logo on error
+              e.target.src = "/logo.png";
+              e.target.className =
+                "w-full h-full object-contain p-8 opacity-40";
+              e.target.onerror = null;
             }}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
-            <span className="text-gray-400 text-4xl">🗺️</span>
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+            <img
+              src="/logo.png"
+              alt="Travyy"
+              className="w-full h-full object-contain p-8 opacity-40"
+            />
           </div>
         )}
 
