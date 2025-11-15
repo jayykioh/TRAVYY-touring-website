@@ -67,12 +67,42 @@ const HomePage = () => {
           : [];
         setRequests(reqs);
 
-        // Map tours with images like MyToursPage - now from tour requests instead of itinerary
+        // Map tours from the API response (tourRequests / requests)
         const tourRequestsArray = tourData.tourRequests || tourData.requests || [];
-        const myTours =
-          tourData.success && Array.isArray(tourData.tours)
-            ? tourData.tours
-            : [];
+        const myTours = Array.isArray(tourRequestsArray)
+          ? tourRequestsArray.map((it) => {
+              // Try to locate a zone hero image (common field: heroImg)
+              const zoneObj = it.tourDetails?.zone || it.tourDetails?.zoneId || it.itineraryId?.zone || null;
+              const zoneHero = zoneObj?.heroImg || zoneObj?.heroImg?.url || zoneObj?.heroImgUrl || zoneObj?.hero || null;
+
+              // Other possible image fields from request/itinerary
+              const requestCover = it.tourDetails?.coverImage || it.tourDetails?.coverImage?.url;
+              const itineraryCover = it.itineraryId?.coverImage || it.itineraryId?.coverImage?.url;
+              const fallbackImage = it.image?.url || it.imageUrl || it.coverImage || '';
+
+              const coverImage =
+                zoneHero ||
+                (typeof requestCover === 'string' ? requestCover : requestCover?.url) ||
+                (typeof itineraryCover === 'string' ? itineraryCover : itineraryCover?.url) ||
+                fallbackImage || '';
+
+              return {
+                id: it._id,
+                _id: it._id,
+                tourName:
+                  it.tourDetails?.zoneName || it.itineraryId?.zoneName || it.name || 'Tour',
+                preferredDate: it.preferredDates?.[0]?.startDate || it.startDate || null,
+                location: it.tourDetails?.zoneName || it.itineraryId?.zoneName || '',
+                numberOfGuests: it.tourDetails?.numberOfGuests || 1,
+                totalPrice: it.initialBudget?.amount || 0,
+                // Provide fields that TourCard expects
+                coverImage: coverImage,
+                imageUrl: coverImage,
+                imageItems: coverImage ? [{ imageUrl: coverImage }] : undefined,
+                raw: it,
+              };
+            })
+          : [];
         setTours(myTours);
 
         // Set earnings

@@ -25,6 +25,33 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
     contactPhone: '',
   });
 
+  // Helpers for budget formatting
+  const formatNumber = (v) => {
+    if (v == null) return '';
+    const s = String(v);
+    return s.replace(/[^0-9]/g, '');
+  };
+
+  const formatDisplay = (v) => {
+    const cleaned = formatNumber(v);
+    if (!cleaned) return '';
+    try {
+      return Number(cleaned).toLocaleString('vi-VN');
+    } catch {
+      return cleaned;
+    }
+  };
+
+  const handleBudgetChange = (val) => {
+    const cleaned = formatNumber(val);
+    setFormData((f) => ({ ...f, budget: cleaned ? formatDisplay(cleaned) : '' }));
+  };
+
+  const getBudgetValueNumber = (budgetStr) => {
+    const cleaned = formatNumber(budgetStr);
+    return cleaned ? Number(cleaned) : 0;
+  };
+
   // Define loadGuides first (before useEffect that uses it)
   const loadGuides = useCallback(async () => {
     setLoadingGuides(true);
@@ -117,8 +144,8 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
       return;
     }
 
-    // Validate budget format and value
-    const budgetNum = parseFloat(formData.budget);
+    // Validate budget format and value (clean formatted input)
+    const budgetNum = getBudgetValueNumber(formData.budget);
     if (!formData.budget || isNaN(budgetNum) || budgetNum <= 0) {
       toast.error('Ngân sách phải là số dương (VD: 2000000)');
       return;
@@ -478,16 +505,18 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
                       <DollarSign className="w-4 h-4 inline mr-1" />
                       Ngân sách (VND) *
                     </label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      step="10000"
-                      value={formData.budget}
-                      onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#02A0AA] focus:border-transparent"
-                      placeholder="2,000,000"
-                    />
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        required
+                        value={formData.budget}
+                        onChange={(e) => handleBudgetChange(e.target.value)}
+                        onFocus={() => setFormData((f) => ({ ...f, budget: formatNumber(f.budget) }))}
+                        onBlur={() => setFormData((f) => ({ ...f, budget: formatDisplay(f.budget) }))}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#02A0AA] focus:border-transparent"
+                        placeholder="2,000,000"
+                      />
                   </div>
 
                   <div>

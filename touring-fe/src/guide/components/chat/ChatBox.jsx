@@ -40,7 +40,12 @@ const ChatBox = ({ requestId, tourInfo }) => {
     sendOffer,
     agreeToTerms,
     sendTypingIndicator,
+    typingUsers,
   } = useTourRequestChat(requestId, "/api/chat");
+
+  // Derived values for header and typing indicator
+  const customerName = requestDetails?.customer?.name || requestDetails?.customerName || 'Khách hàng';
+  const typingArray = Array.from((typeof typingUsers !== 'undefined' && typingUsers) || []);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -155,24 +160,24 @@ const ChatBox = ({ requestId, tourInfo }) => {
           <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
             <div className="flex items-start justify-between">
               <div className="space-y-1">
-              <p className="font-semibold text-gray-900 text-sm">
-                <div className="text-base font-bold">
+                <div className="font-semibold text-gray-900 text-sm">
+                  <div className="text-base font-bold">
                     {(requestDetails?.tourDetails?.zoneName || tourInfo?.tourName || tourInfo?.name) || 'Tour'}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {requestDetails?.tourDetails?.numberOfDays || tourInfo?.duration || ''} • {requestDetails?.tourDetails?.numberOfGuests || tourInfo?.numberOfGuests || ''} khách
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">
-                  {requestDetails?.tourDetails?.numberOfDays || tourInfo?.duration || ''} • {requestDetails?.tourDetails?.numberOfGuests || tourInfo?.numberOfGuests || ''} khách
-                </div>
-              </div>
 
-              <div className="flex flex-col items-end gap-2">
-                <button
-                  onClick={() => setShowItinerary((s) => !s)}
-                  className="text-xs px-3 py-1 bg-white/60 rounded-lg hover:bg-white/80"
-                >
-                  {showItinerary ? 'Ẩn hành trình' : 'Xem hành trình'}
-                </button>
+                <div className="flex flex-col items-end gap-2">
+                  <button
+                    onClick={() => setShowItinerary((s) => !s)}
+                    className="text-xs px-3 py-1 bg-white/60 rounded-lg hover:bg-white/80"
+                  >
+                    {showItinerary ? 'Ẩn hành trình' : 'Xem hành trình'}
+                  </button>
+                </div>
               </div>
-              </p>
               {tourInfo.location && (
                 <p className="text-xs text-gray-500 flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5" />
@@ -278,7 +283,7 @@ const ChatBox = ({ requestId, tourInfo }) => {
         </div>
 
         {/* Typing indicator */}
-        {typingUsers.length > 0 && (
+        {typingArray.length > 0 && (
           <div className="flex justify-start">
             <div className="bg-white rounded-[20px] px-4 py-3 shadow-sm border border-gray-100">
               <div className="flex gap-1">

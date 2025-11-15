@@ -166,8 +166,11 @@ const PriceAgreementCard = ({
             <>
               {/* Gợi ý giá: outline chủ đạo */}
               <button
-                onClick={() => setShowOfferDialog(true)}
-                disabled={loading || agreeing}
+                onClick={() => {
+                  if (bothAgreed) return;
+                  setShowOfferDialog(true);
+                }}
+                disabled={loading || agreeing || bothAgreed}
                 className="px-4 h-9 rounded-full text-sm font-semibold border transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   borderColor: PRIMARY,
@@ -220,8 +223,11 @@ const PriceAgreementCard = ({
             <>
               {/* Đề xuất giá (user): outline chủ đạo */}
               <button
-                onClick={() => setShowOfferDialog(true)}
-                disabled={loading}
+                onClick={() => {
+                  if (bothAgreed) return;
+                  setShowOfferDialog(true);
+                }}
+                disabled={loading || bothAgreed}
                 className="px-4 h-9 rounded-full text-sm font-semibold border transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   borderColor: PRIMARY,
@@ -273,6 +279,11 @@ const PriceAgreementCard = ({
           )}
         </div>
       </div>
+      {bothAgreed && (
+        <div className="mt-2 text-xs text-gray-500">
+          Gợi ý giá đã bị khóa — cả hai bên đã đồng ý.
+        </div>
+      )}
 
       {/* Offer Dialog */}
       {showOfferDialog && (
