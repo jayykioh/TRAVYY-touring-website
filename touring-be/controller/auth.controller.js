@@ -166,16 +166,10 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-<<<<<<< HEAD
     const { username, password, trustedDeviceToken } = req.body; // ✅ Accept trusted device token
-    // cần lấy field password => đừng .select("-password") ở query này
-    const user = await User.findOne({ username });
-=======
-    const { username, password } = req.body;
-    // Find user by email if contains @, else by username
-    const query = username.includes('@') ? { email: username } : { username };
+    // Determine whether the user provided an email or username and query accordingly
+    const query = typeof username === "string" && username.includes("@") ? { email: username } : { username };
     const user = await User.findOne(query);
->>>>>>> 9b265f243c0b8bffa8063c9f453cab9635fff1ac
     if (!user)
       return res.status(400).json({ message: "Invalid username or password" });
 
