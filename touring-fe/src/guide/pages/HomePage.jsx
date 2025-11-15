@@ -7,13 +7,16 @@ import NewRequestModal from "../components/home/NewRequestModal";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import { useAuth } from "../../auth/context";
+import { useSocket } from "../../context/SocketContext";
+import { toast } from "sonner";
 
 const HomePage = () => {
   const navigate = useNavigate();
   const { user, withAuth } = useAuth();
-
+  const { socket, on, joinRoom } = useSocket();
   const [tours, setTours] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [earnings, setEarnings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showBlogNotification, setShowBlogNotification] = useState(false);
   const [hasViewedRequests, setHasViewedRequests] = useState(
@@ -25,47 +28,43 @@ const HomePage = () => {
     async function fetchData() {
       setLoading(true);
       try {
-        const [requestData, tourData] = await Promise.all([
-          withAuth("/api/itinerary/guide/requests"),
+        const [requestData, tourData, earningsData] = await Promise.all([
+          withAuth("/api/guide/custom-requests?status=pending,negotiating"),
           withAuth("/api/itinerary/guide/accepted-tours"),
+          withAuth("/api/guide/earnings").catch(() => ({
+            summary: { thisWeek: 0 },
+          })),
         ]);
 
-        // Map requests
-        const reqs =
-          requestData.success && Array.isArray(requestData.requests)
-            ? requestData.requests.map((it) => ({
-                id: it._id,
-                tourName: it.name || it.zoneName,
-                customerId: it.userId?._id || it.userId,
-                customerName: it.userId?.name || "Khách hàng",
-                customerAvatar: it.userId?.avatar?.url || "",
-                customerEmail: it.userId?.email || "",
-                contactPhone: it.userId?.phone || "",
-                departureDate: it.preferredDate || "",
-                startTime: it.startTime || "",
-                endTime: it.endTime || "",
-                location: it.zoneName,
-                pickupPoint: "",
-                numberOfGuests: it.numberOfPeople || "",
-                duration: it.totalDuration
-                  ? `${Math.floor(it.totalDuration / 60)}h${
-                      it.totalDuration % 60
-                    }m`
-                  : "",
-                totalPrice: Number(it.estimatedCost) || 0,
-                requestedAt: it.tourGuideRequest?.requestedAt,
-                itinerary:
-                  it.items?.map((item) => ({
-                    title: item.name,
-                    time:
-                      item.startTime && item.endTime
-                        ? `${item.startTime} - ${item.endTime}`
-                        : "",
-                    description: item.address || "",
-                  })) || [],
-                raw: it,
-              }))
-            : [];
+        console.log("[HomePage] Raw request data:", requestData);
+        console.log("[HomePage] Raw tour data:", tourData);
+        console.log("[HomePage] Raw earnings data:", earningsData);
+
+        // Map requests using cuocthi structure
+        const requestsArray =
+          requestData.tourRequests || requestData.requests || [];
+        const reqs = Array.isArray(requestsArray)
+          ? requestsArray.map((it) => ({
+              id: it._id,
+              tourName:
+                it.tourDetails?.zoneName ||
+                it.itineraryId?.zoneName ||
+                it.name ||
+                "Custom Tour",
+              customerId: it.userId?._id || it.userId,
+              customerName: it.userId?.name || "Khách hàng",
+              customerAvatar: it.userId?.avatar?.url || "",
+              customerEmail: it.userId?.email || "",
+              contactPhone: it.userId?.phone || "",
+              departureDate: it.preferredDates?.[0]?.startDate || "",
+              location:
+                it.tourDetails?.zoneName || it.itineraryId?.zoneName || "",
+              numberOfGuests: it.tourDetails?.numberOfGuests || 1,
+              totalPrice: it.initialBudget?.amount || 0,
+              requestedAt: it.createdAt,
+              raw: it,
+            }))
+          : [];
         setRequests(reqs);
 
         // Map tours
@@ -74,10 +73,14 @@ const HomePage = () => {
             ? tourData.tours
             : [];
         setTours(myTours);
+
+        // Set earnings
+        setEarnings(earningsData);
       } catch (error) {
         console.error("Error fetching data:", error);
         setTours([]);
         setRequests([]);
+        setEarnings({ summary: { thisWeek: 0 } });
       } finally {
         setLoading(false);
       }
@@ -85,6 +88,30 @@ const HomePage = () => {
 
     if (user) fetchData();
   }, [user, withAuth]);
+
+  // Join socket room for real-time updates
+  useEffect(() => {
+    if (!socket || !user?._id) return;
+
+    joinRoom(`user-${user._id}`);
+
+    // Listen for payment success
+    const unsubscribePayment = on("paymentSuccessful", (data) => {
+      console.log("💰 Payment successful:", data);
+      toast.success(`💰 Khách hàng đã thanh toán cho ${data.tourTitle}`);
+    });
+
+    // Listen for tour marked as done
+    const unsubscribeTourDone = on("tourMarkedDone", (data) => {
+      console.log("✅ Tour marked done:", data);
+      toast.success(`✅ Tour "${data.tourTitle}" đã hoàn thành!`);
+    });
+
+    return () => {
+      unsubscribePayment?.();
+      unsubscribeTourDone?.();
+    };
+  }, [socket, user?._id, joinRoom, on]);
 
   // === TOUR CATEGORIZATION ===
   const now = new Date();

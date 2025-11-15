@@ -3,14 +3,18 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/auth/context";
 import { useCart } from "@/hooks/useCart";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { useSocket } from '@/context/SocketContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+// Normalize API base: some envs include trailing '/api', avoid '/api/api' when concatenating
+const API_BASE_ROOT = String(API_BASE).replace(/\/api\/?$/i, '');
 
 export default function PaymentCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { refreshCart } = useCart(); // ✅ Add cart refresh
+  const { joinRoom, leaveRoom, on } = useSocket() || {};
   const [status, setStatus] = useState("pending");
   const [message, setMessage] = useState("Đang xử lý thanh toán...");
   const [bookingId, setBookingId] = useState(null);
@@ -35,7 +39,7 @@ export default function PaymentCallback() {
           setStatus('processing');
           setProvider('paypal');
           setOrderRef(paypalOrderId);
-          const resp = await fetch(`${API_BASE}/api/paypal/capture`, {
+          const resp = await fetch(`${API_BASE_ROOT}/api/paypal/capture`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -80,7 +84,7 @@ export default function PaymentCallback() {
           // STEP 1: Call mark-paid to ensure session is marked as paid
           try {
             console.log('[MoMo Callback] Calling mark-paid for orderId:', momoOrderId);
-            const markPaidResp = await fetch(`${API_BASE}/api/payments/momo/mark-paid`, {  
+            const markPaidResp = await fetch(`${API_BASE_ROOT}/api/payments/momo/mark-paid`, {  
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -109,13 +113,38 @@ export default function PaymentCallback() {
             console.error('[MoMo Callback] Mark-paid error:', e);
           }
           
-          // STEP 2: Poll booking creation via by-payment endpoint
+          // STEP 2: Try realtime detection via socket then fallback to polling
           let attempts = 0;
+          let offPay;
+          if (joinRoom && on) {
+            try {
+              joinRoom(`payment-${momoOrderId}`);
+              offPay = on('paymentSessionUpdated', async (doc) => {
+                try {
+                  // if backend provided bookingId directly on payment session
+                  if (doc && doc.bookingId) {
+                    setStatus('success');
+                    setMessage('Thanh toán MoMo thành công!');
+                    setBookingId(doc.bookingId);
+                    await refreshCart();
+                    if (offPay) offPay();
+                    if (leaveRoom) leaveRoom(`payment-${momoOrderId}`);
+                  }
+                } catch (e) {
+                  console.error('[MoMo Callback] socket handler error', e);
+                }
+              });
+            } catch (e) {
+              console.warn('[MoMo Callback] socket init failed, will fallback to polling', e?.message);
+            }
+          }
+
+          // STEP 2 (fallback): Poll booking creation via by-payment endpoint
           const poll = async () => {
             attempts++;
             try {
               console.log(`[MoMo Callback] Polling attempt ${attempts} for orderId: ${momoOrderId}`);
-              const r = await fetch(`${API_BASE}/api/bookings/by-payment/momo/${momoOrderId}`, {
+              const r = await fetch(`${API_BASE_ROOT}/api/bookings/by-payment/momo/${momoOrderId}`, {
                 headers: { 
                   'Authorization': `Bearer ${user?.token}`,
                   'Content-Type': 'application/json'
@@ -151,7 +180,20 @@ export default function PaymentCallback() {
               setMessage('Thanh toán MoMo thành công (đang cập nhật booking...)');
             }
           };
+          // ensure we cleanup socket listener when no longer needed
+          let socketCleanup = null;
+          if (offPay) {
+            socketCleanup = () => {
+              offPay();
+              if (leaveRoom) leaveRoom(`payment-${momoOrderId}`);
+            };
+          }
+
           poll();
+          // return cleanup to remove socket listener if effect unmounts
+          return () => {
+            if (socketCleanup) socketCleanup();
+          };
         } else {
           setStatus('error');
           setMessage(decodeURIComponent(momoMessage || 'Thanh toán MoMo thất bại'));
@@ -164,7 +206,7 @@ export default function PaymentCallback() {
       setMessage('Thiếu tham số nhận kết quả thanh toán');
     };
     run();
-  }, [searchParams, user, refreshCart]);
+  }, [searchParams, user, refreshCart, joinRoom, on, leaveRoom]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

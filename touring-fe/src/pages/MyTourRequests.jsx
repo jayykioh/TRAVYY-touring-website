@@ -17,7 +17,8 @@ import { toast } from 'sonner';
 
 export default function MyTourRequests() {
   const navigate = useNavigate();
-  const { withAuth } = useAuth();
+  const auth = useAuth();
+  const withAuth = auth?.withAuth;
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -26,11 +27,21 @@ export default function MyTourRequests() {
 
   const loadRequests = async () => {
     try {
+      console.log('[MyTourRequests] Loading requests...', { hasWithAuth: !!withAuth });
       setLoading(true);
+      
+      if (!withAuth) {
+        console.error('[MyTourRequests] withAuth not available');
+        setLoading(false);
+        return;
+      }
+      
       const data = await withAuth('/api/tour-requests');
+      console.log('[MyTourRequests] Response:', data);
       setRequests(data.requests || []);
+      console.log('[MyTourRequests] Set requests:', data.requests?.length || 0);
     } catch (error) {
-      console.error('Error loading requests:', error);
+      console.error('[MyTourRequests] Error loading requests:', error);
       toast.error('Không thể tải danh sách yêu cầu');
     } finally {
       setLoading(false);
@@ -38,9 +49,14 @@ export default function MyTourRequests() {
   };
 
   useEffect(() => {
-    loadRequests();
+    console.log('[MyTourRequests] Component mounted, loading...');
+    if (withAuth) {
+      loadRequests();
+    } else {
+      console.log('[MyTourRequests] Waiting for auth...');
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [withAuth]);
 
   const handleSendMessage = async () => {
     if (!message.trim() || !selectedRequest) return;

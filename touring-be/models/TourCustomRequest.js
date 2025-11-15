@@ -92,6 +92,13 @@ const TourCustomRequestSchema = new mongoose.Schema({
     index: true
   },
   
+  // Flag: true if customer directly selected a specific guide, false if open/broadcast
+  isDirectRequest: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  
   // Request status
   status: {
     type: String,
@@ -151,6 +158,14 @@ const TourCustomRequestSchema = new mongoose.Schema({
     amount: Number,
     currency: { type: String, default: 'VND' }
   },
+
+  // Minimum price set by guide
+  minPrice: {
+    amount: Number,
+    currency: { type: String, default: 'VND' },
+    setBy: { type: String, enum: ['guide'] },
+    setAt: Date
+  },
   
   // Messages between user and guide
   messages: [MessageSchema],
@@ -202,6 +217,25 @@ const TourCustomRequestSchema = new mongoose.Schema({
   bookingId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Booking'
+  },
+  
+  // Payment status for custom tour
+  paymentStatus: {
+    type: String,
+    enum: ["unpaid", "deposit_paid", "paid"],
+    default: "unpaid",
+    index: true
+  },
+  
+  // Payment details
+  payment: {
+    provider: { type: String, enum: ["paypal", "momo", "cash"] },
+    orderId: String,
+    transactionId: String,
+    status: { type: String, enum: ["pending", "completed", "failed"] },
+    paidAt: Date,
+    amount: Number,
+    currency: String
   },
   
   // Expiry time for pending requests (24 hours default)

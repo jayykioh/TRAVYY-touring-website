@@ -69,11 +69,13 @@ function Login() {
   };
 
   const googleLogin = () => {
-    window.location.href = `${API}/api/auth/google`;
+    // Use relative path to leverage Vite proxy
+    window.location.href = `/api/auth/google`;
   };
 
   const facebookLogin = () => {
-    window.location.href = `${API}/api/auth/facebook`;
+    // Use relative path to leverage Vite proxy
+    window.location.href = `/api/auth/facebook`;
   };
 
   return (

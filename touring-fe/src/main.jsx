@@ -7,18 +7,23 @@ import App from "./App";
 import AuthProvider from "./auth/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import ItineraryProvider from "./context/ItineraryContext";
+import { SocketProvider } from "./context/SocketContext";
 import { Toaster } from "sonner";
+import GlobalChatListener from '@/components/GlobalChatListener';
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <ItineraryProvider>
-          <CartProvider>
-            <App />
-            <Toaster richColors closeButton />
-          </CartProvider>
-        </ItineraryProvider>
+        <SocketProvider>
+          <ItineraryProvider>
+            <CartProvider>
+              <App />
+              <GlobalChatListener />
+              <Toaster richColors closeButton />
+            </CartProvider>
+          </ItineraryProvider>
+        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>

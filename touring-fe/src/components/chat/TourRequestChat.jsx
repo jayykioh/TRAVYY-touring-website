@@ -1,12 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Paperclip, X, Download, Edit2, Trash2, CheckCheck, Check } from 'lucide-react';
+import { Send, Paperclip, X, Download, Edit2, Trash2, CheckCheck, Check, AlertCircle, Wifi, WifiOff } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Textarea } from '../ui/textarea';
-import { Card } from '../ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { format } from 'date-fns';
 import axios from 'axios';
+import { useSocket } from '../../context/SocketContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
@@ -19,9 +16,16 @@ export default function TourRequestChat({ requestId, currentUser }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [error, setError] = useState(null);
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [connectionStatus, setConnectionStatus] = useState('connecting');
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const chatContainerRef = useRef(null);
+  const editInputRef = useRef(null);
+
+  const { joinRoom, leaveRoom, on } = useSocket() || {};
 
   // Scroll to bottom
   const scrollToBottom = () => {
@@ -32,6 +36,7 @@ export default function TourRequestChat({ requestId, currentUser }) {
   const fetchMessages = useCallback(async (pageNum = 1) => {
     try {
       setLoading(true);
+      setError(null);
       const token = localStorage.getItem('token');
       const response = await axios.get(
         `${API_URL}/api/chat/${requestId}/messages?page=${pageNum}&limit=50`,
@@ -46,9 +51,12 @@ export default function TourRequestChat({ requestId, currentUser }) {
         setUnreadCount(response.data.unreadCount);
         setHasMore(response.data.pagination.page < response.data.pagination.totalPages);
         setCurrentPage(pageNum);
+        setConnectionStatus('connected');
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
+      setError('Failed to load messages. Please try again.');
+      setConnectionStatus('error');
     } finally {
       setLoading(false);
     }
@@ -60,6 +68,7 @@ export default function TourRequestChat({ requestId, currentUser }) {
 
     try {
       setSending(true);
+      setError(null);
       const token = localStorage.getItem('token');
 
       if (selectedFiles.length > 0) {
@@ -105,10 +114,70 @@ export default function TourRequestChat({ requestId, currentUser }) {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      alert('Failed to send message');
+      setError('Failed to send message. Please try again.');
     } finally {
       setSending(false);
     }
+  };
+
+  // Edit message
+  const editMessage = async (messageId, newContent) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(
+        `${API_URL}/api/chat/${requestId}/message/${messageId}`,
+        { content: newContent },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (response.data.success) {
+        setMessages(prev => prev.map(m => 
+          m._id === messageId ? { ...m, content: newContent, edited: true } : m
+        ));
+        setEditingMessage(null);
+        setEditContent('');
+      }
+    } catch (error) {
+      console.error('Error editing message:', error);
+      setError('Failed to edit message. Please try again.');
+    }
+  };
+
+  // Delete message
+  const deleteMessage = async (messageId) => {
+    if (!confirm('Are you sure you want to delete this message?')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.delete(
+        `${API_URL}/api/chat/${requestId}/message/${messageId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (response.data.success) {
+        setMessages(prev => prev.filter(m => m._id !== messageId));
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      setError('Failed to delete message. Please try again.');
+    }
+  };
+
+  // Start editing message
+  const startEditing = (message) => {
+    setEditingMessage(message._id);
+    setEditContent(message.content);
+    setTimeout(() => editInputRef.current?.focus(), 100);
+  };
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditingMessage(null);
+    setEditContent('');
   };
 
   // Handle file selection
@@ -179,15 +248,64 @@ export default function TourRequestChat({ requestId, currentUser }) {
     }
   }, [requestId, unreadCount]);
 
-  // Poll for new messages
+  // Poll for new messages (prefer sockets, fallback to polling)
   useEffect(() => {
-    fetchMessages();
-    const interval = setInterval(() => {
-      fetchMessages();
-    }, 5000); // Poll every 5 seconds
+    let offNew, offUpdated, offDeleted, offRead;
+    let pollInterval;
 
-    return () => clearInterval(interval);
-  }, [requestId, fetchMessages]);
+    // load initial history
+    fetchMessages();
+
+  // use joinRoom/on/leaveRoom from hook (declared at top-level)
+
+    // If socket helper available, use it
+    if (joinRoom && on) {
+      try {
+        joinRoom(`chat-${requestId}`);
+
+        offNew = on('newMessage', (msg) => {
+          setMessages(prev => [...prev, msg]);
+          if (document.visibilityState === 'visible') {
+            setUnreadCount(0);
+          }
+          scrollToBottom();
+        });
+
+        offUpdated = on('messageUpdated', (updated) => {
+          setMessages(prev => prev.map(m => (m._id === updated._id ? updated : m)));
+        });
+
+        offDeleted = on('messageDeleted', ({ messageId }) => {
+          setMessages(prev => prev.filter(m => m._id !== messageId));
+        });
+
+        offRead = on('messagesRead', ({ requestId: rid, unreadCount: uc }) => {
+          if (rid === requestId) setUnreadCount(uc || 0);
+        });
+      } catch (e) {
+        console.warn('Socket handlers failed, falling back to polling', e?.message);
+        pollInterval = setInterval(() => fetchMessages(), 5000);
+      }
+    } else {
+      // No socket available (provider not mounted or not connected) -> fallback polling
+      pollInterval = setInterval(() => fetchMessages(), 5000);
+    }
+
+    return () => {
+      try {
+        if (offNew) offNew();
+        if (offUpdated) offUpdated();
+        if (offDeleted) offDeleted();
+        if (offRead) offRead();
+
+  if (leaveRoom) leaveRoom(`chat-${requestId}`);
+
+        if (pollInterval) clearInterval(pollInterval);
+      } catch (e) {
+        console.warn('cleanup error', e?.message);
+      }
+    };
+  }, [requestId, fetchMessages, joinRoom, on, leaveRoom]);
 
   // Mark as read when viewing
   useEffect(() => {
@@ -210,16 +328,57 @@ export default function TourRequestChat({ requestId, currentUser }) {
   };
 
   return (
-    <Card className="flex flex-col h-[600px]">
+    <>
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
+      <div className="flex flex-col h-[600px] bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold">Chat with {currentUser.role === 'user' ? 'Tour Guide' : 'Traveller'}</h3>
+      <div className="p-4 border-b-2 border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {connectionStatus === 'connected' ? (
+              <Wifi className="w-4 h-4 text-green-500" />
+            ) : connectionStatus === 'connecting' ? (
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <WifiOff className="w-4 h-4 text-red-500" />
+            )}
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {connectionStatus === 'connected' ? 'Online' : 
+               connectionStatus === 'connecting' ? 'Connecting...' : 'Offline'}
+            </span>
+          </div>
           {unreadCount > 0 && (
-            <span className="text-sm text-blue-600">{unreadCount} unread message(s)</span>
+            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+              {unreadCount}
+            </span>
           )}
         </div>
+        <h3 className="font-semibold text-gray-900 dark:text-white">
+          Chat with {currentUser.role === 'user' ? 'Tour Guide' : 'Traveller'}
+        </h3>
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="px-4 py-2 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+          <span className="text-sm text-red-700 dark:text-red-400">{error}</span>
+          <button
+            onClick={() => setError(null)}
+            className="ml-auto text-red-500 hover:text-red-700 dark:hover:text-red-300"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Messages */}
       <div
@@ -249,77 +408,150 @@ export default function TourRequestChat({ requestId, currentUser }) {
               return (
                 <div
                   key={message._id}
-                  className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                  className={`flex group ${isOwn ? 'justify-end' : 'justify-start'} animate-fadeIn`}
                 >
-                  <div className={`flex gap-2 max-w-[70%] ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className={`flex gap-2 max-w-[70%] sm:max-w-[80%] ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
                     {/* Avatar */}
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={message.sender.userId?.avatar} />
-                      <AvatarFallback>
-                        {message.sender.name?.charAt(0) || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="w-8 h-8 flex-shrink-0 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                      {message.sender.name?.charAt(0) || 'U'}
+                    </div>
 
                     {/* Message Content */}
                     <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
-                      <div className="text-xs text-gray-500 mb-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 px-1">
                         {message.sender.name}
                       </div>
                       
-                      <div
-                        className={`rounded-lg px-4 py-2 ${
-                          isOwn
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white text-gray-900 border'
-                        }`}
-                      >
-                        {/* Text content */}
-                        {message.content && (
-                          <p className="whitespace-pre-wrap break-words">
-                            {message.content}
-                          </p>
-                        )}
-
-                        {/* File attachments */}
-                        {message.messageType === 'file' && message.attachments?.length > 0 && (
-                          <div className="mt-2 space-y-2">
-                            {message.attachments.map((file, index) => (
-                              <div
-                                key={index}
-                                className={`flex items-center gap-2 p-2 rounded ${
-                                  isOwn ? 'bg-blue-700' : 'bg-gray-100'
-                                }`}
+                      <div className="relative group">
+                        {editingMessage === message._id ? (
+                          <div className="bg-white dark:bg-gray-700 border-2 border-blue-300 rounded-lg p-3 shadow-lg min-w-[200px]">
+                            <textarea
+                              ref={editInputRef}
+                              value={editContent}
+                              onChange={(e) => setEditContent(e.target.value)}
+                              className="w-full px-2 py-1 border rounded resize-none text-sm bg-transparent focus:outline-none dark:text-white dark:bg-gray-700"
+                              rows={Math.min(5, editContent.split('\n').length)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  editMessage(message._id, editContent);
+                                } else if (e.key === 'Escape') {
+                                  cancelEditing();
+                                }
+                              }}
+                            />
+                            <div className="flex justify-end gap-2 mt-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={cancelEditing}
+                                className="text-xs"
                               >
-                                <Paperclip className="w-4 h-4" />
-                                <span className="text-sm flex-1 truncate">
-                                  {file.filename}
-                                </span>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => downloadFile(file.fileId, file.filename)}
-                                  className={isOwn ? 'text-white hover:bg-blue-800' : ''}
-                                >
-                                  <Download className="w-4 h-4" />
-                                </Button>
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => editMessage(message._id, editContent)}
+                                className="text-xs"
+                              >
+                                Save
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            className={`rounded-2xl px-4 py-3 shadow-md transition-all duration-200 hover:shadow-lg ${
+                              isOwn
+                                ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-tr-sm'
+                                : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-2 border-gray-200 dark:border-gray-600 rounded-tl-sm'
+                            }`}
+                          >
+                            {/* Text content */}
+                            {message.content && (
+                              <p className="whitespace-pre-wrap break-words leading-relaxed">
+                                {message.content}
+                              </p>
+                            )}
+
+                            {/* Edited indicator */}
+                            {message.edited && (
+                              <span className={`text-xs italic ${
+                                isOwn ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'
+                              }`}>
+                                (edited)
+                              </span>
+                            )}
+
+                            {/* File attachments */}
+                            {message.messageType === 'file' && message.attachments?.length > 0 && (
+                              <div className="mt-3 space-y-2">
+                                {message.attachments.map((file, index) => (
+                                  <div
+                                    key={index}
+                                    className={`flex items-center gap-2 p-2 rounded-lg ${
+                                      isOwn ? 'bg-blue-600' : 'bg-gray-100 dark:bg-gray-600'
+                                    }`}
+                                  >
+                                    <Paperclip className="w-4 h-4 flex-shrink-0" />
+                                    <span className="text-sm flex-1 truncate">
+                                      {file.filename}
+                                    </span>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => downloadFile(file.fileId, file.filename)}
+                                      className={`p-1 h-auto ${
+                                        isOwn ? 'text-white hover:bg-blue-700' : 'hover:bg-gray-200 dark:hover:bg-gray-500'
+                                      }`}
+                                    >
+                                      <Download className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
+                            )}
+
+                            {/* Timestamp and actions */}
+                            <div className="flex items-center justify-between mt-2">
+                              <div className={`text-xs ${
+                                isOwn ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'
+                              }`}>
+                                {format(new Date(message.createdAt), 'HH:mm')}
+                              </div>
+                              
+                              {/* Message actions for own messages */}
+                              {isOwn && (
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={() => startEditing(message)}
+                                    className="p-1 text-blue-100 hover:bg-white/20 rounded transition-colors"
+                                    title="Edit message"
+                                  >
+                                    <Edit2 className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => deleteMessage(message._id)}
+                                    className="p-1 text-blue-100 hover:bg-white/20 rounded transition-colors"
+                                    title="Delete message"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
+                              
+                              {/* Read status */}
+                              {isOwn && (
+                                <div className="flex items-center">
+                                  {message.isRead ? (
+                                    <CheckCheck className="w-3 h-3 text-blue-100" />
+                                  ) : (
+                                    <Check className="w-3 h-3 text-blue-200" />
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
-
-                        {/* Timestamp and read status */}
-                        <div className={`text-xs mt-1 flex items-center gap-1 ${
-                          isOwn ? 'text-blue-100' : 'text-gray-500'
-                        }`}>
-                          {format(new Date(message.createdAt), 'HH:mm')}
-                          {isOwn && (
-                            message.isRead ? (
-                              <CheckCheck className="w-3 h-3" />
-                            ) : (
-                              <Check className="w-3 h-3" />
-                            )
-                          )}
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -359,7 +591,7 @@ export default function TourRequestChat({ requestId, currentUser }) {
       )}
 
       {/* Input Area */}
-      <div className="p-4 border-t bg-white">
+      <div className="p-4 border-t-2 border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
         <div className="flex gap-2">
           <input
             ref={fileInputRef}
@@ -375,6 +607,7 @@ export default function TourRequestChat({ requestId, currentUser }) {
             size="icon"
             onClick={() => fileInputRef.current?.click()}
             disabled={sending}
+            className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
           >
             <Paperclip className="w-4 h-4" />
           </Button>
@@ -384,27 +617,33 @@ export default function TourRequestChat({ requestId, currentUser }) {
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Type a message... (Shift+Enter for new line)"
-            className="flex-1 min-h-[40px] max-h-[120px] resize-none"
+            className="flex-1 min-h-[40px] max-h-[120px] resize-none bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
             disabled={sending}
           />
 
           <Button
             onClick={sendMessage}
             disabled={sending || (!newMessage.trim() && selectedFiles.length === 0)}
-            className="px-6"
+            className="px-6 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50"
           >
             {sending ? (
-              <span className="animate-spin">⏳</span>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             ) : (
               <Send className="w-4 h-4" />
             )}
           </Button>
         </div>
         
-        <div className="text-xs text-gray-500 mt-2">
-          Max 5 files, 10MB each. Supported: Images, PDF, DOC, XLS, TXT
+        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center justify-between">
+          <span>Max 5 files, 10MB each. Supported: Images, PDF, DOC, XLS, TXT</span>
+          {newMessage.length > 0 && (
+            <span className={`${newMessage.length > 1000 ? 'text-red-500' : 'text-gray-400'}`}>
+              {newMessage.length}/1000
+            </span>
+          )}
         </div>
       </div>
-    </Card>
+      </div>
+    </>
   );
 }

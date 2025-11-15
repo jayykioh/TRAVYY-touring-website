@@ -187,7 +187,7 @@ const CustomerRequestManagement = () => {
   // Handle export CSV
   const handleExport = () => {
     if (filteredRequests.length === 0) {
-      alert("Không có dữ liệu để export");
+      toast.warning("Không có dữ liệu để export");
       return;
     }
 

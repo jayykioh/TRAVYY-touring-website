@@ -5,6 +5,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "@/auth/context";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   MapPin,
@@ -99,6 +100,9 @@ export default function ItineraryResult() {
   // ========== Deposit Payment State ==========
   const [depositLoading, setDepositLoading] = useState(false);
   const [depositMsg, setDepositMsg] = useState("");
+
+  // ========== Chat State ==========
+  const [showChat, setShowChat] = useState(true);
 
   const navigate = useNavigate();
   const { id } = useParams();
@@ -447,7 +451,13 @@ export default function ItineraryResult() {
             {/* Header Actions */}
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowRequestGuideModal(true)}
+                onClick={() => {
+                  if (!itinerary?.items || itinerary.items.length === 0) {
+                    toast.error('Vui lòng thêm các địa điểm vào lộ trình trước khi yêu cầu hướng dẫn viên');
+                    return;
+                  }
+                  setShowRequestGuideModal(true);
+                }}
                 className="px-3 py-2 text-xs rounded-lg bg-gradient-to-r from-[#02A0AA] to-[#029ca6] text-white hover:shadow-lg transition-all flex items-center gap-1.5 font-medium"
               >
                 <UserPlus className="w-3.5 h-3.5" /> Yêu cầu HDV
@@ -918,47 +928,18 @@ export default function ItineraryResult() {
               </div>
             </div>
                       {/* ===== Tour Guide Request Button at bottom ===== */}
-      {/* Tour Guide Request Button (active) at bottom */}
-      {itinerary.isCustomTour && (itinerary.tourGuideRequest?.status === 'none' || itinerary.tourGuideRequest?.status === 'rejected') && (
-        <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 mt-auto">
-          <div className="flex flex-col items-center justify-center">
-            <button
-              onClick={handleSendGuideRequest}
-              disabled={guideReqLoading}
-              className="px-4 py-3 rounded-lg bg-[#02A0AA] text-white hover:bg-[#018F99] text-base font-semibold flex items-center gap-2 disabled:opacity-60 shadow-md"
-            >
-              {guideReqLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Sparkles className="w-5 h-5" />
-              )}
-              Gửi yêu cầu tour guide
-            </button>
-            {guideReqMsg && (
-              <div className="mt-2 text-sm text-slate-700 font-medium">{guideReqMsg}</div>
-            )}
-          </div>
-        </div>
-      )}
+      
 
       {/* Tour Guide Request Pending Button below map */}
-      {itinerary.isCustomTour && itinerary.tourGuideRequest?.status === 'pending' && (
-        <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 mt-6">
-          <div className="flex flex-col items-center justify-center">
-            <div className="flex items-center gap-3 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl px-6 py-4 shadow-sm">
-              <Loader2 className="w-6 h-6 animate-spin text-[#02A0AA]" />
-              <span className="text-base font-semibold text-[#0F172A]">Đã gửi yêu cầu tour guide</span>
-            </div>
-          </div>
-        </div>
-      )}
+     
 
       {/* Chat Box - Show when request is pending or accepted */}
-      {itinerary.isCustomTour && (itinerary.tourGuideRequest?.status === 'pending' || itinerary.tourGuideRequest?.status === 'accepted') && (
+      {showChat && itinerary.tourGuideRequest?._id && (itinerary.tourGuideRequest?.status === 'pending' || itinerary.tourGuideRequest?.status === 'accepted') && (
         <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 mt-8 mb-8">
           <TravellerChatBox
-            requestId={itinerary._id}
-            guideName="Tour Guide"
+            requestId={itinerary.tourGuideRequest._id}
+            guideName={itinerary.tourGuideRequest.guideId?.name || "Tour Guide"}
+            onClose={() => setShowChat(false)}
             tourInfo={{
               tourName: itinerary.name,
               name: itinerary.name,
@@ -977,62 +958,28 @@ export default function ItineraryResult() {
         </div>
       )}
 
-      {/* Deposit Payment Section - Show when accepted and payment is pending */}
-      {itinerary.isCustomTour && 
-       itinerary.tourGuideRequest?.status === 'accepted' && 
-       itinerary.paymentInfo?.status === 'pending' && (
-        <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 mt-6 mb-8">
-          <div className="bg-gradient-to-br from-[#E0F7F9] to-[#B8F0F4] rounded-2xl p-6 shadow-lg border-2 border-[#02A0AA]/20">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-white rounded-full shadow-md">
-                <CheckCircle2 className="w-6 h-6 text-[#02A0AA]" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-[#0F172A] mb-2">
-                  Tour Guide đã chấp nhận yêu cầu!
-                </h3>
-                <p className="text-sm text-slate-600 mb-4">
-                  Vui lòng đặt cọc <strong className="text-[#02A0AA]">30%</strong> tổng giá tour để xác nhận đặt chỗ.
-                </p>
-                
-                <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-slate-600">Tổng giá tour:</span>
-                    <span className="text-base font-semibold text-slate-900">
-                      {itinerary.estimatedCost?.toLocaleString('vi-VN')} VNĐ
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-                    <span className="text-sm font-semibold text-slate-700">Số tiền cọc (30%):</span>
-                    <span className="text-lg font-bold text-[#02A0AA]">
-                      {(itinerary.estimatedCost * 0.3)?.toLocaleString('vi-VN')} VNĐ
-                    </span>
-                  </div>
-                </div>
+      {/* Reopen Chat Button - Show when chat is closed */}
+      {/* DEV helper: always show a debug button to open chat when developing */}
+    
 
-                <button
-                  onClick={handlePayDeposit}
-                  disabled={depositLoading}
-                  className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-[#02A0AA] to-[#018F99] text-white font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-                >
-                  {depositLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                  )}
-                  Thanh toán đặt cọc
-                </button>
-                
-                {depositMsg && (
-                  <div className="mt-3 text-sm text-red-600 font-medium text-center">{depositMsg}</div>
-                )}
-              </div>
-            </div>
-          </div>
+      {!showChat && itinerary.tourGuideRequest?._id && (itinerary.tourGuideRequest?.status === 'pending' || itinerary.tourGuideRequest?.status === 'accepted') && (
+        <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 mt-8 mb-8">
+          <button
+            onClick={() => {
+              console.log('[ItineraryResult] Reopen Chat button clicked');
+              setShowChat(true);
+            }}
+            className="w-full px-6 py-4 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Mở Chat với Tour Guide
+          </button>
         </div>
       )}
+
+   
 
       {/* Deposit Paid Success Message */}
       {itinerary.isCustomTour && 

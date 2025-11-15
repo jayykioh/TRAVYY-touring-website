@@ -5,6 +5,9 @@ const tourRequestController = require('../controller/tourRequestController');
 
 // User routes for tour custom requests
 
+// ⚡ FAST: Check if user has active request for itinerary (pre-validation)
+router.get('/check-active/:itineraryId', authJwt, tourRequestController.checkActiveRequest);
+
 // Create a new tour request from itinerary
 router.post('/create', authJwt, tourRequestController.createTourRequest);
 

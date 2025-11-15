@@ -1,25 +1,22 @@
 import React, { useState, useMemo, useEffect } from "react";
 import Card from "../components/common/Card";
 import Badge from "../components/common/Badge";
-import { getGuideEarnings } from "../data/guideAPI"; // <-- LOGIC TỪ FILE 1
+import { getGuideEarnings } from "../data/guideAPI";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Area,
-  AreaChart,
 } from "recharts";
-import { Calendar, BarChart2, Star, Clock } from "lucide-react"; // <-- STYLE TỪ FILE 2
+import { Calendar, BarChart2, Star, Clock } from "lucide-react";
 
 const EarningsPage = () => {
-  // --- LOGIC TỪ FILE 1 ---
   const [earningsData, setEarningsData] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [range, setRange] = useState("week");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchEarnings = async () => {
@@ -28,7 +25,7 @@ const EarningsPage = () => {
         setEarningsData(data);
       } catch (error) {
         console.error("Failed to fetch earnings:", error);
-        // Fallback data
+
         setEarningsData({
           summary: {
             thisWeek: 0,
@@ -50,62 +47,50 @@ const EarningsPage = () => {
     fetchEarnings();
   }, []);
 
-  const summary = earningsData?.summary || {
-    thisWeek: 0,
-    thisMonth: 0,
-    lastMonth: 0,
-    totalEarnings: 0,
-    pendingPayment: 0,
-  };
+  const summary = earningsData?.summary || {};
   const recentPayments = earningsData?.recentPayments || [];
-  // --- KẾT THÚC LOGIC FILE 1 ---
 
   const chartData = useMemo(() => {
-    const weekly = earningsData?.weeklyData || [];
-    const monthly = earningsData?.monthlyStats || [];
-    const yearly = earningsData?.yearlyStats || [];
+    if (!earningsData) return { title: "", data: [] };
 
-    if (range === "week") {
+    if (range === "week")
       return {
         title: "Tuần này",
-        data: weekly.map((d) => ({
+        data: earningsData.weeklyData.map((d) => ({
           name: d.day,
           value: d.amount || 0,
         })),
       };
-    }
-    if (range === "month") {
+
+    if (range === "month")
       return {
         title: "Tháng này",
-        data: monthly.map((d) => ({
+        data: earningsData.monthlyStats.map((d) => ({
           name: d.month,
           value: d.earnings || 0,
         })),
       };
-    }
+
     return {
       title: "Năm nay",
-      data: yearly.map((d) => ({
+      data: earningsData.yearlyStats.map((d) => ({
         name: d.month,
         value: d.earnings || 0,
       })),
     };
-  }, [range, earningsData]); // <-- Dùng earningsData từ state
+  }, [range, earningsData]);
 
   const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-gray-900 text-white text-xs px-3 py-2 rounded shadow-lg">
-          <p className="font-semibold">
-            {(payload[0].value / 1000000).toFixed(1)}M VND
-          </p>
-        </div>
-      );
-    }
-    return null;
+    if (!active || !payload || !payload.length) return null;
+
+    return (
+      <div className="bg-white border border-gray-200 px-3 py-2 rounded shadow text-sm">
+        {(payload[0].value / 1_000_000).toFixed(1)}M VND
+      </div>
+    );
   };
 
-  // Thêm trạng thái loading
+  // LOADING
   if (loading) {
     return (
       <div className="p-6 max-w-7xl mx-auto flex justify-center items-center min-h-[50vh]">
@@ -125,52 +110,52 @@ const EarningsPage = () => {
         </p>
       </div>
 
-      {/* Summary Cards (STYLE ICON TỪ FILE 2) */}
+      {/* SUMMARY CARDS – giữ style guide_moi hoàn toàn */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Tuần này */}
-        <Card className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-lg transition-shadow">
+        <Card className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-gray-600">Tuần này</p>
-            <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center">
+            <p className="text-sm font-medium text-gray-700">Tuần này</p>
+            <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center">
               <Calendar className="w-5 h-5" />
             </span>
           </div>
           <p className="text-3xl font-extrabold text-black mb-1">
-            {summary.thisWeek.toLocaleString("vi-VN")}
+            {summary.thisWeek?.toLocaleString("vi-VN")}
           </p>
           <p className="text-xs text-gray-400">VND</p>
         </Card>
 
         {/* Tháng này */}
-        <Card className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-lg transition-shadow">
+        <Card className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-gray-600">Tháng này</p>
-            <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center">
+            <p className="text-sm font-medium text-gray-700">Tháng này</p>
+            <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center">
               <BarChart2 className="w-5 h-5" />
             </span>
           </div>
           <p className="text-3xl font-extrabold text-black mb-1">
-            {summary.thisMonth.toLocaleString("vi-VN")}
+            {summary.thisMonth?.toLocaleString("vi-VN")}
           </p>
           <p className="text-xs text-gray-400">VND</p>
         </Card>
 
         {/* Tổng thu nhập */}
-        <Card className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-lg transition-shadow">
+        <Card className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-gray-600">Tổng thu nhập</p>
-            <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center">
+            <p className="text-sm font-medium text-gray-700">Tổng thu nhập</p>
+            <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center">
               <Star className="w-5 h-5" />
             </span>
           </div>
           <p className="text-3xl font-extrabold text-black mb-1">
-            {summary.totalEarnings.toLocaleString("vi-VN")}
+            {summary.totalEarnings?.toLocaleString("vi-VN")}
           </p>
           <p className="text-xs text-gray-400">VND</p>
         </Card>
 
-        {/* Chờ thanh toán (accent cảnh báo) */}
-        <Card className="bg-white border border-orange-200 rounded-2xl p-5 hover:shadow-lg transition-shadow">
+        {/* Chờ thanh toán */}
+        <Card className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-orange-700">
               Chờ thanh toán
@@ -180,72 +165,46 @@ const EarningsPage = () => {
             </span>
           </div>
           <p className="text-3xl font-extrabold text-orange-600 mb-1">
-            {summary.pendingPayment.toLocaleString("vi-VN")}
+            {summary.pendingPayment?.toLocaleString("vi-VN")}
           </p>
           <p className="text-xs text-orange-400">VND</p>
         </Card>
       </div>
 
-      {/* Chart with Recharts (Giống hệt ở cả 2 file) */}
+      {/* CHART – giữ style guide_moi */}
       <Card className="mb-8 shadow-md">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h3 className="text-lg font-bold text-gray-900">{chartData.title}</h3>
 
-          {/* Segmented control */}
+          {/* Range filter */}
           <div className="inline-flex items-center gap-1 bg-white border border-gray-200 rounded-full p-1">
-            <button
-              onClick={() => setRange("week")}
-              aria-pressed={range === "week"}
-              className={[
-                "h-9 px-4 rounded-full text-sm font-semibold transition-colors border",
-                range === "week"
-                  ? "bg-[#02A0AA] text-white border-[#02A0AA] shadow"
-                  : "bg-white text-gray-700 border-transparent hover:bg-gray-50",
-              ].join(" ")}
-            >
-              Tuần
-            </button>
-
-            <button
-              onClick={() => setRange("month")}
-              aria-pressed={range === "month"}
-              className={[
-                "h-9 px-4 rounded-full text-sm font-semibold transition-colors border",
-                range === "month"
-                  ? "bg-[#02A0AA] text-white border-[#02A0AA] shadow"
-                  : "bg-white text-gray-700 border-transparent hover:bg-gray-50",
-              ].join(" ")}
-            >
-              Tháng
-            </button>
-
-            <button
-              onClick={() => setRange("year")}
-              aria-pressed={range === "year"}
-              className={[
-                "h-9 px-4 rounded-full text-sm font-semibold transition-colors border",
-                range === "year"
-                  ? "bg-[#02A0AA] text-white border-[#02A0AA] shadow"
-                  : "bg-white text-gray-700 border-transparent hover:bg-gray-50",
-              ].join(" ")}
-            >
-              Năm
-            </button>
+            {["week", "month", "year"].map((key) => (
+              <button
+                key={key}
+                onClick={() => setRange(key)}
+                className={`h-9 px-4 rounded-full text-sm font-semibold transition-colors ${
+                  range === key
+                    ? "bg-gray-900 text-white shadow"
+                    : "bg-white text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                {key === "week" ? "Tuần" : key === "month" ? "Tháng" : "Năm"}
+              </button>
+            ))}
           </div>
         </div>
 
         <ResponsiveContainer width="100%" height={280}>
-          <AreaChart
-            data={chartData.data}
-            margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-          >
+          <AreaChart data={chartData.data}>
             <defs>
-              <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#02A0AA" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#02A0AA" stopOpacity={0.05} />
+              <linearGradient id="grayGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#000" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#000" stopOpacity={0.05} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+
             <XAxis
               dataKey="name"
               tick={{ fontSize: 12, fill: "#6b7280" }}
@@ -254,71 +213,53 @@ const EarningsPage = () => {
             <YAxis
               tick={{ fontSize: 12, fill: "#6b7280" }}
               tickLine={false}
-              tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
+              tickFormatter={(v) => `${(v / 1_000_000).toFixed(0)}M`}
             />
+
             <Tooltip content={<CustomTooltip />} />
+
             <Area
               type="monotone"
               dataKey="value"
-              stroke="#02A0AA"
-              strokeWidth={3}
-              fill="url(#colorValue)"
-              animationDuration={1200}
-              animationEasing="ease-out"
-              dot={{
-                fill: "#fff",
-                stroke: "#02A0AA",
-                strokeWidth: 3,
-                r: 5,
-              }}
-              activeDot={{
-                r: 7,
-                fill: "#02A0AA",
-                stroke: "#fff",
-                strokeWidth: 2,
-              }}
+              stroke="#111"
+              strokeWidth={2}
+              fill="url(#grayGradient)"
+              dot={{ r: 4, fill: "#fff", stroke: "#111", strokeWidth: 2 }}
+              activeDot={{ r: 6, fill: "#111" }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </Card>
 
-      {/* Recent Payments (Giống hệt ở cả 2 file, dùng data từ state) */}
+      {/* RECENT PAYMENTS – giữ style guide_moi */}
       <Card>
         <h3 className="font-bold text-gray-900 mb-4 text-lg">
           Các khoản thanh toán gần đây
         </h3>
+
         <div className="space-y-3">
-          {recentPayments.map((payment) => (
+          {recentPayments.map((p, idx) => (
             <div
-              key={payment.id}
-              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all hover:shadow-md"
+              key={p.id || p._id || idx}
+              className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all"
             >
               <div className="flex-1">
-                <p className="font-semibold text-gray-900 mb-1">
-                  {payment.tourName}
-                </p>
+                <p className="font-semibold text-gray-900">{p.tourName}</p>
                 <p className="text-xs text-gray-500">
-                  {new Date(payment.date).toLocaleDateString("vi-VN")}
-                  {payment.status === "pending" && payment.expectedPayout && (
-                    <span className="ml-2 text-orange-600">
-                      • Dự kiến:{" "}
-                      {new Date(payment.expectedPayout).toLocaleDateString(
-                        "vi-VN"
-                      )}
-                    </span>
-                  )}
+                  {new Date(p.date).toLocaleDateString("vi-VN")}
                 </p>
               </div>
 
-              <div className="text-right">
-                <p className="font-bold text-gray-900 mb-1">
-                  {payment.netAmount.toLocaleString("vi-VN")} VND
+              <div className="flex items-center gap-3">
+                <p className="font-bold text-gray-900 text-lg">
+                  {p.netAmount.toLocaleString("vi-VN")} VND
                 </p>
+
                 <Badge
-                  variant={payment.status === "paid" ? "success" : "warning"}
                   size="sm"
+                  variant={p.status === "paid" ? "success" : "warning"}
                 >
-                  {payment.status === "paid" ? "Đã thanh toán" : "Đang chờ"}
+                  {p.status === "paid" ? "Đã thanh toán" : "Đang chờ"}
                 </Badge>
               </div>
             </div>

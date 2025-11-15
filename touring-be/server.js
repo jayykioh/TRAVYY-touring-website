@@ -3,6 +3,8 @@ const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 const PORT = process.env.PORT || 4000;
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 const mongoose = require("mongoose");
 const passport = require("passport");
 const cors = require("cors");
@@ -26,7 +28,19 @@ const locationRoutes = require("./routes/location.routes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const promotionRoutes = require("./routes/promotion.routes");
+const refundRoutes = require("./routes/refund.routes");
+const { setupRefundScheduler } = require("./utils/refundScheduler");
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: ["http://localhost:5173", "http://localhost:5174"],
+    credentials: true,
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+  },
+  transports: ['websocket', 'polling']
+});
 const isProd = process.env.NODE_ENV === "production";
 const MONGO_URI =
   process.env.MONGO_URI ||
@@ -38,6 +52,8 @@ const paymentRoutes = require("./routes/payment.routes");
 const guideRoutes = require("./routes/guide/guide.routes");
 // Tour Request Routes
 const tourRequestRoutes = require("./routes/tourRequest.routes");
+// Itinerary Routes
+const itineraryRoutes = require("./routes/itinerary.routes");
 // Quick visibility of PayPal env presence (not actual secrets)
 console.log("[Boot] PayPal env present:", {
   hasClient: !!process.env.PAYPAL_CLIENT_ID,
@@ -73,9 +89,15 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["Content-Type", "Cross-Origin-Resource-Policy"],
   })
 );
 
+// Add Cross-Origin-Resource-Policy header for all responses
+app.use((req, res, next) => {
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  next();
+});
 app.use("/api/location-tours", locationTourRoutes);
 
 if (isProd) app.set("trust proxy", 1);
@@ -93,6 +115,7 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/admin", adminRoutes); // Updated to use modular admin routes
 app.use("/api/payments", paymentRoutes);
+app.use("/api/refunds", refundRoutes); // User refund routes
 const securityRoutes = require("./routes/security.routes");
 app.use("/api/security", securityRoutes);
 app.use("/api/locations", locationRoutes);
@@ -104,6 +127,21 @@ app.use("/api/guide", guideRoutes);
 app.use("/api/tour-requests", tourRequestRoutes);
 const chatRoutes = require("./routes/chat.routes");
 app.use("/api/chat", chatRoutes);
+// Itinerary API
+app.use("/api/itinerary", itineraryRoutes);
+const discoverRoutes = require("./routes/discover.routes");
+app.use("/api/discover", discoverRoutes);
+const zoneRoutes = require("./routes/zone.routes");
+app.use("/api/zones", zoneRoutes);
+
+// Guide Availability Routes
+const guideAvailabilityRoutes = require("./routes/guideAvailability.routes");
+app.use("/api", guideAvailabilityRoutes);
+
+// Tour Completion Routes
+const tourCompletionRoutes = require("./routes/tourCompletion.routes");
+app.use("/api", tourCompletionRoutes);
+
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 app.use("/api/paypal", paypalRoutes);
@@ -136,7 +174,16 @@ mongoose
   .connect(MONGO_URI)
   .then(() => {
     console.log("✅ MongoDB connected");
-    app.listen(PORT, () =>
+
+    // Setup refund scheduler after MongoDB is connected
+    setupRefundScheduler();
+
+    
+  // Initialize WebSocket handlers and collection watchers
+  const setupSockets = require('./socket');
+  setupSockets(io);
+    
+    server.listen(PORT, () =>
       console.log(`🚀 API listening on http://localhost:${PORT}`)
     );
   })
@@ -145,65 +192,8 @@ mongoose
     process.exit(1);
   });
 
+// Make io available globally and to routes
+global.io = io;
+app.set('io', io);
+
 module.exports = app;
-
-// ✅ Check services on startup
-const { health, isAvailable } = require("./services/ai/libs/embedding-client");
-
-async function checkServices() {
-  console.log("\n🔍 Checking services...");
-
-  // MongoDB
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ MongoDB connected");
-  } catch (error) {
-    console.error("❌ MongoDB failed:", error.message);
-    process.exit(1);
-  }
-
-  // Embedding service
-  try {
-    const available = await isAvailable();
-    if (available) {
-      const healthData = await health();
-      console.log("✅ Embedding service OK:", {
-        model: healthData.model,
-        vectors: healthData.vectors,
-        url: process.env.EMBED_SERVICE_URL || "http://localhost:8088",
-      });
-    } else {
-      console.warn("⚠️ Embedding service not available");
-      console.warn(
-        "   URL:",
-        process.env.EMBED_SERVICE_URL || "http://localhost:8088"
-      );
-      console.warn("   Will use keyword fallback for zone matching");
-    }
-  } catch (error) {
-    console.warn("⚠️ Embedding check failed:", error.message);
-  }
-}
-
-checkServices().then(() => {
-  // Routes
-  app.use("/api/auth", require("./routes/auth.routes"));
-  app.use("/api/discover", require("./routes/discover.routes"));
-  app.use("/api/zones", require("./routes/zone.routes"));
-  app.use("/api/itinerary", require("./routes/itinerary.routes"));
-
-  // Health endpoint
-  app.get("/api/health", async (req, res) => {
-    const embedHealth = await health();
-    res.json({
-      backend: "ok",
-      mongo: mongoose.connection.readyState === 1 ? "ok" : "error",
-      embedding: embedHealth,
-    });
-  });
-
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`\n🚀 Backend running on port ${PORT}`);
-  });
-});

@@ -156,7 +156,10 @@ ChatMessageSchema.statics.getChatHistory = function(tourRequestId, page = 1, lim
     tourRequestId,
     isDeleted: false
   })
-    .populate('sender.userId', 'name avatar email')
+    .populate({
+      path: 'sender.userId',
+      select: '_id name avatar email'
+    })
     .populate('replyTo', 'content messageType sender')
     .sort({ createdAt: -1 })
     .skip(skip)

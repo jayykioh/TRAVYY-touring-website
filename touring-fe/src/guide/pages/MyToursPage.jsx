@@ -5,6 +5,7 @@ import Card from "../components/common/Card";
 import Badge from "../components/common/Badge";
 import { Clock, CheckCircle } from "lucide-react";
 import { useAuth } from "../../auth/context";
+import { useSocket } from "../../context/SocketContext";
 import { toast } from "sonner";
 import TourCard from "../components/home/TourCard";
 
@@ -13,6 +14,7 @@ const MyToursPage = () => {
   const tabFromUrl = searchParams.get("tab") || "accepted";
   const [activeTab, setActiveTab] = useState(tabFromUrl);
   const { user, withAuth } = useAuth();
+  const { socket, on, joinRoom } = useSocket();
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,9 +28,32 @@ const MyToursPage = () => {
     setLoading(true);
     try {
       const data = await withAuth("/api/itinerary/guide/accepted-tours");
+      console.log("[MyToursPage] Raw API response:", data);
 
       if (data.success && Array.isArray(data.tours)) {
-        setTours(data.tours);
+        // Map tours to include image data like GuideTourDetailPage
+        const mappedTours = data.tours.map((tour) => {
+          // Extract images from itinerary items
+          const imageItems = (tour.items || []).flatMap((item) =>
+            item.imageUrl
+              ? [{ imageUrl: item.imageUrl }]
+              : item.photos
+              ? item.photos.map((photo) => ({ imageUrl: photo }))
+              : []
+          );
+
+          return {
+            ...tour,
+            // Add imageItems array for TourCard to use
+            imageItems,
+            // Keep existing fields
+            coverImage: tour.coverImage,
+            imageUrl: tour.imageUrl || imageItems[0]?.imageUrl,
+          };
+        });
+
+        console.log("[MyToursPage] Mapped tours with images:", mappedTours);
+        setTours(mappedTours);
       } else {
         setTours([]);
       }
@@ -44,6 +69,46 @@ const MyToursPage = () => {
   useEffect(() => {
     fetchTours();
   }, [fetchTours]);
+
+  // Join socket room for real-time updates
+  useEffect(() => {
+    if (!socket || !user?._id) return;
+
+    // Join user-specific room to receive payment and tour completion notifications
+    joinRoom(`user-${user._id}`);
+
+    // Listen for payment success
+    const unsubscribePayment = on("paymentSuccessful", (data) => {
+      console.log("🔔 Payment successful:", data);
+      toast.success(`Khách hàng đã thanh toán cho ${data.tourTitle || "tour"}`);
+      // Optionally refetch tours to update status
+      fetchTours();
+    });
+
+    // Listen for tour marked as done
+    const unsubscribeTourDone = on("tourMarkedDone", (data) => {
+      console.log("🔔 Tour marked done:", data);
+      toast.success(
+        `Tour "${data.tourTitle || "Không xác định"}" đã hoàn thành!`
+      );
+      fetchTours();
+    });
+
+    // Listen for tour completion notification
+    const unsubscribeTourCompleted = on("tourCompleted", (data) => {
+      console.log("🔔 Tour completed:", data);
+      toast.info(
+        `Tour "${data.tourTitle || "Không xác định"}" được đánh dấu hoàn thành`
+      );
+      fetchTours();
+    });
+
+    return () => {
+      unsubscribePayment?.();
+      unsubscribeTourDone?.();
+      unsubscribeTourCompleted?.();
+    };
+  }, [socket, user?._id, joinRoom, fetchTours, on]);
 
   // Categorize tours by status/dates
   const categorizeTours = (tours) => {

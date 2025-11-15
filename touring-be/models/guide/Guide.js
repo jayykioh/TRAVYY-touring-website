@@ -43,6 +43,7 @@ const guideSchema = new mongoose.Schema(
     languages: [String],
     rating: { type: Number, default: 0 },
     totalTours: { type: Number, default: 0 },
+    reviewCount: { type: Number, default: 0 }, // Number of reviews
     toursConducted: { type: Number, default: 0 },
     responseTime: String,
     availability: { type: String, enum: ["Available", "Busy", "Offline"], default: "Available" },

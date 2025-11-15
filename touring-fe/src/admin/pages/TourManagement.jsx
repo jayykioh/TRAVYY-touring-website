@@ -1,12 +1,11 @@
 // components/TourManagement.jsx
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  RefreshCw,
-  Download,
-} from "lucide-react";
+import { RefreshCw, Download } from "lucide-react";
 import { Users, DollarSign, Calendar, MapPin } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
+import { useNotifications } from "../context/NotificationContext";
+import Modal from "../components/Common/Modal";
 
 // Components
 import StatCard from "../components/Dashboard/StatsCard";
@@ -49,6 +48,7 @@ const ItemsPerPageSelector = ({ value, onChange }) => {
 };
 
 const TourManagement = () => {
+  const { notify } = useNotifications();
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -64,6 +64,7 @@ const TourManagement = () => {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, tour: null });
 
   // Fetch tours data from API
   const fetchTours = async () => {
@@ -233,33 +234,43 @@ const TourManagement = () => {
 
       // Update the tour in state
       setTours(tours.map((t) => (t._id === tour._id ? updatedTour : t)));
-      toast.success(tour.isHidden ? "Đã hiện tour!" : "Đã ẩn tour!");
+      const statusMessage = tour.isHidden ? "Đã hiện tour!" : "Đã ẩn tour!";
+      toast.success(statusMessage);
+      notify.tour("Cập nhật Tour", `${tour.title} - ${statusMessage}`);
     } catch (err) {
       console.error("Failed to toggle visibility:", err);
       toast.error("Lỗi khi thay đổi trạng thái tour. Vui lòng thử lại.");
+      notify.error("Lỗi Cập nhật Tour", "Không thể thay đổi trạng thái tour");
     }
   };
 
   // Handle Delete Tour
   const handleDeleteTour = async (tour) => {
-    if (window.confirm(`Bạn có chắc muốn xóa tour "${tour.title}"?`)) {
-      try {
-        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
-        const response = await fetch(`${API_URL}/api/tours/${tour._id}`, {
-          method: "DELETE",
-        });
+    setDeleteModal({ isOpen: true, tour });
+  };
 
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
+  const confirmDeleteTour = async () => {
+    const tour = deleteModal.tour;
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+      const response = await fetch(`${API_URL}/api/tours/${tour._id}`, {
+        method: "DELETE",
+      });
 
-        // Remove tour from state after successful API call
-        setTours(tours.filter((t) => t._id !== tour._id));
-        toast.success("Đã xóa tour thành công!");
-      } catch (err) {
-        console.error("Failed to delete tour:", err);
-        toast.error("Lỗi khi xóa tour. Vui lòng thử lại.");
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
       }
+
+      // Remove tour from state after successful API call
+      setTours(tours.filter((t) => t._id !== tour._id));
+      setDeleteModal({ isOpen: false, tour: null });
+      toast.success("Đã xóa tour thành công!");
+      notify.tour("Xóa Tour", `Đã xóa tour "${tour.title}"`);
+    } catch (err) {
+      console.error("Failed to delete tour:", err);
+      setDeleteModal({ isOpen: false, tour: null });
+      toast.error("Lỗi khi xóa tour. Vui lòng thử lại.");
+      notify.error("Lỗi Xóa Tour", "Không thể xóa tour");
     }
   };
 
@@ -292,6 +303,10 @@ const TourManagement = () => {
           tours.map((t) => (t._id === editingTour._id ? updatedTour : t))
         );
         toast.success("Cập nhật tour thành công!");
+        notify.tour(
+          "Cập nhật Tour",
+          `Đã cập nhật tour "${formData.title || editingTour.title}"`
+        );
       } else {
         // Add new tour
         const response = await fetch(`${API_URL}/api/tours`, {
@@ -309,6 +324,7 @@ const TourManagement = () => {
         const newTour = await response.json();
         setTours([...tours, newTour]);
         toast.success("Thêm tour mới thành công!");
+        notify.tour("Tour Mới", `Đã thêm tour "${formData.title}"`);
       }
 
       setShowForm(false);
@@ -316,6 +332,7 @@ const TourManagement = () => {
     } catch (err) {
       console.error("Failed to save tour:", err);
       toast.error("Lỗi khi lưu tour. Vui lòng thử lại.");
+      notify.error("Lỗi Lưu Tour", "Không thể lưu tour");
     }
   };
 
@@ -451,7 +468,10 @@ const TourManagement = () => {
 
         {/* Form Modal */}
         {showForm && (
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+          <div
+            className="fixed inset-0 flex items-center justify-center z-50 p-4"
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
+          >
             <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-gray-100 max-h-[90vh] overflow-y-auto">
               <div className="sticky top-0 bg-white border-b px-6 py-4 z-10">
                 <h2 className="text-xl font-bold text-gray-900">
@@ -539,6 +559,28 @@ const TourManagement = () => {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, tour: null })}
+        onConfirm={confirmDeleteTour}
+        title="Xác nhận xóa tour"
+        type="warning"
+        confirmText="Xóa"
+        cancelText="Hủy"
+      >
+        <p className="text-gray-600">
+          Bạn có chắc chắn muốn xóa tour{" "}
+          <span className="font-semibold text-gray-900">
+            "{deleteModal.tour?.title}"
+          </span>
+          ?
+        </p>
+        <p className="text-sm text-gray-500 mt-2">
+          Hành động này không thể hoàn tác.
+        </p>
+      </Modal>
     </div>
   );
 };

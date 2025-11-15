@@ -420,6 +420,59 @@ async function buildMoMoCharge(userId, body) {
       bookingId
     };
   }
+
+  // ✅ NEW: Support for tour-request mode (custom tour requests with guide negotiation)
+  if (mode === "tour-request") {
+    const TourCustomRequest = require("../models/TourCustomRequest");
+    const requestId = body?.requestId;
+    
+    if (!requestId) {
+      throw Object.assign(new Error("MISSING_REQUEST_ID"), { status: 400 });
+    }
+
+    // Load tour custom request
+    const tourRequest = await TourCustomRequest.findById(requestId).populate('userId', 'name email');
+    if (!tourRequest) {
+      throw Object.assign(new Error("REQUEST_NOT_FOUND"), { status: 404 });
+    }
+
+    // Verify request belongs to user and is accepted by guide
+    if (tourRequest.userId._id.toString() !== userId.toString()) {
+      throw Object.assign(new Error("UNAUTHORIZED_REQUEST"), { status: 403 });
+    }
+
+    if (tourRequest.status !== 'accepted') {
+      throw Object.assign(new Error("REQUEST_NOT_ACCEPTED"), { status: 400 });
+    }
+
+    // Get the final amount (either from latest offer or initial budget)
+    const finalAmount = tourRequest.latestOffer?.amount || tourRequest.initialBudget?.amount;
+    if (!finalAmount) {
+      throw Object.assign(new Error("NO_VALID_AMOUNT"), { status: 400 });
+    }
+
+    const items = [{
+      name: tourRequest.title || 'Custom Tour Request',
+      price: finalAmount,
+      originalPrice: undefined,
+      tourId: null, // Tour request doesn't have tourId
+      meta: {
+        date: tourRequest.startDate ? normDate(tourRequest.startDate) : '',
+        adults: tourRequest.numberOfAdults || 0,
+        children: tourRequest.numberOfChildren || 0,
+        unitPriceAdult: 0,
+        unitPriceChild: 0,
+        image: tourRequest.thumbnail || '',
+      },
+    }];
+
+    return {
+      items,
+      totalVND: finalAmount,
+      mode,
+      customRequestId: requestId
+    };
+  }
   
   // fallback: empty
   return {
@@ -453,7 +506,7 @@ exports.createMoMoPayment = async (req, res) => {
 
     // Authoritatively recompute amount from server-side state
     const userId = req.user?.sub || req.user?._id;
-    const { items: serverItems, totalVND, retryBookingId: serverRetryBookingId } = await buildMoMoCharge(userId, {
+    const { items: serverItems, totalVND, retryBookingId: serverRetryBookingId, customRequestId } = await buildMoMoCharge(userId, {
       mode,
       item: buyNowItem,
       retryItems,
@@ -601,6 +654,7 @@ exports.createMoMoPayment = async (req, res) => {
         status: "pending",
         mode: mode || (buyNowItem ? "buy-now" : "cart"),
         retryBookingId: serverRetryBookingId, // For retry payments
+        customRequestId: customRequestId, // For tour-request or custom-tour payments
         items: (Array.isArray(serverItems) ? serverItems : []).map((it) => ({
           name: it.name,
           price: Number(it.price) || 0,
@@ -825,6 +879,75 @@ exports.handleMoMoIPN = async (req, res) => {
         });
       }
 
+      // ✅ UPDATE TourCustomRequest with payment status
+      if (booking && booking.customTourRequest?.requestId) {
+        try {
+          const TourCustomRequest = require("../models/TourCustomRequest");
+          await TourCustomRequest.findByIdAndUpdate(
+            booking.customTourRequest.requestId,
+            {
+              $set: {
+                paymentStatus: "paid",
+                "payment.provider": "momo",
+                "payment.orderId": session.orderId,
+                "payment.transactionId": body.transId,
+                "payment.status": "completed",
+                "payment.paidAt": new Date(),
+                "payment.amount": booking.totalAmount,
+                "payment.currency": booking.currency,
+                bookingId: booking._id,
+                status: "accepted" // Move to accepted after payment
+              }
+            },
+            { new: true }
+          );
+          console.log(`✅ [MoMo IPN] Updated TourCustomRequest ${booking.customTourRequest.requestId} with payment status`);
+        } catch (updateErr) {
+          console.warn(`⚠️ [MoMo IPN] Failed to update TourCustomRequest:`, updateErr);
+        }
+      }
+
+      // 🔔 Emit socket event to notify guide and traveller about successful payment
+      try {
+        // Get io instance from global if available (this will be passed via middleware)
+        const io = global.io;
+        if (io && booking) {
+          // Notify guide about successful payment
+          if (booking.customTourRequest?.guideId) {
+            io.to(`user-${booking.customTourRequest.guideId}`).emit('paymentSuccessful', {
+              bookingId: booking._id,
+              requestId: booking.customTourRequest?.requestId,
+              amount: booking.totalAmount,
+              tourTitle: booking.items?.[0]?.name || 'Tour',
+              status: 'paid',
+              message: 'Khách hàng đã thanh toán xong'
+            });
+            console.log(`[MoMo IPN] 🔔 Emitted paymentSuccessful event to guide ${booking.customTourRequest.guideId}`);
+          }
+          
+          // Notify traveller about payment confirmation
+          io.to(`user-${booking.userId}`).emit('paymentConfirmed', {
+            bookingId: booking._id,
+            status: 'paid',
+            message: 'Thanh toán thành công'
+          });
+          console.log(`[MoMo IPN] 🔔 Emitted paymentConfirmed event to traveller ${booking.userId}`);
+          
+          // Notify request room about payment
+          if (booking.customTourRequest?.requestId) {
+            io.to(`request-${booking.customTourRequest.requestId}`).emit('paymentUpdated', {
+              requestId: booking.customTourRequest.requestId,
+              paymentStatus: 'paid',
+              bookingId: booking._id
+            });
+            console.log(`[MoMo IPN] 🔔 Emitted paymentUpdated to request room`);
+          }
+        }
+      } catch (socketErr) {
+        console.warn(`[MoMo IPN] ⚠️ Failed to emit socket event:`, socketErr);
+        // Don't fail payment if socket emit fails
+      }
+
       // Send payment success notification
       try {
         const User = require("../models/Users");
@@ -931,6 +1054,34 @@ exports.markMoMoPaid = async (req, res) => {
     });
 
     console.log(`✅ [markMoMoPaid] Booking created successfully: ${booking?._id}`);
+
+    // 🔔 Emit socket event to notify guide about payment
+    try {
+      const io = global.io;
+      if (io && booking) {
+        // Notify guide about successful payment
+        if (booking.customTourRequest?.guideId) {
+          io.to(`user-${booking.customTourRequest.guideId}`).emit('paymentSuccessful', {
+            bookingId: booking._id,
+            amount: booking.totalAmount,
+            tourTitle: booking.items?.[0]?.name || 'Tour',
+            status: 'paid',
+            message: 'Khách hàng đã thanh toán xong'
+          });
+          console.log(`[markMoMoPaid] 🔔 Emitted paymentSuccessful event to guide ${booking.customTourRequest.guideId}`);
+        }
+        
+        // Notify traveller
+        io.to(`user-${booking.userId}`).emit('paymentConfirmed', {
+          bookingId: booking._id,
+          status: 'paid',
+          message: 'Thanh toán thành công!'
+        });
+        console.log(`[markMoMoPaid] 🔔 Emitted paymentConfirmed to traveller ${booking.userId}`);
+      }
+    } catch (socketErr) {
+      console.warn(`[markMoMoPaid] ⚠️ Socket emit failed:`, socketErr);
+    }
 
     // 5️⃣ Gửi email xác nhận (tùy chọn)
     try {

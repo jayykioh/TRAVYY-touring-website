@@ -20,33 +20,116 @@ const RequestsPage = () => {
 
   const lastCountRef = useRef(0);
 
-  const mapBackendRequest = (it) => ({
-    id: it._id,
-    tourName: it.name || it.zoneName,
-    customerId: it.userId?._id || it.userId,
-    customerName: it.userId?.name || "Khách hàng",
-    customerAvatar:
-      it.userId?.avatar?.url ||
-      `https://ui-avatars.com/api/?name=${encodeURIComponent(
-        it.userId?.name || "Khách hàng"
-      )}`,
-    departureDate: it.preferredDate || "",
-    numberOfGuests: it.numberOfPeople || "",
-    duration: it.totalDuration
-      ? `${Math.floor(it.totalDuration / 60)}h${it.totalDuration % 60}m`
-      : "",
-    totalPrice: Number(it.estimatedCost) || 0,
-    requestedAt: it.tourGuideRequest?.requestedAt,
-    itinerary: it.items?.map((item) => ({ title: item.name })) || [],
-  });
+  // Map TourCustomRequest (cuocthi API) to UI format
+  const mapBackendRequest = (req) => {
+    const itinerary = req.itineraryId || {};
+    const customer = req.userId || {};
+
+    // Get preferred date
+    const preferredDate = req.preferredDates?.[0] || {};
+    const startDate = preferredDate.startDate
+      ? new Date(preferredDate.startDate)
+      : null;
+    const endDate = preferredDate.endDate
+      ? new Date(preferredDate.endDate)
+      : null;
+
+    // Calculate duration in days
+    let durationDays = 1;
+    if (startDate && endDate) {
+      durationDays =
+        Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) || 1;
+    }
+
+    return {
+      id: req._id,
+      requestNumber: req.requestNumber || req._id.slice(-6),
+
+      // Tour info
+      tourName:
+        req.tourDetails?.zoneName ||
+        itinerary.zoneName ||
+        itinerary.name ||
+        "Custom Tour",
+      location:
+        req.tourDetails?.zoneName ||
+        itinerary.zoneName ||
+        req.tourDetails?.province ||
+        "",
+      numberOfGuests:
+        req.tourDetails?.numberOfGuests || req.tourDetails?.numberOfPeople || 1,
+      numberOfDays: durationDays,
+
+      // Customer info
+      customerId: customer._id || "",
+      customerName: customer.name || "Khách hàng",
+      customerAvatar:
+        customer.avatar?.url ||
+        customer.avatar ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          customer.name || "Khách hàng"
+        )}`,
+      customerEmail: customer.email || req.contactInfo?.email || "",
+      contactPhone: customer.phone || req.contactInfo?.phone || "",
+
+      // Dates
+      departureDate: startDate ? startDate.toISOString() : "",
+      returnDate: endDate ? endDate.toISOString() : "",
+      startTime: startDate
+        ? startDate.toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "",
+      endTime: endDate
+        ? endDate.toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "",
+
+      // Pricing
+      totalPrice: req.initialBudget?.amount || 0,
+      currency: req.initialBudget?.currency || "VND",
+      earnings: Math.round((req.initialBudget?.amount || 0) * 0.8), // 80% commission
+
+      // Duration
+      duration: itinerary.totalDuration
+        ? `${Math.floor(itinerary.totalDuration / 60)}h ${
+            itinerary.totalDuration % 60
+          }m`
+        : `${durationDays} ngày`,
+
+      // Other info
+      requestedAt: req.createdAt,
+      specialRequests:
+        req.specialRequirements || req.tourDetails?.specialRequirements || "",
+      status: req.status,
+
+      // Itinerary items
+      itinerary: (itinerary.items || []).map((item) => ({
+        title: item.name || item.placeName || "Điểm tham quan",
+      })),
+
+      // Keep raw data
+      raw: req,
+      rawItinerary: itinerary,
+    };
+  };
 
   const fetchRequests = useCallback(
     async (isInitialLoad = false) => {
       if (isInitialLoad) setLoading(true);
       try {
-        const data = await withAuth("/api/itinerary/guide/requests");
-        if (data.success && Array.isArray(data.requests)) {
-          const mapped = data.requests.map(mapBackendRequest);
+        const data = await withAuth(
+          "/api/guide/custom-requests?status=pending,negotiating"
+        );
+        console.log("[RequestsPage] Raw API response:", data);
+
+        const requestsArray = data.tourRequests || data.requests || [];
+
+        if (Array.isArray(requestsArray)) {
+          const mapped = requestsArray.map(mapBackendRequest);
 
           if (!isInitialLoad && mapped.length > lastCountRef.current) {
             setShowBanner(true);
@@ -55,9 +138,12 @@ const RequestsPage = () => {
           lastCountRef.current = mapped.length;
 
           setRequests(mapped);
+        } else {
+          console.warn("[RequestsPage] Invalid response format:", data);
+          setRequests([]);
         }
       } catch (e) {
-        console.error(e);
+        console.error("[RequestsPage] Error fetching requests:", e);
         if (isInitialLoad) toast.error("Không thể tải danh sách yêu cầu");
       } finally {
         if (isInitialLoad) setLoading(false);
@@ -135,22 +221,41 @@ const RequestsPage = () => {
 
     setActionLoading(true);
     const endpoint = isAccept
-      ? `/api/itinerary/${id}/accept-tour-guide`
-      : `/api/itinerary/${id}/reject-tour-guide`;
+      ? `/api/guide/custom-requests/${id}/accept`
+      : `/api/guide/custom-requests/${id}/reject`;
 
     try {
-      const res = await withAuth(endpoint, { method: "POST" });
+      console.log("[RequestsPage] Sending action to:", endpoint);
+      const res = await withAuth(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          isAccept
+            ? {
+                finalAmount: 0, // Backend will calculate from negotiation
+                currency: "VND",
+              }
+            : {
+                reason: "Declined by guide",
+              }
+        ),
+      });
+
+      console.log("[RequestsPage] Action response:", res);
+
       if (res.success) {
         toast.success(
-          isAccept ? "Đã chấp nhận yêu cầu tour!" : "Đã từ chối yêu cầu"
+          isAccept ? "✅ Đã chấp nhận yêu cầu tour!" : "✅ Đã từ chối yêu cầu"
         );
         setRequests((prev) => prev.filter((r) => r.id !== id));
+        // Refetch after short delay to ensure backend state is synchronized
+        setTimeout(() => fetchRequests(false), 800);
       } else {
         toast.error(res.error || "Xử lý thất bại");
       }
     } catch (e) {
-      console.error(e);
-      toast.error("Có lỗi xảy ra");
+      console.error("[RequestsPage] Error in action:", e);
+      toast.error("❌ Có lỗi xảy ra: " + (e.message || "Lỗi không xác định"));
     } finally {
       setActionLoading(false);
     }

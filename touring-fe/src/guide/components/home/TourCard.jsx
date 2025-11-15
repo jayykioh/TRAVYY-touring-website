@@ -28,6 +28,7 @@ const TourCard = ({ tour, status = "accepted" }) => {
     name,
     coverImage,
     imageUrl,
+    imageItems,
     totalDuration,
     numberOfPeople,
   } = tour;
@@ -41,6 +42,9 @@ const TourCard = ({ tour, status = "accepted" }) => {
 
   const statusInfo = statusConfig[status] || statusConfig.accepted;
 
+  // Get image from backend - priority: imageItems > imageUrl > coverImage
+  const tourImage = imageItems?.[0]?.imageUrl || imageUrl || coverImage;
+
   const handleClick = () => {
     if (!tourId) return;
     navigate(`/guide/tours/${tourId}`);
@@ -53,15 +57,20 @@ const TourCard = ({ tour, status = "accepted" }) => {
     >
       {/* Ảnh + badge trạng thái */}
       <div className="relative w-full aspect-square overflow-hidden rounded-3xl bg-gray-200 shadow-md">
-        <img
-          src={
-            imageUrl ||
-            coverImage ||
-            "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg"
-          }
-          alt={title}
-          className="w-full h-full object-cover"
-        />
+        {tourImage ? (
+          <img
+            src={tourImage}
+            alt={title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.style.display = "none";
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
+            <span className="text-gray-400 text-4xl">🗺️</span>
+          </div>
+        )}
 
         {/* Badge trạng thái ở góc trên phải (thay cho '20% off') */}
         <div className="absolute top-2 right-2 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold shadow">

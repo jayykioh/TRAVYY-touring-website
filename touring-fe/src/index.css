@@ -120,38 +120,44 @@
 }
 /* Base marker */
 .poi-marker {
-  width: 34px; height: 34px;
-  display: grid; place-items: center;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
   border-radius: 999px;
   background: white;
-  border: 2px solid #0ea5e9;              /* sky-500 */
-  box-shadow: 0 6px 18px rgba(2,160,170,.18);
+  border: 2px solid #0ea5e9; /* sky-500 */
+  box-shadow: 0 6px 18px rgba(2, 160, 170, 0.18);
   cursor: pointer;
-  transition:
-    transform 160ms cubic-bezier(.22,.61,.36,1),
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    border-width 160ms ease;
-  will-change: transform;                  /* mượt khi map di chuyển */
+  transition: transform 160ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    border-color 160ms ease, box-shadow 160ms ease, border-width 160ms ease;
+  will-change: transform; /* mượt khi map di chuyển */
 }
 
 /* subtle inertia khi map move/zoom (Mapbox/Goong translate marker => có transform) */
-.mapboxgl-marker, .goongjs-marker, .goong-mapboxgl-marker, .mapboxgl-marker-anchor-center {
-  transition: transform 140ms cubic-bezier(.22,.61,.36,1);
+.mapboxgl-marker,
+.goongjs-marker,
+.goong-mapboxgl-marker,
+.mapboxgl-marker-anchor-center {
+  transition: transform 140ms cubic-bezier(0.22, 0.61, 0.36, 1);
   will-change: transform;
 }
 
 /* core dot */
 .poi-marker__dot {
-  width: 10px; height: 10px; border-radius: 999px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
   background: #0ea5e9;
 }
 
 /* halo/glow */
 .poi-marker__halo {
   position: absolute;
-  width: 34px; height: 34px; border-radius: 999px;
-  box-shadow: 0 0 0 0 rgba(14,165,233,.25);
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.25);
   transition: box-shadow 200ms ease;
   pointer-events: none;
 }
@@ -159,9 +165,11 @@
 /* ripple khi hover */
 .poi-marker__ripple {
   position: absolute;
-  width: 34px; height: 34px; border-radius: 999px;
-  border: 2px solid rgba(14,165,233,.25);
-  transform: scale(.9);
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 2px solid rgba(14, 165, 233, 0.25);
+  transform: scale(0.9);
   opacity: 0;
   pointer-events: none;
 }
@@ -169,11 +177,11 @@
 /* Hover state */
 .poi-marker:hover {
   transform: scale(1.12);
-  border-color: #02A0AA;
-  box-shadow: 0 10px 24px rgba(2,160,170,.30);
+  border-color: #02a0aa;
+  box-shadow: 0 10px 24px rgba(2, 160, 170, 0.3);
 }
 .poi-marker:hover .poi-marker__halo {
-  box-shadow: 0 0 0 8px rgba(14,165,233,.12);
+  box-shadow: 0 0 0 8px rgba(14, 165, 233, 0.12);
 }
 .poi-marker:hover .poi-marker__ripple {
   animation: poi-ripple 900ms ease-out forwards;
@@ -182,31 +190,42 @@
 /* Selected state */
 .poi-marker--selected {
   transform: scale(1.24);
-  border-color: #02A0AA;
+  border-color: #02a0aa;
   border-width: 3px;
-  box-shadow: 0 12px 30px rgba(2,160,170,.45);
+  box-shadow: 0 12px 30px rgba(2, 160, 170, 0.45);
   z-index: 10;
 }
 .poi-marker--selected .poi-marker__halo {
-  box-shadow: 0 0 0 10px rgba(2,160,170,.18);
+  box-shadow: 0 0 0 10px rgba(2, 160, 170, 0.18);
 }
 
 /* Pin variant */
 .poi-marker--pin {
-  width: 30px; height: 30px; border-radius: 12px 12px 12px 12px/18px 18px 12px 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 12px 12px 12px 12px/18px 18px 12px 12px;
   transform-origin: 50% 80%;
 }
 
 /* Emoji variant */
 .poi-marker--emoji {
-  font-size: 18px; line-height: 1;
+  font-size: 18px;
+  line-height: 1;
 }
 
 /* Ripple keyframes */
 @keyframes poi-ripple {
-  0%   { transform: scale(.9); opacity: .0; }
-  30%  { opacity: .35; }
-  100% { transform: scale(1.25); opacity: 0; }
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
 }
 
 /* Custom Promotion Animations */
@@ -224,7 +243,8 @@
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -237,7 +257,8 @@
 }
 
 @keyframes glow {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.5;
   }
   50% {
@@ -278,6 +299,46 @@
   animation: slideInFromLeft 0.4s ease-out;
 }
 
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Scrollbar Hide */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -294,4 +355,94 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(14, 116, 144, 0.5);
+}
+
+/* Refund Request Page Animations */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes slideDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.6s ease-out;
+}
+
+@keyframes slideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.6s ease-out;
+  animation-fill-mode: both;
+}
+
+/* Stagger animation for multiple items */
+.animate-slideUp:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.animate-slideUp:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.animate-slideUp:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.animate-slideUp:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.animate-slideUp:nth-child(5) {
+  animation-delay: 0.5s;
+}
+
+.animate-slideUp:nth-child(6) {
+  animation-delay: 0.6s;
+}
+
+.animate-slideUp:nth-child(7) {
+  animation-delay: 0.7s;
+}
+
+.animate-slideUp:nth-child(8) {
+  animation-delay: 0.8s;
+}
+
+/* Smooth text rendering */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
 }

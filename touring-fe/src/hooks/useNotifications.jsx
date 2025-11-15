@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../auth/context';
 import { toast } from 'sonner';
+import { useSocket } from '../context/SocketContext';
 
 export function useNotifications() {
   const { user, withAuth } = useAuth() || {};
@@ -10,6 +11,8 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  const { joinRoom, leaveRoom, on } = useSocket() || {};
 
   // Fetch notifications from API
   const fetchNotifications = useCallback(async () => {
@@ -118,16 +121,48 @@ export function useNotifications() {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Optional: Poll for new notifications every 30 seconds
+  // Listen for realtime notifications via socket, fallback to polling
   useEffect(() => {
     if (!token) return;
 
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 30000); // 30 seconds
+    let offCreate, offUpdate, offDelete;
+    let pollInterval;
 
-    return () => clearInterval(interval);
-  }, [token, fetchNotifications]);
+    if (joinRoom && on) {
+      try {
+        // join user room to receive notifications
+        joinRoom(`user-${user?.id}`);
+
+        offCreate = on('notificationCreated', (notif) => {
+          // prepend new notification and increase unread
+          setNotifications(prev => [notif, ...prev]);
+          setUnreadCount(prev => prev + 1);
+        });
+
+        offUpdate = on('notificationUpdated', (updated) => {
+          setNotifications(prev => prev.map(n => (n._id === updated._id ? updated : n)));
+        });
+
+        offDelete = on('notificationDeleted', ({ notificationId }) => {
+          setNotifications(prev => prev.filter(n => n._id !== notificationId));
+        });
+      } catch (e) {
+        console.warn('[Notifications] socket handlers failed, falling back to polling', e?.message);
+        pollInterval = setInterval(() => fetchNotifications(), 30000);
+      }
+    } else {
+      // fallback polling
+      pollInterval = setInterval(() => fetchNotifications(), 30000);
+    }
+
+    return () => {
+      if (offCreate) offCreate();
+      if (offUpdate) offUpdate();
+      if (offDelete) offDelete();
+      if (leaveRoom) leaveRoom(`user-${user?.id}`);
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [token, joinRoom, on, fetchNotifications, leaveRoom, user?.id]);
 
   return {
     notifications,

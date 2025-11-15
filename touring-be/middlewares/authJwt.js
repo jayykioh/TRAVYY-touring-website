@@ -26,29 +26,32 @@ const verifyToken = async (req, res, next) => {
     ? authHeader.slice(7)
     : null;
 
-  if (accessToken) {
-    try {
-      // ✅ ADD: Decode để xem exp
-      const decoded = jwt.decode(accessToken);
-      const now = Math.floor(Date.now() / 1000);
-      console.log(
-        "   📝 Token exp:",
-        decoded?.exp,
-        "| Now:",
-        now,
-        "| Diff:",
-        decoded?.exp - now,
-        "seconds"
-      );
+  // Defensive: treat 'null' string or 'undefined' string as no token (artifact of
+  // localStorage.setItem(key, null) which stores string 'null')
+  const isInvalidTokenString = accessToken === 'null' || accessToken === 'undefined' || accessToken === '';
 
+  if (accessToken && !isInvalidTokenString) {
+    try {
+      const decoded = jwt.decode(accessToken);
       const verified = verifyAccess(accessToken);
+
       req.user = verified;
-      console.log("   ✅ Access token valid:", req.user.sub);
+      req.userId = verified.sub || verified.id || verified._id;
+      req.userRole = verified.role;
+      console.log(
+        "   ✅ Access token valid:",
+        req.user.sub,
+        "| Role:",
+        req.userRole
+      );
       return next();
     } catch (error) {
       console.log("   ⚠️ Access token expired/invalid:", error.message);
     }
+  } else if (isInvalidTokenString) {
+    console.log("   ⚠️ Access token is string 'null'/'undefined', treating as no token, attempting refresh...");
   }
+
 
   // ✅ Priority 2: Auto-refresh from refresh_token cookie
   const refreshToken = req.cookies?.refresh_token;
@@ -167,7 +170,19 @@ const verifyAdminToken = (req, res, next) => {
   }
 };
 
+// Middleware to check if authenticated user is admin (use after verifyToken)
+const isAdmin = (req, res, next) => {
+  if (!req.userRole || req.userRole !== "Admin") {
+    return res.status(403).json({
+      success: false,
+      message: "Admin access required",
+    });
+  }
+  next();
+};
+
 module.exports = verifyToken;
 module.exports.verifyToken = verifyToken;
 module.exports.optionalAuth = optionalAuth;
 module.exports.verifyAdminToken = verifyAdminToken;
+module.exports.isAdmin = isAdmin;
