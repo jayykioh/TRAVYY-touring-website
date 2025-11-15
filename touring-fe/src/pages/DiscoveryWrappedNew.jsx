@@ -333,7 +333,7 @@ function StatsSlide({ profile, onNext }) {
             className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10"
           >
             <div className="text-3xl font-bold text-[#02A0AA]">{count}</div>
-            <div className="text-xs text-slate-400 mt-1">
+            <div className="text-xs text-slate-400">
               {event === 'tour_view' && '🔍 Xem tour'}
               {event === 'tour_bookmark' && '⭐ Lưu tour'}
               {event === 'tour_booking_complete' && '✅ Đặt tour'}
@@ -422,7 +422,7 @@ function VibesSlide({ profile, onNext }) {
         transition={{ delay: 1.5, type: "spring" }}
         className="mt-12 bg-white/10 backdrop-blur-md rounded-2xl px-8 py-4 border border-white/20"
       >
-        <div className="text-sm text-slate-400 mb-1">Độ tin cậy hồ sơ</div>
+        <div className="text-sm text-slate-400 mb-1">Độ chính xác được ghi nhận</div>
         <div className="text-4xl font-bold text-[#02A0AA]">
           {summary.confidence}%
         </div>
@@ -499,9 +499,6 @@ function ProvincesSlide({ profile, onNext }) {
             <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 pt-12 border border-white/20 hover:bg-white/15 transition-all">
               <div className="text-3xl font-bold text-white mb-2">
                 {item.province}
-              </div>
-              <div className="text-lg text-[#02A0AA] font-semibold">
-                {Math.round(item.score * 10) / 10} điểm
               </div>
             </div>
           </motion.div>
