@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useAuth } from '@/auth/context';
+import logger from '@/utils/logger';
 
 /**
  * Hook to check if user has active tour requests
@@ -19,7 +20,7 @@ export function useCheckActiveRequest() {
       
       return response;
     } catch (error) {
-      console.warn('[useCheckActiveRequest] Check failed:', error?.message);
+      logger.warn('[useCheckActiveRequest] Check failed:', error?.message);
       return null;
     }
   }, [withAuth]);

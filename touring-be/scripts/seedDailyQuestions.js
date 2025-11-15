@@ -1,13 +1,14 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const mongoose = require('mongoose');
+const logger = require('../utils/logger');
 const DailyQuestion = require('../models/DailyQuestion');
 
 /**
  * Seed initial daily questions
  */
 async function seedDailyQuestions() {
-  console.log('🌱 [Seed] Seeding daily questions...');
+  logger.info('🌱 [Seed] Seeding daily questions...');
 
   const questions = [
     {
@@ -97,7 +98,7 @@ async function seedDailyQuestions() {
     );
   }
 
-  console.log(`✅ [Seed] Seeded ${questions.length} daily questions`);
+  logger.info(`✅ [Seed] Seeded ${questions.length} daily questions`);
 }
 
 // Run if called directly
@@ -105,14 +106,14 @@ if (require.main === module) {
   mongoose
     .connect(process.env.MONGO_URI)
     .then(async () => {
-      console.log('✅ MongoDB connected');
+      logger.info('✅ MongoDB connected');
       await seedDailyQuestions();
       await mongoose.connection.close();
-      console.log('✅ Done');
+      logger.info('✅ Done');
       process.exit(0);
     })
     .catch((error) => {
-      console.error('❌ Error:', error);
+      logger.error('❌ Error:', error);
       process.exit(1);
     });
 }

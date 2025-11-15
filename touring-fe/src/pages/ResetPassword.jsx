@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Lock, Eye, EyeOff, KeyRound, CheckCircle, AlertCircle, Shield } from "lucide-react";
 import { toast, Toaster } from "sonner";
+import logger from "../utils/logger";
 import axios from "axios";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
@@ -115,7 +116,7 @@ export default function ResetPassword() {
         }, 2000);
       }
     } catch (error) {
-      console.error("Reset password error:", error);
+      logger.error("Reset password error:", error);
       const message = error.response?.data?.message || "Đặt lại mật khẩu thất bại. Link có thể đã hết hạn.";
       toast.error(message);
       

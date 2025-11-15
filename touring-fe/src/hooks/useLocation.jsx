@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import logger from '@/utils/logger';
 
 export default function useLocationOptions(provinceId) {
   const [provinces, setProvinces] = useState([]);
@@ -16,7 +17,7 @@ export default function useLocationOptions(provinceId) {
         });
         if (res.ok) setProvinces(await res.json());
       } catch (e) {
-        console.error("Fetch provinces error:", e);
+        logger.error("Fetch provinces error:", e);
       } finally {
         setLoadingProvince(false);
       }
@@ -39,7 +40,7 @@ export default function useLocationOptions(provinceId) {
         if (res.ok) setWards(await res.json());
         else setWards([]);
       } catch (e) {
-        console.error("Fetch wards error:", e);
+        logger.error("Fetch wards error:", e);
         setWards([]);
       } finally {
         setLoadingWard(false);

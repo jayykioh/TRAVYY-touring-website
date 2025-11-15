@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import TourCard from "../components/TourCard";
+import logger from "../utils/logger";
 import { MapPin, Package, ChevronLeft } from "lucide-react";
 
 const API_BASE = "http://localhost:4000/api"; // như file 1
@@ -37,22 +38,22 @@ export default function RegionTours() {
   async function fetchToursByLocation(locationId) {
     try {
       setLoading(true);
-      console.log("🔍 [Frontend] Fetching tours for locationId:", locationId);
+      logger.debug("🔍 [Frontend] Fetching tours for locationId:", locationId);
 
       const res = await fetch(`${API_BASE}/location-tours/${locationId}`);
       if (!res.ok) {
-        console.error(`❌ [Frontend] HTTP error! status: ${res.status}`);
+        logger.error(`❌ [Frontend] HTTP error! status: ${res.status}`);
         throw new Error(`HTTP error! status: ${res.status}`);
       }
 
       const data = await res.json();
-      console.log("✅ [Frontend] Received tours:", data);
-      console.log("📊 [Frontend] Tours count:", data.length);
+      logger.debug("✅ [Frontend] Received tours:", data);
+      logger.debug("📊 [Frontend] Tours count:", data.length);
 
       setTours(Array.isArray(data) ? data : []);
       setLoading(false);
     } catch (err) {
-      console.error("❌ [Frontend] Fetch tours failed:", err);
+      logger.error("❌ [Frontend] Fetch tours failed:", err);
       setTours([]);
       setLoading(false);
     }

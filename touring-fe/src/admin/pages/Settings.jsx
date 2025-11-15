@@ -16,6 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import * as settingsService from "../services/settingsService";
+import logger from "../../utils/logger";
 import { toast } from "sonner";
 
 export default function Settings() {
@@ -86,7 +87,7 @@ export default function Settings() {
         setInitialProfileData(userData);
         setErrors({});
       } catch (error) {
-        console.error("Failed to fetch profile:", error);
+        logger.error("Failed to fetch profile:", error);
         setErrors({ general: "Cannot load account information" });
       } finally {
         setLoading(false);

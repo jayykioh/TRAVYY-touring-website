@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, Eye, EyeOff, Shield, CheckCircle, AlertCircle, Info } from "lucide-react";
 import { toast, Toaster } from "sonner";
+import logger from '@/utils/logger';
 import axios from "axios";
 import { useAuth } from "../auth/context";
 
@@ -114,7 +115,7 @@ export default function ChangePassword() {
         }, 2000);
       }
     } catch (error) {
-      console.error("Change password error:", error);
+      logger.error("Change password error:", error);
       const message = error.response?.data?.message || "Đổi mật khẩu thất bại";
       toast.error(message);
     } finally {

@@ -10,6 +10,7 @@
  */
 
 import posthog from 'posthog-js';
+import logger from '@/utils/logger';
 
 let isInitialized = false;
 
@@ -24,7 +25,7 @@ export function initPostHog() {
   const apiHost = "https://us.posthog.com"; // luôn dùng host chính, không dùng us.i.posthog.com nữa
 
   if (!apiKey) {
-    console.warn("⚠️ PostHog API key missing – analytics disabled.");
+    logger.warn("⚠️ PostHog API key missing – analytics disabled.");
     return;
   }
 
@@ -56,20 +57,20 @@ export function initPostHog() {
 
       // --- Debug callback ---
       loaded: () => {
-        console.log("✅ PostHog initialized");
-        console.log("📌 Distinct ID:", posthog.get_distinct_id());
-        console.log("📌 Using ingestion host:", posthog.config.api_host);
+        logger.info("✅ PostHog initialized");
+        logger.debug("📌 Distinct ID:", posthog.get_distinct_id());
+        logger.debug("📌 Using ingestion host:", posthog.config.api_host);
         isInitialized = true;
       },
 
       // --- Debug lỗi request ---
       on_request_error: (err) => {
-        console.error("❌ PostHog request failed:", err);
+        logger.error("❌ PostHog request failed:", err);
       }
     });
 
   } catch (err) {
-    console.error("❌ PostHog init error:", err);
+    logger.error("❌ PostHog init error:", err);
   }
 }
 
@@ -80,7 +81,7 @@ export function initPostHog() {
  */
 export function trackEvent(eventName, properties = {}) {
   if (!isInitialized) {
-    console.warn('PostHog not initialized. Skipping event:', eventName);
+    logger.warn('PostHog not initialized. Skipping event:', eventName);
     return;
   }
 
@@ -94,8 +95,8 @@ export function trackEvent(eventName, properties = {}) {
     };
     
     // 🔍 Debug: Log full payload
-    console.log(`📊 Tracked: ${eventName}`, eventData);
-    console.log('🔍 PostHog instance state:', {
+    logger.debug(`📊 Tracked: ${eventName}`, eventData);
+    logger.debug('🔍 PostHog instance state:', {
       distinctId: posthog.get_distinct_id(),
       sessionId: posthog.get_session_id(),
       config: posthog.config
@@ -103,7 +104,7 @@ export function trackEvent(eventName, properties = {}) {
     
     posthog.capture(eventName, eventData);
   } catch (error) {
-    console.error('❌ Track event failed:', eventName, error);
+    logger.error('❌ Track event failed:', eventName, error);
   }
 }
 
@@ -114,7 +115,7 @@ export function trackEvent(eventName, properties = {}) {
  */
 export function identifyUser(userId, traits = {}) {
   if (!isInitialized) {
-    console.warn('PostHog not initialized. Skipping identify:', userId);
+    logger.warn('PostHog not initialized. Skipping identify:', userId);
     return;
   }
 
@@ -124,9 +125,9 @@ export function identifyUser(userId, traits = {}) {
       // Add platform
       platform: 'web',
     });
-    console.log(`👤 Identified user: ${userId}`);
+    logger.info(`👤 Identified user: ${userId}`);
   } catch (error) {
-    console.error('❌ Identify user failed:', userId, error);
+    logger.error('❌ Identify user failed:', userId, error);
   }
 }
 
@@ -139,9 +140,9 @@ export function resetPostHog() {
 
   try {
     posthog.reset();
-    console.log('🔄 PostHog reset');
+    logger.info('🔄 PostHog reset');
   } catch (error) {
-    console.error('❌ Reset failed:', error);
+    logger.error('❌ Reset failed:', error);
   }
 }
 
@@ -155,7 +156,7 @@ export function setUserProperties(properties = {}) {
   try {
     posthog.people.set(properties);
   } catch (error) {
-    console.error('❌ Set user properties failed:', error);
+    logger.error('❌ Set user properties failed:', error);
   }
 }
 

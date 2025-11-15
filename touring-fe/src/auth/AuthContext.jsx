@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRef } from "react";
 import { AuthCtx } from "./context";
 import { identifyUser, resetPostHog } from '../utils/posthog';
+import logger from '@/utils/logger';
 const API_BASE = "http://localhost:4000";
 
 // helper fetch: luôn gửi cookie (để BE đọc refresh_token)
@@ -55,9 +56,13 @@ export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   // Initialize accessToken: check localStorage first, but sanitize invalid strings
   const [accessToken, setAccessToken] = useState(() => {
-    const stored = localStorage.getItem('accessToken');
-    if (stored && stored !== 'null' && stored !== 'undefined') {
-      return stored;
+    try {
+      const stored = localStorage.getItem("accessToken");
+      if (stored && stored !== "null" && stored !== "undefined") {
+        return stored;
+      }
+    } catch (err) {
+      logger.warn("AuthContext: localStorage read failed", err && err.message ? err.message : err);
     }
     return null;
   });
@@ -65,7 +70,7 @@ export default function AuthProvider({ children }) {
     try {
       const raw = sessionStorage.getItem("bannedInfo");
       const parsed = raw ? JSON.parse(raw) : null;
-      console.log(
+      logger.debug(
         "🔧 AuthContext initial bannedInfo from sessionStorage:",
         parsed
       );
@@ -77,7 +82,32 @@ export default function AuthProvider({ children }) {
   const [booting, setBooting] = useState(true);
   // keep a ref of booting so callbacks can observe latest value without
   // being recreated too often
-  const bootingRef = useRef(booting);
+  const bootingRef = useRef(true);
+
+  // Small helpers to safely access storage (some browsers may throw)
+  const safeLocalSet = (key, value) => {
+    try {
+      if (value === undefined || value === null) {
+        localStorage.removeItem(key);
+      } else {
+        localStorage.setItem(key, value);
+      }
+    } catch (err) {
+      logger.warn(`AuthContext: safeLocalSet failed for ${key}`, err && err.message ? err.message : err);
+    }
+  };
+
+  const safeSessionSet = (key, value) => {
+    try {
+      if (value === undefined || value === null) {
+        sessionStorage.removeItem(key);
+      } else {
+        sessionStorage.setItem(key, value);
+      }
+    } catch (err) {
+      logger.warn(`AuthContext: safeSessionSet failed for ${key}`, err && err.message ? err.message : err);
+    }
+  };
 
   const login = useCallback(async (username, password) => {
     const res = await api(`${API_BASE}/api/auth/login`, {
@@ -89,7 +119,7 @@ export default function AuthProvider({ children }) {
     if (res?.accessToken) {
       setAccessToken(res.accessToken);
       // Store in localStorage for API calls that don't use withAuth
-      localStorage.setItem('accessToken', res.accessToken);
+      safeLocalSet('accessToken', res.accessToken);
     }
 
     if (res?.user) {
@@ -117,7 +147,7 @@ export default function AuthProvider({ children }) {
     if (res?.accessToken) {
       setAccessToken(res.accessToken);
       // Store in localStorage for API calls that don't use withAuth
-      localStorage.setItem('accessToken', res.accessToken);
+      safeLocalSet('accessToken', res.accessToken);
     }
 
     if (res?.user) {
@@ -138,7 +168,7 @@ export default function AuthProvider({ children }) {
   const withAuth = useCallback(
     async (input, init = {}) => {
       if (typeof input !== "string") {
-        console.error(
+        logger.error(
           "withAuth: first parameter must be a string URL, got:",
           typeof input,
           input
@@ -155,20 +185,19 @@ export default function AuthProvider({ children }) {
         const start = Date.now();
         while (bootingRef.current) {
           if (Date.now() - start > timeout) return false;
-          // eslint-disable-next-line no-await-in-loop
           await new Promise((r) => setTimeout(r, 50));
         }
         return true;
       };
 
       if (bootingRef.current) {
-        try {
+          try {
           const ok = await waitForBoot(3000);
           if (!ok) {
-            console.debug("withAuth: booting did not finish within timeout");
+            logger.debug("withAuth: booting did not finish within timeout");
           }
         } catch (err) {
-          console.debug("withAuth: error waiting for boot", err);
+          logger.debug("withAuth: error waiting for boot", err);
         }
       }
 
@@ -182,17 +211,22 @@ export default function AuthProvider({ children }) {
         headers.Authorization = `Bearer ${validAccessToken}`;
       } else {
         try {
-          const r = await api(`${API_BASE}/api/auth/refresh`, { method: "POST" }).catch(() => null);
-          if (r?.accessToken) {
-            setAccessToken(r.accessToken);
-            if (r.accessToken && r.accessToken !== 'null' && r.accessToken !== 'undefined') {
-              localStorage.setItem('accessToken', r.accessToken);
+          // Avoid attempting refresh if the app has intentionally logged out
+          if (isLoggedOut) {
+            // don't attempt refresh when user intentionally logged out
+          } else {
+            const r = await api(`${API_BASE}/api/auth/refresh`, { method: "POST" }).catch(() => null);
+            if (r?.accessToken) {
+              setAccessToken(r.accessToken);
+              if (r.accessToken && r.accessToken !== 'null' && r.accessToken !== 'undefined') {
+                safeLocalSet('accessToken', r.accessToken);
+              }
+              headers.Authorization = `Bearer ${r.accessToken}`;
             }
-            headers.Authorization = `Bearer ${r.accessToken}`;
           }
         } catch (e) {
           // Log debug so we can see why refresh failed during proactive attempt
-          console.debug("withAuth: proactive refresh failed:", e && e.message ? e.message : e);
+          logger.debug("withAuth: proactive refresh failed:", e && e.message ? e.message : e);
         }
       }
 
@@ -207,7 +241,7 @@ export default function AuthProvider({ children }) {
           setAccessToken(r.accessToken);
           // Update localStorage as well (only if token is a valid string)
           if (r.accessToken && r.accessToken !== 'null' && r.accessToken !== 'undefined') {
-            localStorage.setItem('accessToken', r.accessToken);
+            safeLocalSet('accessToken', r.accessToken);
           }
           return await api(url, {
             ...init,
@@ -217,7 +251,7 @@ export default function AuthProvider({ children }) {
         throw e;
       }
     },
-    [accessToken]
+    [accessToken, isLoggedOut]
   );
 
   // ✅ thêm flag để tránh refresh sau khi logout
@@ -230,8 +264,8 @@ export default function AuthProvider({ children }) {
       try {
         if (isLoggedOut || cancelled) return; // 👈 tránh auto refresh sau logout
 
-        const r = await api(`${API_BASE}/api/auth/refresh`, { method: "POST" });
-        console.log("🔄 Refresh response:", {
+          const r = await api(`${API_BASE}/api/auth/refresh`, { method: "POST" });
+        logger.debug("🔄 Refresh response:", {
           accountStatus: r?.accountStatus,
           statusReason: r?.statusReason,
         });
@@ -241,29 +275,25 @@ export default function AuthProvider({ children }) {
           const status = String(r.accountStatus || "").toLowerCase();
           const isLocked =
             status === "banned" || status === "locked" || status === "lock";
-          console.log("🔒 Lock check:", { status, isLocked });
+          logger.debug("🔒 Lock check:", { status, isLocked });
 
-          if (isLocked) {
+            if (isLocked) {
             const info = { message: r.statusReason || "Tài khoản bị khóa" };
-            console.log("❌ Setting bannedInfo:", info);
+            logger.warn("❌ Setting bannedInfo:", info);
             setBannedInfo(info);
-            try {
-              sessionStorage.setItem("bannedInfo", JSON.stringify(info));
-            } catch (err) {
-              console.warn("AuthContext: failed to save bannedInfo to sessionStorage", err && err.message ? err.message : err);
-            }
+            safeSessionSet("bannedInfo", JSON.stringify(info));
             // do not attempt to load /me for banned/locked accounts
             setUser(null);
             setBooting(false);
             return;
-          } else {
+            } else {
             // accountStatus present and not banned/locked -> clear any stale bannedInfo
-            console.log("✅ Active account, clearing banned info");
+            logger.info("✅ Active account, clearing banned info");
             setBannedInfo(null);
             try {
               sessionStorage.removeItem("bannedInfo");
             } catch (err) {
-              console.warn("AuthContext: failed to remove bannedInfo from sessionStorage", err && err.message ? err.message : err);
+              logger.warn("AuthContext: failed to remove bannedInfo from sessionStorage", err && err.message ? err.message : err);
             }
           }
         }
@@ -271,7 +301,7 @@ export default function AuthProvider({ children }) {
         if (r?.accessToken) {
           setAccessToken(r.accessToken);
           // Store in localStorage for API calls
-          localStorage.setItem('accessToken', r.accessToken);
+          safeLocalSet('accessToken', r.accessToken);
           try {
             const me = await api(`${API_BASE}/api/auth/me`, {
               headers: { Authorization: `Bearer ${r.accessToken}` },
@@ -280,7 +310,7 @@ export default function AuthProvider({ children }) {
               if (!me.role) me.role = null; // giữ logic role null như bạn cũ
               setUser({ ...me, token: r.accessToken });
               setBannedInfo(null);
-              sessionStorage.removeItem("bannedInfo");
+              safeSessionSet("bannedInfo", null);
               
               // ✅ Identify user in PostHog (OAuth login)
               identifyUser(me._id, {
@@ -289,18 +319,14 @@ export default function AuthProvider({ children }) {
                 role: me.role || 'user'
               });
             }
-          } catch (err) {
+              } catch (err) {
             // If backend returns 403 for banned accounts, capture and expose it
             if (err?.status === 403) {
               const info = err?.body || {
                 message: err.message || "Tài khoản bị khóa",
               };
               setBannedInfo(info);
-              try {
-                sessionStorage.setItem("bannedInfo", JSON.stringify(info));
-              } catch (err) {
-                console.warn("AuthContext: failed to save bannedInfo during refresh flow", err && err.message ? err.message : err);
-              }
+              safeSessionSet("bannedInfo", JSON.stringify(info));
             }
             setUser(null);
           }
@@ -328,13 +354,13 @@ export default function AuthProvider({ children }) {
   // diagnose mid-flow resets reported by users.
   useEffect(() => {
     try {
-      console.debug("AuthContext state", {
+      logger.debug("AuthContext state", {
         time: new Date().toISOString(),
         booting,
         user: user ? { id: user._id || user.id, role: user?.role } : null,
         hasAccessToken: !!accessToken,
       });
-    } catch (err) {
+    } catch {
       // non-fatal
     }
   }, [accessToken, user, booting]);
@@ -346,15 +372,16 @@ export default function AuthProvider({ children }) {
     try {
       await api(`${API_BASE}/api/auth/logout`, { method: "POST" });
     } catch (err) {
-      console.error("Logout error:", err);
+      logger.error("Logout error:", err);
     } finally {
       // 🧹 Dọn sạch session phía client
       setAccessToken(null);
       setUser(null);
       setIsLoggedOut(true);
 
-      localStorage.clear();
-      sessionStorage.clear();
+      // Remove only auth-related items — don't clear entire storage
+      safeLocalSet('accessToken', null);
+      safeSessionSet('bannedInfo', null);
       
       // ✅ Reset PostHog session (clear user identity)
       resetPostHog();

@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useContext } from "react";
+import logger from '@/utils/logger';
 import { toast } from "sonner";
 import { Copy, Check, Tag, Calendar, Percent } from "lucide-react";
 import { AuthCtx } from "@/auth/context";
@@ -21,15 +22,15 @@ export default function ProfilePromotions() {
 
   const fetchPromotions = async () => {
     try {
-      console.log('🎫 ProfilePromotions: Starting fetch');
-      console.log('🎫 withAuth function exists?', typeof withAuth === 'function');
+      logger.debug('🎫 ProfilePromotions: Starting fetch');
+      logger.debug('🎫 withAuth function exists?', typeof withAuth === 'function');
       
       const res = withAuth 
         ? await withAuth('/api/promotions/active')
         : await fetch('/api/promotions/active').then(r => r.json());
       
-      console.log('✅ ProfilePromotions: Response received:', res);
-      console.log('✅ Data structure:', {
+      logger.debug('✅ ProfilePromotions: Response received:', res);
+      logger.debug('✅ Data structure:', {
         success: res?.success,
         dataLength: res?.data?.length,
         dataType: typeof res?.data,
@@ -37,15 +38,15 @@ export default function ProfilePromotions() {
       });
       
       if (res && res.data) {
-        console.log('✅ Setting promotions:', res.data.length, 'items');
+        logger.debug('✅ Setting promotions:', res.data.length, 'items');
         setPromotions(res.data);
       } else {
-        console.warn('⚠️ No data in response:', res);
+        logger.warn('⚠️ No data in response:', res);
         setPromotions([]);
       }
     } catch (error) {
-      console.error("❌ ProfilePromotions: Load failed:", error);
-      console.error("❌ Error details:", {
+      logger.error("❌ ProfilePromotions: Load failed:", error);
+      logger.error("❌ Error details:", {
         message: error.message,
         response: error.response,
         stack: error.stack

@@ -3,6 +3,7 @@ import { useContext, useMemo } from "react";
 import { CartContext } from "../context/CartContext";
 import { useAuth } from "../auth/context";
 import { toast } from "sonner";
+import logger from '@/utils/logger';
 
 export function useCart() {
   const ctx = useContext(CartContext);
@@ -34,7 +35,7 @@ export function useCart() {
     }
     toast.error(fallbackMsg);
     // Log chi tiết cho dev
-    console.error(fallbackMsg, e);
+    logger.error(fallbackMsg, e);
   }
 
   // ============ Actions ============
@@ -135,9 +136,9 @@ export function useCart() {
     try {
       const res = await withAuth("/api/cart", { method: "GET" });
       replace(res?.items || []);
-      console.log('[Cart] Refreshed cart:', res?.items?.length || 0, 'items');
+      logger.debug('[Cart] Refreshed cart:', res?.items?.length || 0, 'items');
     } catch (e) {
-      console.error('[Cart] Failed to refresh cart:', e);
+      logger.error('[Cart] Failed to refresh cart:', e);
       replace([]);
     }
   }

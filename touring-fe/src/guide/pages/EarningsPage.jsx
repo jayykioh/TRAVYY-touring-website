@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Calendar, BarChart2, Star, Clock } from "lucide-react";
+import logger from '@/utils/logger';
 
 const PRIMARY = "#02A0AA";
 
@@ -26,7 +27,7 @@ const EarningsPage = () => {
         const data = await getGuideEarnings();
         setEarningsData(data);
       } catch (error) {
-        console.error("Failed to fetch earnings:", error);
+        logger.error("Failed to fetch earnings:", error);
         setEarningsData({
           summary: {
             thisWeek: 0,

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import logger from "../../utils/logger";
 import { Eye, EyeOff, Lock, Mail, Shield, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../context/AdminAuthContext";
@@ -22,9 +23,7 @@ export default function AdminLogin() {
   // ✅ Auto redirect when authenticated as admin
   useEffect(() => {
     if (isAuthenticated && admin?.role === "Admin") {
-      console.log(
-        "[AdminLogin] Already authenticated as admin, redirecting..."
-      );
+      logger.info("[AdminLogin] Already authenticated as admin, redirecting...");
       const redirectUrl = sessionStorage.getItem("redirect_after_login");
       if (redirectUrl) {
         sessionStorage.removeItem("redirect_after_login");
@@ -64,9 +63,9 @@ export default function AdminLogin() {
     }
 
     try {
-      console.log("Starting login...");
+      logger.info("Starting login...");
       const result = await login(formData.email, formData.password);
-      console.log("Login result:", result);
+      logger.info("Login result:", result);
 
       if (result.success) {
         // ✅ Verify admin role before proceeding
@@ -86,7 +85,7 @@ export default function AdminLogin() {
           localStorage.removeItem("adminRememberMe");
         }
 
-        console.log("Login successful! useEffect will handle navigation.");
+        logger.info("Login successful! useEffect will handle navigation.");
         // Navigation will be handled by useEffect when state updates
       } else if (result.requires2FA || result.requiresEmailVerification) {
         // Redirect đến trang verify
@@ -103,7 +102,7 @@ export default function AdminLogin() {
         setError(result.message || "Email hoặc mật khẩu không chính xác");
       }
     } catch (err) {
-      console.error("Login error:", err);
+      logger.error("Login error:", err);
       setError("Đã có lỗi xảy ra. Vui lòng thử lại sau.");
     } finally {
       setLoading(false);

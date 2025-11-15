@@ -1,4 +1,5 @@
 const fs = require('fs');
+const logger = require('./touring-be/utils/logger');
 const zones = JSON.parse(fs.readFileSync('travelApp.zones.json'));
 
 // Count tag frequency
@@ -14,11 +15,11 @@ const sortedByFreq = Object.entries(tagFreq)
   .sort(([, a], [, b]) => b - a)
   .map(([tag, count]) => ({ tag, count }));
 
-console.log('=== TAGS BY FREQUENCY ===');
+logger.info('=== TAGS BY FREQUENCY ===');
 sortedByFreq.forEach(({ tag, count }) => {
-  console.log(`${count.toString().padStart(3)} zones: ${tag}`);
+  logger.info(`${count.toString().padStart(3)} zones: ${tag}`);
 });
 
-console.log('\n=== RECOMMENDED: TOP 15-18 TAGS (most used) ===');
+logger.info('\n=== RECOMMENDED: TOP 15-18 TAGS (most used) ===');
 const topTags = sortedByFreq.slice(0, 18).map(({ tag }) => tag);
-console.log(JSON.stringify(topTags, null, 2));
+logger.info(JSON.stringify(topTags, null, 2));

@@ -4,6 +4,7 @@ import { useAuth } from "@/auth/context";
 import { useBehaviorTracking } from "@/hooks/useBehaviorTracking";
 import LocationCard from "@/components/LocationCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import logger from '@/utils/logger';
 
 export default function BlogPage() {
   const { slug } = useParams();
@@ -24,7 +25,7 @@ export default function BlogPage() {
         return res.json();
       })
       .then((data) => {
-        console.log("Blog data from API:", data);
+        logger.debug("Blog data from API:", data);
         setBlog(data);
         
         // ✅ Track blog view immediately when blog loads
@@ -49,7 +50,7 @@ export default function BlogPage() {
         }
       })
       .catch((err) => {
-        console.error("Error fetching blog:", err);
+        logger.error("Error fetching blog:", err);
         setError(err.message);
       })
       .finally(() => setLoading(false));

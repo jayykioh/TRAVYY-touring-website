@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 // components/ItineraryCart.jsx
 import React, { useMemo } from 'react';
+import logger from "../utils/logger";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, X, Trash2, Sparkles, ChevronRight } from 'lucide-react';
@@ -441,7 +442,7 @@ export default function ItineraryCart() {
     try {
       await removePOI(poiId);
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     }
   };
 

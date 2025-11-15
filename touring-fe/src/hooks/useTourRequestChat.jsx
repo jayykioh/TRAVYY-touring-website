@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../auth/context';
+import logger from '@/utils/logger';
 
 // Minimal shim hook for tour request chat used by UI components.
 // This implementation is intentionally simple: it provides the
@@ -32,13 +33,13 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
     }
 
     if (booting) {
-      console.debug('[useTourRequestChat] Delaying loadRequest while auth is booting');
+      logger.debug('[useTourRequestChat] Delaying loadRequest while auth is booting');
       setLoading(true);
       return;
     }
 
     if (!accessToken) {
-      console.debug('[useTourRequestChat] Skipping loadRequest - no access token');
+      logger.debug('[useTourRequestChat] Skipping loadRequest - no access token');
       setLoading(false);
       return;
     }
@@ -50,15 +51,15 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
       if (!mountedRef.current) return;
       
       const msgs = response?.messages || [];
-      console.log('[useTourRequestChat] Loaded messages:', msgs.length, 'messages for requestId:', requestId);
-      console.log('[useTourRequestChat] Response keys:', Object.keys(response || {}));
+      logger.debug('[useTourRequestChat] Loaded messages:', msgs.length, 'messages for requestId:', requestId);
+      logger.debug('[useTourRequestChat] Response keys:', Object.keys(response || {}));
       
       setMessages(Array.isArray(msgs) ? msgs : []);
       setUnreadCount(response?.unreadCount || 0);
       
       // If response includes request details (tour info, pricing), store them
       if (response?.tourRequest) {
-        console.log('[useTourRequestChat] Setting requestDetails:', {
+        logger.debug('[useTourRequestChat] Setting requestDetails:', {
           hasTourRequest: !!response.tourRequest,
           keys: Object.keys(response.tourRequest),
           hasTourDetails: !!response.tourRequest.tourDetails,
@@ -68,12 +69,12 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
         });
         setRequestDetails(response.tourRequest);
       } else {
-        console.warn('[useTourRequestChat] No tourRequest in response');
+        logger.warn('[useTourRequestChat] No tourRequest in response');
       }
     } catch (err) {
       // Fallback: if API fails (404/error), still allow chat to work locally
       // Messages won't persist but traveller can still type and send via socket
-      console.warn('[useTourRequestChat] loadRequest failed (fallback mode):', err?.message || err);
+      logger.warn('[useTourRequestChat] loadRequest failed (fallback mode):', err?.message || err);
       if (!mountedRef.current) return;
       setRequestDetails(null);
       setMessages([]);
@@ -99,28 +100,28 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
     // Validate requestId is a valid ObjectId (24 hex chars) and not an itineraryId
     const isValidObjectId = /^[a-f\d]{24}$/i.test(requestId);
     if (!isValidObjectId) {
-      console.warn('[useTourRequestChat] Invalid requestId format, skipping socket setup:', requestId);
+      logger.warn('[useTourRequestChat] Invalid requestId format, skipping socket setup:', requestId);
       return;
     }
 
     const room = `chat-${requestId}`;
     // join the room for this request
     socket.joinRoom?.(room);
-    console.log('[useTourRequestChat] Joined room:', room);
+    logger.debug('[useTourRequestChat] Joined room:', room);
 
     const offNew = socket.on?.('newMessage', (doc) => {
       if (!doc) {
-        console.warn('[useTourRequestChat] Received empty newMessage');
+        logger.warn('[useTourRequestChat] Received empty newMessage');
         return;
       }
       // Only accept messages for this requestId
       const docRoom = doc?.tourRequestId ? `chat-${doc.tourRequestId}` : null;
       if (docRoom && docRoom !== room) {
-        console.log('[useTourRequestChat] Message for different room:', docRoom, 'current:', room);
+        logger.debug('[useTourRequestChat] Message for different room:', docRoom, 'current:', room);
         return;
       }
       
-      console.log('[useTourRequestChat] newMessage received:', {
+      logger.debug('[useTourRequestChat] newMessage received:', {
         messageId: doc._id,
         content: doc.content?.substring(0, 50),
         sender: doc.sender?.role,
@@ -142,7 +143,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
         });
         
         if (isDuplicate) {
-          console.log('[useTourRequestChat] Duplicate message ignored:', doc._id);
+          logger.debug('[useTourRequestChat] Duplicate message ignored:', doc._id);
           return prev;
         }
         
@@ -152,28 +153,28 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
           if (m._id.toString().startsWith('local-') && 
               m.content === doc.content && 
               m.sender?.role === doc.sender?.role) {
-            console.log('[useTourRequestChat] Removing optimistic message:', m._id);
+            logger.debug('[useTourRequestChat] Removing optimistic message:', m._id);
             return false;
           }
           return true;
         });
         
         updated = [...updated, doc];
-        console.log('[useTourRequestChat] Message added. Total messages:', updated.length);
+        logger.debug('[useTourRequestChat] Message added. Total messages:', updated.length);
         return updated;
       });
     });
 
     const offUpdated = socket.on?.('messageUpdated', (doc) => {
       if (!doc) return;
-      console.log('[useTourRequestChat] messageUpdated received:', doc._id);
+      logger.debug('[useTourRequestChat] messageUpdated received:', doc._id);
       setMessages((prev) => prev.map((m) => (m._id === doc._id ? doc : m)));
     });
 
     const offTyping = socket.on?.('typing', (payload) => {
       if (!payload || payload.requestId !== requestId) return;
       const uid = payload.userId || payload.id || 'other';
-      console.log('[useTourRequestChat] typing indicator:', { uid, isTyping: payload.isTyping });
+      logger.debug('[useTourRequestChat] typing indicator:', { uid, isTyping: payload.isTyping });
       setTypingUsers((prev) => {
         const next = new Set(prev);
         if (payload.isTyping) next.add(uid);
@@ -185,20 +186,20 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
     // Listen for agreement completed event
     const offAgreementCompleted = socket.on?.('agreementCompleted', (payload) => {
       if (!payload || payload.requestId !== requestId) return;
-      console.log('[useTourRequestChat] agreementCompleted received:', payload);
+      logger.info('[useTourRequestChat] agreementCompleted received:', payload);
       
       // Refetch request details to get updated agreement status
       loadRequest();
       
       // Show a notification to user (optional - you can customize this)
       if (payload.message) {
-        console.log('[useTourRequestChat] Agreement message:', payload.message);
+        logger.info('[useTourRequestChat] Agreement message:', payload.message);
       }
     });
 
     // Re-join room on socket reconnects
     const offConnect = socket.on?.('connect', () => {
-      console.log('[useTourRequestChat] Socket reconnected, rejoining room:', room);
+      logger.debug('[useTourRequestChat] Socket reconnected, rejoining room:', room);
       setSocketError(null);
       setReconnectAttempts(0);
       socket.joinRoom?.(room);
@@ -208,7 +209,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
 
     // Handle disconnect
     const offDisconnect = socket.on?.('disconnect', (reason) => {
-      console.warn('[useTourRequestChat] Socket disconnected:', reason);
+      logger.warn('[useTourRequestChat] Socket disconnected:', reason);
       setSocketError('Mất kết nối. Đang thử kết nối lại...');
     });
 
@@ -222,7 +223,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
 
     // Handle connect_error
     const offConnectError = socket.on?.('connect_error', (error) => {
-      console.error('[useTourRequestChat] Socket connect error:', error);
+      logger.error('[useTourRequestChat] Socket connect error:', error);
       setSocketError('Lỗi kết nối: ' + (error.message || 'Không xác định'));
     });
 
@@ -256,7 +257,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
         createdAt: new Date().toISOString(),
       };
       
-      console.log('[useTourRequestChat] sendMessage - optimistic update:', optimistic);
+      logger.debug('[useTourRequestChat] sendMessage - optimistic update:', optimistic);
       setMessages((m) => [...m, optimistic]);
 
       // Try to send to server, but don't fail if API returns error
@@ -268,7 +269,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
           body: JSON.stringify({ content: text }),
         });
 
-        console.log('[useTourRequestChat] sendMessage API response:', {
+        logger.debug('[useTourRequestChat] sendMessage API response:', {
           success: res?.success,
           messageId: res?.message?._id,
           content: res?.message?.content?.substring(0, 50)
@@ -281,14 +282,14 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
             const updated = prev.map((m) => 
               m._id === optimistic._id ? res.message : m
             );
-            console.log('[useTourRequestChat] Replaced optimistic message:', res.message._id);
+            logger.debug('[useTourRequestChat] Replaced optimistic message:', res.message._id);
             return updated;
           });
         }
       } catch (apiErr) {
         // API failed, but optimistic message is already in state
         // Traveller still sees their message, socket may sync later
-        console.warn('[useTourRequestChat] sendMessage API failed (using optimistic)', apiErr?.message || apiErr);
+        logger.warn('[useTourRequestChat] sendMessage API failed (using optimistic)', apiErr?.message || apiErr);
       }
 
       // emit typing stop
@@ -296,7 +297,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
 
       return true;
     } catch (err) {
-      console.error('[useTourRequestChat] sendMessage error', err?.message || err);
+      logger.error('[useTourRequestChat] sendMessage error', err?.message || err);
       return false;
     } finally {
       setSending(false);
@@ -315,7 +316,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
 
       // Validate against minPrice
       if (requestDetails?.minPrice?.amount && amount < requestDetails.minPrice.amount) {
-        console.error('[useTourRequestChat] Offer below minPrice:', { amount, minPrice: requestDetails.minPrice.amount });
+        logger.error('[useTourRequestChat] Offer below minPrice:', { amount, minPrice: requestDetails.minPrice.amount });
         throw new Error(`Giá đề xuất phải >= ${requestDetails.minPrice.amount.toLocaleString('vi-VN')} VND (giá tối thiểu của guide)`);
       }
 
@@ -328,7 +329,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
       if (res?.tourRequest) setRequestDetails(res.tourRequest);
       return res?.success ?? true;
     } catch (err) {
-      console.error('[useTourRequestChat] sendOffer error', err?.message || err);
+      logger.error('[useTourRequestChat] sendOffer error', err?.message || err);
       return false;
     }
   }, [withAuth, requestId, apiBase, requestDetails?.minPrice?.amount]);
@@ -343,7 +344,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
       });
       if (res?.tourRequest) {
         setRequestDetails(res.tourRequest);
-        console.log('[useTourRequestChat] Agreement updated:', {
+        logger.info('[useTourRequestChat] Agreement updated:', {
           userAgreed: res.tourRequest.agreement?.userAgreed,
           guideAgreed: res.tourRequest.agreement?.guideAgreed,
           bothAgreed: res.bothAgreed
@@ -351,7 +352,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
       }
       return res?.success ?? true;
     } catch (err) {
-      console.error('[useTourRequestChat] agreeToTerms error', err?.message || err);
+      logger.error('[useTourRequestChat] agreeToTerms error', err?.message || err);
       return false;
     }
   }, [withAuth, requestId, apiBase]);
@@ -372,7 +373,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
       }
       return false;
     } catch (err) {
-      console.error('[useTourRequestChat] editMessage error', err?.message || err);
+      logger.error('[useTourRequestChat] editMessage error', err?.message || err);
       return false;
     } finally {
       setSending(false);
@@ -389,7 +390,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
       setMessages((prev) => prev.filter((m) => m._id !== messageId));
       return true;
     } catch (err) {
-      console.error('[useTourRequestChat] deleteMessage error', err?.message || err);
+      logger.error('[useTourRequestChat] deleteMessage error', err?.message || err);
       return false;
     }
   }, [withAuth, requestId, apiBase]);
@@ -413,7 +414,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
       
       return true;
     } catch (err) {
-      console.error('[useTourRequestChat] sendFileMessage error', err?.message || err);
+      logger.error('[useTourRequestChat] sendFileMessage error', err?.message || err);
       return false;
     } finally {
       setSending(false);
@@ -430,7 +431,7 @@ export function useTourRequestChat(requestId, apiBase = '/api/chat') {
       });
       return res?.success ?? true;
     } catch (err) {
-      console.error('[useTourRequestChat] setMinPrice error', err?.message || err);
+      logger.error('[useTourRequestChat] setMinPrice error', err?.message || err);
       return false;
     }
   }, [withAuth, requestId, apiBase]);

@@ -6,6 +6,7 @@ const User = require("../models/Users");
 const { signAccess, signRefresh, newId } = require("../utils/jwt");
 const axios = require("axios");
 const { sendMail } = require("../utils/emailService");
+const logger = require("../utils/logger");
 
 const isProd = process.env.NODE_ENV === "production";
 const ALLOWED_ROLES = ["Traveler", "TourGuide", "TravelAgency"];
@@ -169,7 +170,7 @@ exports.register = async (req, res) => {
             message: "Số điện thoại đã được sử dụng.",
           });
     }
-    console.error(e);
+    logger.error(e);
     return res
       .status(500)
       .json({ error: "REGISTER_FAILED", message: e.message || "Server error" });
@@ -195,7 +196,7 @@ exports.login = async (req, res) => {
     try {
       match = await bcrypt.compare(password, user.password);
     } catch (bcryptErr) {
-      console.error(`[Login] bcrypt.compare error for ${username}:`, bcryptErr.message);
+      logger.error(`[Login] bcrypt.compare error for ${username}:`, bcryptErr.message);
       return res.status(400).json({ message: "Invalid username or password" });
     }
 
@@ -243,7 +244,7 @@ exports.login = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("LOGIN_ERROR:", err);
+    logger.error("LOGIN_ERROR:", err);
     res
       .status(500)
       .json({ error: "LOGIN_FAILED", message: err.message || "Server error" });
@@ -316,7 +317,7 @@ exports.changePassword = async (req, res) => {
         }
       );
     } catch (emailErr) {
-      console.error(
+      logger.error(
         "Failed to send password change notification:",
         emailErr.message
       );
@@ -324,7 +325,7 @@ exports.changePassword = async (req, res) => {
 
     res.json({ success: true, message: "Đổi mật khẩu thành công" });
   } catch (err) {
-    console.error("CHANGE_PASSWORD_ERROR:", err);
+    logger.error("CHANGE_PASSWORD_ERROR:", err);
     res.status(500).json({ message: err.message || "Server error" });
   }
 };
@@ -343,16 +344,14 @@ exports.forgotPassword = async (req, res) => {
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       // Không tiết lộ email có tồn tại hay không (security)
-      console.log(
-        `⚠️ Forgot password request for non-existent email: ${email}`
-      );
+      logger.warn(`⚠️ Forgot password request for non-existent email: ${email}`);
       return res.json({
         success: true,
         message: "Nếu email tồn tại, link đặt lại mật khẩu đã được gửi",
       });
     }
 
-    console.log(`🔑 Forgot password request for: ${user.email}`);
+    logger.info(`🔑 Forgot password request for: ${user.email}`);
 
     // Tạo reset token
     const resetToken = crypto.randomBytes(32).toString("hex");
@@ -370,8 +369,8 @@ exports.forgotPassword = async (req, res) => {
       process.env.FRONTEND_URL || "http://localhost:5173"
     }/reset-password?token=${resetToken}`;
 
-    console.log(`📧 Sending reset email to: ${user.email}`);
-    console.log(`🔗 Reset link: ${resetLink}`);
+    logger.info(`📧 Sending reset email to: ${user.email}`);
+    logger.debug(`🔗 Reset link: ${resetLink}`);
 
     // Gửi email trực tiếp
     try {
@@ -417,15 +416,10 @@ exports.forgotPassword = async (req, res) => {
         htmlContent
       );
 
-      console.log(
-        `✅ Password reset email sent successfully to: ${user.email}`
-      );
+      logger.info(`✅ Password reset email sent successfully to: ${user.email}`);
     } catch (emailErr) {
-      console.error(
-        "❌ Failed to send password reset email:",
-        emailErr.message
-      );
-      console.error("❌ Full error:", emailErr);
+      logger.error("❌ Failed to send password reset email:", emailErr.message);
+      logger.error("❌ Full error:", emailErr);
       user.resetPasswordToken = undefined;
       user.resetPasswordExpires = undefined;
       await user.save();
@@ -527,9 +521,9 @@ exports.resetPassword = async (req, res) => {
       `;
 
       await sendMail(user.email, subject, htmlContent);
-      console.log(`✅ Password reset success email sent to: ${user.email}`);
+      logger.info(`✅ Password reset success email sent to: ${user.email}`);
     } catch (emailErr) {
-      console.error(
+      logger.error(
         "❌ Failed to send password reset success email:",
         emailErr.message
       );
@@ -541,7 +535,7 @@ exports.resetPassword = async (req, res) => {
       message: "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập ngay bây giờ",
     });
   } catch (err) {
-    console.error("RESET_PASSWORD_ERROR:", err);
+    logger.error("RESET_PASSWORD_ERROR:", err);
     res.status(500).json({ message: err.message || "Server error" });
   }
 };

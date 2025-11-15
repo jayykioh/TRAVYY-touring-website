@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../auth/context";
 import { getGuideProfile } from "../../data/guideAPI";
 import { User, Calendar, LogOut, Award } from "lucide-react";
+import logger from '@/utils/logger';
 
 const ProfileDropdown = () => {
   const [showProfile, setShowProfile] = useState(false);
@@ -25,14 +26,14 @@ const ProfileDropdown = () => {
     try {
       setLoading(true);
       const data = await getGuideProfile();
-      console.log("🔍 [ProfileDropdown] Fetched guide profile:", data);
+      logger.debug("🔍 [ProfileDropdown] Fetched guide profile:", data);
 
       // Backend returns { success: true, ...guide } not { success: true, guide: {...} }
       if (data.success !== false) {
         setGuideProfile(data);
       }
     } catch (error) {
-      console.error("Failed to fetch guide profile:", error);
+      logger.error("Failed to fetch guide profile:", error);
     } finally {
       setLoading(false);
     }

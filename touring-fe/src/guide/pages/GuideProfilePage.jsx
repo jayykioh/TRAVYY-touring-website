@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+import logger from '@/utils/logger';
 import { useAuth } from "../../auth/context";
 import { toast } from "sonner";
 import {
@@ -89,7 +90,7 @@ const GuideProfilePage = () => {
         });
       }
     } catch (err) {
-      console.error("Load profile error:", err);
+        logger.error("Load profile error:", err);
       toast.error("Không thể tải hồ sơ");
     } finally {
       setLoading(false);
@@ -120,7 +121,7 @@ const GuideProfilePage = () => {
         toast.error("Không thể cập nhật hồ sơ");
       }
     } catch (err) {
-      console.error("Save profile error:", err);
+      logger.error("Save profile error:", err);
       toast.error("Có lỗi xảy ra khi lưu hồ sơ");
     } finally {
       setSaving(false);
@@ -174,7 +175,7 @@ const GuideProfilePage = () => {
         await loadProfile();
         toast.success("Avatar đã được cập nhật!");
       } catch (err) {
-        console.error("Upload avatar error:", err);
+        logger.error("Upload avatar error:", err);
         toast.error("Không thể upload avatar");
         setAvatarPreview(null);
       } finally {
@@ -199,7 +200,7 @@ const GuideProfilePage = () => {
       await loadProfile();
       toast.success("Avatar đã được xóa");
     } catch (err) {
-      console.error("Remove avatar error:", err);
+      logger.error("Remove avatar error:", err);
       toast.error("Không thể xóa avatar");
     } finally {
       setUploadingAvatar(false);
@@ -923,7 +924,7 @@ const GuideProfilePage = () => {
                         );
                       }
                     } catch (err) {
-                      console.error("Upload cert error:", err);
+                      logger.error("Upload cert error:", err);
                       toast.error("Có lỗi xảy ra khi tải lên");
                     } finally {
                       setUploadingCert(false);

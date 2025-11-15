@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { useAuth } from "../auth/context";
+import logger from '@/utils/logger';
 
 const BankInfoModal = ({ isOpen, onClose, refundId, onSuccess }) => {
   // Always call hooks at the top level, before any early returns
@@ -14,7 +15,7 @@ const BankInfoModal = ({ isOpen, onClose, refundId, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  console.log("🏦 BankInfoModal render:", {
+  logger.debug("🏦 BankInfoModal render:", {
     isOpen,
     refundId,
     refundIdType: typeof refundId,
@@ -79,7 +80,7 @@ const BankInfoModal = ({ isOpen, onClose, refundId, onSuccess }) => {
       // Get token from auth context (user.token or user.accessToken)
       const token = user?.token || user?.accessToken;
 
-      console.log("🔑 BankInfoModal - Token check:", {
+      logger.debug("🔑 BankInfoModal - Token check:", {
         hasUser: !!user,
         hasToken: !!token,
         tokenPreview: token ? `${token.substring(0, 20)}...` : "NO TOKEN",
@@ -129,7 +130,7 @@ const BankInfoModal = ({ isOpen, onClose, refundId, onSuccess }) => {
   };
 
   // Don't return null - always render but conditionally show/hide
-  console.log("🏦 Rendering modal with isOpen:", isOpen);
+  logger.debug("🏦 Rendering modal with isOpen:", isOpen);
 
   if (!isOpen) {
     return null;

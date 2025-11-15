@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Tour = require("../models/agency/Tours");
 const Booking = require("../models/Bookings");
+const logger = require('../utils/logger');
 
 // copy các helper từ cart.controller (normalizeDate, clamp0, getPricesAndMeta) hoặc require chúng
 const normalizeDate = (d) => (d ? String(d).slice(0, 10) : "");
@@ -94,8 +95,8 @@ exports.quote = async (req, res) => {
 
     res.json({ items: out });
   } catch (e) {
-    console.error("quote error", e);
-    res.status(500).json({ error: "QUOTE_FAILED" });
+    logger.error("quote error", e);
+    return res.sendError('QUOTE_FAILED', 'Quote calculation failed', 500);
   }
 };
 
@@ -104,7 +105,7 @@ exports.getUserBookings = async (req, res) => {
     const userId = req.user?.sub;
     if (!userId) return res.status(401).json({ error: "UNAUTHORIZED" });
 
-    console.log("📚 Fetching bookings for userId:", userId);
+    logger.debug("📚 Fetching bookings for userId:", userId);
 
     // 1️⃣ Lấy danh sách booking từ travelApp (bao gồm cả cancelled và refunded)
     const bookings = await Booking.find({
@@ -157,8 +158,8 @@ exports.getUserBookings = async (req, res) => {
       count: enrichedBookings.length,
     });
   } catch (e) {
-    console.error("getUserBookings error", e);
-    res.status(500).json({ error: "FETCH_BOOKINGS_FAILED" });
+    logger.error("getUserBookings error", e);
+    return res.sendError('FETCH_BOOKINGS_FAILED', 'Failed to fetch bookings', 500);
   }
 };
 
@@ -235,11 +236,8 @@ exports.getBookingById = async (req, res) => {
       data: { ...booking, items, paymentStatus, paymentMethod },
     });
   } catch (e) {
-    console.error("getBookingById error", e);
-    res.status(500).json({
-      success: false,
-      error: "FETCH_BOOKING_FAILED",
-    });
+    logger.error("getBookingById error", e);
+    return res.sendError('FETCH_BOOKING_FAILED', 'Failed to fetch booking', 500);
   }
 };
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import logger from '@/utils/logger';
 import { useAuth } from "../auth/context";
 import {
   Calendar,
@@ -48,11 +49,11 @@ export default function BookingHistory() {
             const requestsData = await withAuth('/api/tour-requests');
             setRequests(requestsData.requests || []);
           } catch (err) {
-            console.error('Error fetching tour requests:', err);
+            logger.error('Error fetching tour requests:', err);
           }
         }
       } catch (err) {
-        console.error("Error fetching data:", err);
+        logger.error("Error fetching data:", err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -73,7 +74,7 @@ export default function BookingHistory() {
 
     // Listen for refund updates from other components
     const handleRefundUpdate = (event) => {
-      console.log("Refund updated event received:", event.detail);
+      logger.debug("Refund updated event received:", event.detail);
       if (user?.token && bookings.length > 0) {
         fetchRefundStatuses(bookings);
       }
@@ -132,7 +133,7 @@ export default function BookingHistory() {
 
       setRefundStatuses(statuses);
     } catch (err) {
-      console.error("Error fetching refund statuses:", err);
+      logger.error("Error fetching refund statuses:", err);
     }
   };
 
@@ -178,7 +179,7 @@ export default function BookingHistory() {
       // Navigate to checkout
       window.location.href = "/booking";
     } catch (error) {
-      console.error("Error retrying payment:", error);
+      logger.error("Error retrying payment:", error);
       alert("Có lỗi xảy ra khi thử thanh toán lại. Vui lòng thử lại sau.");
     }
   };
@@ -408,6 +409,10 @@ export default function BookingHistory() {
             <div className="space-y-4 pb-4">
               {bookings.map((booking) => {
                 const ui = statusUI(booking.status);
+                // Determine if there's a refund associated with this booking
+                const refundStatus = refundStatuses[booking._id] || null;
+                // refundUI contains presentation info (text, className, tourStatus)
+                const refundUI = refundStatus ? getRefundStatusUI(refundStatus.status) : null;
                 return (
                   <div key={booking._id} className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
                     {/* Header card */}

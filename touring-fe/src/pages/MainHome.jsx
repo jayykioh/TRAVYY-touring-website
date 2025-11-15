@@ -1,5 +1,6 @@
 import React from "react";
 import { useAuth } from "../auth/context";
+import logger from "../utils/logger";
 import TourHeroSection from "../components/TourHeroSection";
 import TourPromotions from "../components/TourRecommend";
 import AboutSection from "../components/AboutSection";
@@ -16,7 +17,7 @@ import RegionSection from "../components/RegionSection";
 export default function MainHome() {
   const { bannedInfo, booting } = useAuth();
 
-  console.log(
+  logger.debug(
     "🏠 MainHome render - bannedInfo:",
     bannedInfo,
     "booting:",
@@ -40,7 +41,7 @@ export default function MainHome() {
       bannedInfo.reason ||
       bannedInfo.message ||
       "Tài khoản của bạn đã bị khóa.";
-    console.log("🚫 Showing ban UI with reason:", reason);
+    logger.info("🚫 Showing ban UI with reason:", reason);
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-gray-50">
         <div className="max-w-xl bg-white rounded-lg shadow p-8 text-center border">

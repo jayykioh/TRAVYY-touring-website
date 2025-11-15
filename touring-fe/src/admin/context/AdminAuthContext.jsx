@@ -1,6 +1,7 @@
 // touring-fe/src/admin/context/AdminAuthContext.jsx
 import React, { createContext, useState, useEffect, useContext } from "react";
 import adminAuthService from "../services/adminAuthService";
+import logger from "../../utils/logger";
 
 const AdminAuthContext = createContext();
 
@@ -13,22 +14,22 @@ export const AdminAuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = () => {
       try {
-        console.log("[AdminAuthContext] Initializing auth...");
+        logger.info("[AdminAuthContext] Initializing auth...");
         const authenticated = adminAuthService.isAuthenticated();
-        console.log("[AdminAuthContext] isAuthenticated:", authenticated);
+        logger.info("[AdminAuthContext] isAuthenticated:", authenticated);
 
         if (authenticated) {
           const currentAdmin = adminAuthService.getCurrentAdmin();
           const storedToken = localStorage.getItem("admin_token");
-          console.log("[AdminAuthContext] Setting admin:", currentAdmin);
-          console.log(
+          logger.info("[AdminAuthContext] Setting admin:", currentAdmin);
+          logger.debug(
             "[AdminAuthContext] Setting token:",
             storedToken ? "exists" : "null"
           );
 
           // ✅ Validate admin role
           if (currentAdmin?.role !== "Admin") {
-            console.log("[AdminAuthContext] User is not Admin, clearing auth");
+            logger.warn("[AdminAuthContext] User is not Admin, clearing auth");
             adminAuthService.logout();
             setIsAuthenticated(false);
             setAdmin(null);
@@ -44,7 +45,7 @@ export const AdminAuthProvider = ({ children }) => {
           setToken(null);
         }
       } catch (error) {
-        console.error("Auth initialization error:", error);
+        logger.error("Auth initialization error:", error);
         setIsAuthenticated(false);
         setAdmin(null);
         setToken(null);
@@ -63,7 +64,7 @@ export const AdminAuthProvider = ({ children }) => {
         const currentAdmin = adminAuthService.getCurrentAdmin();
         // ✅ Validate admin role
         if (currentAdmin?.role !== "Admin") {
-          console.log(
+          logger.warn(
             "[AdminAuthContext] Non-admin detected on focus, clearing auth"
           );
           adminAuthService.logout();
@@ -100,11 +101,11 @@ export const AdminAuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    console.log("[AdminAuthContext] Login attempt for:", email);
+    logger.info("[AdminAuthContext] Login attempt for:", email);
     const result = await adminAuthService.login(email, password);
-    console.log("[AdminAuthContext] Login result:", result);
+    logger.debug("[AdminAuthContext] Login result:", result);
     if (result.success) {
-      console.log(
+      logger.info(
         "[AdminAuthContext] Setting admin state after successful login"
       );
       setAdmin(result.admin);

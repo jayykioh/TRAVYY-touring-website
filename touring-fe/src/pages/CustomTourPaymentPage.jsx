@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/auth/context";
 import { ArrowLeft, Lock, CreditCard, Wallet, Calendar, Users, MapPin, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import logger from '@/utils/logger';
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -22,7 +23,7 @@ export default function CustomTourPaymentPage() {
       const response = await withAuth(`/api/bookings/${bookingId}`);
       setBooking(response.booking);
     } catch (error) {
-      console.error("Error loading booking:", error);
+      logger.error("Error loading booking:", error);
       toast.error("Không thể tải thông tin booking");
       navigate("/my-tour-requests");
     } finally {
@@ -85,7 +86,7 @@ export default function CustomTourPaymentPage() {
       }
 
     } catch (error) {
-      console.error("Payment error:", error);
+      logger.error("Payment error:", error);
       toast.error(error.message || "Lỗi khi khởi tạo thanh toán");
       setIsProcessing(false);
     }

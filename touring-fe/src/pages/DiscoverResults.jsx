@@ -12,6 +12,7 @@ import ZonePreview from "../components/ZonePreview";
 import ZonesGrid from "../components/ZoneGrid";
 import ProvinceFilter from "../components/ProvinceFilter";
 import FloatingCartWidget from "@/components/FloatingCartWidget";
+import logger from '@/utils/logger';
 
 export default function DiscoverResults() {
   const location = useLocation();
@@ -40,7 +41,7 @@ export default function DiscoverResults() {
     
     // ✅ NEW: If coming from DiscoveryWrapped, auto-search zones
     if (fromWrapped && location.state?.vibes && location.state?.vibes.length > 0) {
-      console.log('[DiscoverResults] Coming from DiscoveryWrapped, auto-searching...');
+      logger.debug('[DiscoverResults] Coming from DiscoveryWrapped, auto-searching...');
       autoSearchFromProfile(location.state);
       return;
     }
@@ -48,7 +49,7 @@ export default function DiscoverResults() {
     if (navigationData) {
       setData(navigationData);
 
-      console.log("[DiscoverResults] Received data:", {
+      logger.debug("[DiscoverResults] Received data:", {
         zonesCount: navigationData.zones?.length,
         firstZone: navigationData.zones?.[0],
         hasFinalScore: !!navigationData.zones?.[0]?.finalScore,
@@ -98,7 +99,7 @@ export default function DiscoverResults() {
       setLoading(true);
       const { vibes, freeText = '', profile } = wrappedState;
       
-      console.log('[DiscoverResults] Auto-searching with:', { vibes, profile });
+      logger.debug('[DiscoverResults] Auto-searching with:', { vibes, profile });
       
       // Call discover API (reuse existing endpoint)
       const response = await withAuth('/api/discover/parse', {
@@ -135,13 +136,13 @@ export default function DiscoverResults() {
           window.sessionStorage.setItem('discover_result', JSON.stringify(resultData));
         } catch {}
         
-        console.log('[DiscoverResults] Auto-search success:', response.zones.length, 'zones');
+        logger.info('[DiscoverResults] Auto-search success:', response.zones.length, 'zones');
       } else {
-        console.error('[DiscoverResults] Auto-search failed:', response);
+        logger.error('[DiscoverResults] Auto-search failed:', response);
         setData({ zones: [], preferences: { vibes, fromProfile: true } });
       }
     } catch (error) {
-      console.error('[DiscoverResults] Auto-search error:', error);
+      logger.error('[DiscoverResults] Auto-search error:', error);
       setData({ zones: [], preferences: { vibes: wrappedState.vibes, fromProfile: true } });
     } finally {
       setLoading(false);
@@ -159,18 +160,18 @@ export default function DiscoverResults() {
   const handleExploreZone = () => {
     if (!selectedZone) return;
 
-    console.log("[DEBUG] selectedZone:", selectedZone);
-    console.log("[DEBUG] selectedZone.id:", selectedZone.id);
-    console.log("[DEBUG] selectedZone.name:", selectedZone.name);
+    logger.debug("[DEBUG] selectedZone:", selectedZone);
+    logger.debug("[DEBUG] selectedZone.id:", selectedZone.id);
+    logger.debug("[DEBUG] selectedZone.name:", selectedZone.name);
 
     const zoneSlug = selectedZone.id;
     if (!zoneSlug) {
-      console.error("[ERROR] Zone has no id field!", selectedZone);
+      logger.error("[ERROR] Zone has no id field!", selectedZone);
       alert("Zone ID không hợp lệ");
       return;
     }
 
-    console.log(`[FE] Navigating to /zone/${zoneSlug}`);
+    logger.info(`[FE] Navigating to /zone/${zoneSlug}`);
 
     navigate(`/zone/${zoneSlug}`, {
       state: {

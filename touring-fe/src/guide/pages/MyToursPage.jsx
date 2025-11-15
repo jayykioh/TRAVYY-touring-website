@@ -8,6 +8,7 @@ import { useAuth } from "../../auth/context";
 import { useSocket } from "../../context/SocketContext";
 import { toast } from "sonner";
 import TourCard from "../components/home/TourCard";
+import logger from '@/utils/logger';
 
 const MyToursPage = () => {
   const [searchParams] = useSearchParams();
@@ -29,7 +30,7 @@ const MyToursPage = () => {
     try {
       // Fetch all accepted/negotiating/agreement_pending tour requests
       const data = await withAuth("/api/guide/custom-requests?status=accepted,negotiating,agreement_pending");
-      console.log("[MyToursPage] Raw API response:", data);
+      logger.debug("[MyToursPage] Raw API response:", data);
 
       if (data.tourRequests && Array.isArray(data.tourRequests)) {
         // Map tour requests to include image and agreement data
@@ -63,8 +64,8 @@ const MyToursPage = () => {
           };
         });
 
-        console.log("[MyToursPage] Mapped tours with images and agreement:", mappedTours);
-        console.log("[MyToursPage] Agreement details:", mappedTours.map(t => ({
+        logger.debug("[MyToursPage] Mapped tours with images and agreement:", mappedTours);
+        logger.debug("[MyToursPage] Agreement details:", mappedTours.map(t => ({
           tourName: t.name,
           bothAgreed: t.bothAgreed,
           agreement: t.agreement,
@@ -75,7 +76,7 @@ const MyToursPage = () => {
         setTours([]);
       }
     } catch (error) {
-      console.error("Error fetching tours:", error);
+      logger.error("Error fetching tours:", error);
       toast.error("Không thể tải danh sách tour");
       setTours([]);
     } finally {
@@ -96,7 +97,7 @@ const MyToursPage = () => {
 
     // Listen for payment success
     const unsubscribePayment = on("paymentSuccessful", (data) => {
-      console.log("🔔 Payment successful:", data);
+      logger.info("🔔 Payment successful:", data);
       toast.success(`Khách hàng đã thanh toán cho ${data.tourTitle || "tour"}`);
       // Optionally refetch tours to update status
       fetchTours();
@@ -104,7 +105,7 @@ const MyToursPage = () => {
 
     // Listen for tour marked as done
     const unsubscribeTourDone = on("tourMarkedDone", (data) => {
-      console.log("🔔 Tour marked done:", data);
+      logger.info("🔔 Tour marked done:", data);
       toast.success(
         `Tour "${data.tourTitle || "Không xác định"}" đã hoàn thành!`
       );
@@ -113,7 +114,7 @@ const MyToursPage = () => {
 
     // Listen for tour completion notification
     const unsubscribeTourCompleted = on("tourCompleted", (data) => {
-      console.log("🔔 Tour completed:", data);
+      logger.info("🔔 Tour completed:", data);
       toast.info(
         `Tour "${data.tourTitle || "Không xác định"}" được đánh dấu hoàn thành`
       );

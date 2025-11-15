@@ -13,6 +13,7 @@ import { toast } from "sonner";
 // ✅ dùng confirm modal dùng chung
 import { useConfirm } from "../components/common/ConfirmProvider";
 import { AnimatePresence } from "framer-motion";
+import logger from '@/utils/logger';
 
 const PRIMARY = "#02A0AA";
 
@@ -50,22 +51,22 @@ const GuideTourDetailPage = () => {
       try {
         const response = await withAuth(`/api/guide/custom-requests/${id}`);
         data = response;
-        console.log("[GuideTourDetail] Successfully fetched from custom-requests:", data);
+        logger.debug("[GuideTourDetail] Successfully fetched from custom-requests:", data);
       } catch (customError) {
-        console.log("[GuideTourDetail] Custom-requests failed, trying itinerary endpoint");
+        logger.debug("[GuideTourDetail] Custom-requests failed, trying itinerary endpoint");
         
         // Fall back to itinerary endpoint only if custom-requests fails
         try {
           const response = await withAuth(`/api/itinerary/guide/tours/${id}`);
           data = response;
-          console.log("[GuideTourDetail] Successfully fetched from itinerary:", data);
+          logger.debug("[GuideTourDetail] Successfully fetched from itinerary:", data);
         } catch (itineraryError) {
-          console.error("[GuideTourDetail] Both endpoints failed. Custom error:", customError, "Itinerary error:", itineraryError);
+          logger.error("[GuideTourDetail] Both endpoints failed. Custom error:", customError, "Itinerary error:", itineraryError);
           throw itineraryError;
         }
       }
 
-      console.log("[GuideTourDetail] Raw data from API:", data);
+      logger.debug("[GuideTourDetail] Raw data from API:", data);
 
       // API returns { success: true, tourRequest: {...} } for custom requests
       if (data && (data.success || data._id || data.tourRequest)) {
@@ -73,7 +74,7 @@ const GuideTourDetailPage = () => {
         const itinerary = tourRequest.itineraryId || data;
         const customer = tourRequest.userId || data.userId || data.customerInfo;
 
-        console.log("[GuideTourDetail] Parsed:", {
+        logger.debug("[GuideTourDetail] Parsed:", {
           tourRequest,
           itinerary,
           customer,
@@ -203,15 +204,15 @@ const GuideTourDetailPage = () => {
           itineraryData: itinerary,
         };
 
-        console.log("[GuideTourDetail] Transformed tour:", transformedTour);
-        console.log("[GuideTourDetail] Pricing:", {
+        logger.debug("[GuideTourDetail] Transformed tour:", transformedTour);
+        logger.debug("[GuideTourDetail] Pricing:", {
           totalPrice: transformedTour.totalPrice,
           earnings: transformedTour.earnings,
           initialBudget: tourRequest.initialBudget,
           finalPrice: tourRequest.finalPrice,
           estimatedCost: data.estimatedCost,
         });
-        console.log("[GuideTourDetail] Agreement status:", {
+        logger.debug("[GuideTourDetail] Agreement status:", {
           rawAgreement: tourRequest.agreement,
           userAgreed: tourRequest.agreement?.userAgreed,
           guideAgreed: tourRequest.agreement?.guideAgreed,
@@ -219,11 +220,11 @@ const GuideTourDetailPage = () => {
         });
         setTour(transformedTour);
       } else {
-        console.error("[GuideTourDetail] Invalid data format:", data);
+        logger.error("[GuideTourDetail] Invalid data format:", data);
         setTour(null);
       }
-    } catch (error) {
-      console.error("[GuideTourDetail] Error fetching tour:", error);
+      } catch (error) {
+      logger.error("[GuideTourDetail] Error fetching tour:", error);
       setTour(null);
     } finally {
       setLoading(false);
@@ -248,7 +249,7 @@ const GuideTourDetailPage = () => {
 
     // Listen for payment updates
     const unsubscribePayment = on("paymentUpdated", (data) => {
-      console.log("💰 Payment updated via socket:", data);
+      logger.info("💰 Payment updated via socket:", data);
       if (data.requestId === tour.id || data.bookingId === tour._id) {
         // Refetch tour data to get updated payment status
         fetchTourData();
@@ -258,7 +259,7 @@ const GuideTourDetailPage = () => {
 
     // Listen for payment successful event
     const unsubscribePaymentSuccess = on("paymentSuccessful", (data) => {
-      console.log("💳 Payment successful via socket:", data);
+      logger.info("💳 Payment successful via socket:", data);
       if (data.requestId === tour.id) {
         fetchTourData();
         toast.success("💰 Thanh toán thành công! Tour đã được cập nhật.");
@@ -324,7 +325,7 @@ const GuideTourDetailPage = () => {
     if (!ok) return;
 
     try {
-      console.log("[GuideTourDetail] Accepting request:", id);
+      logger.info("[GuideTourDetail] Accepting request:", id);
       const response = await withAuth(
         `/api/guide/custom-requests/${id}/accept`,
         {
@@ -337,7 +338,7 @@ const GuideTourDetailPage = () => {
         }
       );
 
-      console.log("[GuideTourDetail] Accept response:", response);
+      logger.debug("[GuideTourDetail] Accept response:", response);
 
       if (response.success) {
         toast.success("Đã chấp nhận yêu cầu tour!");
@@ -348,7 +349,7 @@ const GuideTourDetailPage = () => {
         toast.error(response.error || "Không thể chấp nhận yêu cầu");
       }
     } catch (error) {
-      console.error("[GuideTourDetail] Error accepting request:", error);
+      logger.error("[GuideTourDetail] Error accepting request:", error);
       toast.error(
         "❌ Có lỗi xảy ra: " + (error.message || "Lỗi không xác định")
       );
@@ -367,7 +368,7 @@ const GuideTourDetailPage = () => {
     if (!ok) return;
 
     try {
-      console.log("[GuideTourDetail] Declining request:", id);
+      logger.info("[GuideTourDetail] Declining request:", id);
       const response = await withAuth(
         `/api/guide/custom-requests/${id}/reject`,
         {
@@ -379,7 +380,7 @@ const GuideTourDetailPage = () => {
         }
       );
 
-      console.log("[GuideTourDetail] Decline response:", response);
+      logger.debug("[GuideTourDetail] Decline response:", response);
 
       if (response.success) {
         toast.success(" Đã từ chối yêu cầu");
@@ -390,7 +391,7 @@ const GuideTourDetailPage = () => {
         toast.error(response.error || "Không thể từ chối yêu cầu");
       }
     } catch (error) {
-      console.error("[GuideTourDetail] Error declining request:", error);
+      logger.error("[GuideTourDetail] Error declining request:", error);
       toast.error("Có lỗi xảy ra: " + (error.message || "Lỗi không xác định"));
     }
   };
@@ -403,7 +404,7 @@ const GuideTourDetailPage = () => {
     }
 
     try {
-      console.log("[GuideTourDetail] Completing tour:", tour._id || id, completionNotes);
+      logger.info("[GuideTourDetail] Completing tour:", tour._id || id, completionNotes);
 
       // Use correct endpoint: /api/bookings/:bookingId/complete
       const bookingId = tour._id || id;
@@ -415,7 +416,7 @@ const GuideTourDetailPage = () => {
         }),
       });
 
-      console.log("[GuideTourDetail] Complete response:", response);
+      logger.debug("[GuideTourDetail] Complete response:", response);
 
       if (response.success) {
         toast.success("🎉 Tour đã được đánh dấu hoàn thành!");
@@ -427,7 +428,7 @@ const GuideTourDetailPage = () => {
         toast.error(response.error || "Không thể hoàn thành tour");
       }
     } catch (error) {
-      console.error("[GuideTourDetail] Error completing tour:", error);
+      logger.error("[GuideTourDetail] Error completing tour:", error);
       toast.error(
         "❌ Có lỗi xảy ra: " + (error.message || "Lỗi không xác định")
       );
@@ -494,7 +495,7 @@ const GuideTourDetailPage = () => {
   const isCancelled = tour.status === "cancelled";
   const isExpired = tour.status === "expired";
 
-  console.log("[GuideTourDetail] Status check:", {
+  logger.debug("[GuideTourDetail] Status check:", {
     tourStatus: tour.status,
     isRequest,
     isOngoing,

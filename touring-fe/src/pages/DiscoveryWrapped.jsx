@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, TrendingUp, MapPin, Calendar, Award, ArrowLeft, ChevronRight, Heart, Compass, Map } from 'lucide-react';
 import { useAuth } from '../auth/context';
+import logger from "../utils/logger";
 import { useNavigate } from 'react-router-dom';
 
 /**
@@ -29,7 +30,7 @@ const DiscoveryWrapped = () => {
       const data = await withAuth('/api/recommendations/profile');
       setProfile(data);
     } catch (err) {
-      console.error('Fetch profile error:', err);
+      logger.error('Fetch profile error:', err);
       setError(err.response?.data?.message || 'Unable to load your profile');
     } finally {
       setLoading(false);

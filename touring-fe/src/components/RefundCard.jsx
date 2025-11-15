@@ -1,4 +1,5 @@
 import PropTypes from "prop-types";
+import logger from "../utils/logger";
 
 const RefundCard = ({
   refund,
@@ -8,7 +9,7 @@ const RefundCard = ({
   onProvideBankInfo,
 }) => {
   // 🔍 Debug: Log refund data to check structure
-  console.log("RefundCard - refund data:", {
+  logger.debug("RefundCard - refund data:", {
     orderRef: refund.orderRef,
     bookingId: refund.bookingId,
     bookingIdType: typeof refund.bookingId,

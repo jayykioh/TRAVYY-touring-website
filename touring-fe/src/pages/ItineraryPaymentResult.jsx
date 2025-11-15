@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { useAuth } from "@/auth/context";
 import { CheckCircle2, XCircle, Loader2, ArrowLeft } from "lucide-react";
+import logger from '@/utils/logger';
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -41,7 +42,7 @@ export default function ItineraryPaymentResult() {
           
           while (attempts < maxAttempts) {
             attempts++;
-            console.log(`[Deposit Payment] Polling attempt ${attempts} for itinerary ${id}`);
+            logger.debug(`[Deposit Payment] Polling attempt ${attempts} for itinerary ${id}`);
             
             try {
               const result = await withAuth(`/api/itinerary/${id}`);
@@ -52,14 +53,14 @@ export default function ItineraryPaymentResult() {
                 if (itin.paymentInfo?.status === 'deposit_paid') {
                   setStatus('success');
                   setMessage('Thanh toán đặt cọc thành công!');
-                  console.log('[Deposit Payment] Payment confirmed');
+                  logger.info('[Deposit Payment] Payment confirmed');
                   break;
                 } else {
-                  console.log('[Deposit Payment] Payment still pending...');
+                  logger.debug('[Deposit Payment] Payment still pending...');
                 }
               }
             } catch (e) {
-              console.error('[Deposit Payment] Poll error:', e);
+              logger.error('[Deposit Payment] Poll error:', e);
             }
             
             if (attempts < maxAttempts) {

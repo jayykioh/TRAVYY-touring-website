@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { ChevronRight, Home, ChevronLeft, Eye, ThumbsUp } from "lucide-react";
+import logger from "../utils/logger";
 
 import { 
   helpCategories, 
@@ -28,7 +29,7 @@ export default function HelpCategoryPage() {
       setCategory(cat);
       setArticles(getArticlesByCategory(slug));
     } catch (error) {
-      console.error("Error loading category:", error);
+      logger.error("Error loading category:", error);
       navigate("/help");
     } finally {
       setLoading(false);

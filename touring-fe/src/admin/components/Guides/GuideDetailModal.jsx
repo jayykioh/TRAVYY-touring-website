@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { getGuideById } from "../../services/guideService";
 import { formatPrice } from "../../utils/guideHelpers";
+import logger from "../../../utils/logger";
 
 const GuideDetailModal = ({ guideId, onClose }) => {
   const [guide, setGuide] = useState(null);
@@ -36,7 +37,7 @@ const GuideDetailModal = ({ guideId, onClose }) => {
         setGuide(result.data);
       }
     } catch (error) {
-      console.error("Failed to load guide details:", error);
+      logger.error("Failed to load guide details:", error);
     } finally {
       setLoading(false);
     }

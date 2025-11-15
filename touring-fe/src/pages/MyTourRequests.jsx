@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import logger from "../utils/logger";
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -27,21 +28,21 @@ export default function MyTourRequests() {
 
   const loadRequests = async () => {
     try {
-      console.log('[MyTourRequests] Loading requests...', { hasWithAuth: !!withAuth });
+      logger.info('[MyTourRequests] Loading requests...', { hasWithAuth: !!withAuth });
       setLoading(true);
       
       if (!withAuth) {
-        console.error('[MyTourRequests] withAuth not available');
+        logger.error('[MyTourRequests] withAuth not available');
         setLoading(false);
         return;
       }
       
       const data = await withAuth('/api/tour-requests');
-      console.log('[MyTourRequests] Response:', data);
+      logger.debug('[MyTourRequests] Response:', data);
       setRequests(data.requests || []);
-      console.log('[MyTourRequests] Set requests:', data.requests?.length || 0);
+      logger.info('[MyTourRequests] Set requests:', data.requests?.length || 0);
     } catch (error) {
-      console.error('[MyTourRequests] Error loading requests:', error);
+      logger.error('[MyTourRequests] Error loading requests:', error);
       toast.error('Không thể tải danh sách yêu cầu');
     } finally {
       setLoading(false);
@@ -49,11 +50,11 @@ export default function MyTourRequests() {
   };
 
   useEffect(() => {
-    console.log('[MyTourRequests] Component mounted, loading...');
+    logger.info('[MyTourRequests] Component mounted, loading...');
     if (withAuth) {
       loadRequests();
     } else {
-      console.log('[MyTourRequests] Waiting for auth...');
+      logger.debug('[MyTourRequests] Waiting for auth...');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [withAuth]);

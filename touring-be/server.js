@@ -1,6 +1,25 @@
+// =========================
+// ENV + CORE IMPORTS
+// =========================
 const path = require("path");
-// Load .env explicitly relative to this file to avoid CWD issues
 require("dotenv").config({ path: path.join(__dirname, ".env") });
+
+// Initialize structured logger and route native console to it
+const logger = require("./utils/logger");
+try {
+  const logger = require("./utils/logger");
+  if (logger) {
+    console.log = (...args) => logger.info(...args);
+    console.info = (...args) => logger.info(...args);
+    console.warn = (...args) => logger.warn(...args);
+    console.error = (...args) => logger.error(...args);
+    console.debug = (...args) => logger.debug(...args);
+    console.trace = (...args) => logger.trace(...args);
+  }
+} catch (e) {
+  // If logger fails to load, keep native console
+}
+
 const PORT = process.env.PORT || 4000;
 const express = require("express");
 const http = require("http");
@@ -12,80 +31,97 @@ const helmet = require("helmet");
 const compression = require("compression");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
+
+// =========================
+// EXPRESS + HTTP + SOCKET
+// =========================
+const app = express();
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: ["http://localhost:5173", "http://localhost:5174"],
+    credentials: true,
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  },
+  transports: ["websocket", "polling"],
+});
+global.io = io;
+app.set("io", io);
+
+// =========================
+// MONGO URI
+// =========================
+const isProd = process.env.NODE_ENV === "production";
+const MONGO_URI =
+  process.env.MONGO_URI ||
+  process.env.MONGODB_URI ||
+  "mongodb://127.0.0.1:27017/travelApp";
+
+// =========================
+// ROUTES - FROM BOTH FILES
+// =========================
 const tourRoutes = require("./routes/tour.routes");
 const profileRoutes = require("./routes/profile.routes");
 const authRoutes = require("./routes/auth.routes");
-
-// Admin Routes (modular structure)
 const adminRoutes = require("./routes/admin");
 const blogRoutes = require("./routes/blogs");
 const vnAddrRoutes = require("./middlewares/vnAddress.routes");
 const cartRoutes = require("./routes/carts.routes");
 const paypalRoutes = require("./routes/paypal.routes");
-require("./middlewares/passport");
 const wishlistRoutes = require("./routes/wishlist.routes");
 const locationRoutes = require("./routes/location.routes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const promotionRoutes = require("./routes/promotion.routes");
 const refundRoutes = require("./routes/refund.routes");
-const { setupRefundScheduler } = require("./utils/refundScheduler");
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: ["http://localhost:5173", "http://localhost:5174"],
-    credentials: true,
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-  },
-  transports: ['websocket', 'polling']
-});
-const isProd = process.env.NODE_ENV === "production";
-const MONGO_URI =
-  process.env.MONGO_URI ||
-  process.env.MONGODB_URI ||
-  "mongodb://127.0.0.1:27017/travelApp";
 const notifyRoutes = require("./routes/notifyRoutes");
 const paymentRoutes = require("./routes/payment.routes");
-// Guide Routes
-const guideRoutes = require("./routes/guide/guide.routes");
-// Tour Request Routes
-const tourRequestRoutes = require("./routes/tourRequest.routes");
-// Itinerary Routes
-const itineraryRoutes = require("./routes/itinerary.routes");
-// Quick visibility of PayPal env presence (not actual secrets)
-console.log("[Boot] PayPal env present:", {
-  hasClient: !!process.env.PAYPAL_CLIENT_ID,
-  hasSecret: !!(process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET),
-  mode: process.env.PAYPAL_MODE,
-});
-// Deep diagnostics: list any env keys containing 'PAYPAL'
-try {
-  const paypalLike = Object.keys(process.env)
-    .filter((k) => k.toUpperCase().includes("PAYPAL"))
-    .map((k) => ({
-      key: k,
-      length: k.length,
-      codes: k.split("").map((c) => c.charCodeAt(0)),
-      valuePreview: (process.env[k] || "").slice(0, 6) + "...",
-    }));
-  console.log("[Boot] PayPal related raw keys:", paypalLike);
-} catch (e) {
-  console.warn("Diag paypal keys failed", e);
-}
 
-// --- location tour for RegionTour ---
+const guideRoutes = require("./routes/guide/guide.routes");
+const tourRequestRoutes = require("./routes/tourRequest.routes");
+const chatRoutes = require("./routes/chat.routes");
+const itineraryRoutes = require("./routes/itinerary.routes");
+const discoverRoutes = require("./routes/discover.routes");
+const zoneRoutes = require("./routes/zone.routes");
 const locationTourRoutes = require("./routes/locationTour.routes");
-// --- Core middlewares ---
+const securityRoutes = require("./routes/security.routes");
+
+// AI / TRACKING / RECOMMEND (Từ file thứ 2)
+const trackRoutes = require("./routes/track.routes");
+const recommendationRoutes = require("./routes/recommendations.routes");
+
+// Passport
+require("./middlewares/passport");
+
+// Refund scheduler
+const { setupRefundScheduler } = require("./utils/refundScheduler");
+
+// PostHog weekly sync
+const { startWeeklySyncCron } = require("./jobs/weeklyProfileSync");
+
+// Embedding services
+const {
+  health,
+  isAvailable,
+} = require("./services/ai/libs/embedding-client");
+const { syncZones } = require("./services/embedding-sync-zones");
+
+// =========================
+// MIDDLEWARES
+// =========================
 app.use(helmet());
 app.use(compression());
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "2mb" }));
 app.use(morgan(isProd ? "combined" : "dev"));
 app.use(cookieParser());
+// Attach standardized response helpers
+app.use(require("./middlewares/responseFormatter"));
+
 app.use(
   cors({
-    origin: "http://localhost:5173", // KHÔNG được để "*"
+    origin: "http://localhost:5173",
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -93,19 +129,18 @@ app.use(
   })
 );
 
-// Add Cross-Origin-Resource-Policy header for all responses
+// CORP header
 app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   next();
 });
-app.use("/api/location-tours", locationTourRoutes);
 
-if (isProd) app.set("trust proxy", 1);
-
-// --- Routes ---
-app.use("/api/vn", vnAddrRoutes);
+// =========================
+// ROUTES (BIG LIST – GHÉP CẢ 2)
+// =========================
 app.use(passport.initialize());
 
+// Core routes
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/blogs", blogRoutes);
@@ -115,178 +150,91 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paymentRoutes);
-app.use("/api/refunds", refundRoutes); // User refund routes
-const securityRoutes = require("./routes/security.routes");
-app.use("/api/security", securityRoutes);
+app.use("/api/refunds", refundRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/promotions", promotionRoutes);
+app.use("/api/vn", vnAddrRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api/notify", notifyRoutes);
-<<<<<<< HEAD
-app.use("/api/notifications", notifyRoutes); // Alias for notifications
-app.use("/api/promotions", promotionRoutes);
-app.use("/api/reviews", reviewRoutes);
-app.use("/api/guide", guideRoutes);
-app.use("/api/tour-requests", tourRequestRoutes);
-const chatRoutes = require("./routes/chat.routes");
-app.use("/api/chat", chatRoutes);
-// Itinerary API
-app.use("/api/itinerary", itineraryRoutes);
-const discoverRoutes = require("./routes/discover.routes");
-app.use("/api/discover", discoverRoutes);
-const zoneRoutes = require("./routes/zone.routes");
-app.use("/api/zones", zoneRoutes);
-
-// Guide Availability Routes
-const guideAvailabilityRoutes = require("./routes/guideAvailability.routes");
-app.use("/api", guideAvailabilityRoutes);
-
-// Tour Completion Routes
-const tourCompletionRoutes = require("./routes/tourCompletion.routes");
-app.use("/api", tourCompletionRoutes);
-=======
+// Alias: keep backwards compatibility with frontend expecting `/api/notifications`
+app.use("/api/notifications", notifyRoutes);
 app.use("/api/paypal", paypalRoutes);
 
-// ✅ Discovery & Zone routes (must be AFTER other routes to avoid conflicts)
-app.use("/api/discover", require("./routes/discover.routes"));
-app.use("/api/zones", require("./routes/zone.routes"));
-app.use("/api/itinerary", require("./routes/itinerary.routes"));
+// Discover / Zone / Itinerary
+app.use("/api/discover", discoverRoutes);
+app.use("/api/zones", zoneRoutes);
+app.use("/api/itinerary", itineraryRoutes);
+app.use("/api/location-tours", locationTourRoutes);
 
-// ✅ AI Recommendation Pipeline routes (NEW)
-app.use("/api/track", require("./routes/track.routes"));
-// app.use("/api/daily-ask", require("./routes/daily-ask.routes")); // ❌ REMOVED: DailyAsk feature
-app.use("/api/recommendations", require("./routes/recommendations.routes"));
-// profile.routes already includes /travel endpoints
->>>>>>> 8e20637a8d8188078aecde30741bd572ab1db75d
+// Guide + Tour Requests + Chat
+app.use("/api/guide", guideRoutes);
+app.use("/api/tour-requests", tourRequestRoutes);
+app.use("/api/chat", chatRoutes);
 
-// --- Healthcheck ---
-app.get("/healthz", (_req, res) => res.json({ ok: true }));
+// AI & Tracking & Recommendations
+app.use("/api/track", trackRoutes);
+app.use("/api/recommendations", recommendationRoutes);
 
-// Lightweight ping to verify credentials loaded (non-sensitive)
-app.get("/api/paypal/ping", (_req, res) => {
-  res.json({
-    ok: true,
-    hasClient: !!process.env.PAYPAL_CLIENT_ID,
-    hasSecret: !!(
-      process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET
-    ),
-    mode: process.env.PAYPAL_MODE || "sandbox",
-  });
+// Security
+app.use("/api/security", securityRoutes);
+
+// HEALTHCHECK
+app.get("/healthz", (req, res) => res.json({ ok: true }));
+
+// =========================
+// GLOBAL ERROR HANDLER
+// =========================
+app.use((err, req, res, next) => {
+  try {
+    const logger = require('./utils/logger');
+    if (logger && logger.error) logger.error('GLOBAL ERROR:', err);
+  } catch (e) {}
+  if (res && typeof res.sendError === 'function') {
+    return res.sendError('INTERNAL_ERROR', err.message || 'Internal server error', 500);
+  }
+  res.status(500).json({ error: 'INTERNAL_ERROR', message: err.message });
 });
 
-// Health endpoint
-app.get("/api/health", async (req, res) => {
-  const { health } = require("./services/ai/libs/embedding-client");
-  const embedHealth = await health();
-  res.json({
-    backend: "ok",
-    mongo: mongoose.connection.readyState === 1 ? "ok" : "error",
-    embedding: embedHealth,
-  });
-});
-
-// --- Global error handler ---
-app.use((err, _req, res, _next) => {
-  console.error(err && err.stack ? err.stack : err);
-  const payload = {
-    error: "INTERNAL_ERROR",
-    message: err.message || "Server error",
-  };
-  if (!isProd && err && err.stack) payload.stack = err.stack;
-  res.status(500).json(payload);
-});
-
-// --- Connect Mongo + Start server ---
+// =========================
+// MONGO + SERVICES + SOCKET + SERVER START
+// =========================
 mongoose
   .connect(MONGO_URI)
-  .then(() => {
-    console.log("✅ MongoDB connected");
+  .then(async () => {
+    logger.info("✅ MongoDB connected");
 
-    // Setup refund scheduler after MongoDB is connected
     setupRefundScheduler();
-
-<<<<<<< HEAD
-    
-  // Initialize WebSocket handlers and collection watchers
-  const setupSockets = require('./socket');
-  setupSockets(io);
-    
-    server.listen(PORT, () =>
-=======
-    // ✅ Start weekly PostHog sync cron (runs every Sunday at 2:00 AM)
-    // This handles ALL profile building: PostHog → Aggregation → Embedding → FAISS + MongoDB
-    const { startWeeklySyncCron } = require("./jobs/weeklyProfileSync");
     startWeeklySyncCron();
 
-    app.listen(PORT, () =>
->>>>>>> 8e20637a8d8188078aecde30741bd572ab1db75d
-      console.log(`🚀 API listening on http://localhost:${PORT}`)
-    );
+    // Embedding check
+    try {
+      const available = await isAvailable();
+      if (available) {
+        const info = await health();
+        logger.info("✅ Embedding OK:", info.model);
+
+        logger.info("🔄 Sync zones...");
+        await syncZones(true);
+        logger.info("✅ Zone sync complete");
+      } else {
+        logger.warn("⚠ Embedding service unavailable");
+      }
+    } catch (err) {
+      logger.warn("⚠ Embedding check failed:", err.message);
+    }
+
+    // SOCKET HANDLER
+    const setupSockets = require("./socket");
+    setupSockets(io);
+
+    // START SERVER
+      server.listen(PORT, () => {
+      logger.info(`🚀 API + Socket running on http://localhost:${PORT}`);
+    });
   })
-  .catch((e) => {
-    console.error("❌ Mongo connect error:", e);
+  .catch((err) => {
+    logger.error("❌ MongoDB ERROR:", err);
     process.exit(1);
   });
-
-// Make io available globally and to routes
-global.io = io;
-app.set('io', io);
 
 module.exports = app;
-<<<<<<< HEAD
-=======
-
-// ✅ Check services on startup
-const { health, isAvailable } = require("./services/ai/libs/embedding-client");
-const { syncZones } = require("./services/embedding-sync-zones");
-
-async function checkServices() {
-  console.log("\n🔍 Checking services...");
-
-  // MongoDB
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ MongoDB connected");
-  } catch (error) {
-    console.error("❌ MongoDB failed:", error.message);
-    process.exit(1);
-  }
-
-  // Embedding service
-  try {
-    const available = await isAvailable();
-    if (available) {
-      const healthData = await health();
-      console.log("✅ Embedding service OK:", {
-        model: healthData.model,
-        vectors: healthData.vectors,
-        url: process.env.EMBED_SERVICE_URL || "http://localhost:8088",
-      });
-      
-      // ✅ Auto-sync zones if embedding service is available
-      console.log("\n🔄 Auto-syncing zones with embedding service...");
-      try {
-        await syncZones(true);
-        console.log("✅ Zone sync complete");
-      } catch (syncError) {
-        console.warn("⚠️ Zone sync failed:", syncError.message);
-        console.warn("   Continuing without embedding sync...");
-      }
-    } else {
-      console.warn("⚠️ Embedding service not available");
-      console.warn(
-        "   URL:",
-        process.env.EMBED_SERVICE_URL || "http://localhost:8088"
-      );
-      console.warn("   Will use keyword fallback for zone matching");
-    }
-  } catch (error) {
-    console.warn("⚠️ Embedding check failed:", error.message);
-  }
-}
-
-checkServices().then(() => {
-  // ✅ Single listen point
-  app.listen(PORT, () => {
-    console.log(`\n🚀 Backend running on port ${PORT}`);
-  });
-});
->>>>>>> 8e20637a8d8188078aecde30741bd572ab1db75d

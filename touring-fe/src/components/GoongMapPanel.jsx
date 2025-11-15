@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useRef } from "react";
 import goongjs from "@goongmaps/goong-js";
+import logger from "../utils/logger";
 import "@goongmaps/goong-js/dist/goong-js.css";
 
 /**
@@ -254,7 +255,7 @@ export default function GoongMapPanel({
           },
         });
       } catch (err) {
-        console.warn("Polygon render failed:", err);
+        logger.warn("Polygon render failed:", err);
       }
     };
 

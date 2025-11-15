@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useAuth } from '../auth/context';
+import logger from '@/utils/logger';
 import { trackTourView as posthogTrackTourView, trackTourBooking as posthogTrackTourBooking, trackTourBookmark as posthogTrackTourBookmark, trackBlogView as posthogTrackBlogView } from '../utils/posthog';
 
 /**
@@ -24,9 +25,9 @@ export function useBehaviorTracking() {
           location: { province: tourData.locations?.[0] },
           vibes: tourData.tags || []
         });
-        console.log('👁️ [PostHog] Tour view tracked:', tourId);
+        logger.debug('👁️ [PostHog] Tour view tracked:', tourId);
       } catch (error) {
-        console.error('❌ Failed to track tour view:', error);
+        logger.error('❌ Failed to track tour view:', error);
       }
     },
     [user?._id]
@@ -54,9 +55,9 @@ export function useBehaviorTracking() {
           price: tourData.price,
           vibes: tourData.tags || []
         }, isAdded);
-        console.log(`🔖 [PostHog] Tour bookmark tracked:`, { tourId, isAdded });
+        logger.debug(`🔖 [PostHog] Tour bookmark tracked:`, { tourId, isAdded });
       } catch (error) {
-        console.error('❌ Failed to track tour bookmark:', error);
+        logger.error('❌ Failed to track tour bookmark:', error);
       }
     },
     [user?._id]
@@ -77,9 +78,9 @@ export function useBehaviorTracking() {
           bookingDate: bookingData.departureDate,
           ...bookingData
         });
-        console.log('💰 [PostHog] Tour booking tracked:', tourId);
+        logger.debug('💰 [PostHog] Tour booking tracked:', tourId);
       } catch (error) {
-        console.error('❌ Failed to track tour booking:', error);
+        logger.error('❌ Failed to track tour booking:', error);
       }
     },
     [user?._id]
@@ -99,9 +100,9 @@ export function useBehaviorTracking() {
           vibes: blogData.tags || [],
           provinces: blogData.provinces || []
         });
-        console.log('📖 [PostHog] Blog view tracked:', blogSlug);
+        logger.debug('📖 [PostHog] Blog view tracked:', blogSlug);
       } catch (error) {
-        console.error('❌ Failed to track blog view:', error);
+        logger.error('❌ Failed to track blog view:', error);
       }
     },
     [user?._id]
@@ -110,7 +111,7 @@ export function useBehaviorTracking() {
   // ⚠️ REMOVED: trackBlogScroll - Not needed for itinerary creation
   const trackBlogScroll = useCallback(
     async () => {
-      console.warn('⚠️ trackBlogScroll is deprecated - not needed for itinerary creation');
+      logger.warn('⚠️ trackBlogScroll is deprecated - not needed for itinerary creation');
     },
     []
   );
@@ -118,7 +119,7 @@ export function useBehaviorTracking() {
   // ⚠️ REMOVED: Zone interactions - Not needed for itinerary creation
   const trackZoneView = useCallback(
     async () => {
-      console.warn('⚠️ trackZoneView is deprecated - zone tracking removed');
+      logger.warn('⚠️ trackZoneView is deprecated - zone tracking removed');
     },
     []
   );
@@ -126,7 +127,7 @@ export function useBehaviorTracking() {
   // Track search queries (deprecated - PostHog autocapture handles this)
   const trackSearch = useCallback(
     async () => {
-      console.warn('⚠️ trackSearch is deprecated - PostHog autocapture handles search events');
+      logger.warn('⚠️ trackSearch is deprecated - PostHog autocapture handles search events');
     },
     []
   );

@@ -24,6 +24,7 @@ import Pagination from "../components/Common/Pagination";
 
 // Services
 import * as guideService from "../services/guideService";
+import logger from "../../utils/logger";
 
 // Utils
 import {
@@ -60,14 +61,14 @@ const GuideManagement = () => {
           guideService.transformUserToGuide
         );
         setGuides(transformedGuides);
-        // ✅ Chỉ log ra console, không hiện toast mỗi lần load
-        console.log(`✅ Loaded ${transformedGuides.length} guides`);
+        // ✅ Chỉ log ra logger (debug), không hiện toast mỗi lần load
+        logger.debug(`✅ Loaded ${transformedGuides.length} guides`);
       } else {
         toast.error(result.error || "Không thể tải dữ liệu hướng dẫn viên");
         setGuides([]);
       }
     } catch (error) {
-      console.error("❌ Load guides error:", error);
+      logger.error("❌ Load guides error:", error);
       toast.error("Có lỗi xảy ra khi tải dữ liệu");
       setGuides([]);
     } finally {
@@ -179,7 +180,7 @@ const GuideManagement = () => {
         toast.error(result.error || "Cập nhật thất bại");
       }
     } catch (error) {
-      console.error("❌ Update guide status error:", error);
+      logger.error("❌ Update guide status error:", error);
       toast.error("Có lỗi xảy ra khi cập nhật trạng thái");
     }
   };

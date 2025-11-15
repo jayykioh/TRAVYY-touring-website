@@ -3,10 +3,12 @@ const express = require("express");
 const router = express.Router();
 const Itinerary = require("../models/Itinerary");
 const { verifyToken } = require("../middlewares/authJwt");
+const authJwt = require("../middlewares/authJwt");
 const { tripV2 } = require("../services/ai/libs/goong");
 const { generateAIInsightsAsync } = require("../services/itinerary/optimizer");
 const polyline = require('polyline');
 const { buildGpx } = require('../utils/gpx');
+const logger = require('../utils/logger');
 
 /* ==================== HELPERS ==================== */
 
@@ -93,10 +95,10 @@ router.get("/", verifyToken, async (req, res) => {
     const itineraries = await Itinerary.find({ userId })
       .sort({ createdAt: -1 })
       .limit(10);
-    res.json({ success: true, itineraries });
+    return res.sendSuccess({ itineraries });
   } catch (error) {
-    console.error("Error fetching itineraries:", error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error("Error fetching itineraries:", error);
+    return res.sendError('FETCH_ITINERARIES_FAILED', error.message, 500);
   }
 });
 
@@ -111,7 +113,7 @@ router.post("/", verifyToken, async (req, res) => {
 
     let itinerary = await Itinerary.findOne({ userId, zoneId, status: "draft" });
     if (itinerary) {
-      return res.json({ success: true, itinerary, message: "Using existing draft" });
+      return res.sendSuccess({ itinerary, message: "Using existing draft" });
     }
 
     itinerary = new Itinerary({
@@ -125,10 +127,10 @@ router.post("/", verifyToken, async (req, res) => {
     });
     await itinerary.save();
 
-    res.json({ success: true, itinerary });
+    return res.sendSuccess({ itinerary });
   } catch (error) {
-    console.error("Error creating itinerary:", error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error("Error creating itinerary:", error);
+    return res.sendError('CREATE_ITINERARY_FAILED', error.message, 500);
   }
 });
 
@@ -145,7 +147,7 @@ router.get('/:id', verifyToken, async (req, res) => {
     });
 
     if (!itinerary) {
-      return res.status(404).json({ success: false, error: 'Not found' });
+      return res.sendError('ITINERARY_NOT_FOUND', 'Itinerary not found', 404);
     }
 
     // Ensure custom tour flag is correct
@@ -157,10 +159,10 @@ router.get('/:id', verifyToken, async (req, res) => {
       await itinerary.save();
     }
 
-    res.json({ success: true, itinerary });
+    return res.sendSuccess({ itinerary });
   } catch (error) {
-    console.error('❌ [GET] Error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('❌ [GET] Error:', error.message);
+    return res.sendError('FETCH_ITINERARY_FAILED', error.message, 500);
   }
 });
 
@@ -174,7 +176,7 @@ router.post("/:id/items", verifyToken, async (req, res) => {
     const userId = getUserId(req.user);
 
     const itinerary = await Itinerary.findOne({ _id: req.params.id, userId });
-    if (!itinerary) return res.status(404).json({ success: false, error: "Itinerary not found" });
+    if (!itinerary) return res.sendError('ITINERARY_NOT_FOUND', 'Itinerary not found', 404);
 
     // Determine if item is tour or POI
     const isTour = poi.itemType === 'tour' || !!poi.tourId;
@@ -184,7 +186,7 @@ router.post("/:id/items", verifyToken, async (req, res) => {
 
     // Check for duplicates
     if (itinerary.items.some((item) => item.poiId === poiId)) {
-      return res.status(400).json({ success: false, error: "Item already in itinerary" });
+      return res.sendError('DUPLICATE_ITEM', 'Item already in itinerary', 400);
     }
 
     // Extract location
@@ -222,7 +224,7 @@ router.post("/:id/items", verifyToken, async (req, res) => {
     }
 
     if (!location.lat || !location.lng) {
-      console.warn("⚠️ Item missing location coordinates:", newItem.name);
+      logger.warn("⚠️ Item missing location coordinates:", newItem.name);
     }
 
     // Add to itinerary
@@ -244,7 +246,7 @@ router.post("/:id/items", verifyToken, async (req, res) => {
     const poiCount = itinerary.items.filter(i => i.itemType === 'poi').length;
     const tourCount = itinerary.items.filter(i => i.itemType === 'tour').length;
     const hasTour = tourCount > 0;
-    console.log('[Itinerary ADD ITEM]', {
+    logger.info('[Itinerary ADD ITEM]', {
       itineraryId: itinerary._id,
       item: newItem.name,
       isCustomTour: itinerary.isCustomTour,
@@ -257,16 +259,16 @@ router.post("/:id/items", verifyToken, async (req, res) => {
 
     // Warn if too many POIs with a tour
     if (hasTour && poiCount > 3) {
-      console.warn('[Itinerary WARNING] Too many POIs with a tour:', { itineraryId: itinerary._id.toString(), poiCount });
+      logger.warn('[Itinerary WARNING] Too many POIs with a tour:', { itineraryId: itinerary._id.toString(), poiCount });
     }
 
     itinerary.isOptimized = false;
     await itinerary.save();
 
-    res.json({ success: true, itinerary });
+    return res.sendSuccess({ itinerary });
   } catch (error) {
-    console.error("❌ Error adding POI:", error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error("❌ Error adding POI:", error);
+    return res.sendError('ADD_POI_FAILED', error.message, 500);
   }
 });
 
@@ -300,10 +302,10 @@ router.delete("/:id/items/:poiId", verifyToken, async (req, res) => {
     
     await itinerary.save();
 
-    res.json({ success: true, itinerary });
+    return res.sendSuccess({ itinerary });
   } catch (error) {
-    console.error("Error removing POI:", error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error("Error removing POI:", error);
+    return res.sendError('REMOVE_POI_FAILED', error.message, 500);
   }
 });
 
@@ -331,10 +333,10 @@ router.patch("/:id/items/reorder", verifyToken, async (req, res) => {
     itinerary.updatedAt = Date.now();
     await itinerary.save();
 
-    res.json({ success: true, itinerary });
+    return res.sendSuccess({ itinerary });
   } catch (error) {
-    console.error("Error reordering items:", error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error("Error reordering items:", error);
+    return res.sendError('REORDER_FAILED', error.message, 500);
   }
 });
 
@@ -368,7 +370,7 @@ router.post('/:id/optimize-ai', verifyToken, async (req, res) => {
 
     const points = items.map(i => [i.location.lng, i.location.lat]);
 
-    console.log('📍 Calling Trip V2 with', points.length, 'points');
+    logger.info('📍 Calling Trip V2 with', points.length, 'points');
 
     // Call Goong Trip V2
     const tripData = await tripV2(points, { vehicle: 'car', roundtrip: false });
@@ -381,7 +383,7 @@ router.post('/:id/optimize-ai', verifyToken, async (req, res) => {
       });
     }
 
-    console.log('✅ Trip data received:', {
+    logger.debug('✅ Trip data received:', {
       distance: `${(trip.distance / 1000).toFixed(2)} km`,
       duration: `${Math.round(trip.duration / 60)} min`,
     });
@@ -430,26 +432,19 @@ router.post('/:id/optimize-ai', verifyToken, async (req, res) => {
 
     await itinerary.save();
 
-    console.log('💾 [optimize-ai] Route saved, AI processing in background...');
+    logger.info('💾 [optimize-ai] Route saved, AI processing in background...');
 
     // Return immediately
-    res.json({ 
-      success: true, 
-      itinerary,
-      message: 'Route optimized. AI insights are being generated...'
-    });
+    res.sendSuccess({ itinerary, message: 'Route optimized. AI insights are being generated...' });
 
     // Generate AI insights in background
     generateAIInsightsAsync(itinerary._id, itinerary.toObject(), tripData).catch(err => {
-      console.error('❌ [Background AI] Error:', err.message);
+      logger.error('❌ [Background AI] Error:', err.message);
     });
 
   } catch (error) {
-    console.error('❌ [optimize-ai] Error:', error.message);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    logger.error('❌ [optimize-ai] Error:', error.message);
+    return res.sendError('OPTIMIZE_AI_FAILED', error.message, 500);
   }
 });
 
@@ -488,15 +483,11 @@ router.post('/:id/request-tour-guide', verifyToken, async (req, res) => {
     }
 
     // Log full itinerary for debugging and tour guide integration
-    console.log('\n📤 [GET /api/itinerary/:id] FULL RESPONSE:', JSON.stringify(itinerary, null, 2));
-
-    res.json({
-      success: true,
-      itinerary
-    });
+    logger.debug('\n📤 [GET /api/itinerary/:id] FULL RESPONSE:', JSON.stringify(itinerary, null, 2));
+    return res.sendSuccess({ itinerary });
   } catch (error) {
-    console.error('[GuideAPI] Error fetching requests:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('[GuideAPI] Error fetching requests:', error);
+    return res.sendError('GUIDE_REQUESTS_FETCH_FAILED', error.message, 500);
   }
 });
 
@@ -510,7 +501,7 @@ router.get('/:id/export.gpx', verifyToken, async (req, res) => {
     const it = await Itinerary.findOne({ _id: req.params.id, userId }).lean();
 
     if (!it) {
-      return res.status(404).json({ success: false, message: 'Not found' });
+      return res.sendError('ITINERARY_NOT_FOUND', 'Not found', 404);
     }
 
     // Extract track points
@@ -528,7 +519,7 @@ router.get('/:id/export.gpx', verifyToken, async (req, res) => {
     }
 
     if (trackPoints.length < 2) {
-      return res.status(400).json({ success: false, message: 'No route to export' });
+      return res.sendError('NO_ROUTE_TO_EXPORT', 'No route to export', 400);
     }
 
     // Extract waypoints
@@ -550,8 +541,8 @@ router.get('/:id/export.gpx', verifyToken, async (req, res) => {
 
     return res.send(gpx);
   } catch (err) {
-    console.error('Export GPX error:', err);
-    return res.status(500).json({ success: false, message: 'Export failed' });
+    logger.error('Export GPX error:', err);
+    return res.sendError('GPX_EXPORT_FAILED', 'Export failed', 500);
   }
 });
 
@@ -572,11 +563,11 @@ router.get('/guide/requests', authJwt, async (req, res) => {
       .sort({ 'tourGuideRequest.requestedAt': -1 })
       .populate({ path: 'userId', select: 'name email phone avatar' });
     
-    console.log(`[GuideAPI] Found ${requests.length} pending requests for guide ${guideUserId}`);
-    res.json({ success: true, requests });
+    logger.info(`[GuideAPI] Found ${requests.length} pending requests for guide ${guideUserId}`);
+    return res.sendSuccess({ requests });
   } catch (error) {
-    console.error('[GuideAPI] Error fetching requests:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('[GuideAPI] Error fetching requests:', error);
+    return res.sendError('GUIDE_REQUESTS_FETCH_FAILED', error.message, 500);
   }
 });
 
@@ -598,7 +589,7 @@ router.get('/guide/accepted-tours', authJwt, async (req, res) => {
       .sort({ 'preferredDate': 1, 'tourGuideRequest.respondedAt': -1 })
       .populate({ path: 'userId', select: 'name email phone avatar' });
 
-    console.log('[GuideAPI] Found', tours.length, 'accepted tours for guide:', guideUserId);
+    logger.info('[GuideAPI] Found', tours.length, 'accepted tours for guide:', guideUserId);
 
     // Fetch agreement data from TourCustomRequest for each tour
     const TourCustomRequest = require('../models/TourCustomRequest');
@@ -615,7 +606,7 @@ router.get('/guide/accepted-tours', authJwt, async (req, res) => {
             tourObj.agreement = tourRequest.agreement || {};
             tourObj.tourRequestStatus = tourRequest.status;
             tourObj.bothAgreed = tourRequest.agreement?.userAgreed && tourRequest.agreement?.guideAgreed;
-            console.log('[GuideAPI] Tour', tour._id, 'agreement:', {
+            logger.debug('[GuideAPI] Tour', tour._id, 'agreement:', {
               bothAgreed: tourObj.bothAgreed,
               userAgreed: tourRequest.agreement?.userAgreed,
               guideAgreed: tourRequest.agreement?.guideAgreed
@@ -623,10 +614,10 @@ router.get('/guide/accepted-tours', authJwt, async (req, res) => {
           } else {
             tourObj.agreement = {};
             tourObj.bothAgreed = false;
-            console.log('[GuideAPI] Tour', tour._id, 'has no TourCustomRequest');
+            logger.debug('[GuideAPI] Tour', tour._id, 'has no TourCustomRequest');
           }
         } catch (err) {
-          console.error('[GuideAPI] Error fetching agreement for tour:', tour._id, err);
+          logger.error('[GuideAPI] Error fetching agreement for tour:', tour._id, err);
           tourObj.agreement = {};
           tourObj.bothAgreed = false;
         }
@@ -634,11 +625,11 @@ router.get('/guide/accepted-tours', authJwt, async (req, res) => {
       })
     );
     
-    console.log('[GuideAPI] Returning', toursWithAgreement.length, 'tours with agreement data');
-    res.json({ success: true, tours: toursWithAgreement });
+    logger.info('[GuideAPI] Returning', toursWithAgreement.length, 'tours with agreement data');
+    return res.sendSuccess({ tours: toursWithAgreement });
   } catch (error) {
-    console.error('[GuideAPI] Error fetching accepted tours:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('[GuideAPI] Error fetching accepted tours:', error);
+    return res.sendError('GUIDE_ACCEPTED_TOURS_FETCH_FAILED', error.message, 500);
   }
 });
 
@@ -687,16 +678,16 @@ router.get('/guide/tours/:id', authJwt, async (req, res) => {
         responseData.bothAgreed = false;
       }
     } catch (err) {
-      console.error('[GuideAPI] Error fetching agreement for tour:', itinerary._id, err);
+      logger.error('[GuideAPI] Error fetching agreement for tour:', itinerary._id, err);
       responseData.agreement = {};
       responseData.bothAgreed = false;
     }
     
-    console.log('[GuideAPI] Tour detail for guide:', responseData._id, 'bothAgreed:', responseData.bothAgreed);
-    res.json(responseData);
+    logger.info('[GuideAPI] Tour detail for guide:', responseData._id, 'bothAgreed:', responseData.bothAgreed);
+    return res.sendSuccess(responseData);
   } catch (error) {
-    console.error('[GuideAPI] Error fetching tour detail:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('[GuideAPI] Error fetching tour detail:', error);
+    return res.sendError('GUIDE_TOUR_DETAIL_FETCH_FAILED', error.message, 500);
   }
 });
 
@@ -732,11 +723,11 @@ router.get('/guide/requests/:id', authJwt, async (req, res) => {
       };
     }
     
-    console.log('[GuideAPI] Request detail for guide:', guideUserId, 'request:', responseData._id);
-    res.json(responseData);
+    logger.info('[GuideAPI] Request detail for guide:', guideUserId, 'request:', responseData._id);
+    return res.sendSuccess(responseData);
   } catch (error) {
-    console.error('[GuideAPI] Error fetching request detail:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('[GuideAPI] Error fetching request detail:', error);
+    return res.sendError('GUIDE_REQUEST_DETAIL_FETCH_FAILED', error.message, 500);
   }
 });
 
@@ -755,7 +746,7 @@ router.post('/:id/accept-tour-guide', authJwt, async (req, res) => {
     }
     
     if (!itinerary.tourGuideRequest || itinerary.tourGuideRequest.status !== 'pending') {
-      return res.status(400).json({ success: false, error: 'No pending tour guide request found' });
+      return res.sendError('NO_PENDING_REQUEST', 'No pending tour guide request found', 400);
     }
     
     // Update tour guide request status
@@ -777,13 +768,13 @@ router.post('/:id/accept-tour-guide', authJwt, async (req, res) => {
         relatedModel: 'Itinerary'
       });
     } catch (notifError) {
-      console.error('Error creating notification:', notifError);
+      logger.error('Error creating notification:', notifError);
     }
     
-    res.json({ success: true, message: 'Tour request accepted', itinerary });
+    return res.sendSuccess({ itinerary, message: 'Tour request accepted' });
   } catch (error) {
-    console.error('Error accepting tour guide request:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error accepting tour guide request:', error);
+    return res.sendError('ACCEPT_REQUEST_FAILED', error.message, 500);
   }
 });
 
@@ -801,7 +792,7 @@ router.post('/:id/reject-tour-guide', authJwt, async (req, res) => {
     }
     
     if (!itinerary.tourGuideRequest || itinerary.tourGuideRequest.status !== 'pending') {
-      return res.status(400).json({ success: false, error: 'No pending tour guide request found' });
+      return res.sendError('NO_PENDING_REQUEST', 'No pending tour guide request found', 400);
     }
     
     // Update tour guide request status
@@ -822,13 +813,13 @@ router.post('/:id/reject-tour-guide', authJwt, async (req, res) => {
         relatedModel: 'Itinerary'
       });
     } catch (notifError) {
-      console.error('Error creating notification:', notifError);
+      logger.error('Error creating notification:', notifError);
     }
     
-    res.json({ success: true, message: 'Tour request rejected' });
+    return res.sendSuccess({ message: 'Tour request rejected' });
   } catch (error) {
-    console.error('Error rejecting tour guide request:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error rejecting tour guide request:', error);
+    return res.sendError('REJECT_REQUEST_FAILED', error.message, 500);
   }
 });
 
@@ -841,7 +832,7 @@ router.post('/:id/create-deposit-payment', authJwt, async (req, res) => {
     const itinerary = await Itinerary.findOne({ _id: req.params.id, userId });
     
     if (!itinerary) {
-      return res.status(404).json({ success: false, error: 'Itinerary not found' });
+      return res.sendError('ITINERARY_NOT_FOUND', 'Itinerary not found', 404);
     }
     
     if (!itinerary.isCustomTour || itinerary.tourGuideRequest?.status !== 'accepted') {
@@ -921,15 +912,10 @@ router.post('/:id/create-deposit-payment', authJwt, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid payment provider' });
     }
     
-    res.json({ 
-      success: true, 
-      paymentUrl,
-      depositAmount,
-      orderId: itinerary.paymentInfo.depositOrderId
-    });
+    return res.sendSuccess({ paymentUrl, depositAmount, orderId: itinerary.paymentInfo.depositOrderId });
   } catch (error) {
-    console.error('[Itinerary] Create deposit payment error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('[Itinerary] Create deposit payment error:', error);
+    return res.sendError('DEPOSIT_PAYMENT_FAILED', error.message, 500);
   }
 });
 
@@ -942,21 +928,18 @@ router.post('/:id/request-tour-guide', authJwt, async (req, res) => {
     const itinerary = await Itinerary.findOne({ _id: req.params.id, userId });
     
     if (!itinerary) {
-      return res.status(404).json({ success: false, error: 'Itinerary not found' });
+      return res.sendError('ITINERARY_NOT_FOUND', 'Itinerary not found', 404);
     }
     
     // Check if itinerary has items
     if (!itinerary.items || itinerary.items.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Itinerary has no items. Please add at least one location first.' 
-      });
+      return res.sendError('NO_ITEMS', 'Itinerary has no items. Please add at least one location first.', 400);
     }
     
     // Auto-set isCustomTour if it has items but flag is false
     if (!itinerary.isCustomTour) {
       itinerary.isCustomTour = true;
-      console.log('[TourGuideRequest] Auto-enabled isCustomTour for itinerary:', itinerary._id);
+      logger.info('[TourGuideRequest] Auto-enabled isCustomTour for itinerary:', itinerary._id);
     }
     
     // Only allow if not already requested or status is none/rejected
@@ -1048,7 +1031,7 @@ router.post('/:id/request-tour-guide', authJwt, async (req, res) => {
     };
     await itinerary.save();
     
-    console.log('[TourGuideRequest] Created TourCustomRequest (broadcast):', {
+    logger.info('[TourGuideRequest] Created TourCustomRequest (broadcast):', {
       requestId: tourRequest._id,
       requestNumber: tourRequest.requestNumber,
       itineraryId: itinerary._id.toString(),
@@ -1064,10 +1047,10 @@ router.post('/:id/request-tour-guide', authJwt, async (req, res) => {
       // Find all guide profiles
       const guides = await Guide.find({}).select('_id');
       
-      console.log(`[TourRequest] Found ${guides.length} guides to notify`);
+      logger.info(`[TourRequest] Found ${guides.length} guides to notify`);
       
       if (guides.length === 0) {
-        console.warn('[TourRequest] ⚠️ No guides found in database!');
+        logger.warn('[TourRequest] ⚠️ No guides found in database!');
       }
       
       // Create notification for each guide profile
@@ -1084,20 +1067,15 @@ router.post('/:id/request-tour-guide', authJwt, async (req, res) => {
       );
       
       await Promise.all(notificationPromises);
-      console.log(`[TourRequest] ✅ Sent ${guides.length} notifications successfully`);
+      logger.info(`[TourRequest] ✅ Sent ${guides.length} notifications successfully`);
     } catch (notifError) {
-      console.error('[TourRequest] ❌ Error creating guide notifications:', notifError);
+      logger.error('[TourRequest] ❌ Error creating guide notifications:', notifError);
     }
     
-    res.json({ 
-      success: true, 
-      itinerary,
-      tourRequest,
-      message: 'Tour guide request sent to all available guides' 
-    });
+    return res.sendSuccess({ itinerary, tourRequest, message: 'Tour guide request sent to all available guides' });
   } catch (error) {
-    console.error('[TourGuideRequest] Error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('[TourGuideRequest] Error:', error);
+    return res.sendError('TOUR_REQUEST_FAILED', error.message, 500);
   }
 });
 

@@ -49,7 +49,13 @@ export const getCustomerRequests = async () => {
       data: data.data || [],
     };
   } catch (error) {
-    console.error("❌ Get customer requests error:", error);
+    // Log with centralized logger
+    try {
+      const logger = await import("../../utils/logger");
+      logger.default.error("❌ Get customer requests error:", error);
+    } catch (e) {
+      /* dynamic import fallback - do nothing */
+    }
     return {
       success: false,
       error: error.message || "Không thể tải dữ liệu",
@@ -73,7 +79,12 @@ export const getCustomerRequestById = async (requestId) => {
       data: data.data,
     };
   } catch (error) {
-    console.error("❌ Get customer request error:", error);
+    try {
+      const logger = await import("../../utils/logger");
+      logger.default.error("❌ Get customer request error:", error);
+    } catch (e) {
+      /* ignore */
+    }
     return {
       success: false,
       error: error.message || "Không thể tải dữ liệu",
@@ -105,7 +116,12 @@ export const updateRequestStatus = async (
       message: data.message || "Cập nhật thành công",
     };
   } catch (error) {
-    console.error("❌ Update request status error:", error);
+    try {
+      const logger = await import("../../utils/logger");
+      logger.default.error("❌ Update request status error:", error);
+    } catch (e) {
+      /* ignore */
+    }
     return {
       success: false,
       error: error.message || "Cập nhật thất bại",

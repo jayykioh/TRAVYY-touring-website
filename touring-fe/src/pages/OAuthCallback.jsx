@@ -1,5 +1,6 @@
 // src/pages/OAuthCallback.jsx
 import { useEffect } from "react";
+import logger from "../utils/logger";
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 import { useNavigate } from "react-router-dom";
 
@@ -24,7 +25,7 @@ export default function OAuthCallback() {
         const body = await r.json().catch(() => ({}));
         const accessToken = body?.accessToken;
 
-        console.log("🔐 OAuth refresh response:", {
+        logger.debug("🔐 OAuth refresh response:", {
           accountStatus: body?.accountStatus,
           statusReason: body?.statusReason,
         });
@@ -34,16 +35,16 @@ export default function OAuthCallback() {
           const status = String(body.accountStatus || "").toLowerCase();
           const isLocked =
             status === "banned" || status === "locked" || status === "lock";
-          console.log("🔒 OAuth lock check:", { status, isLocked });
+          logger.debug("🔒 OAuth lock check:", { status, isLocked });
 
           if (isLocked) {
             const info = { message: body?.statusReason || "Tài khoản bị khóa" };
-            console.log("❌ OAuth setting bannedInfo:", info);
+            logger.info("❌ OAuth setting bannedInfo:", info);
             try {
               sessionStorage.setItem("bannedInfo", JSON.stringify(info));
             } catch (e) {}
           } else {
-            console.log("✅ OAuth active account");
+            logger.info("✅ OAuth active account");
             try {
               sessionStorage.removeItem("bannedInfo");
             } catch (e) {}

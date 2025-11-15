@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import NotificationList from "../components/notifications/NotificationList";
 import { useAuth } from "../../auth/context";
+import logger from '@/utils/logger';
 
 const NotificationsPage = () => {
   const { withAuth } = useAuth();
@@ -32,7 +33,7 @@ const NotificationsPage = () => {
 
   const handleNotificationClick = (notification) => {
     // TODO: Đánh dấu đã đọc, điều hướng chi tiết nếu cần
-    console.log("Clicked notification:", notification);
+    logger.debug("Clicked notification:", notification);
   };
 
   if (loading) return <div className="p-6">Đang tải thông báo...</div>;

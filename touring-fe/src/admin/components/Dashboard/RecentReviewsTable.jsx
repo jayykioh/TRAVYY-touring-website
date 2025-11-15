@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Eye, MessageSquare, X } from "lucide-react";
+import logger from "../../../utils/logger";
 
 const RecentReviewsTable = ({ data = [] }) => {
   const [selectedReview, setSelectedReview] = useState(null);
@@ -150,7 +151,7 @@ const ReviewModal = ({ review, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     // TODO: Call API to submit response
-    console.log("Submitting response:", response);
+    logger.debug("Submitting response:", response);
     onClose();
   };
 

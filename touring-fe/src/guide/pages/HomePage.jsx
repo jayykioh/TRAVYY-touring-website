@@ -9,6 +9,7 @@ import Button from "../components/common/Button";
 import { useAuth } from "../../auth/context";
 import { useSocket } from "../../context/SocketContext";
 import { toast } from "sonner";
+import logger from '@/utils/logger';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -36,9 +37,9 @@ const HomePage = () => {
           })),
         ]);
 
-        console.log("[HomePage] Raw request data:", requestData);
-        console.log("[HomePage] Raw tour data:", tourData);
-        console.log("[HomePage] Raw earnings data:", earningsData);
+        logger.debug("[HomePage] Raw request data:", requestData);
+        logger.debug("[HomePage] Raw tour data:", tourData);
+        logger.debug("[HomePage] Raw earnings data:", earningsData);
 
         // Map requests using cuocthi structure
         const requestsArray =
@@ -108,7 +109,7 @@ const HomePage = () => {
         // Set earnings
         setEarnings(earningsData);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        logger.error("Error fetching data:", error);
         setTours([]);
         setRequests([]);
         setEarnings({ summary: { thisWeek: 0 } });
@@ -128,13 +129,13 @@ const HomePage = () => {
 
     // Listen for payment success
     const unsubscribePayment = on("paymentSuccessful", (data) => {
-      console.log("💰 Payment successful:", data);
+      logger.info("💰 Payment successful:", data);
       toast.success(`💰 Khách hàng đã thanh toán cho ${data.tourTitle}`);
     });
 
     // Listen for tour marked as done
     const unsubscribeTourDone = on("tourMarkedDone", (data) => {
-      console.log("✅ Tour marked done:", data);
+      logger.info("✅ Tour marked done:", data);
       toast.success(`✅ Tour "${data.tourTitle}" đã hoàn thành!`);
     });
 

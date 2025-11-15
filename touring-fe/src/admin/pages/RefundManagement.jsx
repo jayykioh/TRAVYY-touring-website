@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import toast, { Toaster } from "react-hot-toast";
 import Modal from "../components/Common/Modal";
+import logger from "../../utils/logger";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -39,7 +40,7 @@ const RefundManagement = () => {
     const refundId = urlParams.get("refundId");
 
     if (paymentSuccess === "true" && refundId) {
-      console.log(
+      logger.info(
         "🔄 Detected return from MoMo payment - saving params to localStorage"
       );
       // Save to localStorage to persist across any navigation
@@ -52,7 +53,7 @@ const RefundManagement = () => {
       );
       // Clear URL params
       window.history.replaceState({}, "", "/admin/refunds");
-      console.log("✅ Payment params saved and URL cleaned");
+      logger.info("✅ Payment params saved and URL cleaned");
     }
   }, []); // Empty deps = run once on mount
 
@@ -70,13 +71,13 @@ const RefundManagement = () => {
       return;
     }
 
-    console.log("🔄 Starting auto-check for payment...");
+    logger.info("🔄 Starting auto-check for payment...");
     setIsAutoChecking(true);
 
     // Check payment every 5 seconds
     const intervalId = setInterval(async () => {
       try {
-        console.log("⏰ Auto-checking payment status...");
+        logger.debug("⏰ Auto-checking payment status...");
         const response = await fetch(
           `${API_URL}/api/admin/refunds/${selectedRefund._id}/check-payment`,
           {
@@ -91,7 +92,7 @@ const RefundManagement = () => {
         const result = await response.json();
 
         if (result.success) {
-          console.log("✅ Payment completed! Stopping auto-check.");
+          logger.info("✅ Payment completed! Stopping auto-check.");
           clearInterval(intervalId);
           setIsAutoChecking(false);
 
@@ -108,16 +109,16 @@ const RefundManagement = () => {
           await loadRefunds();
           await loadStats();
         } else {
-          console.log("⏳ Payment not completed yet, will check again...");
+          logger.info("⏳ Payment not completed yet, will check again...");
         }
       } catch (error) {
-        console.error("❌ Error in auto-check:", error);
+        logger.error("❌ Error in auto-check:", error);
       }
     }, 5000); // Check every 5 seconds
 
     // Cleanup on unmount or when modal closes
     return () => {
-      console.log("🛑 Stopping auto-check");
+      logger.info("🛑 Stopping auto-check");
       clearInterval(intervalId);
       setIsAutoChecking(false);
     };
@@ -134,7 +135,7 @@ const RefundManagement = () => {
 
         // Only process if less than 10 minutes old (give time for login)
         if (Date.now() - timestamp < 10 * 60 * 1000) {
-          console.log(
+          logger.info(
             "🔄 Processing pending payment check for refund:",
             refundId
           );
@@ -152,7 +153,7 @@ const RefundManagement = () => {
             await new Promise((resolve) => setTimeout(resolve, 3000));
 
             // Check payment status
-            console.log("📤 Sending check-payment request to backend...");
+            logger.info("📤 Sending check-payment request to backend...");
             const response = await fetch(
               `${API_URL}/api/admin/refunds/${refundId}/check-payment`,
               {
@@ -165,7 +166,7 @@ const RefundManagement = () => {
             );
 
             const result = await response.json();
-            console.log("📥 Backend response:", result);
+            logger.debug("📥 Backend response:", result);
 
             toast.dismiss(loadingToast);
 
@@ -191,7 +192,7 @@ const RefundManagement = () => {
             }
           } catch (error) {
             toast.dismiss(loadingToast);
-            console.error("❌ Error checking payment:", error);
+            logger.error("❌ Error checking payment:", error);
             toast.error(
               "Lỗi kiểm tra thanh toán. Vui lòng kiểm tra thủ công trong modal.",
               {
@@ -201,13 +202,13 @@ const RefundManagement = () => {
           }
         } else {
           // Too old, clear it
-          console.log(
+          logger.warn(
             "⚠️ Pending payment check expired (>10 minutes), clearing"
           );
           localStorage.removeItem("pendingPaymentCheck");
         }
       } catch (error) {
-        console.error("❌ Error parsing pending payment check:", error);
+        logger.error("❌ Error parsing pending payment check:", error);
         localStorage.removeItem("pendingPaymentCheck");
       }
     }
@@ -234,7 +235,7 @@ const RefundManagement = () => {
       setRefunds(data.data || []);
       setLoading(false);
     } catch (error) {
-      console.error("Error loading refunds:", error);
+      logger.error("Error loading refunds:", error);
       toast.error("Error loading refunds");
       setLoading(false);
     }
@@ -253,15 +254,15 @@ const RefundManagement = () => {
       const data = await response.json();
       setStats(data.data);
     } catch (error) {
-      console.error("Error loading stats:", error);
+      logger.error("Error loading stats:", error);
     }
   };
 
   const handleViewDetails = (refund) => {
-    console.log("=== Opening Detail Modal ===");
-    console.log("Refund:", refund);
-    console.log("Requires manual processing:", refund.requiresManualProcessing);
-    console.log("Status:", refund.status);
+    logger.debug("=== Opening Detail Modal ===");
+    logger.debug("Refund:", refund);
+    logger.debug("Requires manual processing:", refund.requiresManualProcessing);
+    logger.debug("Status:", refund.status);
     setSelectedRefund(refund);
     setShowDetailModal(true);
   };

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import CheckoutForm from "../components/CheckOutForm";
 import PaymentSummary from "../components/PaymentSummary";
 import { useCart } from "@/hooks/useCart";
+import logger from '@/utils/logger';
 
 export default function BookingPage() {
   const location = useLocation();
@@ -37,7 +38,7 @@ export default function BookingPage() {
         sessionStorage.removeItem('retryPaymentCart');
         sessionStorage.removeItem('retryBookingId');
       } catch (error) {
-        console.error('Error parsing retry payment data:', error);
+        logger.error('Error parsing retry payment data:', error);
       }
     }
   }, []);
@@ -75,7 +76,7 @@ export default function BookingPage() {
         });
         if (!cancelled) setQuote(res?.items?.[0] || null);
       } catch (e) {
-        console.error("Quote error:", e);
+        logger.error("Quote error:", e);
         if (!cancelled) {
           const errorMsg = e.response?.data?.error === "EXCEEDS_DEPARTURE_CAPACITY" 
             ? `Không đủ chỗ trống. Chỉ còn ${e.response?.data?.limit || 0} chỗ.`

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import { useNotifications } from "../context/NotificationContext";
+import logger from "../../utils/logger";
 import toast, { Toaster } from "react-hot-toast";
 import Modal from "../components/Common/Modal";
 
@@ -34,7 +35,7 @@ const PromotionManagement = () => {
   const [formErrors, setFormErrors] = useState({});
 
   useEffect(() => {
-    console.log("PromotionManagement - token:", token);
+    logger.debug("PromotionManagement - token:", token);
     if (token) {
       loadPromotions();
     }
@@ -42,26 +43,25 @@ const PromotionManagement = () => {
 
   const loadPromotions = async () => {
     try {
-      console.log("Fetching promotions with token:", token);
+      logger.debug("Fetching promotions with token:", token);
       const response = await fetch(`${API_URL}/api/promotions`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
-
-      console.log("Response status:", response.status);
+      logger.debug("Response status:", response.status);
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("Error response:", errorData);
+        logger.error("Error response:", errorData);
         throw new Error(errorData.message || "Failed to fetch promotions");
       }
 
       const data = await response.json();
-      console.log("Promotions data:", data);
+      logger.debug("Promotions data:", data);
       setPromotions(data.data || data || []);
     } catch (error) {
-      console.error("Error loading promotions:", error);
+      logger.error("Error loading promotions:", error);
       toast.error("Error loading promotions: " + error.message);
     } finally {
       setLoading(false);
@@ -193,7 +193,7 @@ const PromotionManagement = () => {
         successMessage
       );
     } catch (error) {
-      console.error("Error submitting:", error);
+        logger.error("Error submitting:", error);
       toast.error(error.message || "An error occurred");
       notify.error("Promotion Error", error.message || "Cannot save promotion");
     }

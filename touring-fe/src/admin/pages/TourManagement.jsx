@@ -6,6 +6,7 @@ import { Users, DollarSign, Calendar, MapPin } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { useNotifications } from "../context/NotificationContext";
 import Modal from "../components/Common/Modal";
+import logger from "../../utils/logger";
 
 // Components
 import StatCard from "../components/Dashboard/StatsCard";
@@ -80,10 +81,10 @@ const TourManagement = () => {
       }
 
       const data = await response.json();
-      console.log("Fetched tours:", data);
+      logger.debug("Fetched tours:", data);
       setTours(data);
     } catch (err) {
-      console.error("Failed to fetch tours:", err);
+      logger.error("Failed to fetch tours:", err);
       setError("Không thể tải dữ liệu tour. Vui lòng thử lại sau.");
     } finally {
       setLoading(false);
@@ -238,7 +239,7 @@ const TourManagement = () => {
       toast.success(statusMessage);
       notify.tour("Cập nhật Tour", `${tour.title} - ${statusMessage}`);
     } catch (err) {
-      console.error("Failed to toggle visibility:", err);
+      logger.error("Failed to toggle visibility:", err);
       toast.error("Lỗi khi thay đổi trạng thái tour. Vui lòng thử lại.");
       notify.error("Lỗi Cập nhật Tour", "Không thể thay đổi trạng thái tour");
     }
@@ -267,7 +268,7 @@ const TourManagement = () => {
       toast.success("Đã xóa tour thành công!");
       notify.tour("Xóa Tour", `Đã xóa tour "${tour.title}"`);
     } catch (err) {
-      console.error("Failed to delete tour:", err);
+      logger.error("Failed to delete tour:", err);
       setDeleteModal({ isOpen: false, tour: null });
       toast.error("Lỗi khi xóa tour. Vui lòng thử lại.");
       notify.error("Lỗi Xóa Tour", "Không thể xóa tour");
@@ -330,7 +331,7 @@ const TourManagement = () => {
       setShowForm(false);
       setEditingTour(null);
     } catch (err) {
-      console.error("Failed to save tour:", err);
+      logger.error("Failed to save tour:", err);
       toast.error("Lỗi khi lưu tour. Vui lòng thử lại.");
       notify.error("Lỗi Lưu Tour", "Không thể lưu tour");
     }

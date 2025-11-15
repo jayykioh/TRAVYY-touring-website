@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import logger from '@/utils/logger';
 import { useAuth } from '@/auth/context';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
@@ -20,7 +21,7 @@ export default function BookingDetail() {
       const resp = await withAuth(`/api/bookings/${bookingId}`);
       setBooking(resp.booking || resp);
     } catch (err) {
-      console.error('Error loading booking', err);
+      logger.error('Error loading booking', err);
       toast.error('Không thể tải thông tin booking');
       navigate('/booking');
     } finally {

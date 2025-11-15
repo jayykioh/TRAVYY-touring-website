@@ -1,5 +1,7 @@
 // Guide API functions - centralized API calls for guide functionality
 
+import logger from '@/utils/logger';
+
 // Get guide profile
 export const getGuideProfile = async () => {
   try {
@@ -18,7 +20,7 @@ export const getGuideProfile = async () => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching guide profile:', error);
+    logger.error('Error fetching guide profile:', error);
     throw error;
   }
 };
@@ -41,7 +43,7 @@ export const getTourRequests = async () => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching tour requests:', error);
+    logger.error('Error fetching tour requests:', error);
     throw error;
   }
 };
@@ -64,7 +66,7 @@ export const acceptTourRequest = async (requestId) => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error accepting tour request:', error);
+    logger.error('Error accepting tour request:', error);
     throw error;
   }
 };
@@ -87,7 +89,7 @@ export const rejectTourRequest = async (requestId) => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error rejecting tour request:', error);
+    logger.error('Error rejecting tour request:', error);
     throw error;
   }
 };
@@ -110,7 +112,7 @@ export const getGuideTours = async () => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching guide tours:', error);
+    logger.error('Error fetching guide tours:', error);
     throw error;
   }
 };
@@ -134,7 +136,7 @@ export const getGuideEarnings = async () => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching guide earnings:', error);
+    logger.error('Error fetching guide earnings:', error);
     // Return mock data on error
     return getMockEarningsData();
   }
@@ -249,7 +251,7 @@ export const getGuideNotifications = async () => {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching guide notifications:', error);
+    logger.error('Error fetching guide notifications:', error);
     throw error;
   }
 };

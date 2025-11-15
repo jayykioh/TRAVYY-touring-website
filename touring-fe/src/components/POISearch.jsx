@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import logger from "../utils/logger";
 import { Search, X, MapPin, Loader2 } from 'lucide-react';
 import { debounce } from 'lodash';
 
@@ -25,7 +26,7 @@ export default function POISearch({ zoneId, onSelectPOI }) {
           setResults(json.results || []);
         }
       } catch (err) {
-        console.error('Search error:', err);
+        logger.error('Search error:', err);
       } finally {
         setLoading(false);
       }

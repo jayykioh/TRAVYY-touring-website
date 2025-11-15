@@ -1,5 +1,6 @@
 import { API_CONFIG, API_ENDPOINTS } from "../config/apiConfig";
 import apiHelper from "../utils/apiHelper";
+import logger from "../../utils/logger";
 
 const STORAGE_KEYS = {
   ADMIN_TOKEN: "admin_token",
@@ -41,7 +42,7 @@ const adminAuthService = {
       const userStr = localStorage.getItem(STORAGE_KEYS.ADMIN_USER);
       return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
-      console.error("Error getting admin:", error);
+      logger.error("Error getting admin:", error);
       return null;
     }
   },

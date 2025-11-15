@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/auth/context";
+import logger from "../utils/logger";
 import { ArrowLeft, Lock, CreditCard, Wallet, Calendar, Users, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,7 +23,7 @@ export default function TourRequestPayment() {
       const response = await withAuth(`/api/tour-requests/${requestId}`);
       setRequest(response.tourRequest || response.request || response);
     } catch (error) {
-      console.error("Error loading tour request:", error);
+      logger.error("Error loading tour request:", error);
       toast.error("Không thể tải thông tin yêu cầu");
       navigate("/my-tour-requests");
     } finally {
@@ -81,7 +82,7 @@ export default function TourRequestPayment() {
       }
 
     } catch (error) {
-      console.error("Payment error:", error);
+      logger.error("Payment error:", error);
       toast.error(error.message || "Lỗi khi khởi tạo thanh toán");
       setIsProcessing(false);
     }

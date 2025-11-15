@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { ItineraryContext } from "./itinerary-context";
 import { useAuth } from "@/auth/context";
+import logger from '@/utils/logger';
 
 export default function ItineraryProvider({ children }) {
   const [currentItinerary, setCurrentItinerary] = useState(null);
@@ -34,10 +35,8 @@ export default function ItineraryProvider({ children }) {
       }
       return null;
     } catch (error) {
-      // withAuth đã refresh hộ; nếu vẫn lỗi thì coi như chưa auth
-      if (process.env.NODE_ENV !== "production") {
-        console.error("Error loading itinerary:", error);
-      }
+        // withAuth đã refresh hộ; nếu vẫn lỗi thì coi như chưa auth
+        logger.error("Error loading itinerary:", error);
       return null;
     } finally {
       setLoading(false);
@@ -64,7 +63,7 @@ export default function ItineraryProvider({ children }) {
       throw new Error(data?.message || "Failed to create itinerary");
     } catch (error) {
       if (process.env.NODE_ENV !== "production") {
-        console.error("Error creating itinerary:", error);
+        logger.error("Error creating itinerary:", error);
       }
       throw error;
     }
@@ -95,15 +94,13 @@ export default function ItineraryProvider({ children }) {
         setCurrentItinerary(data.itinerary);
         if (data.warnings?.length > 0) {
           // có thể hiện toast ở đây
-          console.warn("⚠️ Warnings:", data.warnings);
+          logger.warn("⚠️ Warnings:", data.warnings);
         }
         return data.itinerary;
       }
       throw new Error(data?.message || "Failed to add POI");
     } catch (error) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error("Error adding POI:", error);
-      }
+      logger.error("Error adding POI:", error);
       throw error;
     }
   }
@@ -137,15 +134,13 @@ export default function ItineraryProvider({ children }) {
       if (data?.success) {
         setCurrentItinerary(data.itinerary);
         if (data.warnings?.length > 0) {
-          console.warn("⚠️ Warnings:", data.warnings);
+          logger.warn("⚠️ Warnings:", data.warnings);
         }
         return data.itinerary;
       }
       throw new Error(data?.message || "Failed to add tour");
     } catch (error) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error("Error adding tour:", error);
-      }
+      logger.error("Error adding tour:", error);
       throw error;
     }
   }
@@ -166,9 +161,7 @@ export default function ItineraryProvider({ children }) {
       }
       throw new Error(data?.message || "Failed to remove POI");
     } catch (error) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error("Error removing POI:", error);
-      }
+      logger.error("Error removing POI:", error);
       throw error;
     }
   }
@@ -206,12 +199,12 @@ export default function ItineraryProvider({ children }) {
       if (data?.success) {
         // Backend returned updated itinerary, use it
         setCurrentItinerary(data.itinerary);
-        console.log("✅ Order synced with backend");
+        logger.info("✅ Order synced with backend");
       } else {
         throw new Error(data?.message || "Failed to reorder");
       }
-    } catch (error) {
-      console.error("❌ Reorder failed, rolling back:", error);
+      } catch (error) {
+      logger.error("❌ Reorder failed, rolling back:", error);
       // Rollback to previous state on error
       setCurrentItinerary(prevItinerary);
     }

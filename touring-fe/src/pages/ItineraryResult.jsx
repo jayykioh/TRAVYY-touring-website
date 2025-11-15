@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/collapsible";
 import RequestGuideModal from "@/components/RequestGuideModal";
 import TravellerChatBox from "@/components/TravellerChatBox";
+import logger from "@/utils/logger";
 
 export default function ItineraryResult() {
   // ========== Handle Send Tour Guide Request ========== 
@@ -45,7 +46,7 @@ export default function ItineraryResult() {
     setGuideReqLoading(true);
     setGuideReqMsg("");
     try {
-      console.log("[TourGuideRequest] Bắt đầu gửi yêu cầu cho tour guide với itineraryId:", itinerary._id);
+    logger.debug("[TourGuideRequest] Bắt đầu gửi yêu cầu cho tour guide với itineraryId:", itinerary._id);
       const res = await withAuth(`/api/itinerary/${itinerary._id}/request-tour-guide`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -55,14 +56,14 @@ export default function ItineraryResult() {
         // Reload itinerary to update status
         const result = await withAuth(`/api/itinerary/${itinerary._id}`);
         setItinerary(result.itinerary);
-        console.log("[TourGuideRequest] Thành công:", result.itinerary.tourGuideRequest);
+        logger.debug("[TourGuideRequest] Thành công:", result.itinerary.tourGuideRequest);
       } else {
         setGuideReqMsg(res?.error || "Gửi yêu cầu thất bại");
-        console.warn("[TourGuideRequest] Thất bại:", res);
+        logger.warn("[TourGuideRequest] Thất bại:", res);
       }
     } catch (e) {
       setGuideReqMsg("Gửi yêu cầu thất bại: " + (e?.message || e));
-      console.error("[TourGuideRequest] Lỗi:", e);
+      logger.error("[TourGuideRequest] Lỗi:", e);
     } finally {
       setGuideReqLoading(false);
     }
@@ -74,21 +75,21 @@ export default function ItineraryResult() {
     setDepositLoading(true);
     setDepositMsg("");
     try {
-      console.log("[DepositPayment] Bắt đầu thanh toán đặt cọc cho itineraryId:", itinerary._id);
+    logger.debug("[DepositPayment] Bắt đầu thanh toán đặt cọc cho itineraryId:", itinerary._id);
       const res = await withAuth(`/api/itinerary/${itinerary._id}/create-deposit-payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
       if (res?.payUrl) {
-        console.log("[DepositPayment] Chuyển hướng đến:", res.payUrl);
+        logger.debug("[DepositPayment] Chuyển hướng đến:", res.payUrl);
         window.location.href = res.payUrl;
       } else {
         setDepositMsg(res?.error || "Tạo thanh toán thất bại");
-        console.warn("[DepositPayment] Thất bại:", res);
+        logger.warn("[DepositPayment] Thất bại:", res);
       }
     } catch (e) {
       setDepositMsg("Tạo thanh toán thất bại: " + (e?.message || e));
-      console.error("[DepositPayment] Lỗi:", e);
+      logger.error("[DepositPayment] Lỗi:", e);
     } finally {
       setDepositLoading(false);
     }
@@ -124,12 +125,12 @@ export default function ItineraryResult() {
         let data = location.state?.itinerary;
 
         if (!data) {
-          console.log("🔄 [Load] Fetching from API...");
+          logger.debug("🔄 [Load] Fetching from API...");
           const result = await withAuth(`/api/itinerary/${id}`);
           data = result.itinerary;
         }
 
-        console.log("📥 [Load] Initial data:", {
+        logger.debug("📥 [Load] Initial data:", {
           id: data._id,
           name: data.zoneName,
           aiProcessing: data.aiProcessing,
@@ -144,7 +145,7 @@ export default function ItineraryResult() {
         setItinerary(data);
         setIsAIProcessing(Boolean(data.aiProcessing));
       } catch (error) {
-        console.error("❌ [Load] Error:", error);
+        logger.error("❌ [Load] Error:", error);
       } finally {
         setLoading(false);
       }
@@ -155,23 +156,23 @@ export default function ItineraryResult() {
   // ========== Poll for AI insights ==========
   useEffect(() => {
     if (!isAIProcessing) {
-      console.log("🛑 [Polling] Not needed - aiProcessing is false");
+      logger.debug("🛑 [Polling] Not needed - aiProcessing is false");
       return;
     }
 
-    console.log("🔄 [Polling] Starting (check every 2s)...");
+    logger.debug("🔄 [Polling] Starting (check every 2s)...");
     let pollCount = 0;
     const MAX_POLLS = 30; // 60 seconds max
 
     const interval = setInterval(async () => {
       pollCount++;
-      console.log(`🔍 [Polling] Attempt ${pollCount}/${MAX_POLLS}`);
+      logger.debug(`🔍 [Polling] Attempt ${pollCount}/${MAX_POLLS}`);
 
       try {
         const result = await withAuth(`/api/itinerary/${id}`);
         const data = result.itinerary;
 
-        console.log(`📥 [Polling] Response:`, {
+        logger.debug(`📥 [Polling] Response:`, {
           aiProcessing: data.aiProcessing,
           aiProcessingType: typeof data.aiProcessing,
           hasAiInsights: !!data.aiInsights,
@@ -183,7 +184,7 @@ export default function ItineraryResult() {
 
         // ✅ Check if processing is complete
         if (data.aiProcessing === false) {
-          console.log("✅ [Polling] AI processing completed!");
+          logger.info("✅ [Polling] AI processing completed!");
 
           // Validate insights
           const hasValidInsights =
@@ -193,48 +194,48 @@ export default function ItineraryResult() {
             data.aiInsights.tips.length > 0;
 
           if (hasValidInsights) {
-            console.log("✅ [Polling] Valid insights:", {
+            logger.info("✅ [Polling] Valid insights:", {
               summary: data.aiInsights.summary.substring(0, 80),
               tips: data.aiInsights.tips.length,
             });
             setItinerary(data);
             setIsAIProcessing(false);
           } else {
-            console.warn("⚠️ [Polling] Processing done but no valid insights");
+            logger.warn("⚠️ [Polling] Processing done but no valid insights");
             setItinerary(data);
             setIsAIProcessing(false);
           }
         } else {
-          console.log(
+          logger.debug(
             `⏳ [Polling] Still processing... (${pollCount}/${MAX_POLLS})`
           );
         }
 
         // Stop after max
         if (pollCount >= MAX_POLLS) {
-          console.warn("⏰ [Polling] Timeout - stopping after 60s");
+          logger.warn("⏰ [Polling] Timeout - stopping after 60s");
           setIsAIProcessing(false);
         }
       } catch (error) {
-        console.error("❌ [Polling] Error:", error.message);
+        logger.error("❌ [Polling] Error:", error.message);
       }
     }, 2000);
 
     return () => {
-      console.log("🛑 [Polling] Cleanup");
+      logger.debug("🛑 [Polling] Cleanup");
       clearInterval(interval);
     };
   }, [isAIProcessing, id, withAuth]);
 
   // ✅ Manual refresh
   async function handleRefresh() {
-    console.log("🔄 [Manual Refresh] Triggered");
+    logger.debug("🔄 [Manual Refresh] Triggered");
     try {
       const result = await withAuth(`/api/itinerary/${id}`);
       if (result?.itinerary) {
         const data = result.itinerary;
 
-        console.log("📥 [Manual Refresh] Data:", {
+        logger.debug("📥 [Manual Refresh] Data:", {
           aiProcessing: data.aiProcessing,
           hasSummary: !!data.aiInsights?.summary,
           tipsCount: data.aiInsights?.tips?.length,
@@ -244,7 +245,7 @@ export default function ItineraryResult() {
         setIsAIProcessing(data.aiProcessing);
       }
     } catch (error) {
-      console.error("❌ [Manual Refresh] Error:", error);
+      logger.error("❌ [Manual Refresh] Error:", error);
     }
   }
 
@@ -294,7 +295,7 @@ export default function ItineraryResult() {
       await navigator.clipboard.writeText(url);
       alert("Đã sao chép liên kết!");
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     }
   }
 
@@ -308,7 +309,7 @@ export default function ItineraryResult() {
         body: JSON.stringify({ force: true }),
       });
     } catch (e) {
-      console.error("❌ [FE] Re-optimize error:", e);
+      logger.error("❌ [FE] Re-optimize error:", e);
       setIsAIProcessing(false);
     }
   }
@@ -368,7 +369,7 @@ export default function ItineraryResult() {
       a.remove();
       URL.revokeObjectURL(objUrl);
     } catch (err) {
-      console.error("GPX download error:", err);
+      logger.error("GPX download error:", err);
       alert("Tải GPX thất bại. Vui lòng thử lại.");
     }
   }
@@ -966,7 +967,7 @@ export default function ItineraryResult() {
         <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 mt-8 mb-8">
           <button
             onClick={() => {
-              console.log('[ItineraryResult] Reopen Chat button clicked');
+              logger.debug('[ItineraryResult] Reopen Chat button clicked');
               setShowChat(true);
             }}
             className="w-full px-6 py-4 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"

@@ -5,6 +5,7 @@ const USE_MOCK_DATA = false; // was true during development
 
 // Import mock data
 import { mockTours, mockBookings, mockGuides } from "../data/mockData";
+import logger from "../../utils/logger";
 
 // Simulate API delay
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -27,7 +28,7 @@ const refreshAdminToken = async () => {
     }
     return null;
   } catch (error) {
-    console.error("Failed to refresh admin token:", error);
+    logger.error("Failed to refresh admin token:", error);
     return null;
   }
 };
@@ -48,11 +49,11 @@ const fetchWithAuth = async (url, options = {}) => {
 
   // If 401, try to refresh token and retry once
   if (response.status === 401) {
-    console.log("Token expired, attempting to refresh...");
+    logger.info("Token expired, attempting to refresh...");
     const newToken = await refreshAdminToken();
 
     if (newToken) {
-      console.log("Token refreshed successfully, retrying request...");
+      logger.info("Token refreshed successfully, retrying request...");
       response = await fetch(url, {
         ...options,
         headers: {
@@ -61,7 +62,7 @@ const fetchWithAuth = async (url, options = {}) => {
         },
       });
     } else {
-      console.error("Failed to refresh token, redirecting to login...");
+      logger.error("Failed to refresh token, redirecting to login...");
       // ✅ Clear localStorage and redirect to login
       localStorage.removeItem("admin_token");
       localStorage.removeItem("admin_user");

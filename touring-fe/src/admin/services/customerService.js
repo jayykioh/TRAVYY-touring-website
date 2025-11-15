@@ -1,4 +1,5 @@
 // admin/services/customerService.js
+import logger from "../../utils/logger";
 const API_URL = "http://localhost:4000/api";
 
 // Helper to get auth token
@@ -61,7 +62,7 @@ export const getCustomers = async (filters = {}, signal = null) => {
     if (error.name === "AbortError") {
       throw error;
     }
-    console.error("❌ Get customers error:", error);
+    logger.error("❌ Get customers error:", error);
     return {
       success: false,
       error: error.message || "Không thể tải dữ liệu",
@@ -85,7 +86,7 @@ export const getCustomerById = async (customerId) => {
       data: transformUserToCustomer(data.data),
     };
   } catch (error) {
-    console.error("❌ Get customer error:", error);
+    logger.error("❌ Get customer error:", error);
     return {
       success: false,
       error: error.message || "Không thể tải dữ liệu",
@@ -108,7 +109,7 @@ export const getCustomerBookings = async (customerId) => {
       data: data.data || [],
     };
   } catch (error) {
-    console.error("❌ Get customer bookings error:", error);
+    logger.error("❌ Get customer bookings error:", error);
     return {
       success: false,
       error: error.message || "Không thể tải dữ liệu",
@@ -135,7 +136,7 @@ export const deleteCustomer = async (customerId) => {
       message: data.message || "Xóa tài khoản thành công",
     };
   } catch (error) {
-    console.error("❌ Delete customer error:", error);
+    logger.error("❌ Delete customer error:", error);
     return {
       success: false,
       error: error.message || "Xóa tài khoản thất bại",
@@ -171,7 +172,7 @@ export const updateCustomerStatus = async (customerId, status, reason = "") => {
       message: data.message || "Cập nhật thành công",
     };
   } catch (error) {
-    console.error("❌ Update customer status error:", error);
+    logger.error("❌ Update customer status error:", error);
     return {
       success: false,
       error: error.message || "Cập nhật thất bại",
@@ -192,7 +193,7 @@ export const getCustomerStats = async () => {
       data: data.data,
     };
   } catch (error) {
-    console.error("❌ Get customer stats error:", error);
+    logger.error("❌ Get customer stats error:", error);
     return {
       success: false,
       error: error.message || "Không thể tải dữ liệu",

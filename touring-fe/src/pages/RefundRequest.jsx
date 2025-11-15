@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import logger from "../utils/logger";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../auth/context";
@@ -60,7 +61,7 @@ const RefundRequest = () => {
 
       setLoading(false);
     } catch (error) {
-      console.error("Error loading booking:", error);
+      logger.error("Error loading booking:", error);
       toast.error("Error loading booking details");
       setLoading(false);
     }
@@ -177,23 +178,23 @@ const RefundRequest = () => {
   };
 
   const handleConfirmSubmit = async () => {
-    console.log("=== Starting refund submission ===");
-    console.log("Refund Type:", refundType);
-    console.log("Booking ID from params:", bookingId);
-    console.log("Booking object:", booking);
-    console.log("Booking._id:", booking?._id);
-    console.log("Booking.id:", booking?.id);
+    logger.info("=== Starting refund submission ===");
+    logger.info("Refund Type:", refundType);
+    logger.info("Booking ID from params:", bookingId);
+    logger.debug("Booking object:", booking);
+    logger.debug("Booking._id:", booking?._id);
+    logger.debug("Booking.id:", booking?.id);
 
     try {
       const token = user?.token;
       if (!token) {
-        console.error("No token found");
+        logger.error("No token found");
         toast.error("Authentication required");
         navigate("/login");
         return;
       }
 
-      console.log("Token exists:", token ? "Yes" : "No");
+      logger.debug("Token exists:", token ? "Yes" : "No");
 
       const endpoint =
         refundType === "pre_trip_cancellation"
@@ -202,10 +203,10 @@ const RefundRequest = () => {
 
       // ✅ Try multiple ways to get booking ID
       const actualBookingId = booking?._id || booking?.id || bookingId;
-      console.log("Actual booking ID to send:", actualBookingId);
+      logger.debug("Actual booking ID to send:", actualBookingId);
 
       if (!actualBookingId) {
-        console.error("❌ No booking ID found!");
+        logger.error("❌ No booking ID found!");
         toast.error("Không tìm thấy booking ID");
         return;
       }
@@ -222,8 +223,8 @@ const RefundRequest = () => {
               requestNote,
             };
 
-      console.log("Endpoint:", endpoint);
-      console.log("Payload:", payload);
+      logger.debug("Endpoint:", endpoint);
+      logger.debug("Payload:", payload);
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -234,21 +235,21 @@ const RefundRequest = () => {
         body: JSON.stringify(payload),
       });
 
-      console.log("Response status:", response.status);
-      console.log("Response ok:", response.ok);
+      logger.debug("Response status:", response.status);
+      logger.debug("Response ok:", response.ok);
 
       const data = await response.json();
-      console.log("Response data:", data);
+      logger.debug("Response data:", data);
 
       if (!response.ok) {
         // Show specific error message from backend
         const errorMessage =
           data.message || data.error || "Failed to submit refund request";
-        console.error("Backend error:", errorMessage);
+        logger.error("Backend error:", errorMessage);
         throw new Error(errorMessage);
       }
 
-      console.log("Refund submitted successfully!");
+      logger.info("Refund submitted successfully!");
       setShowConfirmModal(false);
       toast.success(
         "Refund request submitted successfully! You will be notified via email when your request is reviewed."
@@ -256,13 +257,13 @@ const RefundRequest = () => {
 
       // Navigate to refund list page to see the newly created request
       setTimeout(() => {
-        console.log("Navigating to /profile/refunds");
+        logger.debug("Navigating to /profile/refunds");
         navigate("/profile/refunds");
       }, 1500);
     } catch (error) {
-      console.error("=== Error submitting refund ===");
-      console.error("Error details:", error);
-      console.error("Error message:", error.message);
+      logger.error("=== Error submitting refund ===");
+      logger.error("Error details:", error);
+      logger.error("Error message:", error.message);
       toast.error(error.message || "Error submitting refund request");
       throw error; // Rethrow to let modal handle loading state
     }

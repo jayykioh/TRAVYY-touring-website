@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Send, ArrowLeft, CheckCircle } from "lucide-react";
 import { toast, Toaster } from "sonner";
+import logger from "../utils/logger";
 import axios from "axios";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
@@ -34,7 +35,7 @@ export default function ForgotPassword() {
         toast.success("Link đặt lại mật khẩu đã được gửi đến email của bạn!");
       }
     } catch (error) {
-      console.error("Forgot password error:", error);
+      logger.error("Forgot password error:", error);
       // Vẫn hiển thị success để không tiết lộ email có tồn tại hay không (security)
       setEmailSent(true);
       toast.success("Nếu email tồn tại, link đặt lại mật khẩu đã được gửi!");

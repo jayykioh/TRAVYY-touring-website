@@ -1,5 +1,7 @@
 import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
+// Initialize client logger (patches console based on NODE_ENV)
+import "./initClientLogger";
 import { BrowserRouter } from "react-router-dom";
 import "./index.css";
 

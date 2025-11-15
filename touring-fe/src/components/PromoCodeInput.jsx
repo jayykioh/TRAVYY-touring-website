@@ -1,5 +1,6 @@
 import { useState, useContext } from 'react';
 import { AuthCtx } from '../auth/context';
+import logger from "../utils/logger";
 
 const PromoCodeInput = ({ totalAmount, onApply }) => {
   const [code, setCode] = useState('');
@@ -42,7 +43,7 @@ const PromoCodeInput = ({ totalAmount, onApply }) => {
         onApply(null);
       }
     } catch (error) {
-      console.error('❌ PromoCodeInput: Validate error:', error);
+      logger.error('❌ PromoCodeInput: Validate error:', error);
       setError(error.message || 'Có lỗi xảy ra');
       setResult(null);
       onApply(null);

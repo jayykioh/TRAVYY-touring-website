@@ -13,6 +13,7 @@ import RecentReviewsTable from "./RecentReviewsTable";
 import AgeDistributionChart from "./AgeDistributionChart";
 import TopTravelersTable from "./TopTravelersTable";
 import { adminAPI } from "../../services/adminAPI";
+import logger from "../../../utils/logger";
 
 import {
   summaryStats,
@@ -60,7 +61,7 @@ const Dashboard = () => {
       setLastRefresh(new Date());
       setIsRefreshing(false);
     } catch (error) {
-      console.error("Error refreshing dashboard:", error);
+      logger.error("Error refreshing dashboard:", error);
       setIsRefreshing(false);
     }
   };
@@ -249,9 +250,9 @@ const Dashboard = () => {
           setDashboardStats(updatedStats);
         }
       } catch (error) {
-        console.error("Error fetching dashboard stats:", error);
-        // Giữ mock data nếu API fail
-      }
+          logger.error("Error fetching dashboard stats:", error);
+          // Giữ mock data nếu API fail
+        }
     };
 
     // Only fetch if authenticated (token present)
@@ -270,11 +271,11 @@ const Dashboard = () => {
         if (result.success && result.data) {
           setRevenueChartData(result.data);
         } else {
-          console.error("API response not successful:", result);
+          logger.error("API response not successful:", result);
           setRevenueChartData(revenueData); // Fallback
         }
       } catch (error) {
-        console.error("Error fetching revenue data:", error);
+        logger.error("Error fetching revenue data:", error);
         setRevenueChartData(revenueData); // Fallback to mock data
       } finally {
         setLoading(false);
@@ -295,11 +296,11 @@ const Dashboard = () => {
         if (result.success && result.data) {
           setCategoryChartData(result.data);
         } else {
-          console.error("Category API response not successful:", result);
+          logger.error("Category API response not successful:", result);
           setCategoryChartData(tourCategoryData); // Fallback
         }
       } catch (error) {
-        console.error("Error fetching category data:", error);
+        logger.error("Error fetching category data:", error);
         setCategoryChartData(tourCategoryData); // Fallback to mock data
       }
     };
@@ -367,10 +368,10 @@ const Dashboard = () => {
 
           setUserMetrics(updatedMetrics);
         } else {
-          console.error("User metrics API response not successful:", result);
+          logger.error("User metrics API response not successful:", result);
         }
       } catch (error) {
-        console.error("Error fetching user metrics:", error);
+        logger.error("Error fetching user metrics:", error);
         // Giữ mock data nếu API fail
       }
     };
@@ -420,7 +421,7 @@ const Dashboard = () => {
           setRecentReviewsData(reviewsResult.data);
         }
       } catch (error) {
-        console.error("Error fetching chart data:", error);
+        logger.error("Error fetching chart data:", error);
         // Giữ mock data nếu API fail
       }
     };

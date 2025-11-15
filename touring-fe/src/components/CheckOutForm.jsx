@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import useLocationOptions from "../hooks/useLocation";
 import { useLocation } from "react-router-dom";
 import VoucherSelector from "./VoucherSelector";
+import logger from '@/utils/logger';
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -51,14 +52,14 @@ export default function CheckoutForm({
   const tourInfo = location.state?.tourInfo || {};
   const isTourRequest = mode === 'tour-request';
   
-  console.log("🔍 CheckoutForm loaded:");
-  console.log("   location.state:", location.state);
-  console.log("   mode:", mode);
-  console.log("   buyNowItem:", buyNowItem);
-  console.log("   requestId:", requestId);
-  console.log("   itinerary items:", itinerary.length);
-  console.log("   zone:", zoneName, "tourInfo:", tourInfo);
-  console.log("   isTourRequest:", isTourRequest);
+  logger.debug("🔍 CheckoutForm loaded:");
+  logger.debug("   location.state:", location.state);
+  logger.debug("   mode:", mode);
+  logger.debug("   buyNowItem:", buyNowItem);
+  logger.debug("   requestId:", requestId);
+  logger.debug("   itinerary items:", itinerary.length);
+  logger.debug("   zone:", zoneName, "tourInfo:", tourInfo);
+  logger.debug("   isTourRequest:", isTourRequest);
 
 
   const [userInfo, setUserInfo] = useState({
@@ -114,7 +115,7 @@ export default function CheckoutForm({
         }));
         didPrefetchRef.current = true;
       } catch (e) {
-        console.error("Prefill profile failed:", e);
+        logger.error("Prefill profile failed:", e);
       } finally { 
         setIsLoadingProfile(false); 
       }
@@ -177,7 +178,7 @@ export default function CheckoutForm({
       }));
       setIsDialogOpen(false);
     } catch (e) {
-      console.error("Update profile error:", e);
+      logger.error("Update profile error:", e);
     } finally { setIsLoadingProfile(false); }
   };
 
@@ -203,7 +204,7 @@ export default function CheckoutForm({
   const handlePayment = async () => {
     // ⬇️ NGĂN CHẶN MULTIPLE CLICKS
     if (isProcessingPayment) {
-      console.log("⚠️ Payment already in progress, ignoring click");
+      logger.warn("⚠️ Payment already in progress, ignoring click");
       return;
     }
 
@@ -228,7 +229,7 @@ export default function CheckoutForm({
 
         // Guard: tour-request must include requestId
         if (mode === 'tour-request' && !requestId) {
-          console.error('[CheckoutForm] Missing requestId for tour-request payment');
+          logger.error('[CheckoutForm] Missing requestId for tour-request payment');
           alert('Không thể tiếp tục: thiếu requestId cho yêu cầu tour. Vui lòng quay lại và thử lại.');
           setIsProcessingPayment(false);
           return;
@@ -252,7 +253,7 @@ export default function CheckoutForm({
           }),
         };
 
-        console.log("📦 Sending payment request:", JSON.stringify(payload, null, 2));
+        logger.info("📦 Sending payment request:", JSON.stringify(payload, null, 2));
         
         const respJson = await withAuth('/api/paypal/create-order', {
           method: 'POST',
@@ -268,14 +269,14 @@ export default function CheckoutForm({
           throw new Error("Không nhận được orderID từ server");
         }
 
-        console.log("✅ Order created, redirecting to PayPal:", orderID, respJson);
+        logger.info("✅ Order created, redirecting to PayPal:", orderID, respJson);
 
         // Redirect đến PayPal (không reset isProcessingPayment vì sẽ redirect)
         const paypalUrl = `https://www.sandbox.paypal.com/checkoutnow?token=${orderID}`;
         window.location.href = paypalUrl;
 
       } catch (error) {
-        console.error("❌ PayPal payment error:", error, error?.body || error?.stack || null);
+          logger.error("❌ PayPal payment error:", error, error?.body || error?.stack || null);
         // Prefer server-provided error message/body when available
         const serverBody = error?.body || (error && error.detail) || null;
         const userMsg = serverBody?.error || serverBody?.message || error.message || 'Lỗi khi tạo đơn PayPal';
@@ -312,7 +313,7 @@ export default function CheckoutForm({
             originalPrice: Number(it.originalPrice)||undefined,
         }));
 
-        console.log("🚀 Creating MoMo payment", { 
+        logger.info("🚀 Creating MoMo payment", { 
           amount, 
           itemsSnapshot, 
           voucherCode: appliedVoucher?.code,
@@ -320,7 +321,7 @@ export default function CheckoutForm({
         });
         // Guard: tour-request must include requestId
         if (mode === 'tour-request' && !requestId) {
-          console.error('[CheckoutForm] Missing requestId for tour-request payment (MoMo)');
+          logger.error('[CheckoutForm] Missing requestId for tour-request payment (MoMo)');
           alert('Không thể tiếp tục: thiếu requestId cho yêu cầu tour. Vui lòng quay lại và thử lại.');
           setIsProcessingPayment(false);
           return;
@@ -358,7 +359,7 @@ export default function CheckoutForm({
           }),
         });
 
-        console.log('MoMo response:', data);
+        logger.info('MoMo response:', data);
         if (!data?.payUrl) {
           const serverMsg = data?.error || data?.message || 'Tạo phiên thanh toán MoMo thất bại';
           if (!import.meta.env.PROD) {
@@ -372,7 +373,7 @@ export default function CheckoutForm({
         // Redirect sang MoMo
         window.location.href = data.payUrl;
       } catch (err) {
-        console.error("MoMo error", err, err?.body || err?.stack || null);
+        logger.error("MoMo error", err, err?.body || err?.stack || null);
         const serverBody = err?.body || (err && err.detail) || null;
         const userMsg = serverBody?.error || serverBody?.message || err.message || 'Lỗi khi tạo MoMo payment';
         if (serverBody && !import.meta.env.PROD) {

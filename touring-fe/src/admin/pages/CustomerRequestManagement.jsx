@@ -9,6 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import logger from "../../utils/logger";
 
 // Components
 import StatCard from "../components/Dashboard/StatsCard";
@@ -58,7 +59,7 @@ const CustomerRequestManagement = () => {
         setRequests([]);
       }
     } catch (error) {
-      console.error("❌ Fetch requests error:", error);
+      logger.error("❌ Fetch requests error:", error);
       toast.error("Có lỗi xảy ra khi tải dữ liệu");
       setRequests([]);
     } finally {

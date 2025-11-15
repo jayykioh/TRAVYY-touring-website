@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useRef } from "react";
+import logger from "../utils/logger";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -125,8 +126,8 @@ export default function MapLibrePanel({
           if (!map.current.hasImage(e.id)) {
             map.current.addImage(e.id, new ImageData(1, 1));
           }
-        } catch {
-          console.log(e);
+        } catch (e) {
+          logger.debug(e);
         }
       });
 
@@ -137,7 +138,7 @@ export default function MapLibrePanel({
         if (map.current.isStyleLoaded()) applyRoute(map.current);
       });
     } catch (err) {
-      console.error("Map init error:", err);
+      logger.error("Map init error:", err);
       onError?.(err);
     }
 

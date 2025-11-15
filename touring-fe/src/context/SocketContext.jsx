@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import logger from '@/utils/logger';
 import { io } from 'socket.io-client';
 import { useAuth } from '../auth/context';
 
@@ -22,7 +23,7 @@ export function SocketProvider({ children }) {
       try {
         socketRef.current.disconnect();
       } catch (err) {
-        console.warn('[SocketProvider] previous socket disconnect failed', err?.message || err);
+        logger.warn('[SocketProvider] previous socket disconnect failed', err?.message || err);
       }
       socketRef.current = null;
     }
@@ -31,7 +32,7 @@ export function SocketProvider({ children }) {
     let token = auth?.accessToken || localStorage.getItem('accessToken') || null;
     if (token === 'null' || token === 'undefined') token = null;
 
-    console.log('[SocketProvider] Connecting to socket:', { 
+    logger.info('[SocketProvider] Connecting to socket:', { 
       API_URL, 
       hasToken: !!token, 
       tokenPreview: token ? token.slice(0, 20) + '...' : 'none',
@@ -57,23 +58,23 @@ export function SocketProvider({ children }) {
     socketRef.current = socket;
 
     const onConnect = () => {
-      console.info('[SocketProvider] ✅ connected successfully');
+      logger.info('[SocketProvider] ✅ connected successfully');
       setConnected(true);
     };
     const onDisconnect = (reason) => {
-      console.info('[SocketProvider] ⚠️ disconnected, reason:', reason);
+      logger.info('[SocketProvider] ⚠️ disconnected, reason:', reason);
       setConnected(false);
     };
     const onConnectError = (err) => {
-      console.warn('[SocketProvider] ❌ connect error:', err?.message || err?.data?.message || JSON.stringify(err));
+      logger.warn('[SocketProvider] ❌ connect error:', err?.message || err?.data?.message || JSON.stringify(err));
     };
 
     // Additional engine-level error logging for deeper diagnostics
     const onError = (err) => {
       try {
-        console.error('[SocketProvider] engine error:', err && (err.message || JSON.stringify(err)));
+        logger.error('[SocketProvider] engine error:', err && (err.message || JSON.stringify(err)));
       } catch {
-        console.error('[SocketProvider] engine error (stringify failed)');
+        logger.error('[SocketProvider] engine error (stringify failed)');
       }
     };
 
@@ -81,7 +82,7 @@ export function SocketProvider({ children }) {
     socket.on('disconnect', onDisconnect);
     socket.on('connect_error', onConnectError);
   socket.io && socket.io.on && socket.io.on('error', onError);
-  socket.io && socket.io.on && socket.io.on('reconnect_attempt', (attempt) => console.info('[SocketProvider] reconnect attempt', attempt));
+  socket.io && socket.io.on && socket.io.on('reconnect_attempt', (attempt) => logger.info('[SocketProvider] reconnect attempt', attempt));
 
     return () => {
       try {
@@ -91,7 +92,7 @@ export function SocketProvider({ children }) {
         socket.io && socket.io.off && socket.io.off('error', onError);
         socket.disconnect();
       } catch (err) {
-        console.warn('[SocketProvider] disconnect error', err?.message || err);
+        logger.warn('[SocketProvider] disconnect error', err?.message || err);
       }
     };
   }, [auth?.accessToken]);
@@ -108,18 +109,18 @@ export function SocketProvider({ children }) {
     if (s.connected) {
       try {
         s.emit('joinRoom', `user-${userId}`);
-        console.info('[SocketProvider] joined user room', `user-${userId}`);
+        logger.info('[SocketProvider] joined user room', `user-${userId}`);
       } catch (err) {
-        console.warn('[SocketProvider] failed to join user room', err?.message || err);
+        logger.warn('[SocketProvider] failed to join user room', err?.message || err);
       }
     } else {
       // If not connected yet, wait for connect then join once
       const onConnectJoin = () => {
         try {
           s.emit('joinRoom', `user-${userId}`);
-          console.info('[SocketProvider] joined user room on connect', `user-${userId}`);
+          logger.info('[SocketProvider] joined user room on connect', `user-${userId}`);
         } catch (err) {
-          console.warn('[SocketProvider] failed to join user room on connect', err?.message || err);
+          logger.warn('[SocketProvider] failed to join user room on connect', err?.message || err);
         }
       };
       s.on('connect', onConnectJoin);

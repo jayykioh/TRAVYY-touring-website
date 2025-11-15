@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, TrendingUp, MapPin, Heart, Award, ChevronRight, ArrowRight, Compass } from 'lucide-react';
 import { useAuth } from '../auth/context';
+import logger from "../utils/logger";
 import { useNavigate } from 'react-router-dom';
 
 /**
@@ -67,7 +68,7 @@ const DiscoveryWrappedNew = () => {
       const data = await withAuth('/api/recommendations/profile');
       setProfile(data);
     } catch (err) {
-      console.error('Fetch profile error:', err);
+      logger.error('Fetch profile error:', err);
       setError(err.response?.data?.message || 'Không thể tải hồ sơ của bạn');
     } finally {
       setLoading(false);

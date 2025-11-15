@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import logger from '@/utils/logger';
 import {
   X,
   Star,
@@ -72,7 +73,7 @@ function ReviewModal({
 
       setImages((prev) => [...prev, ...newImages].slice(0, 5)); // Max 5 images
     } catch (error) {
-      console.error("Error uploading images:", error);
+      logger.error("Error uploading images:", error);
       toast.error("Có lỗi khi tải hình ảnh");
     } finally {
       setUploadingImages(false);
@@ -104,7 +105,7 @@ function ReviewModal({
     setIsSubmitting(true);
 
     try {
-      console.log("Submitting review with data:", {
+      logger.info("Submitting review with data:", {
         tourId,
         bookingId,
         rating,
@@ -140,7 +141,7 @@ function ReviewModal({
       setComment("");
       setImages([]);
     } catch (error) {
-      console.error("Error submitting review:", error);
+      logger.error("Error submitting review:", error);
 
       // Try to get error message from response
       let errorMessage = "Không thể gửi đánh giá. Vui lòng thử lại";
@@ -494,7 +495,7 @@ function TourReviews({ tourId }) {
         setStats(data.stats || null);
       }
     } catch (error) {
-      console.error("Error fetching reviews:", error);
+      logger.error("Error fetching reviews:", error);
     } finally {
       setLoading(false);
     }
@@ -648,7 +649,7 @@ export default function ProfileReviews() {
 
   // ✅ Add effect to log state changes
   useEffect(() => {
-    console.log(
+    logger.debug(
       "📊 State changed - Reviews:",
       userReviews.length,
       "Pending:",
@@ -674,10 +675,10 @@ export default function ProfileReviews() {
         // Backend returns { bookings: [...] }
         const reviewableBookings = reviewableData.bookings || [];
 
-        console.log("✅ Fetched reviews:", reviews.length);
-        console.log("⏳ Reviewable bookings:", reviewableBookings.length);
-        console.log("📋 Reviewable bookings data:", reviewableBookings);
-        console.log(
+        logger.debug("✅ Fetched reviews:", reviews.length);
+        logger.debug("⏳ Reviewable bookings:", reviewableBookings.length);
+        logger.debug("📋 Reviewable bookings data:", reviewableBookings);
+        logger.debug(
           "📊 Total reviews in pagination:",
           reviewsData.pagination?.totalReviews
         );
@@ -696,7 +697,7 @@ export default function ProfileReviews() {
         setUserReviews(reviews);
         setPendingBookings(mapped);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        logger.error("Error fetching data:", error);
         toast.error("Không thể tải dữ liệu đánh giá");
       } finally {
         setLoading(false);
@@ -970,7 +971,7 @@ export default function ProfileReviews() {
                 ? tourInfo.imageItems[0].imageUrl
                 : null;
 
-            console.log("Pending tour item:", {
+            logger.debug("Pending tour item:", {
               tourId,
               title: tourInfo.title,
               imageItems: tourInfo.imageItems,
@@ -1079,7 +1080,7 @@ export default function ProfileReviews() {
 
             // Refresh data to update both tabs
             try {
-              console.log("🔄 Refreshing review data...");
+              logger.info("🔄 Refreshing review data...");
 
               // ✅ Increase delay to 2 seconds to ensure backend has committed the review
               await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -1093,32 +1094,20 @@ export default function ProfileReviews() {
               const reviews = reviewsData.reviews || [];
               const reviewableBookings = reviewableData.bookings || [];
 
-              console.log("✅ Updated reviews count:", reviews.length);
-              console.log(
+              logger.debug("✅ Updated reviews count:", reviews.length);
+              logger.debug(
                 "⏳ Updated reviewable count:",
                 reviewableBookings.length
               );
-              console.log(
+              logger.debug(
                 "📊 New reviews:",
                 reviews.map((r) => r._id)
               );
-              console.log(
+              logger.debug(
                 "📋 New reviewable bookings:",
                 reviewableBookings.map((b) => b._id)
               );
-              console.log(
-                "📈 Total reviews in DB:",
-                reviewsData.pagination?.totalReviews
-              );
-              console.log(
-                "📊 New reviews:",
-                reviews.map((r) => r._id)
-              );
-              console.log(
-                "📋 New reviewable bookings:",
-                reviewableBookings.map((b) => b._id)
-              );
-              console.log(
+              logger.debug(
                 "📈 Total reviews in DB:",
                 reviewsData.pagination?.totalReviews
               );
@@ -1135,7 +1124,7 @@ export default function ProfileReviews() {
               });
 
               // ✅ Force state update with new array references
-              console.log(
+              logger.debug(
                 "🔄 Before setState - userReviews:",
                 userReviews.length,
                 "pendingBookings:",
@@ -1145,7 +1134,7 @@ export default function ProfileReviews() {
               setUserReviews([...reviews]); // Create new array reference
               setPendingBookings([...mapped]); // Create new array reference
 
-              console.log(
+              logger.debug(
                 "✅ After setState - should be:",
                 reviews.length,
                 mapped ? mapped.length : reviewableBookings.length
@@ -1154,7 +1143,7 @@ export default function ProfileReviews() {
               // Wait a tick for state to propagate
               await new Promise((resolve) => setTimeout(resolve, 100));
 
-              console.log("✅ State updated successfully");
+              logger.info("✅ State updated successfully");
 
               // Dismiss loading and show success
               toast.success("Đã thêm đánh giá thành công!", {
@@ -1164,7 +1153,7 @@ export default function ProfileReviews() {
               // Switch to reviewed tab to show the new review
               setActiveTab("reviewed");
             } catch (error) {
-              console.error("❌ Error refreshing data:", error);
+              logger.error("❌ Error refreshing data:", error);
               toast.error(
                 "Không thể cập nhật danh sách. Vui lòng tải lại trang.",
                 { id: "refresh-reviews" }

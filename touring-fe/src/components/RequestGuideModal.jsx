@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/auth/context';
 import { useNavigate } from 'react-router-dom';
 import { useCheckActiveRequest } from '@/hooks/useCheckActiveRequest';
+import logger from '@/utils/logger';
 
 export default function RequestGuideModal({ isOpen, onClose, itineraryId, itineraryName, itineraryLocation }) {
   const { withAuth, user } = useAuth();
@@ -64,7 +65,7 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
       
       const data = await withAuth(`/api/guide/available?${params.toString()}`);
       
-      console.log('📍 [Guides] Loaded for zone:', itineraryLocation, 'Found:', data.guides?.length || 0);
+      logger.info('📍 [Guides] Loaded for zone:', itineraryLocation, 'Found:', data.guides?.length || 0);
       setGuides(data.guides || []);
       
       // Show info if no guides found in this area
@@ -74,7 +75,7 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
         });
       }
     } catch (error) {
-      console.error('Error loading guides:', error);
+      logger.error('Error loading guides:', error);
       toast.error('Không thể tải danh sách hướng dẫn viên');
       setGuides([]);
     } finally {
@@ -87,17 +88,17 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
     if (!isOpen) return;
 
     const checkAndLoadGuides = async () => {
-      console.log('[RequestGuide] Modal opened, checking for active requests...');
+      logger.debug('[RequestGuide] Modal opened, checking for active requests...');
       
       // 1. Check for active request (fast check first)
       if (itineraryId) {
         try {
-          console.log('[RequestGuide] Checking active request for itinerary:', itineraryId);
+          logger.debug('[RequestGuide] Checking active request for itinerary:', itineraryId);
           const result = await checkActiveRequest(itineraryId);
-          console.log('[RequestGuide] Active request check result:', result);
+          logger.debug('[RequestGuide] Active request check result:', result);
           
           if (result?.hasActive) {
-            console.log('[RequestGuide] User already has active request:', result.requestId);
+            logger.info('[RequestGuide] User already has active request:', result.requestId);
             toast.error('Bạn đã có yêu cầu đang chờ xử lý cho lộ trình này. Hãy xem trang "Yêu cầu của tôi".', {
               duration: 4000,
               action: {
@@ -111,13 +112,13 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
             return; // Don't load guides if already has active request
           }
         } catch (error) {
-          console.warn('[RequestGuide] Active request check failed (continuing anyway):', error.message);
+            logger.warn('[RequestGuide] Active request check failed (continuing anyway):', error.message);
           // Continue loading guides even if check fails - don't block the modal
         }
       }
 
       // 2. Load available guides in parallel
-      console.log('[RequestGuide] Loading available guides...');
+      logger.debug('[RequestGuide] Loading available guides...');
       loadGuides();
     };
 
@@ -174,10 +175,10 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
     setSubmitting(true);
     try {
       // Check for active request again (race condition prevention)
-      console.log('[RequestGuide] Checking for active request (pre-submit)...');
+      logger.debug('[RequestGuide] Checking for active request (pre-submit)...');
       try {
         const activeCheck = await checkActiveRequest(itineraryId);
-        console.log('[RequestGuide] Pre-submit active check:', activeCheck);
+        logger.debug('[RequestGuide] Pre-submit active check:', activeCheck);
         if (activeCheck?.hasActive) {
           toast.error('Bạn đã có yêu cầu đang chờ xử lý cho lộ trình này.', {
             duration: 3000,
@@ -190,7 +191,7 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
           return;
         }
       } catch (checkError) {
-        console.warn('[RequestGuide] Pre-submit check failed, proceeding anyway:', checkError.message);
+        logger.warn('[RequestGuide] Pre-submit check failed, proceeding anyway:', checkError.message);
         // Continue with submission - backend will validate
       }
 
@@ -211,8 +212,8 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
         },
       };
 
-      console.log('🔍 [RequestGuide] Sending request body:', requestBody);
-      console.log('📋 [RequestGuide] Selected guide details:', {
+      logger.info('🔍 [RequestGuide] Sending request body:', requestBody);
+      logger.info('📋 [RequestGuide] Selected guide details:', {
         id: selectedGuide._id,
         name: selectedGuide.name,
         rating: selectedGuide.rating
@@ -226,7 +227,7 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
         body: JSON.stringify(requestBody),
       });
 
-      console.log('✅ [RequestGuide] Success response:', result);
+      logger.info('✅ [RequestGuide] Success response:', result);
 
       // Show success message
       toast.success('Đã gửi yêu cầu thành công! Đang chuyển hướng...', {
@@ -253,7 +254,7 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
         navigate('/profile/my-tour-requests');
       }, 300); // Shorter delay for faster response
     } catch (error) {
-      console.error('❌ [RequestGuide] Error submitting request:', {
+      logger.error('❌ [RequestGuide] Error submitting request:', {
         message: error.message,
         status: error.status,
         body: error.body,
@@ -272,7 +273,7 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
       }
       
       // Log the full error details for debugging
-      console.error('[RequestGuide] Full error details:', {
+      logger.error('[RequestGuide] Full error details:', {
         status: error.status,
         body: JSON.stringify(error.body),
         message: errorMessage

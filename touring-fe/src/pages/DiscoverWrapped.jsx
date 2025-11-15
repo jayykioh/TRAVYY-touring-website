@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 // pages/DiscoverWrapped.jsx - Spotify Wrapped-style top 3 zones reveal
 import React, { useState, useEffect } from "react";
+import logger from "../utils/logger";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -157,7 +158,7 @@ export default function DiscoverWrapped() {
     try {
       window.sessionStorage.setItem('from_wrapped', 'true');
     } catch (err) {
-      console.error('SessionStorage error:', err);
+      logger.error('SessionStorage error:', err);
     }
     navigate("/discover-results", { state: { data } });
   };
@@ -167,7 +168,7 @@ export default function DiscoverWrapped() {
     try {
       window.sessionStorage.removeItem('from_wrapped');
     } catch (err) {
-      console.error('SessionStorage error:', err);
+      logger.error('SessionStorage error:', err);
     }
     
     navigate(`/zone/${zone.id}`, {

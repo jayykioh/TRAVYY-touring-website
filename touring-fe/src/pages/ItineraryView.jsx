@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useMemo, useState } from 'react';
+import logger from "../utils/logger";
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Clock, Sparkles, Navigation, ExternalLink, ShoppingCart, Building2, Download, Share2, ChevronDown, ChevronUp, Star, Phone, Globe, Calendar, Users, Camera, Heart, Coffee, Utensils, Plane } from 'lucide-react';
 import { useItinerary } from '@/hooks/useIntinerary';
@@ -38,7 +39,7 @@ export default function ItineraryView() {
 
   useEffect(() => {
     if (itinerary?.items) {
-      console.log('🗺️ ItineraryView - Items with coordinates:',
+      logger.debug('🗺️ ItineraryView - Items with coordinates:',
         itinerary.items.map((item, idx) => ({
           index: idx + 1,
           name: item.name,
@@ -74,8 +75,8 @@ export default function ItineraryView() {
       return `${lat},${lng}`;
     }).join('|');
 
-    console.log('📍 Distance Matrix Origins:', origins);
-    console.log('✅ Valid items:', validItems.length, '/', itinerary.items.length);
+    logger.debug('📍 Distance Matrix Origins:', origins);
+    logger.debug('✅ Valid items:', validItems.length, '/', itinerary.items.length);
     return { origins, validItems };
   };
 
@@ -109,7 +110,7 @@ export default function ItineraryView() {
     try {
       setIsOptimizing(true);
       const { validItems } = prepareForDistanceMatrix();
-      console.log('🚀 Calling backend optimize-ai for itinerary:', itinerary._id, {
+      logger.info('🚀 Calling backend optimize-ai for itinerary:', itinerary._id, {
         validCount: validItems.length
       });
 
@@ -119,13 +120,13 @@ export default function ItineraryView() {
         body: JSON.stringify({})
       });
 
-      console.log('✅ Optimize result:', data.itinerary);
+      logger.info('✅ Optimize result:', data.itinerary);
       toast.success('Tối ưu hành trình thành công!');
       navigate(`/itinerary/result/${data.itinerary._id}`, {
         state: { itinerary: data.itinerary }
       });
     } catch (error) {
-      console.error('❌ Optimize error:', error);
+      logger.error('❌ Optimize error:', error);
       if (error.status === 400) {
         toast.error(error.body?.error || 'Dữ liệu không hợp lệ');
       } else if (error.status === 404) {

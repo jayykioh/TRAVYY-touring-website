@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import logger from "../utils/logger";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/auth/context";
 import { useCart } from "@/hooks/useCart";
@@ -63,7 +64,7 @@ export default function PaymentCallback() {
             throw new Error('Không thể hoàn tất thanh toán');
           }
         } catch(e) {
-          console.error('PayPal callback error', e);
+          logger.error('PayPal callback error', e);
           setStatus('error');
           setMessage(e.message || 'Lỗi thanh toán PayPal');
         }
@@ -82,8 +83,8 @@ export default function PaymentCallback() {
           
           // STEP 1: Call mark-paid to ensure session is marked as paid
           // STEP 1: Call mark-paid to ensure session is marked as paid
-          try {
-            console.log('[MoMo Callback] Calling mark-paid for orderId:', momoOrderId);
+            try {
+            logger.info('[MoMo Callback] Calling mark-paid for orderId:', momoOrderId);
             const markPaidResp = await fetch(`${API_BASE_ROOT}/api/payments/momo/mark-paid`, {  
               method: 'POST',
               headers: {
@@ -96,7 +97,7 @@ export default function PaymentCallback() {
             
             if (markPaidResp.ok) {
               const markData = await markPaidResp.json();
-              console.log('[MoMo Callback] Mark-paid response:', markData);
+              logger.debug('[MoMo Callback] Mark-paid response:', markData);
               if (markData.bookingId) {
                 setStatus('success');
                 setMessage('Thanh toán MoMo thành công!');
@@ -106,11 +107,11 @@ export default function PaymentCallback() {
                 return;
               }
             } else {
-              console.warn('[MoMo Callback] Mark-paid failed:', markPaidResp.status);
-              console.warn('[MoMo Callback] Mark-paid failed:', markPaidResp.status);
+              logger.warn('[MoMo Callback] Mark-paid failed:', markPaidResp.status);
+              logger.warn('[MoMo Callback] Mark-paid failed:', markPaidResp.status);
             }
           } catch (e) {
-            console.error('[MoMo Callback] Mark-paid error:', e);
+            logger.error('[MoMo Callback] Mark-paid error:', e);
           }
           
           // STEP 2: Try realtime detection via socket then fallback to polling
@@ -131,19 +132,19 @@ export default function PaymentCallback() {
                     if (leaveRoom) leaveRoom(`payment-${momoOrderId}`);
                   }
                 } catch (e) {
-                  console.error('[MoMo Callback] socket handler error', e);
+                  logger.error('[MoMo Callback] socket handler error', e);
                 }
               });
             } catch (e) {
-              console.warn('[MoMo Callback] socket init failed, will fallback to polling', e?.message);
+              logger.warn('[MoMo Callback] socket init failed, will fallback to polling', e?.message);
             }
           }
 
           // STEP 2 (fallback): Poll booking creation via by-payment endpoint
           const poll = async () => {
             attempts++;
-            try {
-              console.log(`[MoMo Callback] Polling attempt ${attempts} for orderId: ${momoOrderId}`);
+              try {
+              logger.debug(`[MoMo Callback] Polling attempt ${attempts} for orderId: ${momoOrderId}`);
               const r = await fetch(`${API_BASE_ROOT}/api/bookings/by-payment/momo/${momoOrderId}`, {
                 headers: { 
                   'Authorization': `Bearer ${user?.token}`,
@@ -151,11 +152,11 @@ export default function PaymentCallback() {
                 },
                 credentials: 'include'
               });
-              console.log(`[MoMo Callback] Response status: ${r.status}`);
+              logger.debug(`[MoMo Callback] Response status: ${r.status}`);
               
               if (r.ok) {
                 const d = await r.json();
-                console.log('[MoMo Callback] Response data:', d);
+                logger.debug('[MoMo Callback] Response data:', d);
                 if (d?.booking?._id) {
                   setStatus('success');
                   setMessage('Thanh toán MoMo thành công!');
@@ -166,13 +167,13 @@ export default function PaymentCallback() {
                 }
               } else if (r.status === 202) {
                 // Still processing
-                console.log('[MoMo Callback] Payment still processing...');
+                logger.debug('[MoMo Callback] Payment still processing...');
               } else {
                 const errData = await r.json().catch(() => ({}));
-                console.warn('[MoMo Callback] Error response:', errData);
+                logger.warn('[MoMo Callback] Error response:', errData);
               }
             } catch (e) { 
-              console.error('[MoMo Callback] Poll error:', e);
+              logger.error('[MoMo Callback] Poll error:', e);
             }
             if (attempts < 15) setTimeout(poll, 2000);
             else {
@@ -207,6 +208,24 @@ export default function PaymentCallback() {
     };
     run();
   }, [searchParams, user, refreshCart, joinRoom, on, leaveRoom]);
+
+  // Auto-redirect after a successful payment to avoid users getting lost
+  useEffect(() => {
+    if (status !== 'success') return;
+
+    // If bookingId available, go to booking detail page; otherwise go to booking history
+    const dest = bookingId ? `/bookings/${bookingId}` : `/profile/booking-history`;
+
+    const timer = setTimeout(() => {
+      try {
+        navigate(dest, { replace: true });
+      } catch (e) {
+        logger.warn('Auto-redirect failed', e);
+      }
+    }, 2500); // give user 2.5s to read the success message
+
+    return () => clearTimeout(timer);
+  }, [status, bookingId, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

@@ -146,85 +146,50 @@ export default function Header() {
                       </div>
                     </div>
                   </NavigationMenuContent>
-                </NavigationMenuItem>
-
-                
+                </NavigationMenuItem>                
 
                 {/* Khám phá ngay */}
-      <NavigationMenuItem>
-  <NavigationMenuTrigger
-    className="
-      rounded-full
-      bg-white/40 
-      backdrop-blur-md 
-      border border-white/50
-      text-gray-900 
-      hover:bg-white/50 
-      transition
-    "
-  >
-    Khám phá ngay
-  </NavigationMenuTrigger>
-
-  <NavigationMenuContent
-    className="
-      rounded-2xl
-      border border-white/40
-      bg-white/30
-      backdrop-blur-xl
-      shadow-lg
-      p-2
-    "
-  >
-    <ul className="grid gap-2 md:w-[320px] lg:w-[400px]">
-      <li>
-        <NavigationMenuLink asChild>
-          <Link
-            to="/available-tours"
-            className="
-              block
-              rounded-xl
-              p-4 
-              hover:bg-white/50 
-              transition
-            "
-          >
-            <div className="text-base font-semibold mb-1">
-              Tours có sẵn
-            </div>
-            <p className="text-sm text-gray-600 leading-snug">
-              Khám phá các tour đã được thiết kế sẵn, đa dạng điểm đến và lịch trình.
-            </p>
-          </Link>
-        </NavigationMenuLink>
-      </li>
-
-      <li>
-        <NavigationMenuLink asChild>
-          <Link
-            to="/ai-tour-creator"
-            className="
-              block
-              rounded-xl
-              p-4 
-              hover:bg-white/50 
-              border border-white/50
-              transition
-            "
-          >
-            <div className="text-base font-semibold mb-1 flex items-center gap-2">
-               Trung tâm tạo lịch trình
-            </div>
-            <p className="text-sm text-gray-600 leading-snug">
-              Chọn giữa tự tạo thủ công hoặc AI gợi ý cá nhân hóa.
-            </p>
-          </Link>
-        </NavigationMenuLink>
-      </li>
-    </ul>
-  </NavigationMenuContent>
-</NavigationMenuItem>
-
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-gray-800 hover:bg-white/30 hover:border-white/40 transition">
+                    Khám phá ngay
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-2xl">
+                    <ul className="grid gap-2 md:w-[320px] lg:w-[400px]">
+                      <li>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            to="/available-tours"
+                            className="block rounded-md p-4 hover:bg-white/30 transition"
+                          >
+                            <div className="text-base font-semibold mb-1">
+                              Tours có sẵn
+                            </div>
+                            <p className="text-muted-foreground text-sm leading-snug">
+                              Khám phá các tour du lịch đã được thiết kế sẵn, đa
+                              dạng điểm đến và lịch trình.
+                            </p>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                      <li>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            to="/ai-tour-creator"
+                            className="block rounded-md p-4 hover:bg-white/30 transition"
+                          >
+                            <div className="text-base font-semibold mb-1">
+                              Tự tạo tour
+                            </div>
+                            <p className="text-muted-foreground text-sm leading-snug">
+                              Tự lên kế hoạch và thiết kế tour du lịch theo ý
+                              thích của bạn.
+                            </p>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                    </ul>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>
 
@@ -353,10 +318,7 @@ export default function Header() {
               <Link 
                 to="/help" 
                 className="flex items-center gap-2 py-2 text-gray-800 hover:text-blue-600" 
-<<<<<<< HEAD
                 onClick={() => setIsMenuOpen(false)}
-=======
->>>>>>> 8e20637a8d8188078aecde30741bd572ab1db75d
               >
                 <HelpCircle className="w-4 h-4" />
                 Trợ giúp

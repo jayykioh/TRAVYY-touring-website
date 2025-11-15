@@ -12,12 +12,13 @@ const { Cart, CartItem } = require("../models/Carts");
 
 // Import unified helpers
 const { clearCartAfterPayment, createBookingFromSession, markBookingAsPaid, markBookingAsFailed, FX_VND_USD } = require("../utils/paymentHelpers");
+const logger = require("../utils/logger");
 
 // Helper function to restore cart from failed payment session
 async function restoreCartFromPaymentSession(session) {
   try {
     if (!session || !session.userId || !session.items || session.items.length === 0) {
-      console.log(`[Payment] No items to restore for session ${session?._id}`);
+      logger.debug(`[Payment] No items to restore for session ${session?._id}`);
       return false;
     }
 
@@ -27,7 +28,7 @@ async function restoreCartFromPaymentSession(session) {
     let cart = await Cart.findOne({ userId: session.userId });
     if (!cart) {
       cart = await Cart.create({ userId: session.userId });
-      console.log(`[Payment] Created new cart for user ${session.userId}`);
+      logger.info(`[Payment] Created new cart for user ${session.userId}`);
     }
 
     // Restore items to cart
@@ -60,14 +61,14 @@ async function restoreCartFromPaymentSession(session) {
     }
 
     if (restoredCount > 0) {
-      console.log(`[Payment] ✅ Restored ${restoredCount} items to cart for user ${session.userId} from failed payment`);
+      logger.info(`[Payment] ✅ Restored ${restoredCount} items to cart for user ${session.userId} from failed payment`);
       return true;
     } else {
-      console.log(`[Payment] All items already exist in cart for user ${session.userId}`);
+      logger.info(`[Payment] All items already exist in cart for user ${session.userId}`);
       return false;
     }
   } catch (error) {
-    console.error(`[Payment] ❌ Failed to restore cart from session ${session?._id}:`, error);
+    logger.error(`[Payment] ❌ Failed to restore cart from session ${session?._id}:`, error);
     return false;
   }
 }
@@ -76,24 +77,24 @@ async function restoreCartFromPaymentSession(session) {
 async function holdSeatsForPayment(session) {
   try {
     if (!session || !session.items || session.items.length === 0) {
-      console.log(`[Payment] No items to hold seats for session ${session?._id}`);
+      logger.debug(`[Payment] No items to hold seats for session ${session?._id}`);
       return false;
     }
 
-    console.log(`[Payment] 🔒 Holding seats for payment session ${session._id}`);
+    logger.info(`[Payment] 🔒 Holding seats for payment session ${session._id}`);
     
     for (const item of session.items) {
       if (!item.tourId) continue;
       
       const tour = await Tour.findById(item.tourId);
       if (!tour) {
-        console.log(`   ⚠️ Tour not found, skipping: ${item.tourId}`);
+        logger.warn(`   ⚠️ Tour not found, skipping: ${item.tourId}`);
         continue;
       }
 
       const dep = tour.departures.find(d => normDate(d.date) === item.meta?.date);
       if (!dep) {
-        console.log(`   ⚠️ Departure not found, skipping: ${item.meta?.date}`);
+        logger.warn(`   ⚠️ Departure not found, skipping: ${item.meta?.date}`);
         continue;
       }
 
@@ -110,7 +111,7 @@ async function holdSeatsForPayment(session) {
         { $inc: { "departures.$.seatsLeft": -needed } }
       );
 
-      console.log(`   ✅ Held ${needed} seats for tour ${item.name} (${item.tourId})`);
+      logger.info(`   ✅ Held ${needed} seats for tour ${item.name} (${item.tourId})`);
     }
 
     // Set timeout to release seats after 1 minute if payment not completed
@@ -119,7 +120,7 @@ setTimeout(async () => {
   try {
     const currentSession = await PaymentSession.findById(session._id);
     if (currentSession && currentSession.status === 'pending') {
-      console.log(`[Payment] ⏰ Timeout reached for session ${session._id}, releasing held seats`);
+      logger.info(`[Payment] ⏰ Timeout reached for session ${session._id}, releasing held seats`);
       await releaseSeatsForPayment(session);
       currentSession.status = 'expired';
       await currentSession.save();
@@ -132,7 +133,7 @@ setTimeout(async () => {
           await createBookingFromSession(currentSession, { failReason: "timeout" }); // => status=cancelled
         }
       } catch (e) {
-        console.warn("[Payment] Failed to create failed booking on timeout:", e.message);
+        logger.warn("[Payment] Failed to create failed booking on timeout:", e.message);
       }
 
       // 🔻 (tuỳ chọn) Gửi mail thông báo hết hạn thanh toán
@@ -150,17 +151,17 @@ setTimeout(async () => {
           }
         }
       } catch (e) {
-        console.warn("[Payment] Failed to send timeout notification:", e.message);
+        logger.warn("[Payment] Failed to send timeout notification:", e.message);
       }
     }
   } catch (error) {
-    console.error(`[Payment] ❌ Failed to release seats on timeout for session ${session._id}:`, error);
+    logger.error(`[Payment] ❌ Failed to release seats on timeout for session ${session._id}:`, error);
   }
 }, 60 * 1000); // 1 minute
 
     return true;
   } catch (error) {
-    console.error(`[Payment] ❌ Failed to hold seats for session ${session?._id}:`, error);
+    logger.error(`[Payment] ❌ Failed to hold seats for session ${session?._id}:`, error);
     throw error;
   }
 }
@@ -169,11 +170,11 @@ setTimeout(async () => {
 async function releaseSeatsForPayment(session) {
   try {
     if (!session || !session.items || session.items.length === 0) {
-      console.log(`[Payment] No items to release seats for session ${session?._id}`);
+      logger.debug(`[Payment] No items to release seats for session ${session?._id}`);
       return false;
     }
 
-    console.log(`[Payment] 🔓 Releasing held seats for payment session ${session._id}`);
+    logger.info(`[Payment] 🔓 Releasing held seats for payment session ${session._id}`);
     
     for (const item of session.items) {
       if (!item.tourId) continue;
@@ -192,12 +193,12 @@ async function releaseSeatsForPayment(session) {
         { $inc: { "departures.$.seatsLeft": needed } }
       );
 
-      console.log(`   ✅ Released ${needed} seats for tour ${item.name} (${item.tourId})`);
+      logger.info(`   ✅ Released ${needed} seats for tour ${item.name} (${item.tourId})`);
     }
 
     return true;
   } catch (error) {
-    console.error(`[Payment] ❌ Failed to release seats for session ${session?._id}:`, error);
+    logger.error(`[Payment] ❌ Failed to release seats for session ${session?._id}:`, error);
     return false;
   }
 }
@@ -205,12 +206,12 @@ async function releaseSeatsForPayment(session) {
 // Helper function to confirm held seats (permanent reduction)
 async function confirmSeatsForPayment(session) {
   try {
-    console.log(`[Payment] ✅ Confirming held seats for successful payment session ${session._id}`);
+    logger.info(`[Payment] ✅ Confirming held seats for successful payment session ${session._id}`);
     // Seats are already reduced, just log success
-    console.log(`[Payment] Seats permanently confirmed for session ${session._id}`);
+    logger.info(`[Payment] Seats permanently confirmed for session ${session._id}`);
     return true;
   } catch (error) {
-    console.error(`[Payment] ❌ Failed to confirm seats for session ${session?._id}:`, error);
+    logger.error(`[Payment] ❌ Failed to confirm seats for session ${session?._id}:`, error);
     return false;
   }
 }
@@ -500,7 +501,7 @@ exports.createMoMoPayment = async (req, res) => {
       retryBookingId,
     } = req.body || {};
 
-    console.log("📥 [MoMo] Received payment request:", {
+    logger.info("📥 [MoMo] Received payment request:", {
       mode,
       buyNowItem,
       frontendAmount: req.body.amount,
@@ -517,7 +518,7 @@ exports.createMoMoPayment = async (req, res) => {
       retryBookingId,
     });
 
-    console.log("🧮 [MoMo] Server calculated:", {
+    logger.debug("🧮 [MoMo] Server calculated:", {
       totalVND,
       serverItems: serverItems.map((it) => ({
         name: it.name,
@@ -541,15 +542,15 @@ exports.createMoMoPayment = async (req, res) => {
     const cappedAmount = Math.min(finalTotalVND, MOMO_TEST_LIMIT);
 
     if (cappedAmount !== finalTotalVND) {
-      console.log(
+      logger.warn(
         `⚠️ MoMo Test Limit: Amount capped from ${finalTotalVND.toLocaleString()} to ${cappedAmount.toLocaleString()} VNĐ`
       );
-      console.log(
+      logger.warn(
         `   Reason: MoMo test wallet limit is ${MOMO_TEST_LIMIT.toLocaleString()} VNĐ`
       );
     }
 
-    console.log("💰 MoMo Price calculation:", {
+    logger.debug("💰 MoMo Price calculation:", {
       originalTotal: totalVND,
       discountAmount,
       finalTotal: finalTotalVND,
@@ -631,7 +632,7 @@ exports.createMoMoPayment = async (req, res) => {
     const isOk = momoRes.ok && data?.payUrl && data?.resultCode === 0;
 
     if (!isOk) {
-      console.warn("[MoMo] create failed", {
+      logger.warn("[MoMo] create failed", {
         status: momoRes.status,
         data,
         rawSignature,
@@ -679,7 +680,7 @@ exports.createMoMoPayment = async (req, res) => {
       await holdSeatsForPayment(paymentSession);
       
     } catch (dbErr) {
-      console.error("Failed to persist payment session", dbErr);
+      logger.error("Failed to persist payment session", dbErr);
       throw dbErr;
     }
 
@@ -692,7 +693,7 @@ exports.createMoMoPayment = async (req, res) => {
       ...(process.env.NODE_ENV !== "production" ? { rawSignature } : {}),
     });
   } catch (e) {
-    console.error("createMoMoPayment error", e && e.stack ? e.stack : e);
+    logger.error("createMoMoPayment error", e && e.stack ? e.stack : e);
     const status = e && e.status ? e.status : 500;
     const errBody = {
       error: e && e.message ? e.message : "INTERNAL_ERROR",
@@ -728,9 +729,9 @@ exports.handleMoMoIPN = async (req, res) => {
   try {
     const body = req.body || {};
     // Detailed debug logging for IPN
-    console.log('\n🔔 [MoMo IPN] Received IPN');
-    try { console.log('Headers:', JSON.stringify(req.headers)); } catch(e) { console.log('Headers: <unserializable>'); }
-    try { console.log('Body:', JSON.stringify(body, null, 2)); } catch(e) { console.log('Body: <unserializable>'); }
+    logger.debug('\n🔔 [MoMo IPN] Received IPN');
+    try { logger.debug('Headers:', JSON.stringify(req.headers)); } catch(e) { logger.debug('Headers: <unserializable>'); }
+    try { logger.debug('Body:', JSON.stringify(body, null, 2)); } catch(e) { logger.debug('Body: <unserializable>'); }
     const secretKey =
       process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz"; // sandbox fallback
     const raw = buildIpnRawSignature(body);
@@ -739,7 +740,7 @@ exports.handleMoMoIPN = async (req, res) => {
       .update(raw)
       .digest("hex");
     if (expectedSig !== body.signature) {
-      console.warn("[MoMo] IPN signature mismatch", {
+      logger.warn("[MoMo] IPN signature mismatch", {
         raw,
         expectedSig,
         got: body.signature,
@@ -758,9 +759,9 @@ exports.handleMoMoIPN = async (req, res) => {
 
     // Try direct matches first
     for (const q of candidates) {
-      console.log('[MoMo IPN] Trying session lookup with', q);
+      logger.debug('[MoMo IPN] Trying session lookup with', q);
       session = await PaymentSession.findOne(q);
-      console.log('[MoMo IPN] Lookup result:', session ? `FOUND session._id=${session._id}` : 'not found');
+      logger.debug('[MoMo IPN] Lookup result:', session ? `FOUND session._id=${session._id}` : 'not found');
       if (session) break;
     }
 
@@ -770,11 +771,11 @@ exports.handleMoMoIPN = async (req, res) => {
     }
 
     if (!session) {
-      console.warn("[MoMo] IPN unknown orderId/requestId/transId", { orderId: body.orderId, requestId: body.requestId, transId: body.transId });
+      logger.warn("[MoMo] IPN unknown orderId/requestId/transId", { orderId: body.orderId, requestId: body.requestId, transId: body.transId });
       // Also attempt to find by nested rawCreateResponse keys and log
       if (body.orderId) {
         const nested = await PaymentSession.findOne({ $or: [ { 'rawCreateResponse.orderId': body.orderId }, { 'rawCreateResponse.id': body.orderId } ] });
-        console.log('[MoMo IPN] nested lookup by rawCreateResponse:', nested ? `FOUND session._id=${nested._id}` : 'not found');
+        logger.debug('[MoMo IPN] nested lookup by rawCreateResponse:', nested ? `FOUND session._id=${nested._id}` : 'not found');
       }
       return res.status(404).json({ error: "SESSION_NOT_FOUND" });
     }
@@ -792,7 +793,7 @@ exports.handleMoMoIPN = async (req, res) => {
         session.status = "paid";
         session.paidAt = new Date();
         justPaid = true;
-        console.log(`✅ [MoMo IPN] Payment successful (resultCode: 0) - setting status to 'paid'`);
+        logger.info(`✅ [MoMo IPN] Payment successful (resultCode: 0) - setting status to 'paid'`);
         
         // Confirm held seats permanently
         await confirmSeatsForPayment(session);
@@ -800,16 +801,16 @@ exports.handleMoMoIPN = async (req, res) => {
     } else if (session.status === "pending") {
       session.status = "failed";
       justFailed = true;
-      console.log(`⚠️ [MoMo IPN] Payment failed (resultCode: ${body.resultCode}) - setting status to 'failed'`);
+      logger.warn(`⚠️ [MoMo IPN] Payment failed (resultCode: ${body.resultCode}) - setting status to 'failed'`);
     }
 
-  console.log('[MoMo IPN] Updating session status ->', session.status, ' saving...');
+  logger.debug('[MoMo IPN] Updating session status ->', session.status, ' saving...');
   await session.save();
-  console.log('[MoMo IPN] Session saved:', session._id, 'status:', session.status);
+  logger.info('[MoMo IPN] Session saved:', session._id, 'status:', session.status);
 
     // If payment failed -> release seats and restore cart
     if (justFailed) {
-      console.log(`[MoMo IPN] Payment failed, releasing seats and restoring cart...`);
+      logger.info(`[MoMo IPN] Payment failed, releasing seats and restoring cart...`);
       await releaseSeatsForPayment(session);
       await restoreCartFromPaymentSession(session);
     }
@@ -841,12 +842,12 @@ exports.handleMoMoIPN = async (req, res) => {
                 },
               },
             });
-            console.log(
+            logger.info(
               `✅ [MoMo IPN] Marked promotion ${session.voucherCode} as used for user ${session.userId} and incremented usageCount`
             );
           }
         } catch (voucherError) {
-          console.error(
+          logger.error(
             "[MoMo IPN] Error marking voucher as used:",
             voucherError
           );
@@ -857,7 +858,7 @@ exports.handleMoMoIPN = async (req, res) => {
       let booking;
       if (session.retryBookingId) {
         // For retry payments, update the existing failed booking
-        console.log(`🔄 [MoMo IPN] Updating existing booking ${session.retryBookingId} for retry payment`);
+        logger.info(`🔄 [MoMo IPN] Updating existing booking ${session.retryBookingId} for retry payment`);
         booking = await Booking.findById(session.retryBookingId);
         if (booking) {
           booking.status = 'paid';
@@ -872,9 +873,9 @@ exports.handleMoMoIPN = async (req, res) => {
             raw: body
           };
           await booking.save();
-          console.log(`✅ [MoMo IPN] Updated existing booking ${booking._id} to paid status`);
+          logger.info(`✅ [MoMo IPN] Updated existing booking ${booking._id} to paid status`);
         } else {
-          console.warn(`⚠️ [MoMo IPN] Retry booking ${session.retryBookingId} not found, creating new booking`);
+          logger.warn(`⚠️ [MoMo IPN] Retry booking ${session.retryBookingId} not found, creating new booking`);
        booking = await createBookingFromSession(
             session,{
               ipn: body,
@@ -912,9 +913,9 @@ exports.handleMoMoIPN = async (req, res) => {
             },
             { new: true }
           );
-          console.log(`✅ [MoMo IPN] Updated TourCustomRequest ${booking.customTourRequest.requestId} with payment status`);
+          logger.info(`✅ [MoMo IPN] Updated TourCustomRequest ${booking.customTourRequest.requestId} with payment status`);
         } catch (updateErr) {
-          console.warn(`⚠️ [MoMo IPN] Failed to update TourCustomRequest:`, updateErr);
+          logger.warn(`⚠️ [MoMo IPN] Failed to update TourCustomRequest:`, updateErr);
         }
       }
 
@@ -933,7 +934,7 @@ exports.handleMoMoIPN = async (req, res) => {
               status: 'paid',
               message: 'Khách hàng đã thanh toán xong'
             });
-            console.log(`[MoMo IPN] 🔔 Emitted paymentSuccessful event to guide ${booking.customTourRequest.guideId}`);
+            logger.info(`[MoMo IPN] 🔔 Emitted paymentSuccessful event to guide ${booking.customTourRequest.guideId}`);
           }
           
           // Notify traveller about payment confirmation
@@ -942,7 +943,7 @@ exports.handleMoMoIPN = async (req, res) => {
             status: 'paid',
             message: 'Thanh toán thành công'
           });
-          console.log(`[MoMo IPN] 🔔 Emitted paymentConfirmed event to traveller ${booking.userId}`);
+          logger.info(`[MoMo IPN] 🔔 Emitted paymentConfirmed event to traveller ${booking.userId}`);
           
           // Notify request room about payment
           if (booking.customTourRequest?.requestId) {
@@ -951,11 +952,11 @@ exports.handleMoMoIPN = async (req, res) => {
               paymentStatus: 'paid',
               bookingId: booking._id
             });
-            console.log(`[MoMo IPN] 🔔 Emitted paymentUpdated to request room`);
+            logger.info(`[MoMo IPN] 🔔 Emitted paymentUpdated to request room`);
           }
         }
-      } catch (socketErr) {
-        console.warn(`[MoMo IPN] ⚠️ Failed to emit socket event:`, socketErr);
+        } catch (socketErr) {
+        logger.warn(`[MoMo IPN] ⚠️ Failed to emit socket event:`, socketErr);
         // Don't fail payment if socket emit fails
       }
 
@@ -973,20 +974,20 @@ exports.handleMoMoIPN = async (req, res) => {
             tourTitle: tourTitle,
             bookingId: booking._id
           });
-          console.log(`[MoMo IPN] ✅ Payment success notification sent for booking ${booking._id}`);
+          logger.info(`[MoMo IPN] ✅ Payment success notification sent for booking ${booking._id}`);
         } else {
-          console.warn(`[MoMo IPN] ⚠️ User email not found for session ${session._id}, skipping notification`);
+          logger.warn(`[MoMo IPN] ⚠️ User email not found for session ${session._id}, skipping notification`);
         }
       } catch (notifyError) {
-        console.error(`[MoMo IPN] ❌ Failed to send payment notification:`, notifyError);
+        logger.error(`[MoMo IPN] ❌ Failed to send payment notification:`, notifyError);
         // Don't fail the IPN if notification fails
       }
     }
 
     // Important: MoMo expects 200/204 to stop retrying
     res.json({ message: "OK" });
-  } catch (e) {
-    console.error("handleMoMoIPN error", e);
+    } catch (e) {
+    logger.error("handleMoMoIPN error", e && e.stack ? e.stack : e);
     res.status(500).json({ error: "IPN_ERROR" });
   }
 };
@@ -1015,7 +1016,7 @@ exports.getMoMoSessionStatus = async (req, res) => {
 exports.markMoMoPaid = async (req, res) => {
   try {
     const { orderId, resultCode, message } = req.body || {};
-    console.log("\n🔍 [markMoMoPaid] Called by frontend:", { orderId, resultCode, message });
+    logger.debug("\n🔍 [markMoMoPaid] Called by frontend:", { orderId, resultCode, message });
 
     if (!orderId) return res.status(400).json({ error: "MISSING_ORDER_ID" });
 
@@ -1027,7 +1028,7 @@ exports.markMoMoPaid = async (req, res) => {
     if (!sess) sess = await PaymentSession.findOne({ 'rawCreateResponse.id': orderId });
 
     if (!sess) {
-      console.warn("[markMoMoPaid] SESSION_NOT_FOUND for", orderId);
+      logger.warn("[markMoMoPaid] SESSION_NOT_FOUND for", orderId);
       return res.status(404).json({ error: "SESSION_NOT_FOUND" });
     }
 
@@ -1055,7 +1056,7 @@ exports.markMoMoPaid = async (req, res) => {
       sess.status = "paid";
       sess.paidAt = new Date();
       await sess.save();
-      console.log(`✅ [markMoMoPaid] Session ${sess._id} marked as paid`);
+      logger.info(`✅ [markMoMoPaid] Session ${sess._id} marked as paid`);
     }
 
     // 4️⃣ Tạo booking từ session (nếu chưa có)
@@ -1064,7 +1065,7 @@ exports.markMoMoPaid = async (req, res) => {
       sessionId: sess._id,
     });
 
-    console.log(`✅ [markMoMoPaid] Booking created successfully: ${booking?._id}`);
+    logger.info(`✅ [markMoMoPaid] Booking created successfully: ${booking?._id}`);
 
     // 🔔 Emit socket event to notify guide about payment
     try {
@@ -1079,7 +1080,7 @@ exports.markMoMoPaid = async (req, res) => {
             status: 'paid',
             message: 'Khách hàng đã thanh toán xong'
           });
-          console.log(`[markMoMoPaid] 🔔 Emitted paymentSuccessful event to guide ${booking.customTourRequest.guideId}`);
+          logger.info(`[markMoMoPaid] 🔔 Emitted paymentSuccessful event to guide ${booking.customTourRequest.guideId}`);
         }
         
         // Notify traveller
@@ -1088,10 +1089,10 @@ exports.markMoMoPaid = async (req, res) => {
           status: 'paid',
           message: 'Thanh toán thành công!'
         });
-        console.log(`[markMoMoPaid] 🔔 Emitted paymentConfirmed to traveller ${booking.userId}`);
+        logger.info(`[markMoMoPaid] 🔔 Emitted paymentConfirmed to traveller ${booking.userId}`);
       }
     } catch (socketErr) {
-      console.warn(`[markMoMoPaid] ⚠️ Socket emit failed:`, socketErr);
+      logger.warn(`[markMoMoPaid] ⚠️ Socket emit failed:`, socketErr);
     }
 
     // 5️⃣ Gửi email xác nhận (tùy chọn)
@@ -1107,10 +1108,10 @@ exports.markMoMoPaid = async (req, res) => {
           tourTitle: booking.items?.[0]?.name || "Tour",
           bookingId: booking._id,
         });
-        console.log(`[markMoMoPaid] ✅ Payment success email sent to ${user.email}`);
+        logger.info(`[markMoMoPaid] ✅ Payment success email sent to ${user.email}`);
       }
     } catch (notifyErr) {
-      console.error("[markMoMoPaid] ⚠️ Failed to send success email:", notifyErr);
+      logger.error("[markMoMoPaid] ⚠️ Failed to send success email:", notifyErr);
     }
 
     return res.json({
@@ -1120,7 +1121,7 @@ exports.markMoMoPaid = async (req, res) => {
       message: "Thanh toán thành công!",
     });
   } catch (err) {
-    console.error("markMoMoPaid error", err);
+    logger.error("markMoMoPaid error", err && err.stack ? err.stack : err);
     res.status(500).json({ error: "INTERNAL_ERROR" });
   }
 };
@@ -1130,7 +1131,7 @@ exports.markMoMoPaid = async (req, res) => {
 // This replaces the separate endpoint in bookingController
 exports.getBookingByPayment = async (req, res) => {
   try {
-    console.log(
+    logger.debug(
       `Auth header at GET /api/bookings/by-payment/${req.params.provider}/${req.params.orderId} =>`,
       req.headers.authorization
     );
@@ -1146,7 +1147,7 @@ exports.getBookingByPayment = async (req, res) => {
       return res.status(401).json({ error: "UNAUTHORIZED" });
     }
 
-    console.log(
+    logger.debug(
       `[Payment] Looking for booking with provider=${provider}, orderId=${orderId}, userId=${userId}`
     );
 
@@ -1162,7 +1163,7 @@ exports.getBookingByPayment = async (req, res) => {
       .lean();
 
     if (booking) {
-      console.log(`[Payment] ✅ Found booking:`, booking._id);
+      logger.info(`[Payment] ✅ Found booking: ${booking._id}`);
       const paymentStatus =
         booking.status === "paid"
           ? "paid"
@@ -1174,13 +1175,13 @@ exports.getBookingByPayment = async (req, res) => {
     }
 
     // If no booking yet, check payment session status
-    console.log(
+    logger.debug(
       `[Payment] ⏳ Booking not found yet, checking payment session...`
     );
     const session = await PaymentSession.findOne({ orderId, provider });
 
     if (!session) {
-      console.log(`[Payment] ❌ No payment session found`);
+      logger.warn(`[Payment] ❌ No payment session found`);
       return res
         .status(404)
         .json({
@@ -1189,11 +1190,11 @@ exports.getBookingByPayment = async (req, res) => {
         });
     }
 
-    console.log(`[Payment] Payment session status: ${session.status}`);
+    logger.debug(`[Payment] Payment session status: ${session.status}`);
 
     // If session is paid but no booking, try to create it now
     if (session.status === "paid") {
-      console.log(
+      logger.info(
         `[Payment] 🔄 Session is paid, attempting to create booking...`
       );
       try {
@@ -1207,7 +1208,7 @@ exports.getBookingByPayment = async (req, res) => {
         const paymentMethodNew = newBooking.payment?.provider || newBooking.payment?.method || "";
         return res.json({ success: true, booking: { ...newBooking, paymentStatus: paymentStatusNew, paymentMethod: paymentMethodNew } });
       } catch (createErr) {
-        console.error(
+        logger.error(
           "[Payment] Failed to create booking from paid session:",
           createErr
         );
@@ -1227,7 +1228,7 @@ exports.getBookingByPayment = async (req, res) => {
       message: "Payment session found but not completed yet",
     });
   } catch (e) {
-    console.error("getBookingByPayment error", e);
+    logger.error("getBookingByPayment error", e && e.stack ? e.stack : e);
     res.status(500).json({ error: "FETCH_BOOKING_FAILED" });
   }
 };
@@ -1241,7 +1242,7 @@ exports.retryPaymentForBooking = async (req, res) => {
     if (!userId) return res.status(401).json({ error: "UNAUTHORIZED" });
     if (!bookingId) return res.status(400).json({ error: "BOOKING_ID_REQUIRED" });
 
-    console.log(`[Payment] 🔄 Retrying payment for booking ${bookingId} by user ${userId}`);
+    logger.info(`[Payment] 🔄 Retrying payment for booking ${bookingId} by user ${userId}`);
 
     // 1) Find the failed booking
     const booking = await Booking.findOne({ 
@@ -1306,7 +1307,7 @@ exports.retryPaymentForBooking = async (req, res) => {
     // 4) Hold seats temporarily
     await holdSeatsForPayment(paymentSession);
 
-    console.log(`[Payment] ✅ Created retry payment session ${paymentSession._id} for booking ${bookingId}`);
+    logger.info(`[Payment] ✅ Created retry payment session ${paymentSession._id} for booking ${bookingId}`);
 
     // 5) Return session info for frontend to proceed with payment
     res.json({
@@ -1319,7 +1320,7 @@ exports.retryPaymentForBooking = async (req, res) => {
     });
 
   } catch (e) {
-    console.error("retryPaymentForBooking error", e);
+    logger.error("retryPaymentForBooking error", e && e.stack ? e.stack : e);
     res.status(500).json({ error: "RETRY_PAYMENT_FAILED" });
   }
 };

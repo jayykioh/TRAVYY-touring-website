@@ -4,6 +4,7 @@
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const mongoose = require("mongoose");
+const logger = require("../utils/logger");
 const bcrypt = require("bcryptjs");
 const User = require("../models/Users");
 const Guide = require("../models/guide/Guide");
@@ -123,16 +124,16 @@ function generateCertificate(cert, issueYearsAgo = 2) {
 
 async function seedTourGuides() {
   try {
-    console.log("🔌 Connecting to MongoDB...");
+    logger.info("🔌 Connecting to MongoDB...");
     await mongoose.connect(MONGO_URI);
-    console.log("✅ Connected to MongoDB");
+    logger.info("✅ Connected to MongoDB");
 
     // Get all active zones
     const zones = await Zone.find({ isActive: true }).select("name province id");
-    console.log(`📍 Found ${zones.length} zones`);
+    logger.info(`📍 Found ${zones.length} zones`);
 
     if (zones.length === 0) {
-      console.log("❌ No zones found. Please seed zones first.");
+      logger.warn("❌ No zones found. Please seed zones first.");
       process.exit(0);
     }
 
@@ -146,7 +147,7 @@ async function seedTourGuides() {
       provinceZones[province].push(zone);
     });
 
-    console.log(`🗺️  Found ${Object.keys(provinceZones).length} provinces`);
+    logger.info(`🗺️  Found ${Object.keys(provinceZones).length} provinces`);
 
     const guideCredentials = []; // Store credentials to print
     let totalCreated = 0;
@@ -154,7 +155,7 @@ async function seedTourGuides() {
     // Create 2-3 guides per province
     for (const [province, provinceZoneList] of Object.entries(provinceZones)) {
       const guidesCount = Math.floor(Math.random() * 2) + 2; // 2-3 guides
-      console.log(`\n📍 Creating ${guidesCount} guides for ${province}...`);
+      logger.info(`\n📍 Creating ${guidesCount} guides for ${province}...`);
 
       for (let i = 0; i < guidesCount; i++) {
         const name = generateGuideName();
@@ -191,9 +192,9 @@ async function seedTourGuides() {
                 addressLine: province,
               },
             });
-            console.log(`  ✅ Created user: ${email}`);
+            logger.info(`  ✅ Created user: ${email}`);
           } else {
-            console.log(`  ℹ️  User exists: ${email}`);
+            logger.info(`  ℹ️  User exists: ${email}`);
           }
 
           // Check if guide profile exists
@@ -245,7 +246,7 @@ async function seedTourGuides() {
             guide.checkProfileComplete();
             await guide.save();
 
-            console.log(`  ✅ Created guide: ${name} (${email})`);
+            logger.info(`  ✅ Created guide: ${name} (${email})`);
             totalCreated++;
 
             // Store credentials
@@ -260,20 +261,20 @@ async function seedTourGuides() {
               status: guide.verificationStatus,
             });
           } else {
-            console.log(`  ℹ️  Guide exists: ${name}`);
+            logger.info(`  ℹ️  Guide exists: ${name}`);
           }
 
-        } catch (err) {
-          console.error(`  ❌ Error creating guide ${name}:`, err.message);
+          } catch (err) {
+          logger.error(`  ❌ Error creating guide ${name}:`, err.message);
         }
       }
     }
 
-    console.log("\n" + "=".repeat(80));
-    console.log("🎉 TOUR GUIDE SEEDING COMPLETE!");
-    console.log("=".repeat(80));
-    console.log(`✅ Total guides created: ${totalCreated}`);
-    console.log(`📧 Total accounts: ${guideCredentials.length}`);
+    logger.info("\n" + "=".repeat(80));
+    logger.info("🎉 TOUR GUIDE SEEDING COMPLETE!");
+    logger.info("=".repeat(80));
+    logger.info(`✅ Total guides created: ${totalCreated}`);
+    logger.info(`📧 Total accounts: ${guideCredentials.length}`);
     
     console.log("\n" + "=".repeat(80));
     console.log("🔐 GUIDE LOGIN CREDENTIALS");
@@ -316,7 +317,7 @@ async function seedTourGuides() {
     const fs = require("fs");
     const outputPath = path.join(__dirname, "guide-credentials.json");
     fs.writeFileSync(outputPath, JSON.stringify({ guides: guideCredentials }, null, 2));
-    console.log(`\n💾 Credentials saved to: ${outputPath}`);
+    logger.info(`\n💾 Credentials saved to: ${outputPath}`);
 
     // Also create a simple text file
     const txtPath = path.join(__dirname, "guide-credentials.txt");
@@ -338,13 +339,13 @@ async function seedTourGuides() {
     }
     
     fs.writeFileSync(txtPath, txtContent);
-    console.log(`📄 Text file saved to: ${txtPath}\n`);
+    logger.info(`📄 Text file saved to: ${txtPath}\n`);
 
   } catch (error) {
-    console.error("❌ Error seeding tour guides:", error);
+    logger.error("❌ Error seeding tour guides:", error);
   } finally {
     await mongoose.connection.close();
-    console.log("🔌 MongoDB connection closed");
+    logger.info("🔌 MongoDB connection closed");
   }
 }
 

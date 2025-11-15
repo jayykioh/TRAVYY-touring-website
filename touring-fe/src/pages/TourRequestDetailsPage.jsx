@@ -4,6 +4,7 @@ import { ArrowLeft, MapPin, Calendar, Users } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import TourRequestChat from '../components/chat/TourRequestChat';
 import axios from 'axios';
+import logger from '../utils/logger';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
@@ -47,7 +48,7 @@ export default function TourRequestDetailsPage() {
         setTourRequest(response.data.tourRequest);
       }
     } catch (error) {
-      console.error('Error fetching tour request:', error);
+      logger.error('Error fetching tour request:', error);
       alert('Failed to load tour request');
     } finally {
       setLoading(false);

@@ -1,4 +1,5 @@
 // admin/services/guideService.js
+import logger from "../../utils/logger";
 const API_URL = "http://localhost:4000/api";
 
 // Helper to get auth token
@@ -55,7 +56,7 @@ export const getTourGuides = async (filters = {}) => {
       data: data.data || [],
     };
   } catch (error) {
-    console.error("❌ Get tour guides error:", error);
+    logger.error("❌ Get tour guides error:", error);
     return {
       success: false,
       error: error.message || "Không thể tải dữ liệu",
@@ -83,7 +84,7 @@ export const getGuideById = async (guideId) => {
       data: transformUserToGuide(data.data),
     };
   } catch (error) {
-    console.error("❌ Get guide error:", error);
+    logger.error("❌ Get guide error:", error);
     return {
       success: false,
       error: error.message || "Không thể tải dữ liệu",
@@ -119,7 +120,7 @@ export const updateGuideStatus = async (guideId, status, reason = "") => {
       message: data.message || "Cập nhật thành công",
     };
   } catch (error) {
-    console.error("❌ Update guide status error:", error);
+    logger.error("❌ Update guide status error:", error);
     return {
       success: false,
       error: error.message || "Cập nhật thất bại",

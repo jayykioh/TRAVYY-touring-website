@@ -12,6 +12,7 @@ import {
   Globe,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import logger from "../../../utils/logger";
 
 const TourDetailPage = () => {
   const { id } = useParams();
@@ -89,7 +90,7 @@ const TourDetailPage = () => {
         setReviews(Array.isArray(reviewsData) ? reviewsData : []);
         setError(null);
       } catch (err) {
-        console.error("❌ Error fetching:", err);
+        logger.error("❌ Error fetching:", err);
         setError(err.message);
       } finally {
         setLoading(false);

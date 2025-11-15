@@ -24,6 +24,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import logger from "../utils/logger";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import FloatingChatButton from "../components/FloatingChatButton";
@@ -160,7 +161,7 @@ export default function VibeSelectPage() {
               resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
             },
             (err) => {
-              console.warn("Geolocation error:", err);
+              logger.warn("Geolocation error:", err);
               resolve(null);
             },
             { enableHighAccuracy: true, timeout: 6000 }
@@ -185,7 +186,7 @@ export default function VibeSelectPage() {
       try {
         window.sessionStorage.setItem("discover_result", JSON.stringify(data));
       } catch (storageErr) {
-        console.error("SessionStorage error:", storageErr);
+        logger.error("SessionStorage error:", storageErr);
       }
 
       // Save to history if logged in
@@ -196,7 +197,7 @@ export default function VibeSelectPage() {
       // ✅ Navigate to Wrapped view for top 3 reveal
       navigate("/discover-wrapped", { state: { data } });
     } catch (e) {
-      console.error("Submit error:", e);
+      logger.error("Submit error:", e);
       setErrorMsg(e?.message || "Có lỗi xảy ra. Vui lòng thử lại.");
       toast.error("Không thể tạo gợi ý. Vui lòng thử lại.");
     } finally {
@@ -221,7 +222,7 @@ export default function VibeSelectPage() {
       // Reload history to update UI
       loadHistory();
     } catch (error) {
-      console.error("Failed to save history:", error);
+      logger.error("Failed to save history:", error);
     }
   }
 
@@ -235,7 +236,7 @@ export default function VibeSelectPage() {
         setHistory(data.history || []);
       }
     } catch (error) {
-      console.error("Failed to load history:", error);
+        logger.error("Failed to load history:", error);
     } finally {
       setLoadingHistory(false);
     }
@@ -308,7 +309,7 @@ export default function VibeSelectPage() {
     try {
       window.sessionStorage.setItem("discover_result", JSON.stringify(data));
     } catch (err) {
-      console.error("SessionStorage error:", err);
+      logger.error("SessionStorage error:", err);
     }
 
     // Navigate to results (skip wrapped for history view)
@@ -354,7 +355,7 @@ export default function VibeSelectPage() {
         }
       }
     } catch (error) {
-      console.error("❌ Failed to delete history:", error);
+      logger.error("❌ Failed to delete history:", error);
       toast.error("Không thể xóa lịch sử");
     } finally {
       setDeleteModal({ show: false, type: null, entryId: null });
@@ -597,7 +598,7 @@ export default function VibeSelectPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => {
-                console.log("🔵 Backdrop clicked - closing modal");
+                logger.debug("🔵 Backdrop clicked - closing modal");
                 setShowModal(false);
               }}
             />

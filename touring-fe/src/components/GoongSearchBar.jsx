@@ -1,5 +1,6 @@
 // components/GoongSearchBox.jsx
 import React, { useEffect, useRef, useState } from "react";
+import logger from "../utils/logger";
 
 export default function GoongSearchBox({
   apiBase = "https://rsapi.goong.io",
@@ -28,7 +29,7 @@ export default function GoongSearchBox({
         const data = await res.json();
         setSuggests(data?.predictions || []);
       } catch (e) {
-        console.error("AutoComplete error:", e);
+        logger.error("AutoComplete error:", e);
         setSuggests([]);
       }
     }, delayMs);
@@ -61,7 +62,7 @@ export default function GoongSearchBox({
         });
       }
     } catch (e) {
-      console.error("PlaceDetail error:", e);
+      logger.error("PlaceDetail error:", e);
     }
   };
 

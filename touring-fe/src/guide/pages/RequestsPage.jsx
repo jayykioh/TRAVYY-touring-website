@@ -7,6 +7,7 @@ import RequestCard from "../components/common/RequestCard";
 import { Inbox } from "lucide-react";
 // ✅ dùng modal xác nhận dùng chung
 import { useConfirm } from "../components/common/ConfirmProvider";
+import logger from '@/utils/logger';
 
 const RequestsPage = () => {
   const { withAuth } = useAuth();
@@ -123,28 +124,28 @@ const RequestsPage = () => {
       try {
         // First try to get ALL requests to see what's available
         const dataAll = await withAuth("/api/guide/custom-requests");
-        console.log("[RequestsPage] ALL requests response:", dataAll);
+        logger.debug("[RequestsPage] ALL requests response:", dataAll);
 
         // Then get filtered requests
         const data = await withAuth(
           "/api/guide/custom-requests?status=pending,negotiating,awaiting_guide"
         );
-        console.log("[RequestsPage] Filtered API response:", data);
-        console.log("[RequestsPage] Response keys:", Object.keys(data || {}));
-        console.log("[RequestsPage] tourRequests:", data?.tourRequests);
-        console.log("[RequestsPage] requests:", data?.requests);
+        logger.debug("[RequestsPage] Filtered API response:", data);
+        logger.debug("[RequestsPage] Response keys:", Object.keys(data || {}));
+        logger.debug("[RequestsPage] tourRequests:", data?.tourRequests);
+        logger.debug("[RequestsPage] requests:", data?.requests);
 
         const requestsArray = data.tourRequests || data.requests || [];
-        console.log(
+        logger.debug(
           "[RequestsPage] Requests array length:",
           requestsArray.length
         );
-        console.log("[RequestsPage] First request sample:", requestsArray[0]);
+        logger.debug("[RequestsPage] First request sample:", requestsArray[0]);
 
         if (Array.isArray(requestsArray)) {
           const mapped = requestsArray.map(mapBackendRequest);
-          console.log("[RequestsPage] Mapped requests:", mapped.length);
-          console.log("[RequestsPage] First mapped request:", mapped[0]);
+          logger.debug("[RequestsPage] Mapped requests:", mapped.length);
+          logger.debug("[RequestsPage] First mapped request:", mapped[0]);
 
           if (!isInitialLoad && mapped.length > lastCountRef.current) {
             setShowBanner(true);
@@ -154,12 +155,12 @@ const RequestsPage = () => {
 
           setRequests(mapped);
         } else {
-          console.warn("[RequestsPage] Invalid response format:", data);
+          logger.warn("[RequestsPage] Invalid response format:", data);
           setRequests([]);
         }
       } catch (e) {
-        console.error("[RequestsPage] Error fetching requests:", e);
-        console.error("[RequestsPage] Error details:", e.message, e.stack);
+        logger.error("[RequestsPage] Error fetching requests:", e);
+        logger.error("[RequestsPage] Error details:", e.message, e.stack);
         if (isInitialLoad) toast.error("Không thể tải danh sách yêu cầu");
       } finally {
         if (isInitialLoad) setLoading(false);
@@ -240,8 +241,8 @@ const RequestsPage = () => {
       ? `/api/guide/custom-requests/${id}/accept`
       : `/api/guide/custom-requests/${id}/reject`;
 
-    try {
-      console.log("[RequestsPage] Sending action to:", endpoint);
+      try {
+      logger.debug("[RequestsPage] Sending action to:", endpoint);
       const res = await withAuth(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -257,7 +258,7 @@ const RequestsPage = () => {
         ),
       });
 
-      console.log("[RequestsPage] Action response:", res);
+      logger.debug("[RequestsPage] Action response:", res);
 
       if (res.success) {
         toast.success(
@@ -270,7 +271,7 @@ const RequestsPage = () => {
         toast.error(res.error || "Xử lý thất bại");
       }
     } catch (e) {
-      console.error("[RequestsPage] Error in action:", e);
+      logger.error("[RequestsPage] Error in action:", e);
       toast.error("❌ Có lỗi xảy ra: " + (e.message || "Lỗi không xác định"));
     } finally {
       setActionLoading(false);

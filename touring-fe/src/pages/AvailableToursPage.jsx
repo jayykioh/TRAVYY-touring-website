@@ -5,6 +5,7 @@ import TourCard from "../components/TourCard";
 import { useAuth } from "../auth/context";
 import { optimizeImage } from "@/utils/imageUrl";
 import { toast } from "sonner";
+import logger from '@/utils/logger';
 
 export default function ToursPage() {
   const [allTours, setAllTours] = useState([]);
@@ -32,7 +33,7 @@ export default function ToursPage() {
           );
         }
       })
-      .catch((err) => console.error("Error fetching wishlist:", err));
+        .catch((err) => logger.error("Error fetching wishlist:", err));
   }, [user?.token]);
 
   // ✅ Toggle wishlist trên server với Optimistic Update
@@ -84,7 +85,7 @@ export default function ToursPage() {
         toast.error("Không thể cập nhật wishlist");
       }
     } catch (err) {
-      console.error("Error toggling wishlist:", err);
+      logger.error("Error toggling wishlist:", err);
 
       // ❌ Revert lại state cũ khi có lỗi
       setFavorites((prev) => {
@@ -101,13 +102,13 @@ export default function ToursPage() {
     fetch("api/tours")
       .then((res) => res.json())
       .then((data) => {
-        console.log("Tours from API:", data);
+        logger.debug("Tours from API:", data);
         // Filter out hidden tours
         const visibleTours = data.filter((tour) => !tour.isHidden);
         setAllTours(visibleTours);
         setFilteredTours(visibleTours);
       })
-      .catch((err) => console.error("Error fetching tours:", err));
+      .catch((err) => logger.error("Error fetching tours:", err));
   }, []);
 
   function normalizeVietnamese(str = "") {

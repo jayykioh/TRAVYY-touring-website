@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 // ❌ Bỏ import icon thư viện
 // import { X, MessageCircle, ArrowLeft, Bell } from 'lucide-react';
 import { useAuth } from "../../../auth/context";
+import logger from '@/utils/logger';
 import { useSocket } from "../../../context/SocketContext";
 import ChatBox from "./ChatBox";
 import TravellerChatBox from "../../../components/TravellerChatBox";
@@ -65,7 +66,7 @@ const ChatPopup = ({ isOpen, onClose, userRole }) => {
         setUnreadCounts(counts);
       }
     } catch (error) {
-      console.error("[ChatPopup] Error fetching requests:", error);
+      logger.error("[ChatPopup] Error fetching requests:", error);
     } finally {
       setLoading(false);
     }

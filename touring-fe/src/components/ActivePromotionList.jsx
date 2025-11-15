@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
+import logger from '@/utils/logger';
 import { Copy, Tag } from 'lucide-react';
 import { AuthCtx } from '../auth/context';
 
@@ -20,14 +21,14 @@ const ActivePromotionList = ({ onSelectCode }) => {
 
   const loadPromotions = async () => {
     try {
-      console.log('🎫 ActivePromotionList: Loading with auth');
+      logger.debug('🎫 ActivePromotionList: Loading with auth');
       const response = withAuth 
         ? await withAuth('/api/promotions/active')
         : await fetch('/api/promotions/active').then(r => r.json());
-      console.log('✅ ActivePromotionList: Got promotions:', response.data?.length);
+      logger.debug('✅ ActivePromotionList: Got promotions:', response.data?.length);
       setPromotions(response.data || []);
     } catch (error) {
-      console.error('❌ ActivePromotionList: Load failed:', error);
+      logger.error('❌ ActivePromotionList: Load failed:', error);
     } finally {
       setLoading(false);
     }

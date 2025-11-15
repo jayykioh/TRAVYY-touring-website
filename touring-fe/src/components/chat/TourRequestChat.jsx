@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import logger from '@/utils/logger';
 import { Send, Paperclip, X, Download, Edit2, Trash2, CheckCheck, Check, AlertCircle, Wifi, WifiOff } from 'lucide-react';
 import { Button } from '../ui/button';
 import { format } from 'date-fns';
@@ -49,7 +50,7 @@ export default function TourRequestChat({ requestId, currentUser, tourRequest })
             setTourData(response.data.tourRequest);
           }
         } catch (error) {
-          console.warn('Failed to fetch tour request details:', error);
+          logger.warn('Failed to fetch tour request details:', error);
         }
       };
       
@@ -84,7 +85,7 @@ export default function TourRequestChat({ requestId, currentUser, tourRequest })
         setConnectionStatus('connected');
       }
     } catch (error) {
-      console.error('Error fetching messages:', error);
+      logger.error('Error fetching messages:', error);
       setError('Failed to load messages. Please try again.');
       setConnectionStatus('error');
     } finally {
@@ -143,7 +144,7 @@ export default function TourRequestChat({ requestId, currentUser, tourRequest })
         }
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      logger.error('Error sending message:', error);
       setError('Failed to send message. Please try again.');
     } finally {
       setSending(false);
@@ -170,7 +171,7 @@ export default function TourRequestChat({ requestId, currentUser, tourRequest })
         setEditContent('');
       }
     } catch (error) {
-      console.error('Error editing message:', error);
+      logger.error('Error editing message:', error);
       setError('Failed to edit message. Please try again.');
     }
   };
@@ -192,7 +193,7 @@ export default function TourRequestChat({ requestId, currentUser, tourRequest })
         setMessages(prev => prev.filter(m => m._id !== messageId));
       }
     } catch (error) {
-      console.error('Error deleting message:', error);
+      logger.error('Error deleting message:', error);
       setError('Failed to delete message. Please try again.');
     }
   };
@@ -254,7 +255,7 @@ export default function TourRequestChat({ requestId, currentUser, tourRequest })
       link.click();
       link.remove();
     } catch (error) {
-      console.error('Error downloading file:', error);
+      logger.error('Error downloading file:', error);
       alert('Failed to download file');
     }
   };
@@ -274,7 +275,7 @@ export default function TourRequestChat({ requestId, currentUser, tourRequest })
       );
       setUnreadCount(0);
     } catch (error) {
-      console.error('Error marking as read:', error);
+      logger.error('Error marking as read:', error);
     }
   }, [requestId, unreadCount]);
 
@@ -313,7 +314,7 @@ export default function TourRequestChat({ requestId, currentUser, tourRequest })
           if (rid === requestId) setUnreadCount(uc || 0);
         });
       } catch (e) {
-        console.warn('Socket handlers failed, falling back to polling', e?.message);
+        logger.warn('Socket handlers failed, falling back to polling', e?.message);
         pollInterval = setInterval(() => fetchMessages(), 5000);
       }
     } else {
@@ -332,7 +333,7 @@ export default function TourRequestChat({ requestId, currentUser, tourRequest })
 
         if (pollInterval) clearInterval(pollInterval);
       } catch (e) {
-        console.warn('cleanup error', e?.message);
+        logger.warn('cleanup error', e?.message);
       }
     };
   }, [requestId, fetchMessages, joinRoom, on, leaveRoom]);

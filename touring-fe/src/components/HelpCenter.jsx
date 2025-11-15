@@ -8,6 +8,7 @@ import {
   getFeaturedArticles,
   searchArticles,
 } from "@/mockdata/helpData";
+import logger from "../utils/logger";
 
 export default function HelpCenter() {
   const [categories, setCategories] = useState([]);
@@ -24,7 +25,7 @@ export default function HelpCenter() {
       setCategories(getCategories());
       setFeaturedArticles(getFeaturedArticles());
     } catch (error) {
-      console.error("Error loading help center:", error);
+      logger.error("Error loading help center:", error);
     } finally {
       setLoading(false);
     }

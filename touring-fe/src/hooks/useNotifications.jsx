@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../auth/context';
 import { toast } from 'sonner';
 import { useSocket } from '../context/SocketContext';
+import logger from '@/utils/logger';
 
 export function useNotifications() {
   const { user, withAuth } = useAuth() || {};
@@ -31,7 +32,7 @@ export function useNotifications() {
       setNotifications(response?.notifications || []);
       setUnreadCount(response?.unreadCount || 0);
     } catch (error) {
-      console.error('[Notifications] Fetch error:', error);
+      logger.error('[Notifications] Fetch error:', error);
       if (error?.status !== 401) {
         toast.error('Không thể tải thông báo');
       }
@@ -64,7 +65,7 @@ export function useNotifications() {
 
       setUnreadCount(prev => Math.max(0, prev - notificationIds.length));
     } catch (error) {
-      console.error('[Notifications] Mark as read error:', error);
+      logger.error('[Notifications] Mark as read error:', error);
       toast.error('Không thể đánh dấu đã đọc');
     }
   }, [token, withAuth]);
@@ -86,7 +87,7 @@ export function useNotifications() {
       setUnreadCount(0);
       toast.success('Đã đánh dấu tất cả là đã đọc');
     } catch (error) {
-      console.error('[Notifications] Mark all as read error:', error);
+      logger.error('[Notifications] Mark all as read error:', error);
       toast.error('Không thể đánh dấu tất cả đã đọc');
     }
   }, [token, withAuth]);
@@ -111,7 +112,7 @@ export function useNotifications() {
 
       toast.success('Đã xóa thông báo');
     } catch (error) {
-      console.error('[Notifications] Delete error:', error);
+      logger.error('[Notifications] Delete error:', error);
       toast.error('Không thể xóa thông báo');
     }
   }, [token, withAuth, notifications]);
@@ -147,7 +148,7 @@ export function useNotifications() {
           setNotifications(prev => prev.filter(n => n._id !== notificationId));
         });
       } catch (e) {
-        console.warn('[Notifications] socket handlers failed, falling back to polling', e?.message);
+        logger.warn('[Notifications] socket handlers failed, falling back to polling', e?.message);
         pollInterval = setInterval(() => fetchNotifications(), 30000);
       }
     } else {

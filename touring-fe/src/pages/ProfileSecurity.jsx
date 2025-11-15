@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import logger from "../utils/logger";
 import {
   Shield,
   Mail,
@@ -36,7 +37,7 @@ export default function ProfileSecurity() {
       setTwoFAEnabled(data.twoFactorEnabled || false);
       setEmailVerificationEnabled(data.emailVerificationEnabled || false);
     } catch (error) {
-      console.error("Failed to fetch security settings:", error);
+      logger.error("Failed to fetch security settings:", error);
     }
   };
 

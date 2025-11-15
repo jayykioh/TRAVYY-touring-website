@@ -1,3 +1,5 @@
+import logger from "../../utils/logger";
+
 const apiHelper = {
   async post(url, data) {
     try {
@@ -12,7 +14,7 @@ const apiHelper = {
       if (!res.ok) return { success: false, message: result.message };
       return { success: true, data: result };
     } catch (err) {
-      console.error("POST error:", err);
+      logger.error("POST error:", err);
       return { success: false, message: "Server error" };
     }
   },

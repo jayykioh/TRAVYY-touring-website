@@ -68,6 +68,7 @@ function ProtectedRoute({ children }) {
 
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import logger from "./utils/logger";
 
 export default function App() {
   const { booting, isAuth, user, bannedInfo } = useAuth();
@@ -82,7 +83,7 @@ export default function App() {
       navigate("/guide", { replace: true });
     }
   }, [isAuth, user?.role, location.pathname, navigate]);
-  console.log("Auth state:", { isAuth, user, bannedInfo });
+  logger.debug("Auth state:", { isAuth, user, bannedInfo });
   if (booting) return <LoadingScreen />;
 
   return (

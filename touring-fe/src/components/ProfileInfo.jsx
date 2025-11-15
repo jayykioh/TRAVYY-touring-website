@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../auth/context";
+import logger from "../utils/logger";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 
@@ -103,7 +104,7 @@ export default function ProfileInfo() {
       .then(setProvinces)
       .catch((e) => {
         if (e.name !== "AbortError") {
-          console.error("Failed to load provinces:", e);
+          logger.error("Failed to load provinces:", e);
           toast.error("Failed to load provinces");
         }
       });
@@ -128,7 +129,7 @@ export default function ProfileInfo() {
       .then((data) => setWards(Array.isArray(data) ? data : []))
       .catch((e) => {
         if (e.name !== "AbortError") {
-          console.error("Failed to load wards:", e);
+          logger.error("Failed to load wards:", e);
           toast.error("Failed to load wards");
         }
       });
@@ -197,7 +198,7 @@ export default function ProfileInfo() {
           toast.error(err.body.message || "Validation failed");
           return;
         }
-        console.error("Save error:", err);
+        logger.error("Save error:", err);
         toast.error(err?.body?.message || `Save failed (${err?.status || "ERR"})`);
       } finally {
         setSaving(false);
@@ -263,7 +264,7 @@ export default function ProfileInfo() {
         
         toast.success("Avatar đã được cập nhật!");
       } catch (err) {
-        console.error("Upload avatar error:", err);
+        logger.error("Upload avatar error:", err);
         toast.error(err.message || "Không thể upload avatar");
         setAvatarPreview(null);
       } finally {
@@ -300,7 +301,7 @@ export default function ProfileInfo() {
       
       toast.success("Avatar đã được xóa");
     } catch (err) {
-      console.error("Remove avatar error:", err);
+      logger.error("Remove avatar error:", err);
       toast.error(err.message || "Không thể xóa avatar");
     } finally {
       setUploadingAvatar(false);
