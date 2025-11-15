@@ -195,40 +195,64 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
      📌 RENDER UI
   ====================================================== */
   return (
-    <div className="flex flex-col h-full bg-white overflow-hidden">
-      {/* HEADER */}
-      <div className="p-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md">
+    <div className="flex flex-col h-full bg-[#f5f5f7] overflow-hidden rounded-2xl shadow-xl">
+      {/* HEADER - Minimalist style */}
+      {/* HEADER - Minimalist style */}
+      <div className="px-6 py-4 bg-white border-b border-gray-100">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {connected ? (
-              <>
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-xs font-medium">Đang hoạt động</span>
-              </>
-            ) : (
-              <>
-                <div className="w-2 h-2 bg-gray-300 rounded-full" />
-                <span className="text-xs font-medium">Đang kết nối...</span>
-              </>
-            )}
+          {/* Left: avatar + name + status (giữ nguyên nhưng gọn hơn) */}
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                <span className="text-lg">💬</span>
+              </div>
+              {connected && (
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+              )}
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 text-base">
+                {customerName || "Khách hàng"}
+              </h3>
+              <p className="text-xs text-gray-500">
+                {connected ? "Đang hoạt động" : "Đang kết nối..."}
+              </p>
+            </div>
           </div>
 
+          {/* Right: nút toggle chi tiết (ẩn = ! ; hiện = ×) */}
           <button
-            onClick={() => setShowTourInfo(!showTourInfo)}
-            className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-medium transition-all"
+            onClick={() => setShowTourInfo((p) => !p)}
+            aria-label="Bật/tắt chi tiết tour"
+            className={`w-5 h-5 rounded-full border transition-colors flex items-center justify-center
+        ${
+          showTourInfo
+            ? "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+        }`}
           >
-            {showTourInfo ? "🔼" : "🔽"} Chi tiết tour
+            <span className="text-sm leading-none select-none">
+              {showTourInfo ? "×" : "!"}
+            </span>
           </button>
         </div>
       </div>
 
-      {/* BODY */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
-        {/* Tour Info */}
+      {/* BODY - Clean background */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        {/* Tour Info - Subtle card */}
         {showTourInfo && tourInfo && (
-          <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-3 border-2 border-teal-200 shadow-sm">
-            <div className="space-y-2 text-sm font-semibold">
-              {tourInfo.tourName || tourInfo.name}
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            <div className="space-y-2">
+              <p className="font-semibold text-gray-900 text-sm">
+                {tourInfo.tourName || tourInfo.name}
+              </p>
+              {tourInfo.location && (
+                <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5" />
+                  {tourInfo.location}
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -244,18 +268,18 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
           />
         )}
 
-        {/* MESSAGES */}
-        <div className="space-y-3">
+        {/* MESSAGES - iMessage style */}
+        <div className="space-y-2">
           {loading && messages.length === 0 ? (
-            <div className="flex justify-center py-8">
-              <div className="h-8 w-8 border-b-2 border-teal-500 rounded-full animate-spin" />
+            <div className="flex justify-center py-12">
+              <div className="h-8 w-8 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : messages.length === 0 ? (
-            <div className="text-center text-gray-400 py-8">
+            <div className="text-center text-gray-400 py-12 text-sm">
               Chưa có tin nhắn nào
             </div>
           ) : (
-            messages.map((msg) => {
+            messages.map((msg, idx) => {
               const senderUserId =
                 msg.sender?.userId?._id ||
                 msg.sender?.userId?.toString() ||
@@ -266,31 +290,38 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
               const isMe =
                 msg.sender?.role === "guide" && senderUserId === currentUserId;
 
+              // Show timestamp if first message or >5 min gap
+              const prevMsg = idx > 0 ? messages[idx - 1] : null;
+              const showTime =
+                !prevMsg ||
+                new Date(msg.createdAt) - new Date(prevMsg.createdAt) >
+                  5 * 60 * 1000;
+
               return (
-                <div
-                  key={msg._id}
-                  className={`flex gap-2 ${
-                    isMe ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  {/* Bubble */}
+                <div key={msg._id}>
+                  {showTime && (
+                    <div className="flex justify-center my-3">
+                      <span className="text-xs text-gray-400 px-3 py-1 bg-white rounded-full">
+                        {formatTime(msg.createdAt)}
+                      </span>
+                    </div>
+                  )}
+
                   <div
-                    className={`rounded-xl px-4 py-2 shadow-md max-w-[70%] ${
-                      isMe
-                        ? "bg-gradient-to-br from-teal-500 to-cyan-500 text-white"
-                        : "bg-white border-2 border-gray-200 text-gray-900"
-                    }`}
+                    className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                   >
-                    <p className="text-sm whitespace-pre-wrap break-words">
-                      {msg.content}
-                    </p>
-                    <p
-                      className={`text-[11px] mt-1 text-right ${
-                        isMe ? "text-teal-100" : "text-gray-400"
+                    {/* Bubble - iMessage style */}
+                    <div
+                      className={`rounded-[20px] px-4 py-2.5 max-w-[75%] ${
+                        isMe
+                          ? "bg-[#007AFF] text-white shadow-sm"
+                          : "bg-white text-gray-900 shadow-sm border border-gray-100"
                       }`}
                     >
-                      {formatTime(msg.createdAt)}
-                    </p>
+                      <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">
+                        {msg.content}
+                      </p>
+                    </div>
                   </div>
                 </div>
               );
@@ -298,33 +329,61 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
           )}
         </div>
 
+        {/* Typing indicator */}
+        {typingUsers.length > 0 && (
+          <div className="flex justify-start">
+            <div className="bg-white rounded-[20px] px-4 py-3 shadow-sm border border-gray-100">
+              <div className="flex gap-1">
+                <span
+                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                  style={{ animationDelay: "0ms" }}
+                />
+                <span
+                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                  style={{ animationDelay: "150ms" }}
+                />
+                <span
+                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                  style={{ animationDelay: "300ms" }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
-      {/* INPUT */}
+      {/* INPUT - Clean minimal design */}
       <form
         onSubmit={handleSendMessage}
-        className="p-3 border-t bg-white flex items-end gap-2"
+        className="px-4 py-3 bg-white border-t border-gray-100"
       >
-        <input
-          type="text"
-          value={newMessage}
-          onChange={handleInputChange}
-          placeholder="Nhập tin nhắn..."
-          disabled={sending || !connected}
-          className="flex-1 px-3 py-2 border-2 rounded-xl focus:ring-teal-500"
-        />
-        <button
-          type="submit"
-          disabled={!newMessage.trim() || sending}
-          className="p-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-xl"
-        >
-          {sending ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <Send className="w-5 h-5" />
-          )}
-        </button>
+        <div className="flex items-center gap-2 bg-gray-100 rounded-[24px] px-4 py-2">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={handleInputChange}
+            placeholder="Tin nhắn..."
+            disabled={sending || !connected}
+            className="flex-1 bg-transparent border-none outline-none text-[15px] text-gray-900 placeholder-gray-400"
+          />
+          <button
+            type="submit"
+            disabled={!newMessage.trim() || sending}
+            className={`p-2 rounded-full transition-all ${
+              newMessage.trim() && !sending
+                ? "bg-[#007AFF] text-white hover:bg-[#0051D5]"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            }`}
+          >
+            {sending ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </button>
+        </div>
       </form>
     </div>
   );

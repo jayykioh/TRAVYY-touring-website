@@ -13,6 +13,8 @@ import {
 } from "recharts";
 import { Calendar, BarChart2, Star, Clock } from "lucide-react";
 
+const PRIMARY = "#02A0AA";
+
 const EarningsPage = () => {
   const [earningsData, setEarningsData] = useState(null);
   const [range, setRange] = useState("week");
@@ -25,7 +27,6 @@ const EarningsPage = () => {
         setEarningsData(data);
       } catch (error) {
         console.error("Failed to fetch earnings:", error);
-
         setEarningsData({
           summary: {
             thisWeek: 0,
@@ -43,7 +44,6 @@ const EarningsPage = () => {
         setLoading(false);
       }
     };
-
     fetchEarnings();
   }, []);
 
@@ -82,7 +82,6 @@ const EarningsPage = () => {
 
   const CustomTooltip = ({ active, payload }) => {
     if (!active || !payload || !payload.length) return null;
-
     return (
       <div className="bg-white border border-gray-200 px-3 py-2 rounded shadow text-sm">
         {(payload[0].value / 1_000_000).toFixed(1)}M VND
@@ -90,11 +89,13 @@ const EarningsPage = () => {
     );
   };
 
-  // LOADING
   if (loading) {
     return (
       <div className="p-6 max-w-7xl mx-auto flex justify-center items-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+        <div
+          className="animate-spin rounded-full h-12 w-12 border-2 border-b-transparent"
+          style={{ borderColor: PRIMARY }}
+        />
       </div>
     );
   }
@@ -110,17 +111,23 @@ const EarningsPage = () => {
         </p>
       </div>
 
-      {/* SUMMARY CARDS – giữ style guide_moi hoàn toàn */}
+      {/* SUMMARY CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Tuần này */}
         <Card className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-gray-700">Tuần này</p>
-            <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center">
+            <span
+              className="w-9 h-9 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: "#E6F7F8", color: PRIMARY }}
+            >
               <Calendar className="w-5 h-5" />
             </span>
           </div>
-          <p className="text-3xl font-extrabold text-black mb-1">
+          <p
+            className="text-3xl font-extrabold mb-1"
+            style={{ color: "black" }}
+          >
             {summary.thisWeek?.toLocaleString("vi-VN")}
           </p>
           <p className="text-xs text-gray-400">VND</p>
@@ -130,7 +137,10 @@ const EarningsPage = () => {
         <Card className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-gray-700">Tháng này</p>
-            <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center">
+            <span
+              className="w-9 h-9 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: "#E6F7F8", color: PRIMARY }}
+            >
               <BarChart2 className="w-5 h-5" />
             </span>
           </div>
@@ -144,7 +154,10 @@ const EarningsPage = () => {
         <Card className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-gray-700">Tổng thu nhập</p>
-            <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center">
+            <span
+              className="w-9 h-9 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: "#E6F7F8", color: PRIMARY }}
+            >
               <Star className="w-5 h-5" />
             </span>
           </div>
@@ -154,7 +167,7 @@ const EarningsPage = () => {
           <p className="text-xs text-gray-400">VND</p>
         </Card>
 
-        {/* Chờ thanh toán */}
+        {/* Chờ thanh toán (giữ màu cam đặc thù) */}
         <Card className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-orange-700">
@@ -171,12 +184,12 @@ const EarningsPage = () => {
         </Card>
       </div>
 
-      {/* CHART – giữ style guide_moi */}
+      {/* CHART */}
       <Card className="mb-8 shadow-md">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h3 className="text-lg font-bold text-gray-900">{chartData.title}</h3>
 
-          {/* Range filter */}
+          {/* Range filter (primary) */}
           <div className="inline-flex items-center gap-1 bg-white border border-gray-200 rounded-full p-1">
             {["week", "month", "year"].map((key) => (
               <button
@@ -184,9 +197,10 @@ const EarningsPage = () => {
                 onClick={() => setRange(key)}
                 className={`h-9 px-4 rounded-full text-sm font-semibold transition-colors ${
                   range === key
-                    ? "bg-gray-900 text-white shadow"
+                    ? "text-white shadow"
                     : "bg-white text-gray-700 hover:bg-gray-100"
                 }`}
+                style={range === key ? { backgroundColor: PRIMARY } : undefined}
               >
                 {key === "week" ? "Tuần" : key === "month" ? "Tháng" : "Năm"}
               </button>
@@ -197,9 +211,9 @@ const EarningsPage = () => {
         <ResponsiveContainer width="100%" height={280}>
           <AreaChart data={chartData.data}>
             <defs>
-              <linearGradient id="grayGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#000" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#000" stopOpacity={0.05} />
+              <linearGradient id="primaryGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={PRIMARY} stopOpacity={0.25} />
+                <stop offset="95%" stopColor={PRIMARY} stopOpacity={0.05} />
               </linearGradient>
             </defs>
 
@@ -221,17 +235,17 @@ const EarningsPage = () => {
             <Area
               type="monotone"
               dataKey="value"
-              stroke="#111"
+              stroke={PRIMARY}
               strokeWidth={2}
-              fill="url(#grayGradient)"
-              dot={{ r: 4, fill: "#fff", stroke: "#111", strokeWidth: 2 }}
-              activeDot={{ r: 6, fill: "#111" }}
+              fill="url(#primaryGradient)"
+              dot={{ r: 4, fill: "#fff", stroke: PRIMARY, strokeWidth: 2 }}
+              activeDot={{ r: 6, fill: PRIMARY }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </Card>
 
-      {/* RECENT PAYMENTS – giữ style guide_moi */}
+      {/* RECENT PAYMENTS */}
       <Card>
         <h3 className="font-bold text-gray-900 mb-4 text-lg">
           Các khoản thanh toán gần đây
