@@ -2,13 +2,17 @@
 const express = require("express");
 const router = express.Router();
 const Itinerary = require("../models/Itinerary");
-const authJwt = require("../middlewares/authJWT");
+const { verifyToken } = require("../middlewares/authJwt");
 const { tripV2 } = require("../services/ai/libs/goong");
-const { buildItineraryPrompt, callLLMAndParse, generateAIInsightsAsync } = require("../services/itinerary/optimizer");
+const { generateAIInsightsAsync } = require("../services/itinerary/optimizer");
 const polyline = require('polyline');
 const { buildGpx } = require('../utils/gpx');
 
-/* ---------------- Helpers (time window & timeline utils) ---------------- */
+/* ==================== HELPERS ==================== */
+
+function getUserId(user) {
+  return user?.sub || user?._id || user?.id;
+}
 
 function getZoneTimeWindow(bestTime = "anytime") {
   const MAP = {
@@ -26,10 +30,12 @@ function toMin(hhmm) {
   const [h, m] = (hhmm || "0:0").split(":").map(Number);
   return (h || 0) * 60 + (m || 0);
 }
+
 function fromMin(min) {
   const h = Math.floor(min / 60), m = min % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
+
 function estimateDurationByCategory(item, pace = "moderate") {
   if (typeof item?.duration === "number" && item.duration > 0) return item.duration;
   const pidx = { light: 0, moderate: 1, medium: 1, intense: 2 }[pace] ?? 1;
@@ -47,19 +53,41 @@ function estimateDurationByCategory(item, pace = "moderate") {
   const key = String(item?.category || "default").toLowerCase();
   return (base[key] || base.default)[pidx];
 }
+
 function timeSlotFromMinute(min) {
   if (min < toMin("12:00")) return "morning";
   if (min < toMin("17:00")) return "afternoon";
   if (min < toMin("21:00")) return "evening";
   return "night";
 }
-function getUserId(user) {
-  return user?.sub || user?._id || user?.id;
+
+/**
+ * Update itinerary's custom tour flag and reset tour guide request if needed
+ */
+function updateCustomTourFlag(itinerary) {
+  const hasTour = itinerary.items.some((item) => item.itemType === 'tour');
+  itinerary.isCustomTour = hasTour;
+  
+  // Reset tour guide request if no tours present
+  if (!hasTour) {
+    itinerary.tourGuideRequest = {
+      status: 'none',
+      guideId: null,
+      requestedAt: null,
+      respondedAt: null,
+    };
+  }
+  
+  return hasTour;
 }
 
-/* -------------------------------- Routes -------------------------------- */
+/* ==================== ROUTES ==================== */
 
-router.get("/", authJwt, async (req, res) => {
+/**
+ * GET /api/itinerary
+ * Get all itineraries for current user
+ */
+router.get("/", verifyToken, async (req, res) => {
   try {
     const userId = getUserId(req.user);
     const itineraries = await Itinerary.find({ userId })
@@ -76,7 +104,7 @@ router.get("/", authJwt, async (req, res) => {
  * POST /api/itinerary
  * Create new itinerary or get existing draft
  */
-router.post("/", authJwt, async (req, res) => {
+router.post("/", verifyToken, async (req, res) => {
   try {
     const { zoneId, zoneName, preferences } = req.body;
     const userId = getUserId(req.user);
@@ -105,35 +133,72 @@ router.post("/", authJwt, async (req, res) => {
 });
 
 /**
- * POST /api/itinerary/:id/items
- * Add POI to itinerary
+ * GET /api/itinerary/:id
+ * Get single itinerary by ID
  */
-router.post("/:id/items", authJwt, async (req, res) => {
+router.get('/:id', verifyToken, async (req, res) => {
   try {
-  const { poi } = req.body;
+    const userId = getUserId(req.user);
+    const itinerary = await Itinerary.findOne({
+      _id: req.params.id,
+      userId
+    });
+
+    if (!itinerary) {
+      return res.status(404).json({ success: false, error: 'Not found' });
+    }
+
+    // Ensure custom tour flag is correct
+    updateCustomTourFlag(itinerary);
+    
+    // Ensure tour request state is valid
+    if (itinerary.isCustomTour && (!itinerary.tourGuideRequest || !['pending','accepted'].includes(itinerary.tourGuideRequest.status))) {
+      itinerary.tourGuideRequest = resetTourGuideRequest();
+      await itinerary.save();
+    }
+
+    res.json({ success: true, itinerary });
+  } catch (error) {
+    console.error('❌ [GET] Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/itinerary/:id/items
+ * Add POI/tour to itinerary
+ */
+router.post("/:id/items", verifyToken, async (req, res) => {
+  try {
+    const { poi } = req.body;
     const userId = getUserId(req.user);
 
     const itinerary = await Itinerary.findOne({ _id: req.params.id, userId });
     if (!itinerary) return res.status(404).json({ success: false, error: "Itinerary not found" });
 
+    // Determine if item is tour or POI
     const isTour = poi.itemType === 'tour' || !!poi.tourId;
     const poiId = isTour ? (poi.tourId || poi.id || poi.poiId) : (poi.place_id || poi.id || poi.poiId);
+    
     if (!poiId) return res.status(400).json({ success: false, error: "POI/tour must have id" });
 
+    // Check for duplicates
     if (itinerary.items.some((item) => item.poiId === poiId)) {
       return res.status(400).json({ success: false, error: "Item already in itinerary" });
     }
 
+    // Extract location
     const location = {
       lat: poi.geometry?.location?.lat || poi.lat || poi.location?.lat || 0,
       lng: poi.geometry?.location?.lng || poi.lng || poi.location?.lng || 0,
     };
-    const address =
-      poi.address || poi.vicinity || poi.formatted_address || "Địa chỉ không xác định";
+
+    const address = poi.address || poi.vicinity || poi.formatted_address || "Địa chỉ không xác định";
     const photos = Array.isArray(poi.photos)
       ? poi.photos.map((p) => (typeof p === "string" ? p : (p.photo_reference || p.url || ""))).filter(Boolean).slice(0, 5)
       : [];
 
+    // Build item object
     let newItem = {
       poiId,
       name: poi.name || "Unknown Place",
@@ -144,6 +209,8 @@ router.post("/:id/items", authJwt, async (req, res) => {
       photos,
       itemType: isTour ? 'tour' : 'poi',
     };
+
+    // Add tour info if applicable
     if (isTour) {
       newItem.tourInfo = {
         tourId: poi.tourId || poi.id,
@@ -151,7 +218,6 @@ router.post("/:id/items", authJwt, async (req, res) => {
         basePrice: poi.basePrice,
         currency: poi.currency,
         itinerary: poi.itinerary,
-        // ...add more tour fields as needed
       };
     }
 
@@ -159,6 +225,7 @@ router.post("/:id/items", authJwt, async (req, res) => {
       console.warn("⚠️ Item missing location coordinates:", newItem.name);
     }
 
+    // Add to itinerary
     itinerary.items.push(newItem);
 
     // Mark as custom tour if it has ANY items (POIs or tours)
@@ -178,9 +245,9 @@ router.post("/:id/items", authJwt, async (req, res) => {
     const tourCount = itinerary.items.filter(i => i.itemType === 'tour').length;
     const hasTour = tourCount > 0;
     console.log('[Itinerary ADD ITEM]', {
-      itineraryId: itinerary._id.toString(),
+      itineraryId: itinerary._id,
+      item: newItem.name,
       isCustomTour: itinerary.isCustomTour,
-      tourGuideRequest: itinerary.tourGuideRequest,
       totalItems: itinerary.items.length,
       poiCount,
       tourCount,
@@ -207,13 +274,14 @@ router.post("/:id/items", authJwt, async (req, res) => {
  * DELETE /api/itinerary/:id/items/:poiId
  * Remove POI from itinerary
  */
-router.delete("/:id/items/:poiId", authJwt, async (req, res) => {
+router.delete("/:id/items/:poiId", verifyToken, async (req, res) => {
   try {
     const userId = getUserId(req.user);
     const itinerary = await Itinerary.findOne({ _id: req.params.id, userId });
     if (!itinerary) return res.status(404).json({ success: false, error: "Itinerary not found" });
 
     itinerary.items = itinerary.items.filter((item) => item.poiId !== req.params.poiId);
+    updateCustomTourFlag(itinerary);
     itinerary.isOptimized = false;
     
     // Recompute custom-tour flags after removal
@@ -243,10 +311,11 @@ router.delete("/:id/items/:poiId", authJwt, async (req, res) => {
  * PATCH /api/itinerary/:id/items/reorder
  * Reorder POIs in itinerary
  */
-router.patch("/:id/items/reorder", authJwt, async (req, res) => {
+router.patch("/:id/items/reorder", verifyToken, async (req, res) => {
   try {
     const { order } = req.body;
     const userId = getUserId(req.user);
+    
     if (!Array.isArray(order) || order.length === 0) {
       return res.status(400).json({ success: false, error: "Order must be a non-empty array" });
     }
@@ -271,9 +340,9 @@ router.patch("/:id/items/reorder", authJwt, async (req, res) => {
 
 /**
  * POST /api/itinerary/:id/optimize-ai
- * Optimize route with Goong Trip V2 + AI insights (async)
+ * Optimize route using Goong Trip V2 + AI insights (async)
  */
-router.post('/:id/optimize-ai', authJwt, async (req, res) => {
+router.post('/:id/optimize-ai', verifyToken, async (req, res) => {
   try {
     const userId = getUserId(req.user);
     const itinerary = await Itinerary.findOne({
@@ -285,7 +354,7 @@ router.post('/:id/optimize-ai', authJwt, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Itinerary not found' });
     }
 
-    // ========== STEP 1: Extract coordinates ==========
+    // Extract coordinates from items
     const items = itinerary.items.filter(
       i => i.location?.lat && i.location?.lng
     );
@@ -301,7 +370,7 @@ router.post('/:id/optimize-ai', authJwt, async (req, res) => {
 
     console.log('📍 Calling Trip V2 with', points.length, 'points');
 
-    // ========== STEP 2: Call Goong Trip V2 ==========
+    // Call Goong Trip V2
     const tripData = await tripV2(points, { vehicle: 'car', roundtrip: false });
     const trip = tripData.trips[0];
 
@@ -315,16 +384,14 @@ router.post('/:id/optimize-ai', authJwt, async (req, res) => {
     console.log('✅ Trip data received:', {
       distance: `${(trip.distance / 1000).toFixed(2)} km`,
       duration: `${Math.round(trip.duration / 60)} min`,
-      hasGeometry: !!trip.geometry,
-      geometryLength: trip.geometry?.length
     });
 
-    // ========== STEP 3: Save route data immediately ==========
+    // Save route data
     itinerary.routePolyline = trip.geometry;
     itinerary.totalDistance = Math.round((trip.distance / 1000) * 100) / 100;
     itinerary.totalDuration = Math.round(trip.duration / 60);
 
-    // ========== STEP 4: Build timeline ==========
+    // Build timeline
     const zoneBestTime = itinerary.preferences?.bestTime || 'anytime';
     const { start, end } = getZoneTimeWindow(zoneBestTime);
     let currentTime = toMin(start);
@@ -355,40 +422,30 @@ router.post('/:id/optimize-ai', authJwt, async (req, res) => {
     itinerary.items = items;
     itinerary.isOptimized = true;
     itinerary.optimizedAt = new Date();
-
-    // ✅ FIXED: Correct placeholder matching schema
     itinerary.aiInsights = {
       summary: '⏳ Đang phân tích với AI...',
-      tips: ['⏳ Đang tải gợi ý...'] // ✅ FLAT array [String]
+      tips: ['⏳ Đang tải gợi ý...']
     };
     itinerary.aiProcessing = true;
 
     await itinerary.save();
 
-    console.log('💾 [POST optimize-ai] Saved itinerary (without AI insights yet):', {
-      id: itinerary._id,
-      hasRoutePolyline: true,
-      polylineLength: itinerary.routePolyline?.length,
-      aiProcessing: true
-    });
+    console.log('💾 [optimize-ai] Route saved, AI processing in background...');
 
-    // ✅ Return immediately
+    // Return immediately
     res.json({ 
       success: true, 
       itinerary,
       message: 'Route optimized. AI insights are being generated...'
     });
 
-    // ========== STEP 5: Generate AI insights in background ==========
+    // Generate AI insights in background
     generateAIInsightsAsync(itinerary._id, itinerary.toObject(), tripData).catch(err => {
-      console.error('❌ [Background AI] Unhandled error:', err);
+      console.error('❌ [Background AI] Error:', err.message);
     });
 
   } catch (error) {
-    console.error('❌ [POST optimize-ai] Error:', {
-      message: error.message,
-      stack: error.stack?.split('\n').slice(0, 3)
-    });
+    console.error('❌ [optimize-ai] Error:', error.message);
     res.status(500).json({
       success: false,
       error: error.message
@@ -396,8 +453,11 @@ router.post('/:id/optimize-ai', authJwt, async (req, res) => {
   }
 });
 
-// GET /api/itinerary/:id - Get single itinerary by ID
-router.get('/:id', authJwt, async (req, res) => {
+/**
+ * POST /api/itinerary/:id/request-tour-guide
+ * Request tour guide for custom tour
+ */
+router.post('/:id/request-tour-guide', verifyToken, async (req, res) => {
   try {
     const userId = getUserId(req.user);
     const itinerary = await Itinerary.findOne({
@@ -435,15 +495,16 @@ router.get('/:id', authJwt, async (req, res) => {
       itinerary
     });
   } catch (error) {
-    console.error('❌ [GET] Error:', error.message);
+    console.error('[GuideAPI] Error fetching requests:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-
-
-
-router.get('/:id/export.gpx', authJwt, async (req, res) => {
+/**
+ * GET /api/itinerary/:id/export.gpx
+ * Export itinerary as GPX file
+ */
+router.get('/:id/export.gpx', verifyToken, async (req, res) => {
   try {
     const userId = getUserId(req.user);
     const it = await Itinerary.findOne({ _id: req.params.id, userId }).lean();
@@ -452,7 +513,7 @@ router.get('/:id/export.gpx', authJwt, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Not found' });
     }
 
-    // 1️⃣ Lấy track points
+    // Extract track points
     let trackPoints = [];
     if (it.routePolyline) {
       trackPoints = polyline.decode(it.routePolyline);
@@ -467,10 +528,10 @@ router.get('/:id/export.gpx', authJwt, async (req, res) => {
     }
 
     if (trackPoints.length < 2) {
-      return res.status(400).json({ success: false, message: 'No route geometry to export' });
+      return res.status(400).json({ success: false, message: 'No route to export' });
     }
 
-    // 2️⃣ Waypoints
+    // Extract waypoints
     const waypoints = (it.items || [])
       .map(i => ({
         lat: i?.location?.lat,
@@ -480,17 +541,12 @@ router.get('/:id/export.gpx', authJwt, async (req, res) => {
       }))
       .filter(w => Number.isFinite(w.lat) && Number.isFinite(w.lng));
 
-    // 3️⃣ Build GPX
+    // Build GPX
     const name = it.name || it.zoneName || 'Itinerary';
     const gpx = buildGpx({ name, trackPoints, waypoints });
 
-    // 4️⃣ Tạo tên file an toàn
-    const { ascii, utf8Star } = safeFilename(name, 'route');
     res.setHeader('Content-Type', 'application/gpx+xml; charset=utf-8');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${ascii}.gpx"; filename*=UTF-8''${utf8Star}.gpx`
-    );
+    res.setHeader('Content-Disposition', `attachment; filename="${name}.gpx"`);
 
     return res.send(gpx);
   } catch (err) {

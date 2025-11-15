@@ -25,13 +25,14 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
 }
 
 /**
- * Score a POI based on zone, vibes, and distance
+ * Score a POI based on zone, vibes, distance, and optional user location
  * @param {Object} poi - POI object { name, types, loc: {lat, lng}, rating }
  * @param {Object} zone - Zone object { center: {lat, lng}, vibeKeywords }
  * @param {Array} vibes - User preferences ['beach', 'food', ...]
+ * @param {Object} userLocation - Optional user location {lat, lng}
  * @returns {Object} { matchScore, distanceKm, reasons }
  */
-function scorePOI(poi, zone, vibes = []) {
+function scorePOI(poi, zone, vibes = [], userLocation = null) {
   // Validate inputs
   if (!poi || !poi.loc || !zone || !zone.center) {
     return {
@@ -44,7 +45,7 @@ function scorePOI(poi, zone, vibes = []) {
   let score = 0.5; // Base score
   const reasons = [];
   
-  // 1. Distance score (closer = better, max 5km)
+  // 1. Distance score from zone center (closer = better, max 5km)
   const distanceKm = calculateDistance(
     zone.center.lat,
     zone.center.lng,
@@ -56,9 +57,37 @@ function scorePOI(poi, zone, vibes = []) {
   score += distanceScore * 0.3;
   
   if (distanceKm < 1) {
-    reasons.push('very close');
+    reasons.push('very close to zone center');
   } else if (distanceKm < 3) {
-    reasons.push('nearby');
+    reasons.push('close to zone center');
+  }
+  
+  // 1b. Additional proximity score if user location provided
+  let userDistanceKm = null;
+  let proximityBonus = 0;
+  
+  if (userLocation && userLocation.lat && userLocation.lng) {
+    userDistanceKm = calculateDistance(
+      userLocation.lat,
+      userLocation.lng,
+      poi.loc.lat,
+      poi.loc.lng
+    );
+    
+    // Bonus for POIs close to user (within 2km)
+    if (userDistanceKm < 0.5) {
+      proximityBonus = 0.15;
+      score += proximityBonus;
+      reasons.push(`📍 very close to you (${userDistanceKm.toFixed(2)}km)`);
+    } else if (userDistanceKm < 1) {
+      proximityBonus = 0.10;
+      score += proximityBonus;
+      reasons.push(`📍 close to you (${userDistanceKm.toFixed(2)}km)`);
+    } else if (userDistanceKm < 2) {
+      proximityBonus = 0.05;
+      score += proximityBonus;
+      reasons.push(`📍 nearby (${userDistanceKm.toFixed(2)}km)`);
+    }
   }
   
   // 2. Vibe match score
@@ -142,6 +171,7 @@ function scorePOI(poi, zone, vibes = []) {
   return {
     matchScore: parseFloat(score.toFixed(3)),
     distanceKm: parseFloat(distanceKm.toFixed(2)),
+    userDistanceKm: userDistanceKm ? parseFloat(userDistanceKm.toFixed(2)) : null,
     reasons: reasons.length > 0 ? reasons : ['generic match']
   };
 }

@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import "./index.css";
@@ -10,21 +10,31 @@ import ItineraryProvider from "./context/ItineraryContext";
 import { SocketProvider } from "./context/SocketContext";
 import { Toaster } from "sonner";
 import GlobalChatListener from '@/components/GlobalChatListener';
+import { initPostHog } from "./utils/posthog";
 
-createRoot(document.getElementById("root")).render(
-  <StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
+// Initialize PostHog on app mount
+function AppWithAnalytics() {
+  useEffect(() => {
+    initPostHog();
+  }, []);
+
+  return (
+    <StrictMode>
+      <BrowserRouter>
+        <AuthProvider>
         <SocketProvider>
-          <ItineraryProvider>
-            <CartProvider>
-              <App />
+            <ItineraryProvider>
+              <CartProvider>
+                <App />
               <GlobalChatListener />
-              <Toaster richColors closeButton />
-            </CartProvider>
-          </ItineraryProvider>
+                <Toaster richColors closeButton />
+              </CartProvider>
+            </ItineraryProvider>
         </SocketProvider>
-      </AuthProvider>
-    </BrowserRouter>
-  </StrictMode>
-);
+        </AuthProvider>
+      </BrowserRouter>
+    </StrictMode>
+  );
+}
+
+createRoot(document.getElementById("root")).render(<AppWithAnalytics />);

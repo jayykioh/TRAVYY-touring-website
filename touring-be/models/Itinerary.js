@@ -17,7 +17,7 @@ const ItineraryItemSchema = new mongoose.Schema({
   startTime: String,
   endTime: String,
   // New: distinguish between POI and tour
-  itemType: { type: String, enum: ['poi', 'tour'], required: true },
+  itemType: { type: String, enum: ['poi', 'tour'], default: 'poi' },
   tourInfo: {
     tourId: String,
     agency: Object,

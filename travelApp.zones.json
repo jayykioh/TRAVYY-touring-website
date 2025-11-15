@@ -1,0 +1,9880 @@
+[{
+  "_id": {
+    "$oid": "68f6f061b34c380f4ecf0f4f"
+  },
+  "id": "hue-lang-minh-mang",
+  "province": "hue",
+  "name": "Lăng Minh Mạng",
+  "center": {
+    "lat": 16.387466,
+    "lng": 107.570354
+  },
+  "radiusM": 2000,
+  "tags": [
+    "temple",
+    "history",
+    "photo"
+  ],
+  "vibeKeywords": [
+    "lang",
+    "hoang gia",
+    "di tich",
+    "chup anh",
+    "co kinh"
+  ],
+  "desc": "Một trong những lăng tẩm đẹp nhất triều Nguyễn, nằm bên hồ sen và rừng thông, thể hiện nét kiến trúc uy nghi, cân đối.",
+  "whyChoose": [
+    "Không gian thanh tịnh",
+    "Kiến trúc cổ hài hòa thiên nhiên"
+  ],
+  "funActivities": [
+    "Tham quan lăng",
+    "Chụp ảnh phong cảnh",
+    "Tìm hiểu lịch sử"
+  ],
+  "mustSee": [
+    "Cổng Đại Hồng Môn",
+    "Hiếu Đức Môn",
+    "Hồ Tân Nguyệt"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Mang giày thoải mái vì khu lăng rộng",
+    "Đi sớm để tránh nắng"
+  ],
+  "donts": [
+    "Không chạm tay vào hiện vật",
+    "Không leo lên khu vực cấm"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761123569/lang-minh-mang-hieu-lang-su-ket-hop-hai-hoa-giua-kien-truc-xua-va-thien-nhien-8wYk_xhugbj.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761123567/lang-minh-mang-02_oq0ils.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761123566/lang-minh-mang-hue-thumb_1624691904_xpwr74.jpg"
+  ],
+  "scorePriority": 0.8,
+  "isActive": true,
+  "poly": [
+    [
+      16.405432,
+      107.570354
+    ],
+    [
+      16.404065,
+      107.577521
+    ],
+    [
+      16.40017,
+      107.583596
+    ],
+    [
+      16.394341,
+      107.587655
+    ],
+    [
+      16.387466,
+      107.589081
+    ],
+    [
+      16.380591,
+      107.587655
+    ],
+    [
+      16.374762,
+      107.583596
+    ],
+    [
+      16.370867,
+      107.577521
+    ],
+    [
+      16.3695,
+      107.570354
+    ],
+    [
+      16.370867,
+      107.563187
+    ],
+    [
+      16.374762,
+      107.557112
+    ],
+    [
+      16.380591,
+      107.553053
+    ],
+    [
+      16.387466,
+      107.551627
+    ],
+    [
+      16.394341,
+      107.553053
+    ],
+    [
+      16.40017,
+      107.557112
+    ],
+    [
+      16.404065,
+      107.563187
+    ],
+    [
+      16.405432,
+      107.570354
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          107.570354,
+          16.405432
+        ],
+        [
+          107.577521,
+          16.404065
+        ],
+        [
+          107.583596,
+          16.40017
+        ],
+        [
+          107.587655,
+          16.394341
+        ],
+        [
+          107.589081,
+          16.387466
+        ],
+        [
+          107.587655,
+          16.380591
+        ],
+        [
+          107.583596,
+          16.374762
+        ],
+        [
+          107.577521,
+          16.370867
+        ],
+        [
+          107.570354,
+          16.3695
+        ],
+        [
+          107.563187,
+          16.370867
+        ],
+        [
+          107.557112,
+          16.374762
+        ],
+        [
+          107.553053,
+          16.380591
+        ],
+        [
+          107.551627,
+          16.387466
+        ],
+        [
+          107.553053,
+          16.394341
+        ],
+        [
+          107.557112,
+          16.40017
+        ],
+        [
+          107.563187,
+          16.404065
+        ],
+        [
+          107.570354,
+          16.405432
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f100b34c380f4ecf0f51"
+  },
+  "id": "qb-phong-nha",
+  "province": "quang-binh",
+  "name": "Động Phong Nha",
+  "center": {
+    "lat": 17.47721,
+    "lng": 106.134261
+  },
+  "radiusM": 3000,
+  "tags": [
+    "cave",
+    "nature",
+    "unesco",
+    "boat"
+  ],
+  "vibeKeywords": [
+    "hang dong",
+    "ky vi",
+    "hoang so",
+    "di thuyen",
+    "song ngam"
+  ],
+  "desc": "Di sản UNESCO, nổi tiếng với hệ thống sông ngầm dài nhất và các thạch nhũ tráng lệ.",
+  "whyChoose": [
+    "Trải nghiệm đi thuyền trong hang động",
+    "Vẻ đẹp kỳ vĩ của thạch nhũ"
+  ],
+  "funActivities": [
+    "Đi thuyền trên sông Son",
+    "Khám phá hang động",
+    "Chụp ảnh thạch nhũ"
+  ],
+  "mustSee": [
+    "Hang Cung Đình",
+    "Hang Bi Ký",
+    "Sông ngầm"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Mang áo khoác mỏng vì trong hang lạnh",
+    "Nên đi giày dép chống trơn trượt"
+  ],
+  "donts": [
+    "Không sờ vào thạch nhũ",
+    "Không vứt rác xuống sông"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761124124/dong-phong-nha_17_s4xmb7.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761124125/du-lich-phong-nha-ke-bang-01_qbwtrj.png",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761124125/dong-phong-nha-3_zkrajm.jpg"
+  ],
+  "scorePriority": 0.9,
+  "isActive": true,
+  "poly": [
+    [
+      17.504159,
+      106.134261
+    ],
+    [
+      17.502108,
+      106.145073
+    ],
+    [
+      17.496266,
+      106.154239
+    ],
+    [
+      17.487523,
+      106.160364
+    ],
+    [
+      17.47721,
+      106.162515
+    ],
+    [
+      17.466897,
+      106.160364
+    ],
+    [
+      17.458154,
+      106.154239
+    ],
+    [
+      17.452312,
+      106.145073
+    ],
+    [
+      17.450261,
+      106.134261
+    ],
+    [
+      17.452312,
+      106.123449
+    ],
+    [
+      17.458154,
+      106.114283
+    ],
+    [
+      17.466897,
+      106.108158
+    ],
+    [
+      17.47721,
+      106.106007
+    ],
+    [
+      17.487523,
+      106.108158
+    ],
+    [
+      17.496266,
+      106.114283
+    ],
+    [
+      17.502108,
+      106.123449
+    ],
+    [
+      17.504159,
+      106.134261
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          106.134261,
+          17.504159
+        ],
+        [
+          106.145073,
+          17.502108
+        ],
+        [
+          106.154239,
+          17.496266
+        ],
+        [
+          106.160364,
+          17.487523
+        ],
+        [
+          106.162515,
+          17.47721
+        ],
+        [
+          106.160364,
+          17.466897
+        ],
+        [
+          106.154239,
+          17.458154
+        ],
+        [
+          106.145073,
+          17.452312
+        ],
+        [
+          106.134261,
+          17.450261
+        ],
+        [
+          106.123449,
+          17.452312
+        ],
+        [
+          106.114283,
+          17.458154
+        ],
+        [
+          106.108158,
+          17.466897
+        ],
+        [
+          106.106007,
+          17.47721
+        ],
+        [
+          106.108158,
+          17.487523
+        ],
+        [
+          106.114283,
+          17.496266
+        ],
+        [
+          106.123449,
+          17.502108
+        ],
+        [
+          106.134261,
+          17.504159
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f101b34c380f4ecf0f52"
+  },
+  "id": "dn-ba-na-hills",
+  "province": "da-nang",
+  "name": "Bà Nà Hills (Cầu Vàng)",
+  "center": {
+    "lat": 15.994894,
+    "lng": 107.996577
+  },
+  "radiusM": 4000,
+  "tags": [
+    "theme-park",
+    "photo",
+    "view",
+    "cable-car"
+  ],
+  "vibeKeywords": [
+    "cau vang",
+    "cap treo",
+    "lang phap",
+    "check-in",
+    "view dep"
+  ],
+  "desc": "Khu du lịch trên đỉnh núi với Cầu Vàng nổi tiếng, Làng Pháp, cáp treo dài và khí hậu mát mẻ.",
+  "whyChoose": [
+    "Check-in Cầu Vàng biểu tượng",
+    "Trải nghiệm cáp treo kỷ lục"
+  ],
+  "funActivities": [
+    "Đi dạo Cầu Vàng",
+    "Chơi trò chơi trong Fantasy Park",
+    "Tham quan Làng Pháp"
+  ],
+  "mustSee": [
+    "Cầu Vàng",
+    "Làng Pháp",
+    "Hầm rượu Debay"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Đi sớm để tránh đông và chụp Cầu Vàng vắng người",
+    "Mang theo áo khoác vì trên đỉnh khá lạnh"
+  ],
+  "donts": [
+    "Tránh đi vào ngày mưa bão",
+    "Không mang đồ ăn từ bên ngoài vào khu du lịch"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761124342/DJI_0004-1-scaled_xpjcsc.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761124342/DJI_0004-1-scaled_xpjcsc.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761124340/BNtop-1744278998-9185-1744598184_eqaxnl.webp"
+  ],
+  "scorePriority": 0.95,
+  "isActive": true,
+  "poly": [
+    [
+      16.030826,
+      107.996577
+    ],
+    [
+      16.028091,
+      108.010882
+    ],
+    [
+      16.020302,
+      108.023008
+    ],
+    [
+      16.008645,
+      108.031111
+    ],
+    [
+      15.994894,
+      108.033957
+    ],
+    [
+      15.981143,
+      108.031111
+    ],
+    [
+      15.969486,
+      108.023008
+    ],
+    [
+      15.961697,
+      108.010882
+    ],
+    [
+      15.958962,
+      107.996577
+    ],
+    [
+      15.961697,
+      107.982272
+    ],
+    [
+      15.969486,
+      107.970146
+    ],
+    [
+      15.981143,
+      107.962043
+    ],
+    [
+      15.994894,
+      107.959197
+    ],
+    [
+      16.008645,
+      107.962043
+    ],
+    [
+      16.020302,
+      107.970146
+    ],
+    [
+      16.028091,
+      107.982272
+    ],
+    [
+      16.030826,
+      107.996577
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          107.996577,
+          16.030826
+        ],
+        [
+          108.010882,
+          16.028091
+        ],
+        [
+          108.023008,
+          16.020302
+        ],
+        [
+          108.031111,
+          16.008645
+        ],
+        [
+          108.033957,
+          15.994894
+        ],
+        [
+          108.031111,
+          15.981143
+        ],
+        [
+          108.023008,
+          15.969486
+        ],
+        [
+          108.010882,
+          15.961697
+        ],
+        [
+          107.996577,
+          15.958962
+        ],
+        [
+          107.982272,
+          15.961697
+        ],
+        [
+          107.970146,
+          15.969486
+        ],
+        [
+          107.962043,
+          15.981143
+        ],
+        [
+          107.959197,
+          15.994894
+        ],
+        [
+          107.962043,
+          16.008645
+        ],
+        [
+          107.970146,
+          16.020302
+        ],
+        [
+          107.982272,
+          16.028091
+        ],
+        [
+          107.996577,
+          16.030826
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f102b34c380f4ecf0f53"
+  },
+  "id": "hue-dai-noi",
+  "province": "hue",
+  "name": "Đại Nội Huế (Kinh Thành)",
+  "center": {
+    "lat": 16.469525,
+    "lng": 107.57745
+  },
+  "radiusM": 2500,
+  "tags": [
+    "history",
+    "culture",
+    "unesco",
+    "photo"
+  ],
+  "vibeKeywords": [
+    "kinh thanh",
+    "hoang cung",
+    "co kinh",
+    "di tich",
+    "chup anh"
+  ],
+  "desc": "Khu Hoàng Cung và Tử Cấm Thành của triều Nguyễn, một quần thể di tích lịch sử văn hóa đồ sộ.",
+  "whyChoose": [
+    "Tìm hiểu lịch sử triều Nguyễn",
+    "Kiến trúc cung đình cổ kính, tráng lệ"
+  ],
+  "funActivities": [
+    "Tham quan Ngọ Môn, Điện Thái Hòa",
+    "Chụp ảnh cổ trang",
+    "Xem nghi lễ đổi gác"
+  ],
+  "mustSee": [
+    "Cổng Ngọ Môn",
+    "Điện Thái Hòa",
+    "Tử Cấm Thành"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Mang giày bệt vì phải đi bộ rất nhiều",
+    "Nên thuê xe điện để tham quan toàn bộ khu vực"
+  ],
+  "donts": [
+    "Không mặc đồ ngắn, hở hang vào khu vực điện thờ",
+    "Không leo trèo lên các di tích"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125196/du-lich-dai-noi-hue-02154_oi6pzt.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125197/dai-noi-hue-net-dep-co-kinh-ben-dong-song-huong-tho-mong-1637860597_j4wm1l.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125195/du-lich-dai-noi-hue-01_cw4drm.jpg"
+  ],
+  "scorePriority": 0.83,
+  "isActive": true,
+  "poly": [
+    [
+      16.491983,
+      107.57745
+    ],
+    [
+      16.490273,
+      107.586412
+    ],
+    [
+      16.485405,
+      107.594009
+    ],
+    [
+      16.478119,
+      107.599086
+    ],
+    [
+      16.469525,
+      107.600869
+    ],
+    [
+      16.460931,
+      107.599086
+    ],
+    [
+      16.453645,
+      107.594009
+    ],
+    [
+      16.448777,
+      107.586412
+    ],
+    [
+      16.447067,
+      107.57745
+    ],
+    [
+      16.448777,
+      107.568488
+    ],
+    [
+      16.453645,
+      107.560891
+    ],
+    [
+      16.460931,
+      107.555814
+    ],
+    [
+      16.469525,
+      107.554031
+    ],
+    [
+      16.478119,
+      107.555814
+    ],
+    [
+      16.485405,
+      107.560891
+    ],
+    [
+      16.490273,
+      107.568488
+    ],
+    [
+      16.491983,
+      107.57745
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          107.57745,
+          16.491983
+        ],
+        [
+          107.586412,
+          16.490273
+        ],
+        [
+          107.594009,
+          16.485405
+        ],
+        [
+          107.599086,
+          16.478119
+        ],
+        [
+          107.600869,
+          16.469525
+        ],
+        [
+          107.599086,
+          16.460931
+        ],
+        [
+          107.594009,
+          16.453645
+        ],
+        [
+          107.586412,
+          16.448777
+        ],
+        [
+          107.57745,
+          16.447067
+        ],
+        [
+          107.568488,
+          16.448777
+        ],
+        [
+          107.560891,
+          16.453645
+        ],
+        [
+          107.555814,
+          16.460931
+        ],
+        [
+          107.554031,
+          16.469525
+        ],
+        [
+          107.555814,
+          16.478119
+        ],
+        [
+          107.560891,
+          16.485405
+        ],
+        [
+          107.568488,
+          16.490273
+        ],
+        [
+          107.57745,
+          16.491983
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f404b34c380f4ecf0f70"
+  },
+  "id": "qb-vung-chua-dao-yen",
+  "province": "quang-binh",
+  "name": "Vũng Chùa - Đảo Yến",
+  "center": {
+    "lat": 17.9892,
+    "lng": 106.4021
+  },
+  "radiusM": 2000,
+  "tags": [
+    "history",
+    "spiritual",
+    "view",
+    "nature"
+  ],
+  "vibeKeywords": [
+    "mo dai tuong",
+    "tam linh",
+    "yen binh",
+    "view bien",
+    "lich su"
+  ],
+  "desc": "Nơi an nghỉ cuối cùng của Đại tướng Võ Nguyên Giáp, một địa điểm tâm linh trang nghiêm với phong cảnh sơn thủy hữu tình.",
+  "whyChoose": [
+    "Viếng mộ Đại tướng Võ Nguyên Giáp",
+    "Không gian trang nghiêm, yên bình, view biển"
+  ],
+  "funActivities": [
+    "Dâng hương viếng mộ Đại tướng",
+    "Ngắm cảnh Vũng Chùa",
+    "Chụp ảnh Đảo Yến từ xa"
+  ],
+  "mustSee": [
+    "Khu lăng mộ Đại tướng",
+    "Đảo Yến (nhìn từ đất liền)"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Ăn mặc lịch sự, trang nghiêm (quần dài, áo có tay)",
+    "Giữ im lặng và xếp hàng theo thứ tự",
+    "Đăng ký tại ban quản lý trước khi lên"
+  ],
+  "donts": [
+    "Không mặc đồ ngắn/hở hang",
+    "Không nói to, cười đùa",
+    "Không chụp ảnh trong khu vực cấm"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761210508/vung_chua_dao_yen_sovaba_cb3310aafc_fw93vo.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761127005/vc1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761127005/vc2.jpg"
+  ],
+  "scorePriority": 0.8,
+  "isActive": true,
+  "poly": [
+    [
+      18.007166,
+      106.4021
+    ],
+    [
+      18.005799,
+      106.409329
+    ],
+    [
+      18.001904,
+      106.415457
+    ],
+    [
+      17.996075,
+      106.419552
+    ],
+    [
+      17.9892,
+      106.42099
+    ],
+    [
+      17.982325,
+      106.419552
+    ],
+    [
+      17.976496,
+      106.415457
+    ],
+    [
+      17.972601,
+      106.409329
+    ],
+    [
+      17.971234,
+      106.4021
+    ],
+    [
+      17.972601,
+      106.394871
+    ],
+    [
+      17.976496,
+      106.388743
+    ],
+    [
+      17.982325,
+      106.384648
+    ],
+    [
+      17.9892,
+      106.38321
+    ],
+    [
+      17.996075,
+      106.384648
+    ],
+    [
+      18.001904,
+      106.388743
+    ],
+    [
+      18.005799,
+      106.394871
+    ],
+    [
+      18.007166,
+      106.4021
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          106.4021,
+          18.007166
+        ],
+        [
+          106.409329,
+          18.005799
+        ],
+        [
+          106.415457,
+          18.001904
+        ],
+        [
+          106.419552,
+          17.996075
+        ],
+        [
+          106.42099,
+          17.9892
+        ],
+        [
+          106.419552,
+          17.982325
+        ],
+        [
+          106.415457,
+          17.976496
+        ],
+        [
+          106.409329,
+          17.972601
+        ],
+        [
+          106.4021,
+          17.971234
+        ],
+        [
+          106.394871,
+          17.972601
+        ],
+        [
+          106.388743,
+          17.976496
+        ],
+        [
+          106.384648,
+          17.982325
+        ],
+        [
+          106.38321,
+          17.9892
+        ],
+        [
+          106.384648,
+          17.996075
+        ],
+        [
+          106.388743,
+          18.001904
+        ],
+        [
+          106.394871,
+          18.005799
+        ],
+        [
+          106.4021,
+          18.007166
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f502b34c380f4ecf0f73"
+  },
+  "id": "nt-thap-ba",
+  "province": "nha-trang",
+  "name": "Tháp Bà Ponagar",
+  "center": {
+    "lat": 12.2658,
+    "lng": 109.1944
+  },
+  "radiusM": 1000,
+  "tags": [
+    "history",
+    "culture",
+    "temple",
+    "photo"
+  ],
+  "vibeKeywords": [
+    "di tich",
+    "champa",
+    "co kinh",
+    "tam linh",
+    "view bien",
+    "kien truc"
+  ],
+  "desc": "Quần thể kiến trúc Chăm Pa cổ kính và linh thiêng, nằm trên ngọn đồi nhỏ bên cửa sông Cái, là biểu tượng của Nha Trang.",
+  "whyChoose": [
+    "Kiến trúc Chăm Pa cổ độc đáo",
+    "Địa điểm tâm linh và văn hóa"
+  ],
+  "funActivities": [
+    "Tham quan các tháp",
+    "Tìm hiểu văn hóa Chăm",
+    "Xem múa Chăm",
+    "Ngắm cảnh cửa biển"
+  ],
+  "mustSee": [
+    "Cụm tháp chính (Ngôi Tháp Lớn)",
+    "Trụ cổng (Mandapa)",
+    "View sông Cái"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Ăn mặc lịch sự, trang nghiêm",
+    "Đi sớm để tránh nắng và đông đúc",
+    "Kết hợp đi tắm bùn Tháp Bà (gần đó)"
+  ],
+  "donts": [
+    "Không mặc đồ ngắn/hở hang vào khu điện thờ",
+    "Không leo trèo lên tháp"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761210928/thap-ba-Ponagar-1_yeoeeq.webp",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761128003/tb1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761128003/tb2.jpg"
+  ],
+  "scorePriority": 0.85,
+  "isActive": true,
+  "poly": [
+    [
+      12.274783,
+      109.1944
+    ],
+    [
+      12.274099,
+      109.197918
+    ],
+    [
+      12.272152,
+      109.2009
+    ],
+    [
+      12.269238,
+      109.202893
+    ],
+    [
+      12.2658,
+      109.203593
+    ],
+    [
+      12.262362,
+      109.202893
+    ],
+    [
+      12.259448,
+      109.2009
+    ],
+    [
+      12.257501,
+      109.197918
+    ],
+    [
+      12.256817,
+      109.1944
+    ],
+    [
+      12.257501,
+      109.190882
+    ],
+    [
+      12.259448,
+      109.1879
+    ],
+    [
+      12.262362,
+      109.185907
+    ],
+    [
+      12.2658,
+      109.185207
+    ],
+    [
+      12.269238,
+      109.185907
+    ],
+    [
+      12.272152,
+      109.1879
+    ],
+    [
+      12.274099,
+      109.190882
+    ],
+    [
+      12.274783,
+      109.1944
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          109.1944,
+          12.274783
+        ],
+        [
+          109.197918,
+          12.274099
+        ],
+        [
+          109.2009,
+          12.272152
+        ],
+        [
+          109.202893,
+          12.269238
+        ],
+        [
+          109.203593,
+          12.2658
+        ],
+        [
+          109.202893,
+          12.262362
+        ],
+        [
+          109.2009,
+          12.259448
+        ],
+        [
+          109.197918,
+          12.257501
+        ],
+        [
+          109.1944,
+          12.256817
+        ],
+        [
+          109.190882,
+          12.257501
+        ],
+        [
+          109.1879,
+          12.259448
+        ],
+        [
+          109.185907,
+          12.262362
+        ],
+        [
+          109.185207,
+          12.2658
+        ],
+        [
+          109.185907,
+          12.269238
+        ],
+        [
+          109.1879,
+          12.272152
+        ],
+        [
+          109.190882,
+          12.274099
+        ],
+        [
+          109.1944,
+          12.274783
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f701b34c380f4ecf0f82"
+  },
+  "id": "qng-son-my",
+  "province": "quang-ngai",
+  "name": "Khu chứng tích Sơn Mỹ (Mỹ Lai)",
+  "center": {
+    "lat": 15.1764,
+    "lng": 108.8876
+  },
+  "radiusM": 1500,
+  "tags": [
+    "history",
+    "museum",
+    "war",
+    "memorial"
+  ],
+  "vibeKeywords": [
+    "lich su",
+    "chien tranh",
+    "chung tich",
+    "tuong niem",
+    "hoa binh"
+  ],
+  "desc": "Nơi tưởng niệm vụ thảm sát Mỹ Lai năm 1968, một di tích lịch sử quan trọng về chiến tranh Việt Nam.",
+  "whyChoose": [
+    "Tìm hiểu về lịch sử chiến tranh",
+    "Địa điểm tưởng niệm quan trọng"
+  ],
+  "funActivities": [
+    "Tham quan nhà trưng bày",
+    "Dâng hương tưởng niệm",
+    "Tìm hiểu lịch sử"
+  ],
+  "mustSee": [
+    "Nhà trưng bày hiện vật",
+    "Tượng đài tưởng niệm",
+    "Khu vực làng bị tàn phá (tái hiện)"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Giữ thái độ trang nghiêm",
+    "Nên thuê hướng dẫn viên để hiểu rõ câu chuyện",
+    "Dành thời gian đọc thông tin"
+  ],
+  "donts": [
+    "Không cười đùa, làm ồn",
+    "Không chụp ảnh cợt nhả"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761227158/Monument_of_the_My_Lai_Massacre__2_f4zaaz.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761130002/sm1_new.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761130002/sm2_new.jpg"
+  ],
+  "scorePriority": 0.75,
+  "isActive": true,
+  "poly": [
+    [
+      15.189875,
+      108.8876
+    ],
+    [
+      15.188849,
+      108.892943
+    ],
+    [
+      15.185928,
+      108.897472
+    ],
+    [
+      15.181557,
+      108.900499
+    ],
+    [
+      15.1764,
+      108.901562
+    ],
+    [
+      15.171243,
+      108.900499
+    ],
+    [
+      15.166872,
+      108.897472
+    ],
+    [
+      15.163951,
+      108.892943
+    ],
+    [
+      15.162925,
+      108.8876
+    ],
+    [
+      15.163951,
+      108.882257
+    ],
+    [
+      15.166872,
+      108.877728
+    ],
+    [
+      15.171243,
+      108.874701
+    ],
+    [
+      15.1764,
+      108.873638
+    ],
+    [
+      15.181557,
+      108.874701
+    ],
+    [
+      15.185928,
+      108.877728
+    ],
+    [
+      15.188849,
+      108.882257
+    ],
+    [
+      15.189875,
+      108.8876
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.8876,
+          15.189875
+        ],
+        [
+          108.892943,
+          15.188849
+        ],
+        [
+          108.897472,
+          15.185928
+        ],
+        [
+          108.900499,
+          15.181557
+        ],
+        [
+          108.901562,
+          15.1764
+        ],
+        [
+          108.900499,
+          15.171243
+        ],
+        [
+          108.897472,
+          15.166872
+        ],
+        [
+          108.892943,
+          15.163951
+        ],
+        [
+          108.8876,
+          15.162925
+        ],
+        [
+          108.882257,
+          15.163951
+        ],
+        [
+          108.877728,
+          15.166872
+        ],
+        [
+          108.874701,
+          15.171243
+        ],
+        [
+          108.873638,
+          15.1764
+        ],
+        [
+          108.874701,
+          15.181557
+        ],
+        [
+          108.877728,
+          15.185928
+        ],
+        [
+          108.882257,
+          15.188849
+        ],
+        [
+          108.8876,
+          15.189875
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f704b34c380f4ecf0f85"
+  },
+  "id": "qb-bai-da-nhay",
+  "province": "quang-binh",
+  "name": "Bãi Đá Nhảy",
+  "center": {
+    "lat": 17.7025,
+    "lng": 106.4947
+  },
+  "radiusM": 1500,
+  "tags": [
+    "beach",
+    "nature",
+    "photo",
+    "geology"
+  ],
+  "vibeKeywords": [
+    "da",
+    "bien",
+    "check-in",
+    "hoang so",
+    "doc la",
+    "chup anh"
+  ],
+  "desc": "Bãi biển hoang sơ với quần thể đá bị nước biển bào mòn, tạo nên nhiều hình thù kỳ thú, độc đáo.",
+  "whyChoose": [
+    "Khung cảnh đá và biển độc đáo",
+    "Địa điểm chụp ảnh 'sống ảo'"
+  ],
+  "funActivities": [
+    "Chụp ảnh với các mỏm đá",
+    "Tắm biển (chỗ an toàn)",
+    "Ngắm cảnh"
+  ],
+  "mustSee": [
+    "Các tảng đá hình thù (cóc, voi...)",
+    "Bãi cát",
+    "View từ trên cao"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Mang giày bám tốt để leo đá",
+    "Cẩn thận sóng đánh khi trèo ra xa",
+    "Kết hợp trên đường đi Vũng Chùa"
+  ],
+  "donts": [
+    "Không leo trèo mạo hiểm",
+    "Cẩn thận đá sắc nhọn và hàu"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761227316/Bai_da_nhay_o_dau_quang_binh_1b196a1a97_npb9g1.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761130005/dn1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761130005/dn2.jpg"
+  ],
+  "scorePriority": 0.75,
+  "isActive": true,
+  "poly": [
+    [
+      17.715975,
+      106.4947
+    ],
+    [
+      17.714949,
+      106.500113
+    ],
+    [
+      17.712028,
+      106.504702
+    ],
+    [
+      17.707657,
+      106.507768
+    ],
+    [
+      17.7025,
+      106.508844
+    ],
+    [
+      17.697343,
+      106.507768
+    ],
+    [
+      17.692972,
+      106.504702
+    ],
+    [
+      17.690051,
+      106.500113
+    ],
+    [
+      17.689025,
+      106.4947
+    ],
+    [
+      17.690051,
+      106.489287
+    ],
+    [
+      17.692972,
+      106.484698
+    ],
+    [
+      17.697343,
+      106.481632
+    ],
+    [
+      17.7025,
+      106.480556
+    ],
+    [
+      17.707657,
+      106.481632
+    ],
+    [
+      17.712028,
+      106.484698
+    ],
+    [
+      17.714949,
+      106.489287
+    ],
+    [
+      17.715975,
+      106.4947
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          106.4947,
+          17.715975
+        ],
+        [
+          106.500113,
+          17.714949
+        ],
+        [
+          106.504702,
+          17.712028
+        ],
+        [
+          106.507768,
+          17.707657
+        ],
+        [
+          106.508844,
+          17.7025
+        ],
+        [
+          106.507768,
+          17.697343
+        ],
+        [
+          106.504702,
+          17.692972
+        ],
+        [
+          106.500113,
+          17.690051
+        ],
+        [
+          106.4947,
+          17.689025
+        ],
+        [
+          106.489287,
+          17.690051
+        ],
+        [
+          106.484698,
+          17.692972
+        ],
+        [
+          106.481632,
+          17.697343
+        ],
+        [
+          106.480556,
+          17.7025
+        ],
+        [
+          106.481632,
+          17.707657
+        ],
+        [
+          106.484698,
+          17.712028
+        ],
+        [
+          106.489287,
+          17.714949
+        ],
+        [
+          106.4947,
+          17.715975
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f901b34c380f4ecf0f92"
+  },
+  "id": "hue-ho-thuy-tien",
+  "province": "hue",
+  "name": "Công viên Nước Hồ Thuỷ Tiên",
+  "center": {
+    "lat": 16.4216,
+    "lng": 107.5791
+  },
+  "radiusM": 2000,
+  "tags": [
+    "photo",
+    "adventure",
+    "unique",
+    "abandoned"
+  ],
+  "vibeKeywords": [
+    "check-in",
+    "ma mi",
+    "bo hoang",
+    "con rong",
+    "huyen bi",
+    "kham pha"
+  ],
+  "desc": "Công viên nước bị bỏ hoang nổi tiếng thế giới, thu hút du khách bởi vẻ đẹp ma mị, huyền bí của các công trình, đặc biệt là bức tượng rồng khổng lồ.",
+  "whyChoose": [
+    "Địa điểm check-in độc lạ, ma mị",
+    "Khám phá vẻ đẹp của sự hoang tàn",
+    "Nổi tiếng quốc tế"
+  ],
+  "funActivities": [
+    "Chụp ảnh check-in",
+    "Khám phá khu vực đầu rồng",
+    "Đi bộ quanh hồ"
+  ],
+  "mustSee": [
+    "Tượng Rồng khổng lồ giữa hồ",
+    "Khu máng trượt bỏ hoang",
+    "Sân khấu nhạc nước"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Mang giày thể thao vì phải đi bộ nhiều",
+    "Cẩn thận với các mảnh vỡ hoặc kết cấu yếu",
+    "Nên đi vào buổi sáng hoặc đầu giờ chiều"
+  ],
+  "donts": [
+    "Không nên đi một mình hoặc lúc trời tối",
+    "Không leo trèo mạo hiểm lên các công trình đã xuống cấp"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761723424/images_28_tldzxm.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761240002/thuy-tien-1_def.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761240003/thuy-tien-2_ghi.jpg"
+  ],
+  "scorePriority": 0.8,
+  "isActive": true,
+  "poly": [
+    [
+      16.439566,
+      107.5791
+    ],
+    [
+      16.438199,
+      107.586268
+    ],
+    [
+      16.434304,
+      107.592344
+    ],
+    [
+      16.428475,
+      107.596405
+    ],
+    [
+      16.4216,
+      107.59783
+    ],
+    [
+      16.414725,
+      107.596405
+    ],
+    [
+      16.408896,
+      107.592344
+    ],
+    [
+      16.405001,
+      107.586268
+    ],
+    [
+      16.403634,
+      107.5791
+    ],
+    [
+      16.405001,
+      107.571932
+    ],
+    [
+      16.408896,
+      107.565856
+    ],
+    [
+      16.414725,
+      107.561795
+    ],
+    [
+      16.4216,
+      107.56037
+    ],
+    [
+      16.428475,
+      107.561795
+    ],
+    [
+      16.434304,
+      107.565856
+    ],
+    [
+      16.438199,
+      107.571932
+    ],
+    [
+      16.439566,
+      107.5791
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          107.5791,
+          16.439566
+        ],
+        [
+          107.586268,
+          16.438199
+        ],
+        [
+          107.592344,
+          16.434304
+        ],
+        [
+          107.596405,
+          16.428475
+        ],
+        [
+          107.59783,
+          16.4216
+        ],
+        [
+          107.596405,
+          16.414725
+        ],
+        [
+          107.592344,
+          16.408896
+        ],
+        [
+          107.586268,
+          16.405001
+        ],
+        [
+          107.5791,
+          16.403634
+        ],
+        [
+          107.571932,
+          16.405001
+        ],
+        [
+          107.565856,
+          16.408896
+        ],
+        [
+          107.561795,
+          16.414725
+        ],
+        [
+          107.56037,
+          16.4216
+        ],
+        [
+          107.561795,
+          16.428475
+        ],
+        [
+          107.565856,
+          16.434304
+        ],
+        [
+          107.571932,
+          16.438199
+        ],
+        [
+          107.5791,
+          16.439566
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6fa02b34c380f4ecf0f95"
+  },
+  "id": "nt-dam-market",
+  "province": "nha-trang",
+  "name": "Chợ Đầm",
+  "center": {
+    "lat": 12.2536,
+    "lng": 109.1919
+  },
+  "radiusM": 1000,
+  "tags": [
+    "market",
+    "food",
+    "local",
+    "shopping",
+    "architecture"
+  ],
+  "vibeKeywords": [
+    "am thuc",
+    "dac san",
+    "mua sam",
+    "cho",
+    "kien truc",
+    "hai san kho"
+  ],
+  "desc": "Khu chợ trung tâm lớn nhất Nha Trang, nổi tiếng với kiến trúc tròn hình hoa sen độc đáo và là nơi mua sắm đặc sản, hải sản khô sầm uất.",
+  "whyChoose": [
+    "Thiên đường mua đặc sản (khô, mắm, mực rim)",
+    "Kiến trúc hoa sen độc đáo để tham quan",
+    "Trải nghiệm chợ địa phương nhộn nhịp"
+  ],
+  "funActivities": [
+    "Mua sắm đặc sản, đồ khô",
+    "Ăn vặt (bún cá, bún sứa, nem nướng)",
+    "Tham quan kiến trúc chợ",
+    "Mua quần áo"
+  ],
+  "mustSee": [
+    "Khu bán đồ khô và hải sản",
+    "Khu ẩm thực",
+    "Tòa nhà trung tâm hình hoa sen"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Nên đi buổi sáng để trải nghiệm không khí nhộn nhịp nhất",
+    "Hỏi giá và trả giá khi mua sắm",
+    "Giữ ví và điện thoại cẩn thận"
+  ],
+  "donts": [
+    "Không mua hàng rong bên ngoài chợ",
+    "Cẩn thận móc túi khi quá đông"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761723605/cho-dam-nha-trang--_1629025361_jyehdx.webp",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761250102/cho-dam-1_mno.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761250103/cho-dam-2_pqr.jpg"
+  ],
+  "scorePriority": 0.75,
+  "isActive": true,
+  "poly": [
+    [
+      12.262583,
+      109.1919
+    ],
+    [
+      12.261899,
+      109.195418
+    ],
+    [
+      12.259952,
+      109.1984
+    ],
+    [
+      12.257038,
+      109.200393
+    ],
+    [
+      12.2536,
+      109.201093
+    ],
+    [
+      12.250162,
+      109.200393
+    ],
+    [
+      12.247248,
+      109.1984
+    ],
+    [
+      12.245301,
+      109.195418
+    ],
+    [
+      12.244617,
+      109.1919
+    ],
+    [
+      12.245301,
+      109.188382
+    ],
+    [
+      12.247248,
+      109.1854
+    ],
+    [
+      12.250162,
+      109.183407
+    ],
+    [
+      12.2536,
+      109.182707
+    ],
+    [
+      12.257038,
+      109.183407
+    ],
+    [
+      12.259952,
+      109.1854
+    ],
+    [
+      12.261899,
+      109.188382
+    ],
+    [
+      12.262583,
+      109.1919
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          109.1919,
+          12.262583
+        ],
+        [
+          109.195418,
+          12.261899
+        ],
+        [
+          109.1984,
+          12.259952
+        ],
+        [
+          109.200393,
+          12.257038
+        ],
+        [
+          109.201093,
+          12.2536
+        ],
+        [
+          109.200393,
+          12.250162
+        ],
+        [
+          109.1984,
+          12.247248
+        ],
+        [
+          109.195418,
+          12.245301
+        ],
+        [
+          109.1919,
+          12.244617
+        ],
+        [
+          109.188382,
+          12.245301
+        ],
+        [
+          109.1854,
+          12.247248
+        ],
+        [
+          109.183407,
+          12.250162
+        ],
+        [
+          109.182707,
+          12.2536
+        ],
+        [
+          109.183407,
+          12.257038
+        ],
+        [
+          109.1854,
+          12.259952
+        ],
+        [
+          109.188382,
+          12.261899
+        ],
+        [
+          109.1919,
+          12.262583
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6fb02b34c380f4ecf0f97"
+  },
+  "id": "nt-dao-yen-hon-noi",
+  "province": "nha-trang",
+  "name": "Đảo Yến - Hòn Nội",
+  "center": {
+    "lat": 12.0167,
+    "lng": 109.3
+  },
+  "radiusM": 1500,
+  "tags": [
+    "island",
+    "nature",
+    "beach",
+    "photo",
+    "unique",
+    "bird"
+  ],
+  "vibeKeywords": [
+    "bien",
+    "dao",
+    "chim yen",
+    "hoang so",
+    "bai tam doi",
+    "trong vat"
+  ],
+  "desc": "Hòn đảo nổi tiếng với bãi tắm đôi độc đáo và là nơi chim yến làm tổ. Nơi đây có cảnh quan hoang sơ, nước biển trong vắt và chỉ mở cửa cho khách theo tour.",
+  "whyChoose": [
+    "Bãi tắm đôi độc nhất vô nhị tại Việt Nam",
+    "Nước biển trong thấy đáy",
+    "Tìm hiểu về nghề khai thác yến sào"
+  ],
+  "funActivities": [
+    "Tắm biển bãi tắm đôi",
+    "Lặn ngắm san hô",
+    "Leo núi lên đỉnh Du Hạ (ngắm toàn cảnh)",
+    "Đi tàu đáy kính"
+  ],
+  "mustSee": [
+    "Bãi tắm đôi",
+    "Hang Yến (nhìn từ ngoài)",
+    "Đền thờ Tổ nghề Yến"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Chỉ có thể đi bằng tour (không tự túc được)",
+    "Mang theo đồ bơi, kem chống nắng",
+    "Đảo chỉ mở cửa từ tháng 3 đến tháng 9"
+  ],
+  "donts": [
+    "Không tự ý đi vào khu vực khai thác tổ yến",
+    "Không xả rác trên đảo",
+    "Không đi vào mùa mưa bão"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761723780/images_30_t926hr.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761260102/dy-1_mno.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761260103/dy-2_pqr.jpg"
+  ],
+  "scorePriority": 0.85,
+  "isActive": true,
+  "poly": [
+    [
+      12.030175,
+      109.3
+    ],
+    [
+      12.029149,
+      109.305272
+    ],
+    [
+      12.026228,
+      109.309741
+    ],
+    [
+      12.021857,
+      109.312728
+    ],
+    [
+      12.0167,
+      109.313777
+    ],
+    [
+      12.011543,
+      109.312728
+    ],
+    [
+      12.007172,
+      109.309741
+    ],
+    [
+      12.004251,
+      109.305272
+    ],
+    [
+      12.003225,
+      109.3
+    ],
+    [
+      12.004251,
+      109.294728
+    ],
+    [
+      12.007172,
+      109.290259
+    ],
+    [
+      12.011543,
+      109.287272
+    ],
+    [
+      12.0167,
+      109.286223
+    ],
+    [
+      12.021857,
+      109.287272
+    ],
+    [
+      12.026228,
+      109.290259
+    ],
+    [
+      12.029149,
+      109.294728
+    ],
+    [
+      12.030175,
+      109.3
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          109.3,
+          12.030175
+        ],
+        [
+          109.305272,
+          12.029149
+        ],
+        [
+          109.309741,
+          12.026228
+        ],
+        [
+          109.312728,
+          12.021857
+        ],
+        [
+          109.313777,
+          12.0167
+        ],
+        [
+          109.312728,
+          12.011543
+        ],
+        [
+          109.309741,
+          12.007172
+        ],
+        [
+          109.305272,
+          12.004251
+        ],
+        [
+          109.3,
+          12.003225
+        ],
+        [
+          109.294728,
+          12.004251
+        ],
+        [
+          109.290259,
+          12.007172
+        ],
+        [
+          109.287272,
+          12.011543
+        ],
+        [
+          109.286223,
+          12.0167
+        ],
+        [
+          109.287272,
+          12.021857
+        ],
+        [
+          109.290259,
+          12.026228
+        ],
+        [
+          109.294728,
+          12.029149
+        ],
+        [
+          109.3,
+          12.030175
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "6901d92e5dd814c46ade87fb"
+  },
+  "id": "dn-son-tra",
+  "province": "da-nang",
+  "name": "Bán đảo Sơn Trà",
+  "center": {
+    "lat": 16.1173,
+    "lng": 108.2889
+  },
+  "radiusM": 3500,
+  "poly": [
+    [
+      16.1201,
+      108.2823
+    ],
+    [
+      16.1184,
+      108.296
+    ],
+    [
+      16.1105,
+      108.3015
+    ],
+    [
+      16.1042,
+      108.2913
+    ],
+    [
+      16.1201,
+      108.2823
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.2823,
+          16.1201
+        ],
+        [
+          108.296,
+          16.1184
+        ],
+        [
+          108.3015,
+          16.1105
+        ],
+        [
+          108.2913,
+          16.1042
+        ],
+        [
+          108.2823,
+          16.1201
+        ]
+      ]
+    ]
+  },
+  "tags": [
+    "nature",
+    "photo",
+    "temple"
+  ],
+  "vibeKeywords": [
+    "rung",
+    "bien",
+    "phat",
+    "chua",
+    "view"
+  ],
+  "desc": "Khu sinh thái tự nhiên nổi tiếng, có chùa Linh Ứng, voọc chà vá, hải đăng và các điểm ngắm cảnh tuyệt đẹp.",
+  "whyChoose": [
+    "Không khí trong lành",
+    "Ngắm toàn cảnh Đà Nẵng từ trên cao"
+  ],
+  "funActivities": [
+    "Leo núi",
+    "Tham quan chùa Linh Ứng",
+    "Ngắm hoàng hôn"
+  ],
+  "mustSee": [
+    "Chùa Linh Ứng",
+    "Bãi Bụt",
+    "Hải đăng Sơn Trà"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Mang theo nước và giày leo núi",
+    "Đi sớm để tránh sương mù"
+  ],
+  "donts": [
+    "Không cho khỉ ăn",
+    "Không đi vào khu rừng sâu nếu không có hướng dẫn"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761121990/chua-linh-ung-ban-dao-son-tra-danang-01-1024x576_kz9x2r.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761121992/CF154FA8-66FE-4DFC-A78B-5556FB08F973_lblu4r.png",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761121990/ban-dao-son-tra-2_lgwdbj.webp"
+  ],
+  "scorePriority": 0.8,
+  "isActive": true
+},
+{
+  "_id": {
+    "$oid": "68f6efa2b34c380f4ecf0f3d"
+  },
+  "id": "dn-an-thuong",
+  "province": "da-nang",
+  "name": "Khu An Thượng",
+  "center": {
+    "lat": 16.0543,
+    "lng": 108.2444
+  },
+  "radiusM": 1500,
+  "tags": [
+    "food",
+    "nightlife",
+    "cafe"
+  ],
+  "vibeKeywords": [
+    "bar",
+    "expat",
+    "gan bien",
+    "bia",
+    "nhac song"
+  ],
+  "desc": "Khu phố Tây sôi động với nhiều quán ăn, bar, cafe, và không khí trẻ trung gần biển Mỹ Khê.",
+  "whyChoose": [
+    "Ẩm thực đa dạng, gần biển",
+    "Không khí sôi động về đêm"
+  ],
+  "funActivities": [
+    "Bar",
+    "Cafe",
+    "Ăn hải sản",
+    "Nghe nhạc sống"
+  ],
+  "mustSee": [
+    "Phố đi bộ An Thượng",
+    "An Thượng 38 Street"
+  ],
+  "bestTime": "evening",
+  "tips": [
+    "Đi bộ buổi chiều để tận hưởng gió biển",
+    "Mang tiền mặt vì nhiều quán nhỏ không nhận thẻ"
+  ],
+  "donts": [
+    "Tránh đi tối thứ 7 nếu không thích đông",
+    "Không nên đậu xe ô tô trong hẻm nhỏ"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761121434/khu-pho-du-lich-an-thuong-bat-dau-di-vao-hoat-dong-tu-23042018-02_utjgfb.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761121598/anh4-17096269340301492008391_vn0bnz.webp",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761121602/anh3-170962693395568763130_av2yyk.webp"
+  ],
+  "scorePriority": 0.9,
+  "isActive": true,
+  "poly": [
+    [
+      16.067775,
+      108.2444
+    ],
+    [
+      16.066749,
+      108.249766
+    ],
+    [
+      16.063828,
+      108.254315
+    ],
+    [
+      16.059457,
+      108.257354
+    ],
+    [
+      16.0543,
+      108.258422
+    ],
+    [
+      16.049143,
+      108.257354
+    ],
+    [
+      16.044772,
+      108.254315
+    ],
+    [
+      16.041851,
+      108.249766
+    ],
+    [
+      16.040825,
+      108.2444
+    ],
+    [
+      16.041851,
+      108.239034
+    ],
+    [
+      16.044772,
+      108.234485
+    ],
+    [
+      16.049143,
+      108.231446
+    ],
+    [
+      16.0543,
+      108.230378
+    ],
+    [
+      16.059457,
+      108.231446
+    ],
+    [
+      16.063828,
+      108.234485
+    ],
+    [
+      16.066749,
+      108.239034
+    ],
+    [
+      16.067775,
+      108.2444
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.2444,
+          16.067775
+        ],
+        [
+          108.249766,
+          16.066749
+        ],
+        [
+          108.254315,
+          16.063828
+        ],
+        [
+          108.257354,
+          16.059457
+        ],
+        [
+          108.258422,
+          16.0543
+        ],
+        [
+          108.257354,
+          16.049143
+        ],
+        [
+          108.254315,
+          16.044772
+        ],
+        [
+          108.249766,
+          16.041851
+        ],
+        [
+          108.2444,
+          16.040825
+        ],
+        [
+          108.239034,
+          16.041851
+        ],
+        [
+          108.234485,
+          16.044772
+        ],
+        [
+          108.231446,
+          16.049143
+        ],
+        [
+          108.230378,
+          16.0543
+        ],
+        [
+          108.231446,
+          16.059457
+        ],
+        [
+          108.234485,
+          16.063828
+        ],
+        [
+          108.239034,
+          16.066749
+        ],
+        [
+          108.2444,
+          16.067775
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6efe2b34c380f4ecf0f45"
+  },
+  "id": "hue-thien-mu",
+  "province": "hue",
+  "name": "Thiên Mụ – Kim Long",
+  "center": {
+    "lat": 16.453423,
+    "lng": 107.544678
+  },
+  "radiusM": 2500,
+  "tags": [
+    "temple",
+    "river",
+    "photo"
+  ],
+  "vibeKeywords": [
+    "song huong",
+    "chua",
+    "tam linh",
+    "lang man"
+  ],
+  "desc": "Vùng ven sông Hương yên bình với chùa Thiên Mụ và những con đường rợp bóng cây.",
+  "whyChoose": [
+    "Không gian thanh tịnh",
+    "Gần trung tâm Huế nhưng yên bình"
+  ],
+  "funActivities": [
+    "Tham quan chùa Thiên Mụ",
+    "Đi thuyền trên sông Hương"
+  ],
+  "mustSee": [
+    "Chùa Thiên Mụ",
+    "Nhà cổ Kim Long"
+  ],
+  "bestTime": "afternoon",
+  "tips": [
+    "Đi buổi chiều để ngắm hoàng hôn bên sông",
+    "Mang theo máy ảnh để chụp cảnh ven sông"
+  ],
+  "donts": [
+    "Không nói to trong khuôn viên chùa",
+    "Không vẽ bậy hoặc xả rác"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761122273/79442-Thien-Mu-Pagoda_rjudjn.webp",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761122273/527227-thien-mu-pagoda_jkkg22.webp",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761122273/chua-thien-mu-1_um4u5z.jpg"
+  ],
+  "scorePriority": 0.9,
+  "isActive": true,
+  "poly": [
+    [
+      16.475881,
+      107.544678
+    ],
+    [
+      16.474171,
+      107.553639
+    ],
+    [
+      16.469303,
+      107.561236
+    ],
+    [
+      16.462017,
+      107.566312
+    ],
+    [
+      16.453423,
+      107.568095
+    ],
+    [
+      16.444829,
+      107.566312
+    ],
+    [
+      16.437543,
+      107.561236
+    ],
+    [
+      16.432675,
+      107.553639
+    ],
+    [
+      16.430965,
+      107.544678
+    ],
+    [
+      16.432675,
+      107.535717
+    ],
+    [
+      16.437543,
+      107.52812
+    ],
+    [
+      16.444829,
+      107.523044
+    ],
+    [
+      16.453423,
+      107.521261
+    ],
+    [
+      16.462017,
+      107.523044
+    ],
+    [
+      16.469303,
+      107.52812
+    ],
+    [
+      16.474171,
+      107.535717
+    ],
+    [
+      16.475881,
+      107.544678
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          107.544678,
+          16.475881
+        ],
+        [
+          107.553639,
+          16.474171
+        ],
+        [
+          107.561236,
+          16.469303
+        ],
+        [
+          107.566312,
+          16.462017
+        ],
+        [
+          107.568095,
+          16.453423
+        ],
+        [
+          107.566312,
+          16.444829
+        ],
+        [
+          107.561236,
+          16.437543
+        ],
+        [
+          107.553639,
+          16.432675
+        ],
+        [
+          107.544678,
+          16.430965
+        ],
+        [
+          107.535717,
+          16.432675
+        ],
+        [
+          107.52812,
+          16.437543
+        ],
+        [
+          107.523044,
+          16.444829
+        ],
+        [
+          107.521261,
+          16.453423
+        ],
+        [
+          107.523044,
+          16.462017
+        ],
+        [
+          107.52812,
+          16.469303
+        ],
+        [
+          107.535717,
+          16.474171
+        ],
+        [
+          107.544678,
+          16.475881
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f104b34c380f4ecf0f55"
+  },
+  "id": "qb-thien-duong",
+  "province": "quang-binh",
+  "name": "Động Thiên Đường",
+  "center": {
+    "lat": 17.51941,
+    "lng": 106.223221
+  },
+  "radiusM": 2500,
+  "tags": [
+    "cave",
+    "nature",
+    "photo"
+  ],
+  "vibeKeywords": [
+    "hang dong",
+    "ky ao",
+    "trang le",
+    "thach nhu",
+    "hoang so"
+  ],
+  "desc": "Được mệnh danh là 'hoàng cung trong lòng đất', đây là một trong những hang động khô dài nhất châu Á với thạch nhũ kỳ ảo.",
+  "whyChoose": [
+    "Vẻ đẹp tráng lệ, kỳ ảo của thạch nhũ",
+    "Hệ thống cầu gỗ an toàn, dễ tham quan"
+  ],
+  "funActivities": [
+    "Đi bộ trên cầu gỗ 1km",
+    "Chiêm ngưỡng thạch nhũ",
+    "Chụp ảnh"
+  ],
+  "mustSee": [
+    "Cung Thạch Hoa Viên",
+    "Cung Quảng Hàn",
+    "Giếng Trời (cuối tuyến)"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Phải leo bộ hoặc đi xe điện lên cửa hang",
+    "Mang giày thể thao thoải mái"
+  ],
+  "donts": [
+    "Không chạy nhảy trên cầu gỗ",
+    "Không nói to gây vang vọng"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125481/dongthienduong-1_pgurih.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125483/dong-thien-duong36_jmlqsj.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125484/du-lich-dong-thien-duong-01_kwcvvs.png"
+  ],
+  "scorePriority": 0.9,
+  "isActive": true,
+  "poly": [
+    [
+      17.541868,
+      106.223221
+    ],
+    [
+      17.540158,
+      106.232233
+    ],
+    [
+      17.53529,
+      106.239873
+    ],
+    [
+      17.528004,
+      106.244979
+    ],
+    [
+      17.51941,
+      106.246771
+    ],
+    [
+      17.510816,
+      106.244979
+    ],
+    [
+      17.50353,
+      106.239873
+    ],
+    [
+      17.498662,
+      106.232233
+    ],
+    [
+      17.496952,
+      106.223221
+    ],
+    [
+      17.498662,
+      106.214209
+    ],
+    [
+      17.50353,
+      106.206569
+    ],
+    [
+      17.510816,
+      106.201463
+    ],
+    [
+      17.51941,
+      106.199671
+    ],
+    [
+      17.528004,
+      106.201463
+    ],
+    [
+      17.53529,
+      106.206569
+    ],
+    [
+      17.540158,
+      106.214209
+    ],
+    [
+      17.541868,
+      106.223221
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          106.223221,
+          17.541868
+        ],
+        [
+          106.232233,
+          17.540158
+        ],
+        [
+          106.239873,
+          17.53529
+        ],
+        [
+          106.244979,
+          17.528004
+        ],
+        [
+          106.246771,
+          17.51941
+        ],
+        [
+          106.244979,
+          17.510816
+        ],
+        [
+          106.239873,
+          17.50353
+        ],
+        [
+          106.232233,
+          17.498662
+        ],
+        [
+          106.223221,
+          17.496952
+        ],
+        [
+          106.214209,
+          17.498662
+        ],
+        [
+          106.206569,
+          17.50353
+        ],
+        [
+          106.201463,
+          17.510816
+        ],
+        [
+          106.199671,
+          17.51941
+        ],
+        [
+          106.201463,
+          17.528004
+        ],
+        [
+          106.206569,
+          17.53529
+        ],
+        [
+          106.214209,
+          17.540158
+        ],
+        [
+          106.223221,
+          17.541868
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f203b34c380f4ecf0f59"
+  },
+  "id": "hue-cho-dong-ba",
+  "province": "hue",
+  "name": "Chợ Đông Ba",
+  "center": {
+    "lat": 16.472714,
+    "lng": 107.588284
+  },
+  "radiusM": 1000,
+  "tags": [
+    "market",
+    "food",
+    "local",
+    "shopping"
+  ],
+  "vibeKeywords": [
+    "am thuc",
+    "dac san",
+    "mua sam",
+    "cho",
+    "dia phuong"
+  ],
+  "desc": "Khu chợ truyền thống lớn nhất và lâu đời nhất của Huế, là thiên đường ẩm thực và mua sắm đặc sản.",
+  "whyChoose": [
+    "Thưởng thức ẩm thực đường phố Huế",
+    "Trải nghiệm văn hóa chợ địa phương"
+  ],
+  "funActivities": [
+    "Ăn vặt (bún, bánh, chè)",
+    "Mua sắm (mè xửng, nón lá, tôm chua)",
+    "Dạo chợ"
+  ],
+  "mustSee": [
+    "Khu ẩm thực",
+    "Khu bán đồ khô",
+    "Lầu chuông (biểu tượng chợ)"
+  ],
+  "bestTime": "afternoon",
+  "tips": [
+    "Nên hỏi giá trước khi mua",
+    "Giữ ví và điện thoại cẩn thận",
+    "Đi buổi chiều để ăn vặt"
+  ],
+  "donts": [
+    "Không mua hàng nếu không hỏi giá",
+    "Không đi vào giờ cao điểm quá đông"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126275/cho-dong-ba-hue-1_jtj7gb.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126277/cho-dong-ba-04_ofx5ti.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126280/thoi-diem-hop-ly-ghe-cho_dozica.jpg"
+  ],
+  "scorePriority": 0.75,
+  "isActive": true,
+  "poly": [
+    [
+      16.481697,
+      107.588284
+    ],
+    [
+      16.481013,
+      107.591869
+    ],
+    [
+      16.479066,
+      107.594908
+    ],
+    [
+      16.476152,
+      107.596939
+    ],
+    [
+      16.472714,
+      107.597652
+    ],
+    [
+      16.469276,
+      107.596939
+    ],
+    [
+      16.466362,
+      107.594908
+    ],
+    [
+      16.464415,
+      107.591869
+    ],
+    [
+      16.463731,
+      107.588284
+    ],
+    [
+      16.464415,
+      107.584699
+    ],
+    [
+      16.466362,
+      107.58166
+    ],
+    [
+      16.469276,
+      107.579629
+    ],
+    [
+      16.472714,
+      107.578916
+    ],
+    [
+      16.476152,
+      107.579629
+    ],
+    [
+      16.479066,
+      107.58166
+    ],
+    [
+      16.481013,
+      107.584699
+    ],
+    [
+      16.481697,
+      107.588284
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          107.588284,
+          16.481697
+        ],
+        [
+          107.591869,
+          16.481013
+        ],
+        [
+          107.594908,
+          16.479066
+        ],
+        [
+          107.596939,
+          16.476152
+        ],
+        [
+          107.597652,
+          16.472714
+        ],
+        [
+          107.596939,
+          16.469276
+        ],
+        [
+          107.594908,
+          16.466362
+        ],
+        [
+          107.591869,
+          16.464415
+        ],
+        [
+          107.588284,
+          16.463731
+        ],
+        [
+          107.584699,
+          16.464415
+        ],
+        [
+          107.58166,
+          16.466362
+        ],
+        [
+          107.579629,
+          16.469276
+        ],
+        [
+          107.578916,
+          16.472714
+        ],
+        [
+          107.579629,
+          16.476152
+        ],
+        [
+          107.58166,
+          16.479066
+        ],
+        [
+          107.584699,
+          16.481013
+        ],
+        [
+          107.588284,
+          16.481697
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f301b34c380f4ecf0f62"
+  },
+  "id": "dn-cho-han",
+  "province": "da-nang",
+  "name": "Chợ Hàn",
+  "center": {
+    "lat": 16.0682,
+    "lng": 108.2238
+  },
+  "radiusM": 1000,
+  "tags": [
+    "market",
+    "food",
+    "local",
+    "shopping"
+  ],
+  "vibeKeywords": [
+    "am thuc",
+    "dac san",
+    "mua sam",
+    "dia phuong",
+    "mam",
+    "cha bo"
+  ],
+  "desc": "Khu chợ sầm uất và lâu đời ngay trung tâm Đà Nẵng, nổi tiếng với các loại mắm, đặc sản khô và ẩm thực địa phương.",
+  "whyChoose": [
+    "Thiên đường mua đặc sản làm quà",
+    "Trải nghiệm chợ địa phương sầm uất"
+  ],
+  "funActivities": [
+    "Mua sắm (mắm, khô, chả)",
+    "Ăn vặt",
+    "Dạo chợ"
+  ],
+  "mustSee": [
+    "Khu đồ khô & mắm",
+    "Khu ẩm thực",
+    "Khu vải vóc"
+  ],
+  "bestTime": "afternoon",
+  "tips": [
+    "Nên trả giá (nhưng không quá nhiều)",
+    "Giữ ví và điện thoại cẩn thận",
+    "Hỏi kỹ hạn sử dụng của đặc sản"
+  ],
+  "donts": [
+    "Không mua hàng rong bên ngoài chợ",
+    "Cẩn thận móc túi khi đông người"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761143991/157_cho-han-da-nang-119-tran-phu-da-nang-bk-1_hjvmmd.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126002/chohan1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126002/chohan2.jpg"
+  ],
+  "scorePriority": 0.7,
+  "isActive": true,
+  "poly": [
+    [
+      16.077183,
+      108.2238
+    ],
+    [
+      16.076499,
+      108.227377
+    ],
+    [
+      16.074552,
+      108.23041
+    ],
+    [
+      16.071638,
+      108.232437
+    ],
+    [
+      16.0682,
+      108.233148
+    ],
+    [
+      16.064762,
+      108.232437
+    ],
+    [
+      16.061848,
+      108.23041
+    ],
+    [
+      16.059901,
+      108.227377
+    ],
+    [
+      16.059217,
+      108.2238
+    ],
+    [
+      16.059901,
+      108.220223
+    ],
+    [
+      16.061848,
+      108.21719
+    ],
+    [
+      16.064762,
+      108.215163
+    ],
+    [
+      16.0682,
+      108.214452
+    ],
+    [
+      16.071638,
+      108.215163
+    ],
+    [
+      16.074552,
+      108.21719
+    ],
+    [
+      16.076499,
+      108.220223
+    ],
+    [
+      16.077183,
+      108.2238
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.2238,
+          16.077183
+        ],
+        [
+          108.227377,
+          16.076499
+        ],
+        [
+          108.23041,
+          16.074552
+        ],
+        [
+          108.232437,
+          16.071638
+        ],
+        [
+          108.233148,
+          16.0682
+        ],
+        [
+          108.232437,
+          16.064762
+        ],
+        [
+          108.23041,
+          16.061848
+        ],
+        [
+          108.227377,
+          16.059901
+        ],
+        [
+          108.2238,
+          16.059217
+        ],
+        [
+          108.220223,
+          16.059901
+        ],
+        [
+          108.21719,
+          16.061848
+        ],
+        [
+          108.215163,
+          16.064762
+        ],
+        [
+          108.214452,
+          16.0682
+        ],
+        [
+          108.215163,
+          16.071638
+        ],
+        [
+          108.21719,
+          16.074552
+        ],
+        [
+          108.220223,
+          16.076499
+        ],
+        [
+          108.2238,
+          16.077183
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f304b34c380f4ecf0f65"
+  },
+  "id": "dn-cham-museum",
+  "province": "da-nang",
+  "name": "Bảo tàng Điêu khắc Chăm",
+  "center": {
+    "lat": 16.0617,
+    "lng": 108.225
+  },
+  "radiusM": 500,
+  "tags": [
+    "museum",
+    "history",
+    "culture",
+    "architecture"
+  ],
+  "vibeKeywords": [
+    "bao tang",
+    "di tich",
+    "champa",
+    "dieu khac",
+    "co kinh"
+  ],
+  "desc": "Nơi lưu giữ bộ sưu tập nghệ thuật điêu khắc Chăm Pa lớn nhất thế giới, nằm trong tòa nhà cổ kính giao thoa kiến trúc Pháp và Chăm.",
+  "whyChoose": [
+    "Tìm hiểu sâu về văn hóa Chăm Pa",
+    "Bộ sưu tập hiện vật độc đáo, quý hiếm"
+  ],
+  "funActivities": [
+    "Tham quan các phòng trưng bày",
+    "Tìm hiểu lịch sử",
+    "Chụp ảnh kiến trúc bảo tàng"
+  ],
+  "mustSee": [
+    "Tượng Bồ tát Tara",
+    "Đài thờ Mỹ Sơn E1",
+    "Đài thờ Trà Kiệu"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Nên thuê hướng dẫn viên hoặc audio guide để hiểu rõ",
+    "Kết hợp tham quan Cầu Rồng và Cầu Tình Yêu"
+  ],
+  "donts": [
+    "Không sờ vào hiện vật",
+    "Không dùng đèn flash khi chụp ảnh"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761144574/bao-vat-tai-bao-tang-dieu-khac-cham_i6d0oi.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126005/cham1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126005/cham2.jpg"
+  ],
+  "scorePriority": 0.75,
+  "isActive": true,
+  "poly": [
+    [
+      16.066192,
+      108.225
+    ],
+    [
+      16.06585,
+      108.226789
+    ],
+    [
+      16.064876,
+      108.228305
+    ],
+    [
+      16.063419,
+      108.229318
+    ],
+    [
+      16.0617,
+      108.229674
+    ],
+    [
+      16.059981,
+      108.229318
+    ],
+    [
+      16.058524,
+      108.228305
+    ],
+    [
+      16.05755,
+      108.226789
+    ],
+    [
+      16.057208,
+      108.225
+    ],
+    [
+      16.05755,
+      108.223211
+    ],
+    [
+      16.058524,
+      108.221695
+    ],
+    [
+      16.059981,
+      108.220682
+    ],
+    [
+      16.0617,
+      108.220326
+    ],
+    [
+      16.063419,
+      108.220682
+    ],
+    [
+      16.064876,
+      108.221695
+    ],
+    [
+      16.06585,
+      108.223211
+    ],
+    [
+      16.066192,
+      108.225
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.225,
+          16.066192
+        ],
+        [
+          108.226789,
+          16.06585
+        ],
+        [
+          108.228305,
+          16.064876
+        ],
+        [
+          108.229318,
+          16.063419
+        ],
+        [
+          108.229674,
+          16.0617
+        ],
+        [
+          108.229318,
+          16.059981
+        ],
+        [
+          108.228305,
+          16.058524
+        ],
+        [
+          108.226789,
+          16.05755
+        ],
+        [
+          108.225,
+          16.057208
+        ],
+        [
+          108.223211,
+          16.05755
+        ],
+        [
+          108.221695,
+          16.058524
+        ],
+        [
+          108.220682,
+          16.059981
+        ],
+        [
+          108.220326,
+          16.0617
+        ],
+        [
+          108.220682,
+          16.063419
+        ],
+        [
+          108.221695,
+          16.064876
+        ],
+        [
+          108.223211,
+          16.06585
+        ],
+        [
+          108.225,
+          16.066192
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f403b34c380f4ecf0f69"
+  },
+  "id": "qb-con-cat-quang-phu",
+  "province": "quang-binh",
+  "name": "Đồi cát Quang Phú",
+  "center": {
+    "lat": 17.5105,
+    "lng": 106.5912
+  },
+  "radiusM": 2000,
+  "tags": [
+    "nature",
+    "photo",
+    "adventure",
+    "sunrise",
+    "sand"
+  ],
+  "vibeKeywords": [
+    "truot cat",
+    "sa mac",
+    "chup anh",
+    "binh minh",
+    "hoang so"
+  ],
+  "desc": "Đồi cát trắng mịn màng trải dài sát biển, là nơi lý tưởng để trượt cát và chụp ảnh 'sống ảo' như ở sa mạc.",
+  "whyChoose": [
+    "Trải nghiệm trượt cát thú vị",
+    "Khung cảnh 'sa mạc' độc đáo"
+  ],
+  "funActivities": [
+    "Trượt cát",
+    "Chụp ảnh",
+    "Ngắm bình minh"
+  ],
+  "mustSee": [
+    "Đỉnh đồi cát (view biển)",
+    "Con đường xuyên đồi cát"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Đi thật sớm (5h-6h sáng) để tránh nắng gắt",
+    "Mang theo nước uống và kính râm",
+    "Thuê ván trượt của người dân địa phương"
+  ],
+  "donts": [
+    "Không đi vào buổi trưa (cát rất nóng)",
+    "Không xả rác"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761210453/con-cat-quang-phu-thien-duong-cat-voi-nhung-khoanh-khac-vo-cung-dang-nho-01-1653148857_pl7pwd.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761127004/qp1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761127004/qp2.jpg"
+  ],
+  "scorePriority": 0.75,
+  "isActive": true,
+  "poly": [
+    [
+      17.528466,
+      106.5912
+    ],
+    [
+      17.527099,
+      106.598409
+    ],
+    [
+      17.523204,
+      106.604521
+    ],
+    [
+      17.517375,
+      106.608605
+    ],
+    [
+      17.5105,
+      106.610039
+    ],
+    [
+      17.503625,
+      106.608605
+    ],
+    [
+      17.497796,
+      106.604521
+    ],
+    [
+      17.493901,
+      106.598409
+    ],
+    [
+      17.492534,
+      106.5912
+    ],
+    [
+      17.493901,
+      106.583991
+    ],
+    [
+      17.497796,
+      106.577879
+    ],
+    [
+      17.503625,
+      106.573795
+    ],
+    [
+      17.5105,
+      106.572361
+    ],
+    [
+      17.517375,
+      106.573795
+    ],
+    [
+      17.523204,
+      106.577879
+    ],
+    [
+      17.527099,
+      106.583991
+    ],
+    [
+      17.528466,
+      106.5912
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          106.5912,
+          17.528466
+        ],
+        [
+          106.598409,
+          17.527099
+        ],
+        [
+          106.604521,
+          17.523204
+        ],
+        [
+          106.608605,
+          17.517375
+        ],
+        [
+          106.610039,
+          17.5105
+        ],
+        [
+          106.608605,
+          17.503625
+        ],
+        [
+          106.604521,
+          17.497796
+        ],
+        [
+          106.598409,
+          17.493901
+        ],
+        [
+          106.5912,
+          17.492534
+        ],
+        [
+          106.583991,
+          17.493901
+        ],
+        [
+          106.577879,
+          17.497796
+        ],
+        [
+          106.573795,
+          17.503625
+        ],
+        [
+          106.572361,
+          17.5105
+        ],
+        [
+          106.573795,
+          17.517375
+        ],
+        [
+          106.577879,
+          17.523204
+        ],
+        [
+          106.583991,
+          17.527099
+        ],
+        [
+          106.5912,
+          17.528466
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f500b34c380f4ecf0f71"
+  },
+  "id": "nt-vinwonders",
+  "province": "nha-trang",
+  "name": "VinWonders Nha Trang (Hòn Tre)",
+  "center": {
+    "lat": 12.215,
+    "lng": 109.213
+  },
+  "radiusM": 2000,
+  "tags": [
+    "theme-park",
+    "beach",
+    "cable-car",
+    "family",
+    "photo"
+  ],
+  "vibeKeywords": [
+    "cong vien",
+    "cap treo",
+    "tro choi",
+    "check-in",
+    "thuy cung",
+    "vinh nha trang"
+  ],
+  "desc": "Công viên giải trí quy mô lớn nằm trên đảo Hòn Tre, nổi tiếng với cáp treo vượt biển, công viên nước và vô số trò chơi.",
+  "whyChoose": [
+    "Khu vui chơi giải trí 'tất cả trong một'",
+    "Trải nghiệm cáp treo vượt biển"
+  ],
+  "funActivities": [
+    "Đi cáp treo",
+    "Chơi Zipline (kỷ lục)",
+    "Công viên nước",
+    "Xem cá heo"
+  ],
+  "mustSee": [
+    "Quảng trường Thần Thoại",
+    "Bánh xe bầu trời (Sky Wheel)",
+    "Tata Show",
+    "Thủy cung"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Nên đi cả ngày để chơi hết",
+    "Mang theo đồ bơi, khăn tắm và kem chống nắng",
+    "Kiểm tra lịch diễn Tata Show trước"
+  ],
+  "donts": [
+    "Không mang đồ ăn, nước uống từ bên ngoài lên đảo",
+    "Tránh đi vào cuối tuần lễ nếu không thích xếp hàng"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761210795/How-to-get-to-VinWonders-Nha-Trang-banner_ezipre.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761128001/vw1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761128001/vw2.jpg"
+  ],
+  "scorePriority": 0.95,
+  "isActive": true,
+  "poly": [
+    [
+      12.232966,
+      109.213
+    ],
+    [
+      12.231599,
+      109.220035
+    ],
+    [
+      12.227704,
+      109.225998
+    ],
+    [
+      12.221875,
+      109.229983
+    ],
+    [
+      12.215,
+      109.231382
+    ],
+    [
+      12.208125,
+      109.229983
+    ],
+    [
+      12.202296,
+      109.225998
+    ],
+    [
+      12.198401,
+      109.220035
+    ],
+    [
+      12.197034,
+      109.213
+    ],
+    [
+      12.198401,
+      109.205965
+    ],
+    [
+      12.202296,
+      109.200002
+    ],
+    [
+      12.208125,
+      109.196017
+    ],
+    [
+      12.215,
+      109.194618
+    ],
+    [
+      12.221875,
+      109.196017
+    ],
+    [
+      12.227704,
+      109.200002
+    ],
+    [
+      12.231599,
+      109.205965
+    ],
+    [
+      12.232966,
+      109.213
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          109.213,
+          12.232966
+        ],
+        [
+          109.220035,
+          12.231599
+        ],
+        [
+          109.225998,
+          12.227704
+        ],
+        [
+          109.229983,
+          12.221875
+        ],
+        [
+          109.231382,
+          12.215
+        ],
+        [
+          109.229983,
+          12.208125
+        ],
+        [
+          109.225998,
+          12.202296
+        ],
+        [
+          109.220035,
+          12.198401
+        ],
+        [
+          109.213,
+          12.197034
+        ],
+        [
+          109.205965,
+          12.198401
+        ],
+        [
+          109.200002,
+          12.202296
+        ],
+        [
+          109.196017,
+          12.208125
+        ],
+        [
+          109.194618,
+          12.215
+        ],
+        [
+          109.196017,
+          12.221875
+        ],
+        [
+          109.200002,
+          12.227704
+        ],
+        [
+          109.205965,
+          12.231599
+        ],
+        [
+          109.213,
+          12.232966
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f700b34c380f4ecf0f81"
+  },
+  "id": "nt-nha-tho-da",
+  "province": "nha-trang",
+  "name": "Nhà thờ Núi (Nhà thờ Đá)",
+  "center": {
+    "lat": 12.2472,
+    "lng": 109.1895
+  },
+  "radiusM": 1000,
+  "tags": [
+    "church",
+    "photo",
+    "culture",
+    "architecture"
+  ],
+  "vibeKeywords": [
+    "kien truc",
+    "gothic",
+    "co kinh",
+    "check-in",
+    "dao Chua"
+  ],
+  "desc": "Nhà thờ Chánh tòa Nha Trang, có kiến trúc Gothic cổ kính, nằm trên đồi cao nhìn xuống thành phố.",
+  "whyChoose": [
+    "Kiến trúc Gothic ấn tượng",
+    "View đẹp, không gian thanh tịnh"
+  ],
+  "funActivities": [
+    "Tham quan nhà thờ",
+    "Chụp ảnh",
+    "Dự lễ (nếu đúng giờ)"
+  ],
+  "mustSee": [
+    "Tháp chuông",
+    "Cửa sổ kính màu",
+    "View từ trên đồi"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Ăn mặc lịch sự",
+    "Giữ yên tĩnh",
+    "Đi buổi sáng sớm để chụp ảnh vắng người"
+  ],
+  "donts": [
+    "Không làm ồn",
+    "Không mặc đồ ngắn",
+    "Tránh đi vào giờ lễ nếu chỉ để tham quan"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761227063/nha-tho-da-nha-trang-2-e1724667202503_okrxij.webp",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761130001/ntd1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761130001/ntd2.jpg"
+  ],
+  "scorePriority": 0.8,
+  "isActive": true,
+  "poly": [
+    [
+      12.256183,
+      109.1895
+    ],
+    [
+      12.255499,
+      109.193018
+    ],
+    [
+      12.253552,
+      109.196
+    ],
+    [
+      12.250638,
+      109.197993
+    ],
+    [
+      12.2472,
+      109.198692
+    ],
+    [
+      12.243762,
+      109.197993
+    ],
+    [
+      12.240848,
+      109.196
+    ],
+    [
+      12.238901,
+      109.193018
+    ],
+    [
+      12.238217,
+      109.1895
+    ],
+    [
+      12.238901,
+      109.185982
+    ],
+    [
+      12.240848,
+      109.183
+    ],
+    [
+      12.243762,
+      109.181007
+    ],
+    [
+      12.2472,
+      109.180308
+    ],
+    [
+      12.250638,
+      109.181007
+    ],
+    [
+      12.253552,
+      109.183
+    ],
+    [
+      12.255499,
+      109.185982
+    ],
+    [
+      12.256183,
+      109.1895
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          109.1895,
+          12.256183
+        ],
+        [
+          109.193018,
+          12.255499
+        ],
+        [
+          109.196,
+          12.253552
+        ],
+        [
+          109.197993,
+          12.250638
+        ],
+        [
+          109.198692,
+          12.2472
+        ],
+        [
+          109.197993,
+          12.243762
+        ],
+        [
+          109.196,
+          12.240848
+        ],
+        [
+          109.193018,
+          12.238901
+        ],
+        [
+          109.1895,
+          12.238217
+        ],
+        [
+          109.185982,
+          12.238901
+        ],
+        [
+          109.183,
+          12.240848
+        ],
+        [
+          109.181007,
+          12.243762
+        ],
+        [
+          109.180308,
+          12.2472
+        ],
+        [
+          109.181007,
+          12.250638
+        ],
+        [
+          109.183,
+          12.253552
+        ],
+        [
+          109.185982,
+          12.255499
+        ],
+        [
+          109.1895,
+          12.256183
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f702b34c380f4ecf0f83"
+  },
+  "id": "hue-bien-thuan-an",
+  "province": "hue",
+  "name": "Bãi biển Thuận An",
+  "center": {
+    "lat": 16.5186,
+    "lng": 107.6369
+  },
+  "radiusM": 2000,
+  "tags": [
+    "beach",
+    "local",
+    "food",
+    "sunset"
+  ],
+  "vibeKeywords": [
+    "bien",
+    "dia phuong",
+    "tam bien",
+    "hai san",
+    "yen binh"
+  ],
+  "desc": "Bãi biển gần trung tâm Huế nhất, là nơi người dân địa phương thường đến tắm biển, ăn hải sản và thư giãn.",
+  "whyChoose": [
+    "Biển gần thành phố",
+    "Hải sản tươi, giá bình dân"
+  ],
+  "funActivities": [
+    "Tắm biển",
+    "Ăn hải sản (chòi)",
+    "Ngắm hoàng hôn"
+  ],
+  "mustSee": [
+    "Cửa biển Thuận An",
+    "Các quán hải sản ven biển"
+  ],
+  "bestTime": "afternoon",
+  "tips": [
+    "Đi buổi chiều muộn để tắm và ăn tối",
+    "Hải sản ngon và rẻ",
+    "Mang theo tiền mặt"
+  ],
+  "donts": [
+    "Không tắm quá xa bờ",
+    "Cẩn thận sóng lớn vào mùa đông"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761227212/thuanan_80a265fd33_bye3ux.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761130003/ta1_new.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761130003/ta2_new.jpg"
+  ],
+  "scorePriority": 0.7,
+  "isActive": true,
+  "poly": [
+    [
+      16.536566,
+      107.6369
+    ],
+    [
+      16.535199,
+      107.644071
+    ],
+    [
+      16.531304,
+      107.650151
+    ],
+    [
+      16.525475,
+      107.654213
+    ],
+    [
+      16.5186,
+      107.65564
+    ],
+    [
+      16.511725,
+      107.654213
+    ],
+    [
+      16.505896,
+      107.650151
+    ],
+    [
+      16.502001,
+      107.644071
+    ],
+    [
+      16.500634,
+      107.6369
+    ],
+    [
+      16.502001,
+      107.629729
+    ],
+    [
+      16.505896,
+      107.623649
+    ],
+    [
+      16.511725,
+      107.619587
+    ],
+    [
+      16.5186,
+      107.61816
+    ],
+    [
+      16.525475,
+      107.619587
+    ],
+    [
+      16.531304,
+      107.623649
+    ],
+    [
+      16.535199,
+      107.629729
+    ],
+    [
+      16.536566,
+      107.6369
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          107.6369,
+          16.536566
+        ],
+        [
+          107.644071,
+          16.535199
+        ],
+        [
+          107.650151,
+          16.531304
+        ],
+        [
+          107.654213,
+          16.525475
+        ],
+        [
+          107.65564,
+          16.5186
+        ],
+        [
+          107.654213,
+          16.511725
+        ],
+        [
+          107.650151,
+          16.505896
+        ],
+        [
+          107.644071,
+          16.502001
+        ],
+        [
+          107.6369,
+          16.500634
+        ],
+        [
+          107.629729,
+          16.502001
+        ],
+        [
+          107.623649,
+          16.505896
+        ],
+        [
+          107.619587,
+          16.511725
+        ],
+        [
+          107.61816,
+          16.5186
+        ],
+        [
+          107.619587,
+          16.525475
+        ],
+        [
+          107.623649,
+          16.531304
+        ],
+        [
+          107.629729,
+          16.535199
+        ],
+        [
+          107.6369,
+          16.536566
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f703b34c380f4ecf0f84"
+  },
+  "id": "dn-linh-ung-pagoda",
+  "province": "da-nang",
+  "name": "Chùa Linh Ứng (Bãi Bụt - Sơn Trà)",
+  "center": {
+    "lat": 16.1009,
+    "lng": 108.2774
+  },
+  "radiusM": 1500,
+  "tags": [
+    "temple",
+    "view",
+    "photo",
+    "spiritual",
+    "statue"
+  ],
+  "vibeKeywords": [
+    "chua",
+    "phat",
+    "tam linh",
+    "view bien",
+    "tuong Phat",
+    "yen tinh"
+  ],
+  "desc": "Ngôi chùa lớn và đẹp nhất Đà Nẵng, nằm trên bán đảo Sơn Trà với tượng Phật Bà Quan Âm cao nhất Việt Nam nhìn ra biển.",
+  "whyChoose": [
+    "Không gian tâm linh trang nghiêm",
+    "View toàn cảnh biển Đà Nẵng tuyệt đẹp",
+    "Tượng Phật Bà cao nhất VN"
+  ],
+  "funActivities": [
+    "Viếng chùa, cầu an",
+    "Chụp ảnh với view biển",
+    "Ngắm tượng Phật Bà"
+  ],
+  "mustSee": [
+    "Tượng Phật Bà Quan Âm",
+    "Chánh điện",
+    "View từ sân chùa"
+  ],
+  "bestTime": "afternoon",
+  "tips": [
+    "Ăn mặc lịch sự (che vai, qua gối)",
+    "Đi buổi chiều để ngắm hoàng hôn",
+    "Coi chừng khỉ (không nên trêu)"
+  ],
+  "donts": [
+    "Không mặc đồ ngắn",
+    "Không nói to",
+    "Không cho khỉ ăn"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761227271/Son-Tra-Peninsula_Da-Nang_Vietnam_Linh-Ung-Pagoda-01_welglc.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761130004/lu1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761130004/lu2.jpg"
+  ],
+  "scorePriority": 0.9,
+  "isActive": true,
+  "poly": [
+    [
+      16.114375,
+      108.2774
+    ],
+    [
+      16.113349,
+      108.282767
+    ],
+    [
+      16.110428,
+      108.287317
+    ],
+    [
+      16.106057,
+      108.290357
+    ],
+    [
+      16.1009,
+      108.291425
+    ],
+    [
+      16.095743,
+      108.290357
+    ],
+    [
+      16.091372,
+      108.287317
+    ],
+    [
+      16.088451,
+      108.282767
+    ],
+    [
+      16.087425,
+      108.2774
+    ],
+    [
+      16.088451,
+      108.272033
+    ],
+    [
+      16.091372,
+      108.267483
+    ],
+    [
+      16.095743,
+      108.264443
+    ],
+    [
+      16.1009,
+      108.263375
+    ],
+    [
+      16.106057,
+      108.264443
+    ],
+    [
+      16.110428,
+      108.267483
+    ],
+    [
+      16.113349,
+      108.272033
+    ],
+    [
+      16.114375,
+      108.2774
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.2774,
+          16.114375
+        ],
+        [
+          108.282767,
+          16.113349
+        ],
+        [
+          108.287317,
+          16.110428
+        ],
+        [
+          108.290357,
+          16.106057
+        ],
+        [
+          108.291425,
+          16.1009
+        ],
+        [
+          108.290357,
+          16.095743
+        ],
+        [
+          108.287317,
+          16.091372
+        ],
+        [
+          108.282767,
+          16.088451
+        ],
+        [
+          108.2774,
+          16.087425
+        ],
+        [
+          108.272033,
+          16.088451
+        ],
+        [
+          108.267483,
+          16.091372
+        ],
+        [
+          108.264443,
+          16.095743
+        ],
+        [
+          108.263375,
+          16.1009
+        ],
+        [
+          108.264443,
+          16.106057
+        ],
+        [
+          108.267483,
+          16.110428
+        ],
+        [
+          108.272033,
+          16.113349
+        ],
+        [
+          108.2774,
+          16.114375
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6fa01b34c380f4ecf0f94"
+  },
+  "id": "dn-love-bridge",
+  "province": "da-nang",
+  "name": "Cầu Tình Yêu & Cá chép hóa rồng",
+  "center": {
+    "lat": 16.0628,
+    "lng": 108.2285
+  },
+  "radiusM": 500,
+  "tags": [
+    "photo",
+    "nightlife",
+    "river",
+    "romance",
+    "view"
+  ],
+  "vibeKeywords": [
+    "check-in",
+    "song han",
+    "o khoa",
+    "lang man",
+    "ca chep hoa rong",
+    "cau rong"
+  ],
+  "desc": "Điểm check-in lãng mạn bên bờ sông Hàn, nổi tiếng với các cột đèn lồng trái tim, hàng ngàn ổ khóa tình yêu và tượng Cá chép hóa rồng phun nước.",
+  "whyChoose": [
+    "View sông Hàn và Cầu Rồng (phun lửa) tuyệt đẹp",
+    "Địa điểm lãng mạn cho các cặp đôi",
+    "Biểu tượng check-in mới của Đà Nẵng"
+  ],
+  "funActivities": [
+    "Treo ổ khóa tình yêu",
+    "Chụp ảnh với tượng Cá chép hóa rồng",
+    "Ngắm Cầu Rồng phun lửa/nước",
+    "Dạo bộ bờ sông"
+  ],
+  "mustSee": [
+    "Tượng Cá chép hóa rồng",
+    "Các trụ đèn lồng ổ khóa",
+    "View Cầu Rồng"
+  ],
+  "bestTime": "evening",
+  "tips": [
+    "Địa điểm xem Cầu Rồng phun lửa rất lý tưởng",
+    "Nên mang theo ổ khóa của riêng bạn hoặc mua tại chỗ",
+    "Rất đông vào tối cuối tuần"
+  ],
+  "donts": [
+    "Không chen lấn, xô đẩy khi xem phun lửa",
+    "Không vứt rác xuống sông"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761723604/tuong-ca-chep-hoa-rong-da-nang-banner_voqa7z.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761250002/love-bridge-1_def.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761250003/love-bridge-2-ca-chep_ghi.jpg"
+  ],
+  "scorePriority": 0.85,
+  "isActive": true,
+  "poly": [
+    [
+      16.067292,
+      108.2285
+    ],
+    [
+      16.06695,
+      108.230289
+    ],
+    [
+      16.065976,
+      108.231805
+    ],
+    [
+      16.064519,
+      108.232818
+    ],
+    [
+      16.0628,
+      108.233174
+    ],
+    [
+      16.061081,
+      108.232818
+    ],
+    [
+      16.059624,
+      108.231805
+    ],
+    [
+      16.05865,
+      108.230289
+    ],
+    [
+      16.058308,
+      108.2285
+    ],
+    [
+      16.05865,
+      108.226711
+    ],
+    [
+      16.059624,
+      108.225195
+    ],
+    [
+      16.061081,
+      108.224182
+    ],
+    [
+      16.0628,
+      108.223826
+    ],
+    [
+      16.064519,
+      108.224182
+    ],
+    [
+      16.065976,
+      108.225195
+    ],
+    [
+      16.06695,
+      108.226711
+    ],
+    [
+      16.067292,
+      108.2285
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.2285,
+          16.067292
+        ],
+        [
+          108.230289,
+          16.06695
+        ],
+        [
+          108.231805,
+          16.065976
+        ],
+        [
+          108.232818,
+          16.064519
+        ],
+        [
+          108.233174,
+          16.0628
+        ],
+        [
+          108.232818,
+          16.061081
+        ],
+        [
+          108.231805,
+          16.059624
+        ],
+        [
+          108.230289,
+          16.05865
+        ],
+        [
+          108.2285,
+          16.058308
+        ],
+        [
+          108.226711,
+          16.05865
+        ],
+        [
+          108.225195,
+          16.059624
+        ],
+        [
+          108.224182,
+          16.061081
+        ],
+        [
+          108.223826,
+          16.0628
+        ],
+        [
+          108.224182,
+          16.064519
+        ],
+        [
+          108.225195,
+          16.065976
+        ],
+        [
+          108.226711,
+          16.06695
+        ],
+        [
+          108.2285,
+          16.067292
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6efabb34c380f4ecf0f3f"
+  },
+  "id": "dn-pho-co-hoi-an",
+  "province": "da-nang",
+  "name": "Phố Cổ Hội An",
+  "center": {
+    "lat": 15.8801,
+    "lng": 108.338
+  },
+  "radiusM": 1800,
+  "tags": [
+    "photo",
+    "culture",
+    "nightlife"
+  ],
+  "vibeKeywords": [
+    "den long",
+    "song hoai",
+    "pho co",
+    "check-in",
+    "thuyen hoa"
+  ],
+  "desc": "Khu phố cổ nổi tiếng với đèn lồng, sông Hoài và kiến trúc cổ hòa quyện với văn hóa Việt - Hoa - Nhật.",
+  "whyChoose": [
+    "Không khí lãng mạn, cổ kính",
+    "Địa điểm chụp ảnh và check-in hàng đầu Việt Nam"
+  ],
+  "funActivities": [
+    "Thả đèn hoa đăng",
+    "Dạo sông Hoài",
+    "Thưởng thức cao lầu"
+  ],
+  "mustSee": [
+    "Chùa Cầu",
+    "Sông Hoài",
+    "Phố đèn lồng Nguyễn Thái Học"
+  ],
+  "bestTime": "evening",
+  "tips": [
+    "Đi dạo từ 17h để ngắm phố lên đèn",
+    "Mang theo tiền mặt để mua đồ handmade và đồ ăn vặt"
+  ],
+  "donts": [
+    "Không nên đạp xe hoặc chạy xe trong phố đi bộ buổi tối",
+    "Tránh đi vào dịp lễ hội nếu không thích đông"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761121739/pho-co-hoi-an-33-1722925558_f9jqca.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761121738/61c990f69c470453267766__1440_wnmkth.png",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761121737/KDCyar4c-pho-co-hoi-an-thumb-1_jwiexi.jpg"
+  ],
+  "scorePriority": 1,
+  "isActive": true,
+  "poly": [
+    [
+      15.89627,
+      108.338
+    ],
+    [
+      15.895039,
+      108.344433
+    ],
+    [
+      15.891534,
+      108.349887
+    ],
+    [
+      15.886288,
+      108.353532
+    ],
+    [
+      15.8801,
+      108.354811
+    ],
+    [
+      15.873912,
+      108.353532
+    ],
+    [
+      15.868666,
+      108.349887
+    ],
+    [
+      15.865161,
+      108.344433
+    ],
+    [
+      15.86393,
+      108.338
+    ],
+    [
+      15.865161,
+      108.331567
+    ],
+    [
+      15.868666,
+      108.326113
+    ],
+    [
+      15.873912,
+      108.322468
+    ],
+    [
+      15.8801,
+      108.321189
+    ],
+    [
+      15.886288,
+      108.322468
+    ],
+    [
+      15.891534,
+      108.326113
+    ],
+    [
+      15.895039,
+      108.331567
+    ],
+    [
+      15.89627,
+      108.338
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.338,
+          15.89627
+        ],
+        [
+          108.344433,
+          15.895039
+        ],
+        [
+          108.349887,
+          15.891534
+        ],
+        [
+          108.353532,
+          15.886288
+        ],
+        [
+          108.354811,
+          15.8801
+        ],
+        [
+          108.353532,
+          15.873912
+        ],
+        [
+          108.349887,
+          15.868666
+        ],
+        [
+          108.344433,
+          15.865161
+        ],
+        [
+          108.338,
+          15.86393
+        ],
+        [
+          108.331567,
+          15.865161
+        ],
+        [
+          108.326113,
+          15.868666
+        ],
+        [
+          108.322468,
+          15.873912
+        ],
+        [
+          108.321189,
+          15.8801
+        ],
+        [
+          108.322468,
+          15.886288
+        ],
+        [
+          108.326113,
+          15.891534
+        ],
+        [
+          108.331567,
+          15.895039
+        ],
+        [
+          108.338,
+          15.89627
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f201b34c380f4ecf0f57"
+  },
+  "id": "dn-cau-rong",
+  "province": "da-nang",
+  "name": "Cầu Rồng",
+  "center": {
+    "lat": 16.061185,
+    "lng": 108.224509
+  },
+  "radiusM": 1500,
+  "tags": [
+    "photo",
+    "nightlife",
+    "architecture",
+    "bridge"
+  ],
+  "vibeKeywords": [
+    "check-in",
+    "song han",
+    "phun lua",
+    "buoi toi",
+    "bieu tuong"
+  ],
+  "desc": "Cây cầu biểu tượng của Đà Nẵng với hình dáng con rồng, nổi tiếng với màn trình diễn phun lửa và nước.",
+  "whyChoose": [
+    "Xem phun lửa/nước cuối tuần",
+    "Biểu tượng check-in của thành phố"
+  ],
+  "funActivities": [
+    "Xem phun lửa (21h T7, CN)",
+    "Dạo bộ trên cầu",
+    "Chụp ảnh đêm",
+    "Du thuyền sông Hàn"
+  ],
+  "mustSee": [
+    "Đầu Rồng (nơi phun lửa)",
+    "Cầu Tình Yêu (gần đó)"
+  ],
+  "bestTime": "evening",
+  "tips": [
+    "Đến sớm 30 phút để có vị trí đẹp xem phun lửa",
+    "Vị trí xem tốt nhất là quảng trường hoặc du thuyền"
+  ],
+  "donts": [
+    "Không dừng xe giữa cầu gây ách tắc",
+    "Cẩn thận móc túi khi xem lễ hội đông người"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125982/cau-rong-da-nang_7_-min_ii2zp4.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125985/ca%CC%82%CC%80u-ro%CC%82%CC%80ng-%C4%91a%CC%80-na%CC%86%CC%83ng-ivivu_wfjp2x.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125986/kinh-nghiem-check-in-cau-rong-da-nang-1-trong-20-cay-cau-an-tuong-nhat-the-gioi-05-1636442674_lcjwg4.jpg"
+  ],
+  "scorePriority": 0.9,
+  "isActive": true,
+  "poly": [
+    [
+      16.07466,
+      108.224509
+    ],
+    [
+      16.073634,
+      108.229875
+    ],
+    [
+      16.070713,
+      108.234424
+    ],
+    [
+      16.066342,
+      108.237464
+    ],
+    [
+      16.061185,
+      108.238531
+    ],
+    [
+      16.056028,
+      108.237464
+    ],
+    [
+      16.051657,
+      108.234424
+    ],
+    [
+      16.048736,
+      108.229875
+    ],
+    [
+      16.04771,
+      108.224509
+    ],
+    [
+      16.048736,
+      108.219143
+    ],
+    [
+      16.051657,
+      108.214594
+    ],
+    [
+      16.056028,
+      108.211554
+    ],
+    [
+      16.061185,
+      108.210487
+    ],
+    [
+      16.066342,
+      108.211554
+    ],
+    [
+      16.070713,
+      108.214594
+    ],
+    [
+      16.073634,
+      108.219143
+    ],
+    [
+      16.07466,
+      108.224509
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.224509,
+          16.07466
+        ],
+        [
+          108.229875,
+          16.073634
+        ],
+        [
+          108.234424,
+          16.070713
+        ],
+        [
+          108.237464,
+          16.066342
+        ],
+        [
+          108.238531,
+          16.061185
+        ],
+        [
+          108.237464,
+          16.056028
+        ],
+        [
+          108.234424,
+          16.051657
+        ],
+        [
+          108.229875,
+          16.048736
+        ],
+        [
+          108.224509,
+          16.04771
+        ],
+        [
+          108.219143,
+          16.048736
+        ],
+        [
+          108.214594,
+          16.051657
+        ],
+        [
+          108.211554,
+          16.056028
+        ],
+        [
+          108.210487,
+          16.061185
+        ],
+        [
+          108.211554,
+          16.066342
+        ],
+        [
+          108.214594,
+          16.070713
+        ],
+        [
+          108.219143,
+          16.073634
+        ],
+        [
+          108.224509,
+          16.07466
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f202b34c380f4ecf0f58"
+  },
+  "id": "qb-song-chay-hang-toi",
+  "province": "quang-binh",
+  "name": "Sông Chày - Hang Tối",
+  "center": {
+    "lat": 17.5931,
+    "lng": 106.2415
+  },
+  "radiusM": 2000,
+  "tags": [
+    "adventure",
+    "nature",
+    "zipline",
+    "cave",
+    "kayak"
+  ],
+  "vibeKeywords": [
+    "zipline",
+    "mao hiem",
+    "tam bun",
+    "kayak",
+    "song xanh"
+  ],
+  "desc": "Khu du lịch mạo hiểm với trải nghiệm đu Zipline, chèo Kayak trên sông Chày xanh biếc và tắm bùn khoáng trong Hang Tối.",
+  "whyChoose": [
+    "Trải nghiệm mạo hiểm đa dạng",
+    "Tắm bùn khoáng tự nhiên"
+  ],
+  "funActivities": [
+    "Đu Zipline",
+    "Chèo Kayak",
+    "Tắm bùn trong hang",
+    "Tắm sông"
+  ],
+  "mustSee": [
+    "Zipline 2 dây",
+    "Hang Tối (khu tắm bùn)"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Mang theo đồ bơi và khăn tắm",
+    "Nên mua tour trọn gói các trò chơi",
+    "Chỉ mang đồ chống nước"
+  ],
+  "donts": [
+    "Không mang điện thoại vào hang tối (dễ rơi)",
+    "Không nên đi nếu sợ độ cao hoặc không gian hẹp"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126134/kham-pha-hang-toi_elofqm.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126137/kham-pha-song-chay-hang-toi-quang-binh-tu-a-den-z-1-1653581617_tfu5gx.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126134/tat-tan-tat-trai-nghiem-zipline-song-chay-hang-toi-quang-binh-01-1653480770_lyurhv.jpg"
+  ],
+  "scorePriority": 0.85,
+  "isActive": true,
+  "poly": [
+    [
+      17.611066,
+      106.2415
+    ],
+    [
+      17.609699,
+      106.248713
+    ],
+    [
+      17.605804,
+      106.254827
+    ],
+    [
+      17.599975,
+      106.258913
+    ],
+    [
+      17.5931,
+      106.260348
+    ],
+    [
+      17.586225,
+      106.258913
+    ],
+    [
+      17.580396,
+      106.254827
+    ],
+    [
+      17.576501,
+      106.248713
+    ],
+    [
+      17.575134,
+      106.2415
+    ],
+    [
+      17.576501,
+      106.234287
+    ],
+    [
+      17.580396,
+      106.228173
+    ],
+    [
+      17.586225,
+      106.224087
+    ],
+    [
+      17.5931,
+      106.222652
+    ],
+    [
+      17.599975,
+      106.224087
+    ],
+    [
+      17.605804,
+      106.228173
+    ],
+    [
+      17.609699,
+      106.234287
+    ],
+    [
+      17.611066,
+      106.2415
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          106.2415,
+          17.611066
+        ],
+        [
+          106.248713,
+          17.609699
+        ],
+        [
+          106.254827,
+          17.605804
+        ],
+        [
+          106.258913,
+          17.599975
+        ],
+        [
+          106.260348,
+          17.5931
+        ],
+        [
+          106.258913,
+          17.586225
+        ],
+        [
+          106.254827,
+          17.580396
+        ],
+        [
+          106.248713,
+          17.576501
+        ],
+        [
+          106.2415,
+          17.575134
+        ],
+        [
+          106.234287,
+          17.576501
+        ],
+        [
+          106.228173,
+          17.580396
+        ],
+        [
+          106.224087,
+          17.586225
+        ],
+        [
+          106.222652,
+          17.5931
+        ],
+        [
+          106.224087,
+          17.599975
+        ],
+        [
+          106.228173,
+          17.605804
+        ],
+        [
+          106.234287,
+          17.609699
+        ],
+        [
+          106.2415,
+          17.611066
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f302b34c380f4ecf0f63"
+  },
+  "id": "qb-suoi-mooc",
+  "province": "quang-binh",
+  "name": "Khu du lịch Suối Moọc",
+  "center": {
+    "lat": 17.5815,
+    "lng": 106.2413
+  },
+  "radiusM": 2000,
+  "tags": [
+    "nature",
+    "adventure",
+    "kayak",
+    "swim"
+  ],
+  "vibeKeywords": [
+    "suoi",
+    "tam suoi",
+    "cheo kayak",
+    "rung",
+    "thu gian",
+    "xanh ngoc"
+  ],
+  "desc": "Khu du lịch sinh thái với dòng suối trong vắt, mát lạnh chảy qua rừng, có nhiều trò chơi dưới nước và điểm thư giãn.",
+  "whyChoose": [
+    "Tắm suối nước xanh ngọc, mát lạnh",
+    "Khung cảnh thiên nhiên hoang sơ"
+  ],
+  "funActivities": [
+    "Tắm suối",
+    "Chèo Kayak",
+    "Đu dây (nhỏ)",
+    "Thưởng thức gà nướng"
+  ],
+  "mustSee": [
+    "Cầu tre",
+    "Khu vực nhảy cầu",
+    "Hồ bơi tự nhiên"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Mang theo đồ bơi và túi chống nước",
+    "Đi vào mùa hè để tắm (mùa mưa nước đục)",
+    "Thử gà nướng và cơm nắm"
+  ],
+  "donts": [
+    "Không đi vào mùa mưa lũ",
+    "Không xả rác ra suối"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761144669/kinh-nghiem-kham-pha-suoi-mooc-quang-binh-danh-cho-hoi-ban-than-02-1653448078_zj7oug.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126003/sm1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126003/sm2.jpg"
+  ],
+  "scorePriority": 0.8,
+  "isActive": true,
+  "poly": [
+    [
+      17.599466,
+      106.2413
+    ],
+    [
+      17.598099,
+      106.248512
+    ],
+    [
+      17.594204,
+      106.254627
+    ],
+    [
+      17.588375,
+      106.258712
+    ],
+    [
+      17.5815,
+      106.260147
+    ],
+    [
+      17.574625,
+      106.258712
+    ],
+    [
+      17.568796,
+      106.254627
+    ],
+    [
+      17.564901,
+      106.248512
+    ],
+    [
+      17.563534,
+      106.2413
+    ],
+    [
+      17.564901,
+      106.234088
+    ],
+    [
+      17.568796,
+      106.227973
+    ],
+    [
+      17.574625,
+      106.223888
+    ],
+    [
+      17.5815,
+      106.222453
+    ],
+    [
+      17.588375,
+      106.223888
+    ],
+    [
+      17.594204,
+      106.227973
+    ],
+    [
+      17.598099,
+      106.234088
+    ],
+    [
+      17.599466,
+      106.2413
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          106.2413,
+          17.599466
+        ],
+        [
+          106.248512,
+          17.598099
+        ],
+        [
+          106.254627,
+          17.594204
+        ],
+        [
+          106.258712,
+          17.588375
+        ],
+        [
+          106.260147,
+          17.5815
+        ],
+        [
+          106.258712,
+          17.574625
+        ],
+        [
+          106.254627,
+          17.568796
+        ],
+        [
+          106.248512,
+          17.564901
+        ],
+        [
+          106.2413,
+          17.563534
+        ],
+        [
+          106.234088,
+          17.564901
+        ],
+        [
+          106.227973,
+          17.568796
+        ],
+        [
+          106.223888,
+          17.574625
+        ],
+        [
+          106.222453,
+          17.5815
+        ],
+        [
+          106.223888,
+          17.588375
+        ],
+        [
+          106.227973,
+          17.594204
+        ],
+        [
+          106.234088,
+          17.598099
+        ],
+        [
+          106.2413,
+          17.599466
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f303b34c380f4ecf0f64"
+  },
+  "id": "hue-lang-co",
+  "province": "hue",
+  "name": "Vịnh Lăng Cô & Đầm Lập An",
+  "center": {
+    "lat": 16.2435,
+    "lng": 108.0818
+  },
+  "radiusM": 3000,
+  "tags": [
+    "beach",
+    "nature",
+    "photo",
+    "sunset",
+    "food"
+  ],
+  "vibeKeywords": [
+    "bien",
+    "vinh",
+    "dam",
+    "son thuy",
+    "hai san",
+    "deo hai van",
+    "hau"
+  ],
+  "desc": "Một trong những vịnh biển đẹp nhất thế giới, nằm dưới chân đèo Hải Vân. Gần đó là Đầm Lập An thơ mộng, nổi tiếng với làng hàu.",
+  "whyChoose": [
+    "Cảnh biển và đầm phá tuyệt đẹp",
+    "Hải sản tươi ngon (đặc biệt là hàu)"
+  ],
+  "funActivities": [
+    "Tắm biển Lăng Cô",
+    "Chụp ảnh Đầm Lập An",
+    "Ăn hàu và hải sản",
+    "Ngắm cảnh đèo Hải Vân"
+  ],
+  "mustSee": [
+    "Bãi biển Lăng Cô",
+    "Đầm Lập An (lúc chiều tà)",
+    "Con đường ven đầm"
+  ],
+  "bestTime": "afternoon",
+  "tips": [
+    "Đến Đầm Lập An lúc thủy triều rút (buổi chiều)",
+    "Ăn hải sản ở các quán ven đầm",
+    "Kết hợp đi đèo Hải Vân"
+  ],
+  "donts": [
+    "Không tắm biển khi sóng lớn (mùa đông)",
+    "Không vứt vỏ hàu bừa bãi"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761144735/Langco3-1446-1689668265_ludpdu.webp",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126004/lc1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126004/lc2.jpg"
+  ],
+  "scorePriority": 0.85,
+  "isActive": true,
+  "poly": [
+    [
+      16.270449,
+      108.0818
+    ],
+    [
+      16.268398,
+      108.092542
+    ],
+    [
+      16.262556,
+      108.101648
+    ],
+    [
+      16.253813,
+      108.107733
+    ],
+    [
+      16.2435,
+      108.10987
+    ],
+    [
+      16.233187,
+      108.107733
+    ],
+    [
+      16.224444,
+      108.101648
+    ],
+    [
+      16.218602,
+      108.092542
+    ],
+    [
+      16.216551,
+      108.0818
+    ],
+    [
+      16.218602,
+      108.071058
+    ],
+    [
+      16.224444,
+      108.061952
+    ],
+    [
+      16.233187,
+      108.055867
+    ],
+    [
+      16.2435,
+      108.05373
+    ],
+    [
+      16.253813,
+      108.055867
+    ],
+    [
+      16.262556,
+      108.061952
+    ],
+    [
+      16.268398,
+      108.071058
+    ],
+    [
+      16.270449,
+      108.0818
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.0818,
+          16.270449
+        ],
+        [
+          108.092542,
+          16.268398
+        ],
+        [
+          108.101648,
+          16.262556
+        ],
+        [
+          108.107733,
+          16.253813
+        ],
+        [
+          108.10987,
+          16.2435
+        ],
+        [
+          108.107733,
+          16.233187
+        ],
+        [
+          108.101648,
+          16.224444
+        ],
+        [
+          108.092542,
+          16.218602
+        ],
+        [
+          108.0818,
+          16.216551
+        ],
+        [
+          108.071058,
+          16.218602
+        ],
+        [
+          108.061952,
+          16.224444
+        ],
+        [
+          108.055867,
+          16.233187
+        ],
+        [
+          108.05373,
+          16.2435
+        ],
+        [
+          108.055867,
+          16.253813
+        ],
+        [
+          108.061952,
+          16.262556
+        ],
+        [
+          108.071058,
+          16.268398
+        ],
+        [
+          108.0818,
+          16.270449
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f401b34c380f4ecf0f67"
+  },
+  "id": "dn-hai-van-pass",
+  "province": "da-nang",
+  "name": "Đèo Hải Vân",
+  "center": {
+    "lat": 16.1882,
+    "lng": 108.1325
+  },
+  "radiusM": 3000,
+  "tags": [
+    "nature",
+    "view",
+    "photo",
+    "roadtrip"
+  ],
+  "vibeKeywords": [
+    "view dep",
+    "check-in",
+    "phuot",
+    "di tich",
+    "bien",
+    "son thuy"
+  ],
+  "desc": "'Thiên hạ đệ nhất hùng quan', con đèo huyền thoại với cung đường uốn lượn và tầm nhìn bao quát Vịnh Lăng Cô và TP. Đà Nẵng.",
+  "whyChoose": [
+    "Cung đường đèo đẹp nhất Việt Nam",
+    "Tầm nhìn panorama tuyệt đẹp"
+  ],
+  "funActivities": [
+    "Chạy xe máy",
+    "Chụp ảnh tại Hải Vân Quan",
+    "Uống cafe ngắm cảnh"
+  ],
+  "mustSee": [
+    "Hải Vân Quan",
+    "View Vịnh Lăng Cô",
+    "Cây thông cô đơn (Gần đó)"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Nên đi xe số hoặc xe côn tay, kiểm tra phanh kỹ",
+    "Đi buổi sáng trời trong, ít sương mù"
+  ],
+  "donts": [
+    "Không chạy tốc độ cao ở khúc cua",
+    "Tránh đi lúc trời mưa hoặc sương mù dày"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761127002/hai-van-hero_151.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761127002/hv1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761127002/hv2.jpg"
+  ],
+  "scorePriority": 0.9,
+  "isActive": true,
+  "poly": [
+    [
+      16.215149,
+      108.1325
+    ],
+    [
+      16.213098,
+      108.143239
+    ],
+    [
+      16.207256,
+      108.152343
+    ],
+    [
+      16.198513,
+      108.158426
+    ],
+    [
+      16.1882,
+      108.160562
+    ],
+    [
+      16.177887,
+      108.158426
+    ],
+    [
+      16.169144,
+      108.152343
+    ],
+    [
+      16.163302,
+      108.143239
+    ],
+    [
+      16.161251,
+      108.1325
+    ],
+    [
+      16.163302,
+      108.121761
+    ],
+    [
+      16.169144,
+      108.112657
+    ],
+    [
+      16.177887,
+      108.106574
+    ],
+    [
+      16.1882,
+      108.104438
+    ],
+    [
+      16.198513,
+      108.106574
+    ],
+    [
+      16.207256,
+      108.112657
+    ],
+    [
+      16.213098,
+      108.121761
+    ],
+    [
+      16.215149,
+      108.1325
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.1325,
+          16.215149
+        ],
+        [
+          108.143239,
+          16.213098
+        ],
+        [
+          108.152343,
+          16.207256
+        ],
+        [
+          108.158426,
+          16.198513
+        ],
+        [
+          108.160562,
+          16.1882
+        ],
+        [
+          108.158426,
+          16.177887
+        ],
+        [
+          108.152343,
+          16.169144
+        ],
+        [
+          108.143239,
+          16.163302
+        ],
+        [
+          108.1325,
+          16.161251
+        ],
+        [
+          108.121761,
+          16.163302
+        ],
+        [
+          108.112657,
+          16.169144
+        ],
+        [
+          108.106574,
+          16.177887
+        ],
+        [
+          108.104438,
+          16.1882
+        ],
+        [
+          108.106574,
+          16.198513
+        ],
+        [
+          108.112657,
+          16.207256
+        ],
+        [
+          108.121761,
+          16.213098
+        ],
+        [
+          108.1325,
+          16.215149
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f402b34c380f4ecf0f68"
+  },
+  "id": "dn-cho-con",
+  "province": "da-nang",
+  "name": "Chợ Cồn",
+  "center": {
+    "lat": 16.0681,
+    "lng": 108.2183
+  },
+  "radiusM": 1000,
+  "tags": [
+    "food",
+    "market",
+    "local",
+    "shopping"
+  ],
+  "vibeKeywords": [
+    "am thuc",
+    "an vat",
+    "dia phuong",
+    "cho",
+    "re",
+    "dac san"
+  ],
+  "desc": "Thiên đường ẩm thực vỉa hè sầm uất nhất Đà Nẵng, tập trung hàng trăm món ăn vặt và đặc sản địa phương.",
+  "whyChoose": [
+    "Ăn 'sập' ẩm thực đường phố Đà Nẵng",
+    "Trải nghiệm văn hóa chợ địa phương"
+  ],
+  "funActivities": [
+    "Ăn vặt (ốc hút, bánh bèo, chè...)",
+    "Mua đặc sản khô",
+    "Ăn tối bình dân"
+  ],
+  "mustSee": [
+    "Khu ẩm thực trong nhà (Đình 17)",
+    "Khu ăn vặt ngoài trời (buổi chiều)"
+  ],
+  "bestTime": "afternoon",
+  "tips": [
+    "Đi tầm 15h-16h là lúc các hàng ăn vặt dọn ra",
+    "Mang tiền mặt",
+    "Đi dạo một vòng trước khi quyết định ăn"
+  ],
+  "donts": [
+    "Không nên mua đồ điện tử/quần áo ở đây",
+    "Giữ ví và điện thoại cẩn thận"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761210371/cho-con-thanh-pho-da-nang_pw6iv6.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761127003/cc1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761127003/cc2.jpg"
+  ],
+  "scorePriority": 0.8,
+  "isActive": true,
+  "poly": [
+    [
+      16.077083,
+      108.2183
+    ],
+    [
+      16.076399,
+      108.221877
+    ],
+    [
+      16.074452,
+      108.22491
+    ],
+    [
+      16.071538,
+      108.226937
+    ],
+    [
+      16.0681,
+      108.227648
+    ],
+    [
+      16.064662,
+      108.226937
+    ],
+    [
+      16.061748,
+      108.22491
+    ],
+    [
+      16.059801,
+      108.221877
+    ],
+    [
+      16.059117,
+      108.2183
+    ],
+    [
+      16.059801,
+      108.214723
+    ],
+    [
+      16.061748,
+      108.21169
+    ],
+    [
+      16.064662,
+      108.209663
+    ],
+    [
+      16.0681,
+      108.208952
+    ],
+    [
+      16.071538,
+      108.209663
+    ],
+    [
+      16.074452,
+      108.21169
+    ],
+    [
+      16.076399,
+      108.214723
+    ],
+    [
+      16.077083,
+      108.2183
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.2183,
+          16.077083
+        ],
+        [
+          108.221877,
+          16.076399
+        ],
+        [
+          108.22491,
+          16.074452
+        ],
+        [
+          108.226937,
+          16.071538
+        ],
+        [
+          108.227648,
+          16.0681
+        ],
+        [
+          108.226937,
+          16.064662
+        ],
+        [
+          108.22491,
+          16.061748
+        ],
+        [
+          108.221877,
+          16.059801
+        ],
+        [
+          108.2183,
+          16.059117
+        ],
+        [
+          108.214723,
+          16.059801
+        ],
+        [
+          108.21169,
+          16.061748
+        ],
+        [
+          108.209663,
+          16.064662
+        ],
+        [
+          108.208952,
+          16.0681
+        ],
+        [
+          108.209663,
+          16.071538
+        ],
+        [
+          108.21169,
+          16.074452
+        ],
+        [
+          108.214723,
+          16.076399
+        ],
+        [
+          108.2183,
+          16.077083
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f401b34c380f4ecf0f66"
+  },
+  "id": "dn-ha-tra-que",
+  "province": "da-nang",
+  "name": "Làng rau Trà Quế",
+  "center": {
+    "lat": 15.9015,
+    "lng": 108.3448
+  },
+  "radiusM": 1500,
+  "tags": [
+    "culture",
+    "local",
+    "nature",
+    "food",
+    "photo"
+  ],
+  "vibeKeywords": [
+    "nong dan",
+    "rau sach",
+    "yen binh",
+    "trai nghiem",
+    "xe dap"
+  ],
+  "desc": "Làng nghề trồng rau truyền thống nằm giữa phố cổ Hội An và biển An Bàng, nổi tiếng với không khí trong lành và các loại rau thơm đặc trưng.",
+  "whyChoose": [
+    "Trải nghiệm làm nông dân thực thụ",
+    "Không khí làng quê yên bình, trong lành",
+    "Thưởng thức ẩm thực từ rau sạch tại vườn"
+  ],
+  "funActivities": [
+    "Đạp xe quanh làng",
+    "Học cách cuốc đất, trồng rau",
+    "Ngâm chân lá thuốc",
+    "Lớp học nấu ăn (cooking class)"
+  ],
+  "mustSee": [
+    "Vườn rau hữu cơ",
+    "Cánh đồng lúa (tùy mùa)",
+    "Giếng cổ trong làng"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Nên đi xe đạp từ Phố Cổ ra",
+    "Mang nón lá để chụp ảnh và che nắng",
+    "Thử món Tam Hữu đặc sản"
+  ],
+  "donts": [
+    "Không tự ý hái rau nếu chưa xin phép",
+    "Không giẫm lên luống rau"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761722705/lang-rau-tra-que-0-2-1_obvccy.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761150002/tra-que-gallery-1_ghijk.webp",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761150003/tra-que-gallery-2_lmnop.jpg"
+  ],
+  "scorePriority": 0.8,
+  "isActive": true,
+  "poly": [
+    [
+      15.914975,
+      108.3448
+    ],
+    [
+      15.913949,
+      108.350162
+    ],
+    [
+      15.911028,
+      108.354707
+    ],
+    [
+      15.906657,
+      108.357744
+    ],
+    [
+      15.9015,
+      108.358811
+    ],
+    [
+      15.896343,
+      108.357744
+    ],
+    [
+      15.891972,
+      108.354707
+    ],
+    [
+      15.889051,
+      108.350162
+    ],
+    [
+      15.888025,
+      108.3448
+    ],
+    [
+      15.889051,
+      108.339438
+    ],
+    [
+      15.891972,
+      108.334893
+    ],
+    [
+      15.896343,
+      108.331856
+    ],
+    [
+      15.9015,
+      108.330789
+    ],
+    [
+      15.906657,
+      108.331856
+    ],
+    [
+      15.911028,
+      108.334893
+    ],
+    [
+      15.913949,
+      108.339438
+    ],
+    [
+      15.914975,
+      108.3448
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.3448,
+          15.914975
+        ],
+        [
+          108.350162,
+          15.913949
+        ],
+        [
+          108.354707,
+          15.911028
+        ],
+        [
+          108.357744,
+          15.906657
+        ],
+        [
+          108.358811,
+          15.9015
+        ],
+        [
+          108.357744,
+          15.896343
+        ],
+        [
+          108.354707,
+          15.891972
+        ],
+        [
+          108.350162,
+          15.889051
+        ],
+        [
+          108.3448,
+          15.888025
+        ],
+        [
+          108.339438,
+          15.889051
+        ],
+        [
+          108.334893,
+          15.891972
+        ],
+        [
+          108.331856,
+          15.896343
+        ],
+        [
+          108.330789,
+          15.9015
+        ],
+        [
+          108.331856,
+          15.906657
+        ],
+        [
+          108.334893,
+          15.911028
+        ],
+        [
+          108.339438,
+          15.913949
+        ],
+        [
+          108.3448,
+          15.914975
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f402b34c380f4ecf0f67"
+  },
+  "id": "hue-pho-tay",
+  "province": "hue",
+  "name": "Phố đi bộ (Phố Tây) Huế",
+  "center": {
+    "lat": 16.4635,
+    "lng": 107.5945
+  },
+  "radiusM": 1000,
+  "tags": [
+    "nightlife",
+    "food",
+    "bar",
+    "local"
+  ],
+  "vibeKeywords": [
+    "bia",
+    "bar",
+    "nhac song",
+    "sôi động",
+    "du khach",
+    "pho di bo"
+  ],
+  "desc": "Tuyến phố đi bộ Võ Thị Sáu, Phạm Ngũ Lão, Chu Văn An. Nơi tập trung nhiều quán bar, pub, nhà hàng, và các hoạt động giải trí đường phố sôi động về đêm.",
+  "whyChoose": [
+    "Không khí sôi động, náo nhiệt nhất Huế về đêm",
+    "Đa dạng các quán bar, pub",
+    "Gặp gỡ du khách quốc tế"
+  ],
+  "funActivities": [
+    "Nghe nhạc sống",
+    "Uống bia tại các quán vỉa hè",
+    "Xem biểu diễn đường phố",
+    "Ăn vặt đêm"
+  ],
+  "mustSee": [
+    "Tuyến phố Võ Thị Sáu",
+    "Các quán pub/bar đặc trưng",
+    "Cầu đi bộ Gỗ Lim (gần đó)"
+  ],
+  "bestTime": "evening",
+  "tips": [
+    "Phố chỉ đi bộ từ 18h - 22h cuối tuần",
+    "Gửi xe ở các bãi gần đó trước khi vào phố đi bộ"
+  ],
+  "donts": [
+    "Không đi xe máy vào giờ cấm",
+    "Cẩn thận móc túi khi quá đông"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761722706/images_27_tjrq8v.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761151002/hue-pho-tay-1_wxyz.webp",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761151003/hue-pho-tay-2_asdfg.jpg"
+  ],
+  "scorePriority": 0.85,
+  "isActive": true,
+  "poly": [
+    [
+      16.472483,
+      107.5945
+    ],
+    [
+      16.471799,
+      107.598085
+    ],
+    [
+      16.469852,
+      107.601124
+    ],
+    [
+      16.466938,
+      107.603154
+    ],
+    [
+      16.4635,
+      107.603867
+    ],
+    [
+      16.460062,
+      107.603154
+    ],
+    [
+      16.457148,
+      107.601124
+    ],
+    [
+      16.455201,
+      107.598085
+    ],
+    [
+      16.454517,
+      107.5945
+    ],
+    [
+      16.455201,
+      107.590915
+    ],
+    [
+      16.457148,
+      107.587876
+    ],
+    [
+      16.460062,
+      107.585846
+    ],
+    [
+      16.4635,
+      107.585133
+    ],
+    [
+      16.466938,
+      107.585846
+    ],
+    [
+      16.469852,
+      107.587876
+    ],
+    [
+      16.471799,
+      107.590915
+    ],
+    [
+      16.472483,
+      107.5945
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          107.5945,
+          16.472483
+        ],
+        [
+          107.598085,
+          16.471799
+        ],
+        [
+          107.601124,
+          16.469852
+        ],
+        [
+          107.603154,
+          16.466938
+        ],
+        [
+          107.603867,
+          16.4635
+        ],
+        [
+          107.603154,
+          16.460062
+        ],
+        [
+          107.601124,
+          16.457148
+        ],
+        [
+          107.598085,
+          16.455201
+        ],
+        [
+          107.5945,
+          16.454517
+        ],
+        [
+          107.590915,
+          16.455201
+        ],
+        [
+          107.587876,
+          16.457148
+        ],
+        [
+          107.585846,
+          16.460062
+        ],
+        [
+          107.585133,
+          16.4635
+        ],
+        [
+          107.585846,
+          16.466938
+        ],
+        [
+          107.587876,
+          16.469852
+        ],
+        [
+          107.590915,
+          16.471799
+        ],
+        [
+          107.5945,
+          16.472483
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6fc02b34c380f4ecf0f99"
+  },
+  "id": "qb-me-suot",
+  "province": "quang-binh",
+  "name": "Khu vực Tượng đài Mẹ Suốt",
+  "center": {
+    "lat": 17.4727,
+    "lng": 106.6119
+  },
+  "radiusM": 1000,
+  "tags": [
+    "history",
+    "river",
+    "photo",
+    "local",
+    "memorial"
+  ],
+  "vibeKeywords": [
+    "song nhat le",
+    "tuong dai",
+    "lich su",
+    "dao bo",
+    "ngam canh",
+    "cong vien"
+  ],
+  "desc": "Khu vực công viên ven sông Nhật Lệ, nơi đặt tượng đài Mẹ Suốt, người anh hùng chèo đò qua sông trong chiến tranh. Đây là điểm ngắm sông và thư giãn của người dân.",
+  "whyChoose": [
+    "Địa điểm lịch sử ý nghĩa",
+    "View ngắm sông Nhật Lệ đẹp và thoáng đãng",
+    "Không khí thư giãn, mát mẻ vào buổi chiều"
+  ],
+  "funActivities": [
+    "Viếng thăm tượng đài Mẹ Suốt",
+    "Đi dạo công viên ven sông",
+    "Ngắm hoàng hôn trên sông Nhật Lệ",
+    "Chụp ảnh"
+  ],
+  "mustSee": [
+    "Tượng đài Mẹ Suốt",
+    "Sông Nhật Lệ",
+    "Cầu Nhật Lệ (nhìn từ xa)"
+  ],
+  "bestTime": "evening",
+  "tips": [
+    "Đi dạo vào buổi chiều tối là mát nhất",
+    "Gần chợ Đồng Hới, có thể kết hợp tham quan",
+    "Không gian lý tưởng để đi bộ"
+  ],
+  "donts": [
+    "Không leo trèo lên tượng đài",
+    "Không xả rác ra công viên và bờ sông"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761723976/tuong_dai_me_suot_nam_ngay_ben_canh_song_nhat_le_7723a7c620_nw0qut.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761270102/ms-1_mno.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761270103/ms-2_pqr.jpg"
+  ],
+  "scorePriority": 0.75,
+  "isActive": true,
+  "poly": [
+    [
+      17.481683,
+      106.6119
+    ],
+    [
+      17.480999,
+      106.615504
+    ],
+    [
+      17.479052,
+      106.618559
+    ],
+    [
+      17.476138,
+      106.620601
+    ],
+    [
+      17.4727,
+      106.621318
+    ],
+    [
+      17.469262,
+      106.620601
+    ],
+    [
+      17.466348,
+      106.618559
+    ],
+    [
+      17.464401,
+      106.615504
+    ],
+    [
+      17.463717,
+      106.6119
+    ],
+    [
+      17.464401,
+      106.608296
+    ],
+    [
+      17.466348,
+      106.605241
+    ],
+    [
+      17.469262,
+      106.603199
+    ],
+    [
+      17.4727,
+      106.602482
+    ],
+    [
+      17.476138,
+      106.603199
+    ],
+    [
+      17.479052,
+      106.605241
+    ],
+    [
+      17.480999,
+      106.608296
+    ],
+    [
+      17.481683,
+      106.6119
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          106.6119,
+          17.481683
+        ],
+        [
+          106.615504,
+          17.480999
+        ],
+        [
+          106.618559,
+          17.479052
+        ],
+        [
+          106.620601,
+          17.476138
+        ],
+        [
+          106.621318,
+          17.4727
+        ],
+        [
+          106.620601,
+          17.469262
+        ],
+        [
+          106.618559,
+          17.466348
+        ],
+        [
+          106.615504,
+          17.464401
+        ],
+        [
+          106.6119,
+          17.463717
+        ],
+        [
+          106.608296,
+          17.464401
+        ],
+        [
+          106.605241,
+          17.466348
+        ],
+        [
+          106.603199,
+          17.469262
+        ],
+        [
+          106.602482,
+          17.4727
+        ],
+        [
+          106.603199,
+          17.476138
+        ],
+        [
+          106.605241,
+          17.479052
+        ],
+        [
+          106.608296,
+          17.480999
+        ],
+        [
+          106.6119,
+          17.481683
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6efdab34c380f4ecf0f43"
+  },
+  "id": "dn-ngu-hanh-son",
+  "province": "da-nang",
+  "name": "Ngũ Hành Sơn",
+  "center": {
+    "lat": 16.0036,
+    "lng": 108.2631
+  },
+  "radiusM": 2000,
+  "tags": [
+    "temple",
+    "photo",
+    "culture"
+  ],
+  "vibeKeywords": [
+    "chua",
+    "dong",
+    "phat",
+    "lang nghe da",
+    "di tich"
+  ],
+  "desc": "Cụm núi đá vôi linh thiêng với các hang động, chùa cổ và làng nghề đá mỹ nghệ nổi tiếng.",
+  "whyChoose": [
+    "Địa điểm tâm linh và check-in nổi tiếng",
+    "Ngắm toàn cảnh thành phố"
+  ],
+  "funActivities": [
+    "Leo núi",
+    "Tham quan chùa Tam Thai",
+    "Khám phá động Huyền Không"
+  ],
+  "mustSee": [
+    "Chùa Tam Thai",
+    "Động Huyền Không",
+    "Làng đá Non Nước"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Mang giày thể thao, tránh đi trưa nắng"
+  ],
+  "donts": [
+    "Không khắc tên lên đá",
+    "Không mang đồ cúng vào động"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761122179/danh-thang-ngu-hanh-son-da-nang-002_s5iheu.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761122178/danh-thang-ngu-hanh-son-da-nang-chua-quan-the-am_bfsfek.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761122178/di-tich-5674_whnqqy.jpg"
+  ],
+  "scorePriority": 0.85,
+  "isActive": true,
+  "poly": [
+    [
+      16.021566,
+      108.2631
+    ],
+    [
+      16.020199,
+      108.270253
+    ],
+    [
+      16.016304,
+      108.276316
+    ],
+    [
+      16.010475,
+      108.280368
+    ],
+    [
+      16.0036,
+      108.281791
+    ],
+    [
+      15.996725,
+      108.280368
+    ],
+    [
+      15.990896,
+      108.276316
+    ],
+    [
+      15.987001,
+      108.270253
+    ],
+    [
+      15.985634,
+      108.2631
+    ],
+    [
+      15.987001,
+      108.255947
+    ],
+    [
+      15.990896,
+      108.249884
+    ],
+    [
+      15.996725,
+      108.245832
+    ],
+    [
+      16.0036,
+      108.244409
+    ],
+    [
+      16.010475,
+      108.245832
+    ],
+    [
+      16.016304,
+      108.249884
+    ],
+    [
+      16.020199,
+      108.255947
+    ],
+    [
+      16.021566,
+      108.2631
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.2631,
+          16.021566
+        ],
+        [
+          108.270253,
+          16.020199
+        ],
+        [
+          108.276316,
+          16.016304
+        ],
+        [
+          108.280368,
+          16.010475
+        ],
+        [
+          108.281791,
+          16.0036
+        ],
+        [
+          108.280368,
+          15.996725
+        ],
+        [
+          108.276316,
+          15.990896
+        ],
+        [
+          108.270253,
+          15.987001
+        ],
+        [
+          108.2631,
+          15.985634
+        ],
+        [
+          108.255947,
+          15.987001
+        ],
+        [
+          108.249884,
+          15.990896
+        ],
+        [
+          108.245832,
+          15.996725
+        ],
+        [
+          108.244409,
+          16.0036
+        ],
+        [
+          108.245832,
+          16.010475
+        ],
+        [
+          108.249884,
+          16.016304
+        ],
+        [
+          108.255947,
+          16.020199
+        ],
+        [
+          108.2631,
+          16.021566
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6eff4b34c380f4ecf0f47"
+  },
+  "id": "hue-vong-canh",
+  "province": "hue",
+  "name": "Đồi Vọng Cảnh",
+  "center": {
+    "lat": 16.427124,
+    "lng": 107.565057
+  },
+  "radiusM": 2000,
+  "tags": [
+    "photo",
+    "nature",
+    "sunset"
+  ],
+  "vibeKeywords": [
+    "ngam canh",
+    "song huong",
+    "chup anh",
+    "chieu",
+    "lang man"
+  ],
+  "desc": "Điểm ngắm cảnh lãng mạn nhất ở Huế, nhìn toàn cảnh sông Hương và núi Ngự Bình.",
+  "whyChoose": [
+    "Ngắm hoàng hôn đẹp nhất Huế",
+    "Không khí yên tĩnh, mát mẻ"
+  ],
+  "funActivities": [
+    "Chụp ảnh",
+    "Picnic",
+    "Ngắm sông Hương từ trên cao"
+  ],
+  "mustSee": [
+    "Đỉnh đồi Vọng Cảnh",
+    "Đường thông cổ"
+  ],
+  "bestTime": "evening",
+  "tips": [
+    "Mang nước, đi buổi chiều tầm 16–17h",
+    "Chuẩn bị tripod nếu muốn chụp cảnh hoàng hôn"
+  ],
+  "donts": [
+    "Không xả rác, không bẻ cây",
+    "Không nên đến quá khuya"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761122425/doi-vong-canh-5_yeyrj0.webp",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761122426/doi-vong-canh-8-1024x681_yebg8i.webp",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761122427/638710885090341245-doi_vongcanh-03-_jppsku.jpg"
+  ],
+  "scorePriority": 0.75,
+  "isActive": true,
+  "poly": [
+    [
+      16.44509,
+      107.565057
+    ],
+    [
+      16.443723,
+      107.572225
+    ],
+    [
+      16.439828,
+      107.578302
+    ],
+    [
+      16.433999,
+      107.582362
+    ],
+    [
+      16.427124,
+      107.583788
+    ],
+    [
+      16.420249,
+      107.582362
+    ],
+    [
+      16.41442,
+      107.578302
+    ],
+    [
+      16.410525,
+      107.572225
+    ],
+    [
+      16.409158,
+      107.565057
+    ],
+    [
+      16.410525,
+      107.557889
+    ],
+    [
+      16.41442,
+      107.551812
+    ],
+    [
+      16.420249,
+      107.547752
+    ],
+    [
+      16.427124,
+      107.546326
+    ],
+    [
+      16.433999,
+      107.547752
+    ],
+    [
+      16.439828,
+      107.551812
+    ],
+    [
+      16.443723,
+      107.557889
+    ],
+    [
+      16.44509,
+      107.565057
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          107.565057,
+          16.44509
+        ],
+        [
+          107.572225,
+          16.443723
+        ],
+        [
+          107.578302,
+          16.439828
+        ],
+        [
+          107.582362,
+          16.433999
+        ],
+        [
+          107.583788,
+          16.427124
+        ],
+        [
+          107.582362,
+          16.420249
+        ],
+        [
+          107.578302,
+          16.41442
+        ],
+        [
+          107.572225,
+          16.410525
+        ],
+        [
+          107.565057,
+          16.409158
+        ],
+        [
+          107.557889,
+          16.410525
+        ],
+        [
+          107.551812,
+          16.41442
+        ],
+        [
+          107.547752,
+          16.420249
+        ],
+        [
+          107.546326,
+          16.427124
+        ],
+        [
+          107.547752,
+          16.433999
+        ],
+        [
+          107.551812,
+          16.439828
+        ],
+        [
+          107.557889,
+          16.443723
+        ],
+        [
+          107.565057,
+          16.44509
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f047b34c380f4ecf0f49"
+  },
+  "id": "dn-my-khe-beach",
+  "province": "da-nang",
+  "name": "Bãi biển Mỹ Khê",
+  "center": {
+    "lat": 16.061612,
+    "lng": 108.246745
+  },
+  "radiusM": 2000,
+  "tags": [
+    "beach",
+    "sunset",
+    "photo"
+  ],
+  "vibeKeywords": [
+    "bien",
+    "tắm biển",
+    "sunset",
+    "check-in",
+    "surf"
+  ],
+  "desc": "Một trong những bãi biển đẹp nhất Việt Nam, nước trong, cát trắng và hoàng hôn thật tuyệt.",
+  "whyChoose": [
+    "Biển đẹp, gần trung tâm",
+    "Hoàng hôn ngắm cực chill"
+  ],
+  "funActivities": [
+    "Tắm biển",
+    "Lướt sóng",
+    "Chụp ảnh hoàng hôn"
+  ],
+  "mustSee": [
+    "Khu vực chính Mỹ Khê",
+    "Cầu Rồng nhìn từ biển"
+  ],
+  "bestTime": "evening",
+  "tips": [
+    "Mang áo khoác nhẹ nếu đi chiều muộn",
+    "Thuê dù + ghế tắm biển sớm để có chỗ đẹp"
+  ],
+  "donts": [
+    "Không tắm quá xa bờ vào chiều muộn",
+    "Không để đồ giá trị tại ghế tắm không có bảo vệ"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761122499/1672740553-bai-bien-my-khe-dia-diem-du-lich-da-nang-attdad03-14-jpg_veqpox.webp",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761122500/bai-bien-my-khe_nq0lkm.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761122501/bai-bien-my-khe-da-nang-lang-nguoi-ngam-nhin-1-trong-6-bai-bien-dep-nhat-hanh-tinh-04-1636298582_abbjyt.jpg"
+  ],
+  "scorePriority": 0.8,
+  "isActive": true,
+  "poly": [
+    [
+      16.079578,
+      108.246745
+    ],
+    [
+      16.078211,
+      108.2539
+    ],
+    [
+      16.074316,
+      108.259965
+    ],
+    [
+      16.068487,
+      108.264018
+    ],
+    [
+      16.061612,
+      108.265441
+    ],
+    [
+      16.054737,
+      108.264018
+    ],
+    [
+      16.048908,
+      108.259965
+    ],
+    [
+      16.045013,
+      108.2539
+    ],
+    [
+      16.043646,
+      108.246745
+    ],
+    [
+      16.045013,
+      108.23959
+    ],
+    [
+      16.048908,
+      108.233525
+    ],
+    [
+      16.054737,
+      108.229472
+    ],
+    [
+      16.061612,
+      108.228049
+    ],
+    [
+      16.068487,
+      108.229472
+    ],
+    [
+      16.074316,
+      108.233525
+    ],
+    [
+      16.078211,
+      108.23959
+    ],
+    [
+      16.079578,
+      108.246745
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.246745,
+          16.079578
+        ],
+        [
+          108.2539,
+          16.078211
+        ],
+        [
+          108.259965,
+          16.074316
+        ],
+        [
+          108.264018,
+          16.068487
+        ],
+        [
+          108.265441,
+          16.061612
+        ],
+        [
+          108.264018,
+          16.054737
+        ],
+        [
+          108.259965,
+          16.048908
+        ],
+        [
+          108.2539,
+          16.045013
+        ],
+        [
+          108.246745,
+          16.043646
+        ],
+        [
+          108.23959,
+          16.045013
+        ],
+        [
+          108.233525,
+          16.048908
+        ],
+        [
+          108.229472,
+          16.054737
+        ],
+        [
+          108.228049,
+          16.061612
+        ],
+        [
+          108.229472,
+          16.068487
+        ],
+        [
+          108.233525,
+          16.074316
+        ],
+        [
+          108.23959,
+          16.078211
+        ],
+        [
+          108.246745,
+          16.079578
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f058b34c380f4ecf0f4d"
+  },
+  "id": "dn-cu-lao-cham",
+  "province": "da-nang",
+  "name": "Cù Lao Chàm",
+  "center": {
+    "lat": 15.946334,
+    "lng": 108.512439
+  },
+  "radiusM": 3000,
+  "tags": [
+    "island",
+    "snorkeling",
+    "nature"
+  ],
+  "vibeKeywords": [
+    "dao",
+    "lan bien",
+    "chup anh",
+    "bien xanh",
+    "hai san"
+  ],
+  "desc": "Cụm đảo cách Hội An khoảng 15km, nổi tiếng với bãi biển trong xanh, san hô và ẩm thực hải sản tươi ngon.",
+  "whyChoose": [
+    "Trải nghiệm lặn ngắm san hô",
+    "Không khí trong lành, ít người"
+  ],
+  "funActivities": [
+    "Lặn ngắm san hô",
+    "Đi cano",
+    "Ăn hải sản tươi"
+  ],
+  "mustSee": [
+    "Bãi Chồng",
+    "Bãi Ông",
+    "Chợ Tân Hiệp"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Mang áo chống nắng, đi cano sáng sớm",
+    "Chuẩn bị đồ bơi và khăn tắm"
+  ],
+  "donts": [
+    "Không giẫm lên san hô",
+    "Không thu thập vỏ sò, sinh vật biển"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761123420/CLC3-6855-1716979438_hdepcl.webp",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761123420/VtCCzVHA-cu-lao-cham-thumb-1_u26zia.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761123421/bai-xep-cu-lao-cham-2_1645201213_lc6myv.jpg"
+  ],
+  "scorePriority": 0.85,
+  "isActive": true,
+  "poly": [
+    [
+      15.973283,
+      108.512439
+    ],
+    [
+      15.971232,
+      108.523165
+    ],
+    [
+      15.96539,
+      108.532258
+    ],
+    [
+      15.956647,
+      108.538333
+    ],
+    [
+      15.946334,
+      108.540467
+    ],
+    [
+      15.936021,
+      108.538333
+    ],
+    [
+      15.927278,
+      108.532258
+    ],
+    [
+      15.921436,
+      108.523165
+    ],
+    [
+      15.919385,
+      108.512439
+    ],
+    [
+      15.921436,
+      108.501713
+    ],
+    [
+      15.927278,
+      108.49262
+    ],
+    [
+      15.936021,
+      108.486545
+    ],
+    [
+      15.946334,
+      108.484411
+    ],
+    [
+      15.956647,
+      108.486545
+    ],
+    [
+      15.96539,
+      108.49262
+    ],
+    [
+      15.971232,
+      108.501713
+    ],
+    [
+      15.973283,
+      108.512439
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.512439,
+          15.973283
+        ],
+        [
+          108.523165,
+          15.971232
+        ],
+        [
+          108.532258,
+          15.96539
+        ],
+        [
+          108.538333,
+          15.956647
+        ],
+        [
+          108.540467,
+          15.946334
+        ],
+        [
+          108.538333,
+          15.936021
+        ],
+        [
+          108.532258,
+          15.927278
+        ],
+        [
+          108.523165,
+          15.921436
+        ],
+        [
+          108.512439,
+          15.919385
+        ],
+        [
+          108.501713,
+          15.921436
+        ],
+        [
+          108.49262,
+          15.927278
+        ],
+        [
+          108.486545,
+          15.936021
+        ],
+        [
+          108.484411,
+          15.946334
+        ],
+        [
+          108.486545,
+          15.956647
+        ],
+        [
+          108.49262,
+          15.96539
+        ],
+        [
+          108.501713,
+          15.971232
+        ],
+        [
+          108.512439,
+          15.973283
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f103b34c380f4ecf0f54"
+  },
+  "id": "hue-lang-huong",
+  "province": "hue",
+  "name": "Làng hương Thủy Xuân",
+  "center": {
+    "lat": 16.435468,
+    "lng": 107.562319
+  },
+  "radiusM": 1000,
+  "tags": [
+    "photo",
+    "culture",
+    "craft",
+    "local"
+  ],
+  "vibeKeywords": [
+    "check-in",
+    "lang nghe",
+    "huong",
+    "sac mau",
+    "ao dai"
+  ],
+  "desc": "Làng nghề làm hương truyền thống nổi tiếng với các bó hương đa sắc màu rực rỡ, là điểm check-in yêu thích.",
+  "whyChoose": [
+    "Địa điểm chụp ảnh 'sống ảo' cực đẹp",
+    "Tìm hiểu về nghề làm hương truyền thống"
+  ],
+  "funActivities": [
+    "Chụp ảnh với các bó hương",
+    "Thử làm hương thủ công",
+    "Mua sắm đồ lưu niệm"
+  ],
+  "mustSee": [
+    "Các cửa hàng hương sặc sỡ",
+    "Đồi Vọng Cảnh (gần đó)"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Mặc đồ màu trắng hoặc màu trơn để nổi bật",
+    "Nên mua một ít hương để ủng hộ người dân"
+  ],
+  "donts": [
+    "Không làm xô đổ các bó hương",
+    "Không chụp ảnh quá lâu tại một điểm gây cản trở"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125338/lang-huong-thuy-xuan-2-768x512_gt7xq9.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125342/lang-huong-thuy-xuan-2_yhh0pn.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125337/lang-huong-thuy-xuan-hue_t7sb7f.jpg"
+  ],
+  "scorePriority": 0.85,
+  "isActive": true,
+  "poly": [
+    [
+      16.444451,
+      107.562319
+    ],
+    [
+      16.443767,
+      107.565903
+    ],
+    [
+      16.44182,
+      107.568942
+    ],
+    [
+      16.438906,
+      107.570972
+    ],
+    [
+      16.435468,
+      107.571685
+    ],
+    [
+      16.43203,
+      107.570972
+    ],
+    [
+      16.429116,
+      107.568942
+    ],
+    [
+      16.427169,
+      107.565903
+    ],
+    [
+      16.426485,
+      107.562319
+    ],
+    [
+      16.427169,
+      107.558735
+    ],
+    [
+      16.429116,
+      107.555696
+    ],
+    [
+      16.43203,
+      107.553666
+    ],
+    [
+      16.435468,
+      107.552953
+    ],
+    [
+      16.438906,
+      107.553666
+    ],
+    [
+      16.44182,
+      107.555696
+    ],
+    [
+      16.443767,
+      107.558735
+    ],
+    [
+      16.444451,
+      107.562319
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          107.562319,
+          16.444451
+        ],
+        [
+          107.565903,
+          16.443767
+        ],
+        [
+          107.568942,
+          16.44182
+        ],
+        [
+          107.570972,
+          16.438906
+        ],
+        [
+          107.571685,
+          16.435468
+        ],
+        [
+          107.570972,
+          16.43203
+        ],
+        [
+          107.568942,
+          16.429116
+        ],
+        [
+          107.565903,
+          16.427169
+        ],
+        [
+          107.562319,
+          16.426485
+        ],
+        [
+          107.558735,
+          16.427169
+        ],
+        [
+          107.555696,
+          16.429116
+        ],
+        [
+          107.553666,
+          16.43203
+        ],
+        [
+          107.552953,
+          16.435468
+        ],
+        [
+          107.553666,
+          16.438906
+        ],
+        [
+          107.555696,
+          16.44182
+        ],
+        [
+          107.558735,
+          16.443767
+        ],
+        [
+          107.562319,
+          16.444451
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f200b34c380f4ecf0f56"
+  },
+  "id": "hue-lang-khai-dinh",
+  "province": "hue",
+  "name": "Lăng Khải Định (Ứng Lăng)",
+  "center": {
+    "lat": 16.4025,
+    "lng": 107.5936
+  },
+  "radiusM": 1000,
+  "tags": [
+    "history",
+    "photo",
+    "culture",
+    "architecture"
+  ],
+  "vibeKeywords": [
+    "lang",
+    "hoang gia",
+    "doc la",
+    "chup anh",
+    "kham su",
+    "gothic"
+  ],
+  "desc": "Lăng tẩm độc đáo nhất triều Nguyễn, kết hợp kiến trúc Đông-Tây, nổi tiếng với nghệ thuật khảm sành sứ tinh xảo.",
+  "whyChoose": [
+    "Kiến trúc giao thoa độc đáo",
+    "Nghệ thuật khảm đỉnh cao"
+  ],
+  "funActivities": [
+    "Tham quan điện Khải Thành",
+    "Chụp ảnh với tượng lính",
+    "Tìm hiểu nghệ thuật khảm sứ"
+  ],
+  "mustSee": [
+    "Điện Khải Thành",
+    "Tượng Vua Khải Định (bằng đồng)",
+    "Bia đá"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Đường lên lăng có nhiều bậc thang, mang giày thoải mái",
+    "Nên đi buổi sáng để chụp ảnh đẹp nhất"
+  ],
+  "donts": [
+    "Không chạm vào các bức phù điêu sứ",
+    "Không nói to trong điện thờ"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125890/unnamed_m3jdv3.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125890/Lang_Khai_Dinh_cpvxb7.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761125892/Lang_Khai_Dinh_7._qahcsh.jpg"
+  ],
+  "scorePriority": 0.85,
+  "isActive": true,
+  "poly": [
+    [
+      16.411483,
+      107.5936
+    ],
+    [
+      16.410799,
+      107.597184
+    ],
+    [
+      16.408852,
+      107.600222
+    ],
+    [
+      16.405938,
+      107.602251
+    ],
+    [
+      16.4025,
+      107.602964
+    ],
+    [
+      16.399062,
+      107.602251
+    ],
+    [
+      16.396148,
+      107.600222
+    ],
+    [
+      16.394201,
+      107.597184
+    ],
+    [
+      16.393517,
+      107.5936
+    ],
+    [
+      16.394201,
+      107.590016
+    ],
+    [
+      16.396148,
+      107.586978
+    ],
+    [
+      16.399062,
+      107.584949
+    ],
+    [
+      16.4025,
+      107.584236
+    ],
+    [
+      16.405938,
+      107.584949
+    ],
+    [
+      16.408852,
+      107.586978
+    ],
+    [
+      16.410799,
+      107.590016
+    ],
+    [
+      16.411483,
+      107.5936
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          107.5936,
+          16.411483
+        ],
+        [
+          107.597184,
+          16.410799
+        ],
+        [
+          107.600222,
+          16.408852
+        ],
+        [
+          107.602251,
+          16.405938
+        ],
+        [
+          107.602964,
+          16.4025
+        ],
+        [
+          107.602251,
+          16.399062
+        ],
+        [
+          107.600222,
+          16.396148
+        ],
+        [
+          107.597184,
+          16.394201
+        ],
+        [
+          107.5936,
+          16.393517
+        ],
+        [
+          107.590016,
+          16.394201
+        ],
+        [
+          107.586978,
+          16.396148
+        ],
+        [
+          107.584949,
+          16.399062
+        ],
+        [
+          107.584236,
+          16.4025
+        ],
+        [
+          107.584949,
+          16.405938
+        ],
+        [
+          107.586978,
+          16.408852
+        ],
+        [
+          107.590016,
+          16.410799
+        ],
+        [
+          107.5936,
+          16.411483
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f204b34c380f4ecf0f60"
+  },
+  "id": "qb-nhat-le",
+  "province": "quang-binh",
+  "name": "Bãi biển Nhật Lệ",
+  "center": {
+    "lat": 17.4784,
+    "lng": 106.6206
+  },
+  "radiusM": 2000,
+  "tags": [
+    "beach",
+    "sunset",
+    "food",
+    "local"
+  ],
+  "vibeKeywords": [
+    "bien",
+    "tam bien",
+    "hoang hon",
+    "hai san",
+    "yen binh"
+  ],
+  "desc": "Bãi biển đẹp và nổi tiếng nhất Đồng Hới với bãi cát trắng mịn, nước trong xanh và nhiều quán hải sản ven bờ.",
+  "whyChoose": [
+    "Bãi biển sạch, đẹp ngay trung tâm",
+    "Hải sản tươi ngon, giá hợp lý"
+  ],
+  "funActivities": [
+    "Tắm biển",
+    "Ngắm bình minh/hoàng hôn",
+    "Ăn hải sản",
+    "Dạo bộ"
+  ],
+  "mustSee": [
+    "Cửa sông Nhật Lệ",
+    "Tượng đài Mẹ Suốt (gần đó)"
+  ],
+  "bestTime": "evening",
+  "tips": [
+    "Tắm biển vào sáng sớm hoặc chiều muộn",
+    "Thưởng thức hải sản tại các quán ven biển"
+  ],
+  "donts": [
+    "Không bơi ra quá xa",
+    "Tránh đi vào mùa mưa bão (tháng 9-11)"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126579/bien-nhat-le-1_c3dtxl.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126582/sunset_lyvfiq.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126576/kinh-nghiem-di-bien-nhat-le-quang-binh-ban-nhat-dinh-phai-biet-6-1653384572_srazts.jpg"
+  ],
+  "scorePriority": 0.8,
+  "isActive": true,
+  "poly": [
+    [
+      17.496366,
+      106.6206
+    ],
+    [
+      17.494999,
+      106.627808
+    ],
+    [
+      17.491104,
+      106.633919
+    ],
+    [
+      17.485275,
+      106.638002
+    ],
+    [
+      17.4784,
+      106.639436
+    ],
+    [
+      17.471525,
+      106.638002
+    ],
+    [
+      17.465696,
+      106.633919
+    ],
+    [
+      17.461801,
+      106.627808
+    ],
+    [
+      17.460434,
+      106.6206
+    ],
+    [
+      17.461801,
+      106.613392
+    ],
+    [
+      17.465696,
+      106.607281
+    ],
+    [
+      17.471525,
+      106.603198
+    ],
+    [
+      17.4784,
+      106.601764
+    ],
+    [
+      17.485275,
+      106.603198
+    ],
+    [
+      17.491104,
+      106.607281
+    ],
+    [
+      17.494999,
+      106.613392
+    ],
+    [
+      17.496366,
+      106.6206
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          106.6206,
+          17.496366
+        ],
+        [
+          106.627808,
+          17.494999
+        ],
+        [
+          106.633919,
+          17.491104
+        ],
+        [
+          106.638002,
+          17.485275
+        ],
+        [
+          106.639436,
+          17.4784
+        ],
+        [
+          106.638002,
+          17.471525
+        ],
+        [
+          106.633919,
+          17.465696
+        ],
+        [
+          106.627808,
+          17.461801
+        ],
+        [
+          106.6206,
+          17.460434
+        ],
+        [
+          106.613392,
+          17.461801
+        ],
+        [
+          106.607281,
+          17.465696
+        ],
+        [
+          106.603198,
+          17.471525
+        ],
+        [
+          106.601764,
+          17.4784
+        ],
+        [
+          106.603198,
+          17.485275
+        ],
+        [
+          106.607281,
+          17.491104
+        ],
+        [
+          106.613392,
+          17.494999
+        ],
+        [
+          106.6206,
+          17.496366
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f300b34c380f4ecf0f61"
+  },
+  "id": "hue-lang-tu-duc",
+  "province": "hue",
+  "name": "Lăng Tự Đức (Khiêm Lăng)",
+  "center": {
+    "lat": 16.4325,
+    "lng": 107.566
+  },
+  "radiusM": 2500,
+  "tags": [
+    "history",
+    "photo",
+    "culture",
+    "park"
+  ],
+  "vibeKeywords": [
+    "lang",
+    "hoang gia",
+    "tho mong",
+    "co kinh",
+    "yen tinh",
+    "ho sen"
+  ],
+  "desc": "Lăng tẩm thơ mộng nhất triều Nguyễn, được thiết kế như một công viên hoàng gia với hồ nước, đảo nhỏ, phản ánh tâm hồn thi sĩ của vua Tự Đức.",
+  "whyChoose": [
+    "Không gian thơ mộng, yên tĩnh",
+    "Kiến trúc hòa quyện thiên nhiên"
+  ],
+  "funActivities": [
+    "Tham quan điện thờ",
+    "Chụp ảnh áo dài/cổ trang",
+    "Dạo bộ quanh hồ Lưu Khiêm"
+  ],
+  "mustSee": [
+    "Hồ Lưu Khiêm & Xung Khiêm Tạ",
+    "Nhà hát Minh Khiêm",
+    "Bi Đình (nơi có bia Khiêm Cung Ký 20 tấn)"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Mang giày thoải mái vì khu lăng rất rộng",
+    "Là địa điểm lý tưởng để chụp ảnh áo dài"
+  ],
+  "donts": [
+    "Không chạm tay vào hiện vật",
+    "Không mặc đồ ngắn vào khu vực điện thờ"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126702/lang-tu-duc-noi-an-giac-day-nha-nhan-cua-vi-vua-uyen-bac-voi-tam-hon-thi-si-3-1638784138_kkgqft.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126703/lang-tu-duc-banner-1_lsbeis.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761126704/0428-18-26-20_rlo6so.jpg"
+  ],
+  "scorePriority": 0.9,
+  "isActive": true,
+  "poly": [
+    [
+      16.454958,
+      107.566
+    ],
+    [
+      16.453248,
+      107.57496
+    ],
+    [
+      16.44838,
+      107.582556
+    ],
+    [
+      16.441094,
+      107.587632
+    ],
+    [
+      16.4325,
+      107.589414
+    ],
+    [
+      16.423906,
+      107.587632
+    ],
+    [
+      16.41662,
+      107.582556
+    ],
+    [
+      16.411752,
+      107.57496
+    ],
+    [
+      16.410042,
+      107.566
+    ],
+    [
+      16.411752,
+      107.55704
+    ],
+    [
+      16.41662,
+      107.549444
+    ],
+    [
+      16.423906,
+      107.544368
+    ],
+    [
+      16.4325,
+      107.542586
+    ],
+    [
+      16.441094,
+      107.544368
+    ],
+    [
+      16.44838,
+      107.549444
+    ],
+    [
+      16.453248,
+      107.55704
+    ],
+    [
+      16.454958,
+      107.566
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          107.566,
+          16.454958
+        ],
+        [
+          107.57496,
+          16.453248
+        ],
+        [
+          107.582556,
+          16.44838
+        ],
+        [
+          107.587632,
+          16.441094
+        ],
+        [
+          107.589414,
+          16.4325
+        ],
+        [
+          107.587632,
+          16.423906
+        ],
+        [
+          107.582556,
+          16.41662
+        ],
+        [
+          107.57496,
+          16.411752
+        ],
+        [
+          107.566,
+          16.410042
+        ],
+        [
+          107.55704,
+          16.411752
+        ],
+        [
+          107.549444,
+          16.41662
+        ],
+        [
+          107.544368,
+          16.423906
+        ],
+        [
+          107.542586,
+          16.4325
+        ],
+        [
+          107.544368,
+          16.441094
+        ],
+        [
+          107.549444,
+          16.44838
+        ],
+        [
+          107.55704,
+          16.453248
+        ],
+        [
+          107.566,
+          16.454958
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f400b34c380f4ecf0f66"
+  },
+  "id": "hue-pha-tam-giang",
+  "province": "hue",
+  "name": "Phá Tam Giang",
+  "center": {
+    "lat": 16.5938,
+    "lng": 107.4475
+  },
+  "radiusM": 5000,
+  "tags": [
+    "nature",
+    "sunset",
+    "local",
+    "food",
+    "boat"
+  ],
+  "vibeKeywords": [
+    "hoang hon",
+    "song nuoc",
+    "yen binh",
+    "ngu dan",
+    "hai san",
+    "chuom"
+  ],
+  "desc": "Hệ đầm phá nước lợ lớn nhất Đông Nam Á, nổi tiếng với cảnh hoàng hôn kỳ vĩ và cuộc sống ngư dân.",
+  "whyChoose": [
+    "Hoàng hôn đẹp nhất Huế",
+    "Trải nghiệm cuộc sống ngư dân"
+  ],
+  "funActivities": [
+    "Ngắm hoàng hôn",
+    "Đi thuyền trên phá",
+    "Thưởng thức hải sản (cá kình, tôm)"
+  ],
+  "mustSee": [
+    "Rừng ngập mặn Rú Chá (gần đó)",
+    "Làng chài Thái Dương Hạ"
+  ],
+  "bestTime": "evening",
+  "tips": [
+    "Đi tầm 16h để đón hoàng hôn",
+    "Nên thuê thuyền của dân địa phương để trải nghiệm"
+  ],
+  "donts": [
+    "Không đi vào ngày mưa bão",
+    "Không xả rác xuống phá"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761210283/pha-tam-giang-7_pslgha.webp",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761127001/tg1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761127001/tg2.jpg"
+  ],
+  "scorePriority": 0.8,
+  "isActive": true,
+  "poly": [
+    [
+      16.638716,
+      107.4475
+    ],
+    [
+      16.635297,
+      107.465435
+    ],
+    [
+      16.62556,
+      107.48064
+    ],
+    [
+      16.610988,
+      107.4908
+    ],
+    [
+      16.5938,
+      107.494367
+    ],
+    [
+      16.576612,
+      107.4908
+    ],
+    [
+      16.56204,
+      107.48064
+    ],
+    [
+      16.552303,
+      107.465435
+    ],
+    [
+      16.548884,
+      107.4475
+    ],
+    [
+      16.552303,
+      107.429565
+    ],
+    [
+      16.56204,
+      107.41436
+    ],
+    [
+      16.576612,
+      107.4042
+    ],
+    [
+      16.5938,
+      107.400633
+    ],
+    [
+      16.610988,
+      107.4042
+    ],
+    [
+      16.62556,
+      107.41436
+    ],
+    [
+      16.635297,
+      107.429565
+    ],
+    [
+      16.638716,
+      107.4475
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          107.4475,
+          16.638716
+        ],
+        [
+          107.465435,
+          16.635297
+        ],
+        [
+          107.48064,
+          16.62556
+        ],
+        [
+          107.4908,
+          16.610988
+        ],
+        [
+          107.494367,
+          16.5938
+        ],
+        [
+          107.4908,
+          16.576612
+        ],
+        [
+          107.48064,
+          16.56204
+        ],
+        [
+          107.465435,
+          16.552303
+        ],
+        [
+          107.4475,
+          16.548884
+        ],
+        [
+          107.429565,
+          16.552303
+        ],
+        [
+          107.41436,
+          16.56204
+        ],
+        [
+          107.4042,
+          16.576612
+        ],
+        [
+          107.400633,
+          16.5938
+        ],
+        [
+          107.4042,
+          16.610988
+        ],
+        [
+          107.41436,
+          16.62556
+        ],
+        [
+          107.429565,
+          16.635297
+        ],
+        [
+          107.4475,
+          16.638716
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f501b34c380f4ecf0f72"
+  },
+  "id": "qng-ly-son",
+  "province": "quang-ngai",
+  "name": "Đảo Lý Sơn",
+  "center": {
+    "lat": 15.3833,
+    "lng": 109.1167
+  },
+  "radiusM": 3000,
+  "tags": [
+    "island",
+    "nature",
+    "photo",
+    "geology",
+    "local"
+  ],
+  "vibeKeywords": [
+    "dao",
+    "bien",
+    "hoang so",
+    "toi",
+    "vach da",
+    "check-in"
+  ],
+  "desc": "Hòn đảo núi lửa tiền tiêu, được mệnh danh là 'vương quốc tỏi', nổi tiếng với cổng Tò Vò, vách đá kỳ vĩ và nước biển trong xanh.",
+  "whyChoose": [
+    "Vẻ đẹp hoang sơ, độc đáo",
+    "Check-in với cổng Tò Vò lúc hoàng hôn"
+  ],
+  "funActivities": [
+    "Ngắm hoàng hôn ở Cổng Tò Vò",
+    "Đi cano ra Đảo Bé",
+    "Lặn ngắm san hô",
+    "Thưởng thức gỏi tỏi"
+  ],
+  "mustSee": [
+    "Cổng Tò Vò",
+    "Đỉnh Thới Lới",
+    "Chùa Hang",
+    "Đảo Bé (An Bình)"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Nên đi tàu cao tốc ra đảo vào buổi sáng",
+    "Thuê xe máy để tự khám phá đảo",
+    "Mùa hè là đẹp nhất (tháng 4 - tháng 8)"
+  ],
+  "donts": [
+    "Không đi vào mùa mưa bão (tháng 9 - 12)",
+    "Không giẫm lên san hô khi lặn"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761210852/dao-ly-son-o-dau-2_fjfuew.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761128002/ls1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761128002/ls2.jpg"
+  ],
+  "scorePriority": 0.9,
+  "isActive": true,
+  "poly": [
+    [
+      15.410249,
+      109.1167
+    ],
+    [
+      15.408198,
+      109.127396
+    ],
+    [
+      15.402356,
+      109.136464
+    ],
+    [
+      15.393613,
+      109.142523
+    ],
+    [
+      15.3833,
+      109.144651
+    ],
+    [
+      15.372987,
+      109.142523
+    ],
+    [
+      15.364244,
+      109.136464
+    ],
+    [
+      15.358402,
+      109.127396
+    ],
+    [
+      15.356351,
+      109.1167
+    ],
+    [
+      15.358402,
+      109.106004
+    ],
+    [
+      15.364244,
+      109.096936
+    ],
+    [
+      15.372987,
+      109.090877
+    ],
+    [
+      15.3833,
+      109.088749
+    ],
+    [
+      15.393613,
+      109.090877
+    ],
+    [
+      15.402356,
+      109.096936
+    ],
+    [
+      15.408198,
+      109.106004
+    ],
+    [
+      15.410249,
+      109.1167
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          109.1167,
+          15.410249
+        ],
+        [
+          109.127396,
+          15.408198
+        ],
+        [
+          109.136464,
+          15.402356
+        ],
+        [
+          109.142523,
+          15.393613
+        ],
+        [
+          109.144651,
+          15.3833
+        ],
+        [
+          109.142523,
+          15.372987
+        ],
+        [
+          109.136464,
+          15.364244
+        ],
+        [
+          109.127396,
+          15.358402
+        ],
+        [
+          109.1167,
+          15.356351
+        ],
+        [
+          109.106004,
+          15.358402
+        ],
+        [
+          109.096936,
+          15.364244
+        ],
+        [
+          109.090877,
+          15.372987
+        ],
+        [
+          109.088749,
+          15.3833
+        ],
+        [
+          109.090877,
+          15.393613
+        ],
+        [
+          109.096936,
+          15.402356
+        ],
+        [
+          109.106004,
+          15.408198
+        ],
+        [
+          109.1167,
+          15.410249
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f503b34c380f4ecf0f74"
+  },
+  "id": "nt-hon-chong",
+  "province": "nha-trang",
+  "name": "Hòn Chồng - Hòn Vợ",
+  "center": {
+    "lat": 12.2741,
+    "lng": 109.2007
+  },
+  "radiusM": 1000,
+  "tags": [
+    "nature",
+    "photo",
+    "view",
+    "sunset"
+  ],
+  "vibeKeywords": [
+    "da",
+    "bien",
+    "check-in",
+    "view dep",
+    "hoang hon",
+    "ky thu"
+  ],
+  "desc": "Quần thể bãi đá tự nhiên với các tảng đá lớn xếp chồng lên nhau một cách kỳ thú, là điểm ngắm cảnh biển và thành phố đẹp.",
+  "whyChoose": [
+    "Khung cảnh đá và biển độc đáo",
+    "Điểm ngắm hoàng hôn yên bình"
+  ],
+  "funActivities": [
+    "Chụp ảnh check-in",
+    "Leo trèo (cẩn thận)",
+    "Uống cafe ngắm biển"
+  ],
+  "mustSee": [
+    "Tảng đá có dấu tay (theo truyền thuyết)",
+    "View nhìn ra Vịnh Nha Trang",
+    "Hòn Vợ (kế bên)"
+  ],
+  "bestTime": "evening",
+  "tips": [
+    "Mang giày bám tốt để leo đá",
+    "Đi buổi chiều để ngắm hoàng hôn",
+    "Cẩn thận sóng đánh khi trèo ra xa"
+  ],
+  "donts": [
+    "Không leo trèo khi trời mưa hoặc đá ướt",
+    "Không khắc tên lên đá"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761213291/hon-chong-hon-vo-nha-trang-thumb_esutks.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761128004/hc1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761128004/hc2.jpg"
+  ],
+  "scorePriority": 0.75,
+  "isActive": true,
+  "poly": [
+    [
+      12.283083,
+      109.2007
+    ],
+    [
+      12.282399,
+      109.204218
+    ],
+    [
+      12.280452,
+      109.207201
+    ],
+    [
+      12.277538,
+      109.209193
+    ],
+    [
+      12.2741,
+      109.209893
+    ],
+    [
+      12.270662,
+      109.209193
+    ],
+    [
+      12.267748,
+      109.207201
+    ],
+    [
+      12.265801,
+      109.204218
+    ],
+    [
+      12.265117,
+      109.2007
+    ],
+    [
+      12.265801,
+      109.197182
+    ],
+    [
+      12.267748,
+      109.194199
+    ],
+    [
+      12.270662,
+      109.192207
+    ],
+    [
+      12.2741,
+      109.191507
+    ],
+    [
+      12.277538,
+      109.192207
+    ],
+    [
+      12.280452,
+      109.194199
+    ],
+    [
+      12.282399,
+      109.197182
+    ],
+    [
+      12.283083,
+      109.2007
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          109.2007,
+          12.283083
+        ],
+        [
+          109.204218,
+          12.282399
+        ],
+        [
+          109.207201,
+          12.280452
+        ],
+        [
+          109.209193,
+          12.277538
+        ],
+        [
+          109.209893,
+          12.2741
+        ],
+        [
+          109.209193,
+          12.270662
+        ],
+        [
+          109.207201,
+          12.267748
+        ],
+        [
+          109.204218,
+          12.265801
+        ],
+        [
+          109.2007,
+          12.265117
+        ],
+        [
+          109.197182,
+          12.265801
+        ],
+        [
+          109.194199,
+          12.267748
+        ],
+        [
+          109.192207,
+          12.270662
+        ],
+        [
+          109.191507,
+          12.2741
+        ],
+        [
+          109.192207,
+          12.277538
+        ],
+        [
+          109.194199,
+          12.280452
+        ],
+        [
+          109.197182,
+          12.282399
+        ],
+        [
+          109.2007,
+          12.283083
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f504b34c380f4ecf0f75"
+  },
+  "id": "qng-my-son",
+  "province": "quang-ngai",
+  "name": "Thánh địa Mỹ Sơn",
+  "center": {
+    "lat": 15.7645,
+    "lng": 108.1235
+  },
+  "radiusM": 2000,
+  "tags": [
+    "history",
+    "culture",
+    "unesco",
+    "temple",
+    "photo"
+  ],
+  "vibeKeywords": [
+    "di tich",
+    "champa",
+    "co kinh",
+    "huyen bi",
+    "den thap"
+  ],
+  "desc": "Di sản UNESCO, là quần thể đền tháp Chăm Pa cổ xưa ẩn mình trong thung lũng, mang vẻ đẹp huyền bí và giá trị lịch sử lớn.",
+  "whyChoose": [
+    "Tìm hiểu về nền văn minh Chăm Pa",
+    "Vẻ đẹp cổ kính, huyền bí"
+  ],
+  "funActivities": [
+    "Tham quan các cụm tháp",
+    "Xem biểu diễn múa Chăm",
+    "Chụp ảnh di tích",
+    "Đi xe điện vào khu trung tâm"
+  ],
+  "mustSee": [
+    "Cụm tháp B-C-D (trung tâm)",
+    "Cụm tháp A (bị bom phá hủy)",
+    "Bảo tàng tại cổng"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Nên đi sáng sớm hoặc chiều muộn để tránh nắng",
+    "Mang giày đi bộ thoải mái",
+    "Thuê hướng dẫn viên để hiểu rõ lịch sử"
+  ],
+  "donts": [
+    "Không leo trèo lên tháp",
+    "Không chạm vào hiện vật",
+    "Tránh đi vào buổi trưa nắng gắt"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761213342/tha1747722808_5733_gdwaq2.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761128005/ms1.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761128005/ms2.jpg"
+  ],
+  "scorePriority": 0.85,
+  "isActive": true,
+  "poly": [
+    [
+      15.782466,
+      108.1235
+    ],
+    [
+      15.781099,
+      108.130644
+    ],
+    [
+      15.777204,
+      108.136701
+    ],
+    [
+      15.771375,
+      108.140747
+    ],
+    [
+      15.7645,
+      108.142168
+    ],
+    [
+      15.757625,
+      108.140747
+    ],
+    [
+      15.751796,
+      108.136701
+    ],
+    [
+      15.747901,
+      108.130644
+    ],
+    [
+      15.746534,
+      108.1235
+    ],
+    [
+      15.747901,
+      108.116356
+    ],
+    [
+      15.751796,
+      108.110299
+    ],
+    [
+      15.757625,
+      108.106253
+    ],
+    [
+      15.7645,
+      108.104832
+    ],
+    [
+      15.771375,
+      108.106253
+    ],
+    [
+      15.777204,
+      108.110299
+    ],
+    [
+      15.781099,
+      108.116356
+    ],
+    [
+      15.782466,
+      108.1235
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.1235,
+          15.782466
+        ],
+        [
+          108.130644,
+          15.781099
+        ],
+        [
+          108.136701,
+          15.777204
+        ],
+        [
+          108.140747,
+          15.771375
+        ],
+        [
+          108.142168,
+          15.7645
+        ],
+        [
+          108.140747,
+          15.757625
+        ],
+        [
+          108.136701,
+          15.751796
+        ],
+        [
+          108.130644,
+          15.747901
+        ],
+        [
+          108.1235,
+          15.746534
+        ],
+        [
+          108.116356,
+          15.747901
+        ],
+        [
+          108.110299,
+          15.751796
+        ],
+        [
+          108.106253,
+          15.757625
+        ],
+        [
+          108.104832,
+          15.7645
+        ],
+        [
+          108.106253,
+          15.771375
+        ],
+        [
+          108.110299,
+          15.777204
+        ],
+        [
+          108.116356,
+          15.781099
+        ],
+        [
+          108.1235,
+          15.782466
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6f902b34c380f4ecf0f93"
+  },
+  "id": "nt-ocean-institute",
+  "province": "nha-trang",
+  "name": "Viện Hải dương học",
+  "center": {
+    "lat": 12.2198,
+    "lng": 109.2106
+  },
+  "radiusM": 1000,
+  "tags": [
+    "museum",
+    "education",
+    "family",
+    "history"
+  ],
+  "vibeKeywords": [
+    "bao tang",
+    "ca",
+    "sinh vat bien",
+    "mau vat",
+    "lich su",
+    "gia dinh"
+  ],
+  "desc": "Một trong những cơ sở nghiên cứu biển lâu đời nhất Việt Nam, là bảo tàng lưu giữ hàng ngàn mẫu vật sinh vật biển và bộ xương cá voi khổng lồ.",
+  "whyChoose": [
+    "Tìm hiểu về thế giới đại dương",
+    "Địa điểm lý tưởng cho gia đình có trẻ nhỏ",
+    "Xem bộ xương cá voi khổng lồ"
+  ],
+  "funActivities": [
+    "Tham quan khu trưng bày mẫu vật",
+    "Xem các bể cá sống",
+    "Chụp ảnh bộ xương cá voi"
+  ],
+  "mustSee": [
+    "Bộ xương cá voi (dài 18m)",
+    "Khu mẫu vật ngâm",
+    "Đường hầm thủy cung (nhỏ)",
+    "Bảo tàng tài nguyên biển Hoàng Sa - Trường Sa"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Dành khoảng 1.5 - 2 tiếng để tham quan",
+    "Nên đi cùng trẻ em để học hỏi",
+    "Kết hợp đi Cảng Cầu Đá gần đó"
+  ],
+  "donts": [
+    "Không gõ vào các bể kính",
+    "Không dùng đèn flash với sinh vật sống"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761723425/vien-hai-duong-hoc-nha-trang-cover_rw01bd.webp",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761240102/hdh-1_mno.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761240103/hdh-2_pqr.jpg"
+  ],
+  "scorePriority": 0.75,
+  "isActive": true,
+  "poly": [
+    [
+      12.228783,
+      109.2106
+    ],
+    [
+      12.228099,
+      109.214117
+    ],
+    [
+      12.226152,
+      109.217099
+    ],
+    [
+      12.223238,
+      109.219092
+    ],
+    [
+      12.2198,
+      109.219791
+    ],
+    [
+      12.216362,
+      109.219092
+    ],
+    [
+      12.213448,
+      109.217099
+    ],
+    [
+      12.211501,
+      109.214117
+    ],
+    [
+      12.210817,
+      109.2106
+    ],
+    [
+      12.211501,
+      109.207083
+    ],
+    [
+      12.213448,
+      109.204101
+    ],
+    [
+      12.216362,
+      109.202108
+    ],
+    [
+      12.2198,
+      109.201409
+    ],
+    [
+      12.223238,
+      109.202108
+    ],
+    [
+      12.226152,
+      109.204101
+    ],
+    [
+      12.228099,
+      109.207083
+    ],
+    [
+      12.228783,
+      109.2106
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          109.2106,
+          12.228783
+        ],
+        [
+          109.214117,
+          12.228099
+        ],
+        [
+          109.217099,
+          12.226152
+        ],
+        [
+          109.219092,
+          12.223238
+        ],
+        [
+          109.219791,
+          12.2198
+        ],
+        [
+          109.219092,
+          12.216362
+        ],
+        [
+          109.217099,
+          12.213448
+        ],
+        [
+          109.214117,
+          12.211501
+        ],
+        [
+          109.2106,
+          12.210817
+        ],
+        [
+          109.207083,
+          12.211501
+        ],
+        [
+          109.204101,
+          12.213448
+        ],
+        [
+          109.202108,
+          12.216362
+        ],
+        [
+          109.201409,
+          12.2198
+        ],
+        [
+          109.202108,
+          12.223238
+        ],
+        [
+          109.204101,
+          12.226152
+        ],
+        [
+          109.207083,
+          12.228099
+        ],
+        [
+          109.2106,
+          12.228783
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6fb01b34c380f4ecf0f96"
+  },
+  "id": "hue-lang-gia-long",
+  "province": "hue",
+  "name": "Lăng Gia Long (Thiên Thọ Lăng)",
+  "center": {
+    "lat": 16.3358,
+    "lng": 107.5761
+  },
+  "radiusM": 2500,
+  "tags": [
+    "history",
+    "culture",
+    "nature",
+    "photo",
+    "royal"
+  ],
+  "vibeKeywords": [
+    "lang",
+    "hoang gia",
+    "yen tinh",
+    "nguyen thuy",
+    "rung thong",
+    "son thuy"
+  ],
+  "desc": "Lăng mộ đầu tiên của triều Nguyễn, nơi an nghỉ của Vua Gia Long. Nổi tiếng với vẻ đẹp hoang sơ, yên bình và kiến trúc giản dị, hòa mình vào thiên nhiên hùng vĩ.",
+  "whyChoose": [
+    "Không gian yên tĩnh, nguyên sơ nhất trong các lăng",
+    "Kiến trúc hài hòa tuyệt đối với thiên nhiên",
+    "Tìm hiểu về vị vua sáng lập triều Nguyễn"
+  ],
+  "funActivities": [
+    "Tham quan lăng",
+    "Đi bộ trong rừng thông",
+    "Chụp ảnh phong cảnh"
+  ],
+  "mustSee": [
+    "Khu lăng mộ (Thiên Thọ Lăng)",
+    "Hồ Bán Nguyệt",
+    "Bi Đình (bia đá)",
+    "Đồi thông"
+  ],
+  "bestTime": "morning",
+  "tips": [
+    "Đường đi khá xa và vắng, nên đi taxi hoặc xe máy cẩn thận",
+    "Mang giày thể thao",
+    "Nơi đây rất vắng, mang theo nước uống"
+  ],
+  "donts": [
+    "Không làm ồn, giữ sự trang nghiêm",
+    "Không đi vào buổi chiều quá muộn"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761723778/images_29_asgetk.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761260002/gl-1_def.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761260003/gl-2_ghi.jpg"
+  ],
+  "scorePriority": 0.7,
+  "isActive": true,
+  "poly": [
+    [
+      16.358258,
+      107.5761
+    ],
+    [
+      16.356548,
+      107.585056
+    ],
+    [
+      16.35168,
+      107.592648
+    ],
+    [
+      16.344394,
+      107.597721
+    ],
+    [
+      16.3358,
+      107.599503
+    ],
+    [
+      16.327206,
+      107.597721
+    ],
+    [
+      16.31992,
+      107.592648
+    ],
+    [
+      16.315052,
+      107.585056
+    ],
+    [
+      16.313342,
+      107.5761
+    ],
+    [
+      16.315052,
+      107.567144
+    ],
+    [
+      16.31992,
+      107.559552
+    ],
+    [
+      16.327206,
+      107.554479
+    ],
+    [
+      16.3358,
+      107.552697
+    ],
+    [
+      16.344394,
+      107.554479
+    ],
+    [
+      16.35168,
+      107.559552
+    ],
+    [
+      16.356548,
+      107.567144
+    ],
+    [
+      16.358258,
+      107.5761
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          107.5761,
+          16.358258
+        ],
+        [
+          107.585056,
+          16.356548
+        ],
+        [
+          107.592648,
+          16.35168
+        ],
+        [
+          107.597721,
+          16.344394
+        ],
+        [
+          107.599503,
+          16.3358
+        ],
+        [
+          107.597721,
+          16.327206
+        ],
+        [
+          107.592648,
+          16.31992
+        ],
+        [
+          107.585056,
+          16.315052
+        ],
+        [
+          107.5761,
+          16.313342
+        ],
+        [
+          107.567144,
+          16.315052
+        ],
+        [
+          107.559552,
+          16.31992
+        ],
+        [
+          107.554479,
+          16.327206
+        ],
+        [
+          107.552697,
+          16.3358
+        ],
+        [
+          107.554479,
+          16.344394
+        ],
+        [
+          107.559552,
+          16.35168
+        ],
+        [
+          107.567144,
+          16.356548
+        ],
+        [
+          107.5761,
+          16.358258
+        ]
+      ]
+    ]
+  }
+},
+{
+  "_id": {
+    "$oid": "68f6fc01b34c380f4ecf0f98"
+  },
+  "id": "qng-my-khe-beach",
+  "province": "quang-ngai",
+  "name": "Bãi biển Mỹ Khê (Quảng Ngãi)",
+  "center": {
+    "lat": 15.1788,
+    "lng": 108.9105
+  },
+  "radiusM": 2000,
+  "tags": [
+    "beach",
+    "nature",
+    "relax",
+    "local",
+    "photo"
+  ],
+  "vibeKeywords": [
+    "bien",
+    "hoang so",
+    "yen tinh",
+    "tam bien",
+    "hai san",
+    "dia phuong"
+  ],
+  "desc": "Bãi biển hoang sơ, yên tĩnh với bãi cát trắng mịn hình vòng cung, nước biển trong xanh và rừng dương xanh mát. Khác với Mỹ Khê (Đà Nẵng), nơi đây vắng vẻ hơn.",
+  "whyChoose": [
+    "Không gian yên bình, hoang sơ, vắng khách du lịch",
+    "Bãi cát thoải, an toàn để tắm biển",
+    "Gần khu chứng tích Sơn Mỹ"
+  ],
+  "funActivities": [
+    "Tắm biển",
+    "Thư giãn, tắm nắng",
+    "Ăn hải sản địa phương",
+    "Cắm trại"
+  ],
+  "mustSee": [
+    "Bãi cát trắng trải dài",
+    "Rừng dương ven biển",
+    "Khu chứng tích Sơn Mỹ (gần đó)"
+  ],
+  "bestTime": "afternoon",
+  "tips": [
+    "Nên đi buổi chiều để tắm biển và ngắm hoàng hôn",
+    "Hải sản ở đây tươi và giá rẻ",
+    "Mang theo kem chống nắng và mũ"
+  ],
+  "donts": [
+    "Không xả rác vì bãi biển rất sạch",
+    "Cẩn thận sóng lớn vào mùa mưa (tháng 10 - 12)"
+  ],
+  "heroImg": "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761723974/images_31_gbrtug.jpg",
+  "gallery": [
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761270002/qng-mk-1_def.jpg",
+    "https://res.cloudinary.com/dodkc8iuu/image/upload/v1761270003/qng-mk-2_ghi.jpg"
+  ],
+  "scorePriority": 0.7,
+  "isActive": true,
+  "poly": [
+    [
+      15.196766,
+      108.9105
+    ],
+    [
+      15.195399,
+      108.917624
+    ],
+    [
+      15.191504,
+      108.923663
+    ],
+    [
+      15.185675,
+      108.927699
+    ],
+    [
+      15.1788,
+      108.929116
+    ],
+    [
+      15.171925,
+      108.927699
+    ],
+    [
+      15.166096,
+      108.923663
+    ],
+    [
+      15.162201,
+      108.917624
+    ],
+    [
+      15.160834,
+      108.9105
+    ],
+    [
+      15.162201,
+      108.903376
+    ],
+    [
+      15.166096,
+      108.897337
+    ],
+    [
+      15.171925,
+      108.893301
+    ],
+    [
+      15.1788,
+      108.891884
+    ],
+    [
+      15.185675,
+      108.893301
+    ],
+    [
+      15.191504,
+      108.897337
+    ],
+    [
+      15.195399,
+      108.903376
+    ],
+    [
+      15.196766,
+      108.9105
+    ]
+  ],
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          108.9105,
+          15.196766
+        ],
+        [
+          108.917624,
+          15.195399
+        ],
+        [
+          108.923663,
+          15.191504
+        ],
+        [
+          108.927699,
+          15.185675
+        ],
+        [
+          108.929116,
+          15.1788
+        ],
+        [
+          108.927699,
+          15.171925
+        ],
+        [
+          108.923663,
+          15.166096
+        ],
+        [
+          108.917624,
+          15.162201
+        ],
+        [
+          108.9105,
+          15.160834
+        ],
+        [
+          108.903376,
+          15.162201
+        ],
+        [
+          108.897337,
+          15.166096
+        ],
+        [
+          108.893301,
+          15.171925
+        ],
+        [
+          108.891884,
+          15.1788
+        ],
+        [
+          108.893301,
+          15.185675
+        ],
+        [
+          108.897337,
+          15.191504
+        ],
+        [
+          108.903376,
+          15.195399
+        ],
+        [
+          108.9105,
+          15.196766
+        ]
+      ]
+    ]
+  }
+}]

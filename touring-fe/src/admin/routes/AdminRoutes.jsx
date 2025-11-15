@@ -35,11 +35,11 @@ const ProtectedRoutes = () => {
   return (
     <Routes>
       {/* Public route - Login */}
-      <Route path="/login" element={<AdminLogin />} />
+      <Route path="login" element={<AdminLogin />} />
 
       {/* Protected routes with layout */}
       <Route
-        path="/dashboard"
+        path="dashboard"
         element={
           <AdminProtectedRoute>
             <AdminLayout activePage="dashboard">
@@ -50,7 +50,7 @@ const ProtectedRoutes = () => {
       />
 
       <Route
-        path="/tours"
+        path="tours"
         element={
           <AdminProtectedRoute>
             <AdminLayout activePage="tours">
@@ -61,7 +61,7 @@ const ProtectedRoutes = () => {
       />
 
       <Route
-        path="/tours/:id"
+        path="tours/:id"
         element={
           <AdminProtectedRoute>
             <AdminLayout activePage="tours">
@@ -72,7 +72,7 @@ const ProtectedRoutes = () => {
       />
 
       <Route
-        path="/guides"
+        path="guides"
         element={
           <AdminProtectedRoute>
             <AdminLayout activePage="guides">
@@ -84,7 +84,7 @@ const ProtectedRoutes = () => {
 
       {/* Customer Management Routes */}
       <Route
-        path="/customers/accounts"
+        path="customers/accounts"
         element={
           <AdminProtectedRoute>
             <AdminLayout activePage="customers">
@@ -95,7 +95,7 @@ const ProtectedRoutes = () => {
       />
 
       <Route
-        path="/customers/:id"
+        path="customers/:id"
         element={
           <AdminProtectedRoute>
             <AdminLayout activePage="customers">
@@ -107,7 +107,7 @@ const ProtectedRoutes = () => {
 
       {/* Customer Requests Routes */}
       <Route
-        path="/customer-requests"
+        path="customer-requests"
         element={
           <AdminProtectedRoute>
             <AdminLayout activePage="customer-requests">
@@ -118,7 +118,7 @@ const ProtectedRoutes = () => {
       />
 
       <Route
-        path="/customer-requests/:id"
+        path="customer-requests/:id"
         element={
           <AdminProtectedRoute>
             <AdminLayout activePage="customer-requests">
@@ -129,7 +129,7 @@ const ProtectedRoutes = () => {
       />
 
       <Route
-        path="/customer-requests/:id/update"
+        path="customer-requests/:id/update"
         element={
           <AdminProtectedRoute>
             <AdminLayout activePage="customer-requests">
@@ -140,7 +140,7 @@ const ProtectedRoutes = () => {
       />
 
       <Route
-        path="/certification"
+        path="certification"
         element={
           <AdminProtectedRoute>
             <AdminLayout activePage="certification">
@@ -151,7 +151,7 @@ const ProtectedRoutes = () => {
       />
 
       <Route
-        path="/settings"
+        path="settings"
         element={
           <AdminProtectedRoute>
             <AdminLayout activePage="settings">
@@ -162,7 +162,7 @@ const ProtectedRoutes = () => {
       />
 
       <Route
-        path="/promotions"
+        path="promotions"
         element={
           <AdminProtectedRoute>
             <AdminLayout activePage="promotions">
@@ -173,7 +173,7 @@ const ProtectedRoutes = () => {
       />
 
       <Route
-        path="/refunds"
+        path="refunds"
         element={
           <AdminProtectedRoute>
             <AdminLayout activePage="refunds">

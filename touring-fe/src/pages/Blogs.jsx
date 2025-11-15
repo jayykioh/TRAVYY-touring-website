@@ -1,13 +1,18 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useAuth } from "@/auth/context";
+import { useBehaviorTracking } from "@/hooks/useBehaviorTracking";
 import LocationCard from "@/components/LocationCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function BlogPage() {
   const { slug } = useParams();
+  const { user } = useAuth();
+  const { trackBlogView } = useBehaviorTracking();
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const hasTrackedView = useRef(false);
 
   useEffect(() => {
     setLoading(true);
@@ -21,13 +26,34 @@ export default function BlogPage() {
       .then((data) => {
         console.log("Blog data from API:", data);
         setBlog(data);
+        
+        // ✅ Track blog view immediately when blog loads
+        if (user?.token && !hasTrackedView.current) {
+          // Extract vibes from activities/sightseeing
+          const vibes = [
+            ...(data.activities?.map(a => a.name) || []),
+            ...(data.sightseeing?.map(s => s.name) || [])
+          ].filter(Boolean).slice(0, 5);
+          
+          // Extract province from region or location.address
+          const provinces = [data.region, data.location?.address]
+            .filter(Boolean)
+            .map(p => p.split(',')[0].trim());
+          
+          trackBlogView(slug, {
+            title: data.title,
+            tags: vibes,
+            provinces: [...new Set(provinces)] // Remove duplicates
+          });
+          hasTrackedView.current = true;
+        }
       })
       .catch((err) => {
         console.error("Error fetching blog:", err);
         setError(err.message);
       })
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, user?.token, trackBlogView]);
 
   if (loading) {
     return <BlogSkeleton />;
@@ -375,3 +401,5 @@ function FAQ({ items }) {
     </div>
   );
 }
+
+/* ----------- Helper functions removed - tracking now handled by backend ----------- */

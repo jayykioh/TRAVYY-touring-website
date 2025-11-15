@@ -197,6 +197,12 @@ export default function BookingHistory() {
           className:
             "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
         };
+      case "pending_refund":
+        return {
+          text: "Chờ xử lý hoàn tiền",
+          className:
+            "bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-200",
+        };
       case "cancelled":
         return {
           text: "Thanh toán thất bại",
@@ -209,7 +215,7 @@ export default function BookingHistory() {
         };
       case "refunded":
         return {
-          text: "Đã hoàn tiền",
+          text: "Đã hoàn tiền - Tour đã hủy",
           className: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200",
         };
       default:
@@ -228,44 +234,51 @@ export default function BookingHistory() {
           className:
             "bg-yellow-50 text-yellow-700 ring-1 ring-inset ring-yellow-200",
           icon: "⏳",
+          tourStatus: "pending", // Tour tạm ngưng chờ xử lý
         };
       case "under_review":
         return {
           text: "Đang xem xét",
           className: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200",
           icon: "🔍",
+          tourStatus: "pending", // Tour tạm ngưng
         };
       case "approved":
         return {
-          text: "Đã duyệt",
+          text: "Đã duyệt - Tour bị hủy",
           className:
             "bg-green-50 text-green-700 ring-1 ring-inset ring-green-200",
           icon: "✅",
+          tourStatus: "cancelled", // Tour đã bị hủy
         };
       case "processing":
         return {
-          text: "Đang xử lý",
+          text: "Đang xử lý - Tour bị hủy",
           className:
             "bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-200",
           icon: "⚙️",
+          tourStatus: "cancelled", // Tour đã bị hủy
         };
       case "completed":
         return {
-          text: "Request đã phản hồi thành công",
+          text: "Đã hoàn tiền - Tour đã hủy",
           className: "bg-teal-50 text-teal-700 ring-1 ring-inset ring-teal-200",
           icon: "💰",
+          tourStatus: "cancelled", // Tour đã bị hủy
         };
       case "rejected":
         return {
-          text: "Request bị từ chối",
+          text: "Request bị từ chối - Tour vẫn diễn ra",
           className: "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200",
           icon: "❌",
+          tourStatus: "active", // Tour vẫn hoạt động bình thường
         };
       default:
         return {
           text: "Đang xử lý",
           className: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200",
           icon: "📋",
+          tourStatus: "pending",
         };
     }
   };
@@ -431,15 +444,22 @@ export default function BookingHistory() {
                             {ui.text}
                           </span>
 
-                          {/* Refund Status Badge */}
-                          {refundUI && (
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${refundUI.className}`}
-                              title={`Mã refund: ${refundStatus.refundReference}`}
-                            >
-                              <span>{refundUI.icon}</span>
-                              {refundUI.text}
-                            </span>
+                          {/* Tour Status - Only show when important */}
+                          {/* Show "Tour KHÔNG khởi hành" when refund approved/completed OR booking refunded */}
+                          {(refundUI && refundUI.tourStatus === "cancelled") ||
+                          booking.status === "refunded" ? (
+                            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 ring-1 ring-inset ring-red-200">
+                              <span>🚫</span>
+                              <span>Tour KHÔNG khởi hành</span>
+                            </div>
+                          ) : null}
+
+                          {/* Show "Tour vẫn khởi hành" only when refund rejected */}
+                          {refundUI && refundUI.tourStatus === "active" && (
+                            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 ring-1 ring-inset ring-green-200">
+                              <span>✈️</span>
+                              <span>Tour vẫn khởi hành</span>
+                            </div>
                           )}
                         </div>
                       </div>

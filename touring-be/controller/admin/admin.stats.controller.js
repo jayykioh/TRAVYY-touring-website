@@ -644,3 +644,311 @@ exports.getUserMetrics = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+/**
+ * Get Top Popular Tours (by booking count)
+ * GET /api/admin/top-popular-tours
+ */
+exports.getTopPopularTours = async (req, res) => {
+  try {
+    const Review = require("../../models/Review");
+    const Tour = require("../../models/agency/Tours");
+
+    console.log("📊 Fetching top popular tours...");
+
+    // Unwind items array to get individual tours, then aggregate
+    const popularTours = await Booking.aggregate([
+      {
+        $match: {
+          status: { $in: ["confirmed", "paid", "completed"] },
+        },
+      },
+      // Unwind the items array to get individual tour bookings
+      {
+        $unwind: "$items",
+      },
+      // Group by tourId from items
+      {
+        $group: {
+          _id: "$items.tourId",
+          bookings: { $sum: 1 },
+          totalRevenue: {
+            $sum: {
+              $ifNull: [
+                "$totalAmount",
+                {
+                  $ifNull: [
+                    "$totalVND",
+                    { $multiply: [{ $ifNull: ["$totalUSD", 0] }, 24000] },
+                  ],
+                },
+              ],
+            },
+          },
+          totalGuests: {
+            $sum: {
+              $add: [
+                { $ifNull: ["$items.adults", 0] },
+                { $ifNull: ["$items.children", 0] },
+              ],
+            },
+          },
+        },
+      },
+      {
+        $sort: { bookings: -1 },
+      },
+      {
+        $limit: 5,
+      },
+    ]);
+
+    console.log(
+      `✅ Found ${popularTours.length} popular tours:`,
+      popularTours.map((t) => ({ id: t._id, bookings: t.bookings }))
+    );
+
+    // Manually populate tour info and reviews
+    const formattedTours = await Promise.all(
+      popularTours.map(async (item, index) => {
+        // Get tour info
+        const tourInfo = await Tour.findById(item._id);
+        console.log(
+          `🔍 Tour ${item._id}:`,
+          tourInfo ? tourInfo.title : "NOT FOUND"
+        );
+
+        // Get thumbnail from imageItems array
+        const thumbnail = tourInfo?.imageItems?.[0]?.imageUrl || "";
+        console.log(
+          `🖼️  Thumbnail for ${tourInfo?.title}:`,
+          thumbnail || "NO IMAGE"
+        );
+
+        // Get average rating from reviews
+        const reviews = await Review.find({ tourId: item._id });
+        const avgRating =
+          reviews.length > 0
+            ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) /
+              reviews.length
+            : 0;
+
+        return {
+          rank: index + 1,
+          tourId: item._id,
+          title: tourInfo?.title || "Unknown Tour",
+          thumbnail: thumbnail,
+          bookings: item.bookings,
+          revenue: item.totalRevenue,
+          totalGuests: item.totalGuests,
+          rating: avgRating.toFixed(1),
+          reviewCount: reviews.length,
+          trend: index === 0 ? "up" : index < 3 ? "stable" : "down",
+        };
+      })
+    );
+
+    console.log(
+      "✅ Formatted tours:",
+      formattedTours.map((t) => t.title)
+    );
+
+    res.json({
+      success: true,
+      data: formattedTours,
+    });
+  } catch (err) {
+    console.error("GET_TOP_POPULAR_TOURS_ERROR:", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: err.message });
+  }
+};
+
+/**
+ * Get Recent Reviews (need response)
+ * GET /api/admin/recent-reviews
+ */
+exports.getRecentReviews = async (req, res) => {
+  try {
+    const Review = require("../../models/Review");
+    const Tour = require("../../models/agency/Tours");
+
+    // Get 5 most recent reviews
+    const reviews = await Review.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate("userId", "name avatar email");
+
+    // Format response with manual tour lookup
+    const formattedReviews = await Promise.all(
+      reviews.map(async (review) => {
+        const timeAgo = getTimeAgo(review.createdAt);
+
+        // Manually get tour info to access imageItems
+        const tourInfo = await Tour.findById(review.tourId);
+        const thumbnail = tourInfo?.imageItems?.[0]?.imageUrl || "";
+
+        return {
+          _id: review._id,
+          customer: {
+            name: review.userId?.name || "Unknown User",
+            avatar: review.userId?.avatar || "",
+            email: review.userId?.email || "",
+          },
+          tour: {
+            title: tourInfo?.title || "Unknown Tour",
+            thumbnail: thumbnail,
+          },
+          rating: review.rating || 0,
+          content: review.content || review.comment || "",
+          timeAgo: timeAgo,
+          createdAt: review.createdAt,
+          hasResponse: !!review.response,
+          response: review.response || null,
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: formattedReviews,
+    });
+  } catch (err) {
+    console.error("GET_RECENT_REVIEWS_ERROR:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// Helper function to calculate time ago
+function getTimeAgo(date) {
+  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+
+  const intervals = {
+    năm: 31536000,
+    tháng: 2592000,
+    tuần: 604800,
+    ngày: 86400,
+    giờ: 3600,
+    phút: 60,
+  };
+
+  for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+    const interval = Math.floor(seconds / secondsInUnit);
+    if (interval >= 1) {
+      return `${interval} ${unit} trước`;
+    }
+  }
+
+  return "Vừa xong";
+}
+
+/**
+ * Get Available Guides (users with role "TourGuide")
+ * GET /api/admin/available-guides
+ */
+exports.getAvailableGuides = async (req, res) => {
+  try {
+    const Itinerary = require("../../models/Itinerary");
+
+    // Get all users with role "TourGuide"
+    const tourGuides = await User.find({ role: "TourGuide" })
+      .select("name email avatar phone")
+      .lean();
+
+    console.log(`📋 Found ${tourGuides.length} tour guides`);
+
+    // Get current week date range (Monday to Sunday)
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    // For each guide, count tours this week
+    const guidesWithStats = await Promise.all(
+      tourGuides.map(async (guide) => {
+        // Count accepted tour requests for this guide in current week
+        const toursThisWeek = await Itinerary.countDocuments({
+          "tourGuideRequest.guideId": guide._id,
+          "tourGuideRequest.status": "accepted",
+          createdAt: { $gte: monday, $lte: sunday },
+        });
+
+        return {
+          _id: guide._id,
+          name: guide.name,
+          email: guide.email,
+          avatar: guide.avatar || "",
+          phone: guide.phone || "",
+          toursThisWeek: toursThisWeek,
+          status: toursThisWeek > 0 ? "active" : "available",
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: {
+        totalGuides: tourGuides.length,
+        guides: guidesWithStats,
+      },
+    });
+  } catch (err) {
+    console.error("GET_AVAILABLE_GUIDES_ERROR:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+/**
+ * Get Refund Statistics
+ * GET /api/admin/refund-stats
+ */
+exports.getRefundStats = async (req, res) => {
+  try {
+    const Refund = require("../../models/Refund");
+
+    // Aggregate refunds by status
+    const refundStats = await Refund.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+          totalAmount: { $sum: "$finalRefundAmount" },
+        },
+      },
+    ]);
+
+    console.log("💰 Refund stats:", refundStats);
+
+    // Format the response
+    const stats = {
+      total: 0,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      processing: 0,
+      completed: 0,
+      totalAmount: 0,
+    };
+
+    refundStats.forEach((item) => {
+      const status = item._id || "unknown";
+      stats[status] = item.count;
+      stats.total += item.count;
+      stats.totalAmount += item.totalAmount || 0;
+    });
+
+    res.json({
+      success: true,
+      data: stats,
+    });
+  } catch (err) {
+    console.error("GET_REFUND_STATS_ERROR:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};

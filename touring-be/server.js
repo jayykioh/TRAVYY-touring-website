@@ -113,13 +113,14 @@ app.use("/api/tours", tourRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
-app.use("/api/admin", adminRoutes); // Updated to use modular admin routes
+app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/refunds", refundRoutes); // User refund routes
 const securityRoutes = require("./routes/security.routes");
 app.use("/api/security", securityRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api/notify", notifyRoutes);
+<<<<<<< HEAD
 app.use("/api/notifications", notifyRoutes); // Alias for notifications
 app.use("/api/promotions", promotionRoutes);
 app.use("/api/reviews", reviewRoutes);
@@ -141,10 +142,23 @@ app.use("/api", guideAvailabilityRoutes);
 // Tour Completion Routes
 const tourCompletionRoutes = require("./routes/tourCompletion.routes");
 app.use("/api", tourCompletionRoutes);
+=======
+app.use("/api/paypal", paypalRoutes);
+
+// ✅ Discovery & Zone routes (must be AFTER other routes to avoid conflicts)
+app.use("/api/discover", require("./routes/discover.routes"));
+app.use("/api/zones", require("./routes/zone.routes"));
+app.use("/api/itinerary", require("./routes/itinerary.routes"));
+
+// ✅ AI Recommendation Pipeline routes (NEW)
+app.use("/api/track", require("./routes/track.routes"));
+// app.use("/api/daily-ask", require("./routes/daily-ask.routes")); // ❌ REMOVED: DailyAsk feature
+app.use("/api/recommendations", require("./routes/recommendations.routes"));
+// profile.routes already includes /travel endpoints
+>>>>>>> 8e20637a8d8188078aecde30741bd572ab1db75d
 
 // --- Healthcheck ---
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
-app.use("/api/paypal", paypalRoutes);
 
 // Lightweight ping to verify credentials loaded (non-sensitive)
 app.get("/api/paypal/ping", (_req, res) => {
@@ -155,6 +169,17 @@ app.get("/api/paypal/ping", (_req, res) => {
       process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET
     ),
     mode: process.env.PAYPAL_MODE || "sandbox",
+  });
+});
+
+// Health endpoint
+app.get("/api/health", async (req, res) => {
+  const { health } = require("./services/ai/libs/embedding-client");
+  const embedHealth = await health();
+  res.json({
+    backend: "ok",
+    mongo: mongoose.connection.readyState === 1 ? "ok" : "error",
+    embedding: embedHealth,
   });
 });
 
@@ -178,12 +203,21 @@ mongoose
     // Setup refund scheduler after MongoDB is connected
     setupRefundScheduler();
 
+<<<<<<< HEAD
     
   // Initialize WebSocket handlers and collection watchers
   const setupSockets = require('./socket');
   setupSockets(io);
     
     server.listen(PORT, () =>
+=======
+    // ✅ Start weekly PostHog sync cron (runs every Sunday at 2:00 AM)
+    // This handles ALL profile building: PostHog → Aggregation → Embedding → FAISS + MongoDB
+    const { startWeeklySyncCron } = require("./jobs/weeklyProfileSync");
+    startWeeklySyncCron();
+
+    app.listen(PORT, () =>
+>>>>>>> 8e20637a8d8188078aecde30741bd572ab1db75d
       console.log(`🚀 API listening on http://localhost:${PORT}`)
     );
   })
@@ -197,3 +231,62 @@ global.io = io;
 app.set('io', io);
 
 module.exports = app;
+<<<<<<< HEAD
+=======
+
+// ✅ Check services on startup
+const { health, isAvailable } = require("./services/ai/libs/embedding-client");
+const { syncZones } = require("./services/embedding-sync-zones");
+
+async function checkServices() {
+  console.log("\n🔍 Checking services...");
+
+  // MongoDB
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("✅ MongoDB connected");
+  } catch (error) {
+    console.error("❌ MongoDB failed:", error.message);
+    process.exit(1);
+  }
+
+  // Embedding service
+  try {
+    const available = await isAvailable();
+    if (available) {
+      const healthData = await health();
+      console.log("✅ Embedding service OK:", {
+        model: healthData.model,
+        vectors: healthData.vectors,
+        url: process.env.EMBED_SERVICE_URL || "http://localhost:8088",
+      });
+      
+      // ✅ Auto-sync zones if embedding service is available
+      console.log("\n🔄 Auto-syncing zones with embedding service...");
+      try {
+        await syncZones(true);
+        console.log("✅ Zone sync complete");
+      } catch (syncError) {
+        console.warn("⚠️ Zone sync failed:", syncError.message);
+        console.warn("   Continuing without embedding sync...");
+      }
+    } else {
+      console.warn("⚠️ Embedding service not available");
+      console.warn(
+        "   URL:",
+        process.env.EMBED_SERVICE_URL || "http://localhost:8088"
+      );
+      console.warn("   Will use keyword fallback for zone matching");
+    }
+  } catch (error) {
+    console.warn("⚠️ Embedding check failed:", error.message);
+  }
+}
+
+checkServices().then(() => {
+  // ✅ Single listen point
+  app.listen(PORT, () => {
+    console.log(`\n🚀 Backend running on port ${PORT}`);
+  });
+});
+>>>>>>> 8e20637a8d8188078aecde30741bd572ab1db75d

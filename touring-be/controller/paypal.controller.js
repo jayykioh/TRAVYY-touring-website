@@ -725,6 +725,35 @@ await paymentSession.save();
           }
         });
         console.log("✅ Booking marked as paid");
+
+        // 🎉 Track successful booking interaction (HIGHEST WEIGHT ×3.0)
+        try {
+          const TourInteraction = require('../models/TourInteraction');
+          const crypto = require('crypto');
+          
+          // Track booking for each tour in the session
+          for (const item of paymentSession.items) {
+            const interaction = new TourInteraction({
+              userId: paymentSession.userId,
+              tourId: item.tourId,
+              action: 'booking',
+              bookingData: {
+                adults: item.adults || 0,
+                children: item.children || 0,
+                totalPrice: item.subtotal || 0,
+                departureDate: item.date || null
+              },
+              sessionId: `sess_${crypto.randomBytes(8).toString('hex')}_${Date.now()}`
+            });
+
+            await interaction.save();
+            console.log(`🎉 [Track] Booking tracked! User ${paymentSession.userId} booked tour ${item.tourId}`);
+          }
+        } catch (trackError) {
+          console.error('❌ [Track] Failed to track booking interaction:', trackError);
+          // Don't fail the payment if tracking fails
+        }
+
       } catch (markError) {
         console.error("❌ Failed to mark booking as paid:", markError);
         // Booking exists but payment status update failed

@@ -2,7 +2,7 @@
 const jwt = require("jsonwebtoken");
 const { randomUUID } = require("crypto");
 
-const ACCESS_TTL  = process.env.ACCESS_TTL  || "10m";
+const ACCESS_TTL  = process.env.ACCESS_TTL  || "30m"; 
 const REFRESH_TTL = process.env.REFRESH_TTL || "30d";
 
 function signAccess(user) {

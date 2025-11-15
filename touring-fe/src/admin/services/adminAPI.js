@@ -408,4 +408,32 @@ export const adminAPI = {
     );
     return response.json();
   },
+
+  getTopPopularTours: async () => {
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/api/admin/top-popular-tours`
+    );
+    return response.json();
+  },
+
+  getRecentReviews: async () => {
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/api/admin/recent-reviews`
+    );
+    return response.json();
+  },
+
+  getAvailableGuides: async () => {
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/api/admin/available-guides`
+    );
+    return response.json();
+  },
+
+  getRefundStats: async () => {
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/api/admin/refund-stats`
+    );
+    return response.json();
+  },
 };

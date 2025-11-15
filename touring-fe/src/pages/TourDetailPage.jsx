@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Heart,
@@ -17,6 +17,7 @@ import TourCard from "../components/TourCard";
 import { TourReviews } from "../components/ProfileReviews";
 import { useCart } from "../hooks/useCart";
 import { useAuth } from "../auth/context";
+import { useBehaviorTracking } from "../hooks/useBehaviorTracking";
 import BreadcrumbNav from "@/components/BreadcrumbNav";
 import { createPortal } from "react-dom";
 import { toast, Toaster } from "sonner";
@@ -31,12 +32,16 @@ export default function TourDetailPage() {
   const navigate = useNavigate();
   const { add } = useCart();
   const { user } = useAuth();
+  const { trackTourView, trackTourBookmark, trackTourBooking } = useBehaviorTracking();
 
   const [tour, setTour] = useState(null);
   const [allTours, setAllTours] = useState([]);
   const [isFav, setIsFav] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState("");
+
+  // Track if we already sent view event (prevent duplicates)
+  const hasTrackedInitialView = useRef(false);
 
   // promotions state
   const [promotions, setPromotions] = useState([]);
@@ -59,6 +64,9 @@ export default function TourDetailPage() {
   useEffect(() => {
     let ignore = false;
     const ac = new AbortController();
+    
+    // ✅ Reset tracking flag when navigating to new tour
+    hasTrackedInitialView.current = false;
 
     async function load() {
       try {
@@ -87,6 +95,21 @@ export default function TourDetailPage() {
               .then((res) => res.json())
               .then((data) => setIsFav(data.isFav))
               .catch(() => {});
+            
+            // ✅ Track view immediately when tour loads
+            if (!hasTrackedInitialView.current) {
+              // Get actual price from first available departure, fallback to basePrice
+              const actualPrice = tourData.departures?.[0]?.priceAdult || tourData.basePrice;
+              
+              trackTourView(tourData._id, {
+                tourName: tourData.title,
+                tags: tourData.tags || [],
+                locations: tourData.locations?.map(loc => loc.name || loc.region) || [],
+                price: actualPrice,
+                duration: tourData.duration
+              });
+              hasTrackedInitialView.current = true;
+            }
           }
           // Filter out hidden tours from the list
           const visibleTours = Array.isArray(listData)
@@ -110,7 +133,8 @@ export default function TourDetailPage() {
       ignore = true;
       ac.abort();
     };
-  }, [routeId, user?.token]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeId]); // ✅ FIX: Only re-run when routeId changes (different tour page)
 
   // Load active promotions
   useEffect(() => {
@@ -256,6 +280,18 @@ export default function TourDetailPage() {
     }
     // Gửi thêm snapshot giá để trang checkout có thể tạo phiên MoMo chính xác
     const snapshotSubtotal = priceAdult * qtyAdult + priceChild * qtyChild;
+    
+    // ✅ Track booking (HIGHEST WEIGHT!)
+    trackTourBooking(getId(tour), {
+      tourName: tour.tourName,
+      tags: tour.tags || [],
+      locations: tour.locations?.map(loc => loc.name || loc.region) || [],
+      adults: qtyAdult,
+      children: qtyChild,
+      totalPrice: snapshotSubtotal,
+      departureDate: selectedDate,
+    });
+    
     navigate("/booking", {
       state: {
         mode: "buy-now",
@@ -291,6 +327,15 @@ export default function TourDetailPage() {
       });
       const data = await res.json();
       setIsFav(data.isFav);
+      
+      // ✅ Track bookmark action
+      const actualPrice = tour.departures?.[0]?.priceAdult || tour.basePrice;
+      trackTourBookmark(getId(tour), data.isFav, {
+        tourName: tour.title,
+        tags: tour.tags || [],
+        locations: tour.locations?.map(loc => loc.name || loc.region) || [],
+        price: actualPrice
+      });
     } catch (err) {
       console.error("Error toggling wishlist:", err);
     }
@@ -905,6 +950,7 @@ function RelatedTours({ tours }) {
         {tours.map((tour) => {
           return (
             <TourCard
+              key={tour._id}
               id={tour._id}
               to={`/tours/${tour._id}`}
               image={optimizeImage(tour.imageItems?.[0]?.imageUrl, 800)}

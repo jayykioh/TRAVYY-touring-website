@@ -1,45 +1,84 @@
-
-
 const express = require('express');
 const router = express.Router();
-// --- Tours by Zone ---
 const Tour = require("../models/agency/Tours");
 require("../models/agency/Location");
 require("../models/agency/TravelAgency");
 
+const { findPOIsByCategory, loadPriorityPOIs } = require('../services/zones/poi-finder');
+const { getPlaceDetails, autocompletePlaces } = require('../services/ai/libs/map4d');
+
+let zoneService;
+try {
+  zoneService = require('../services/zones');
+} catch (error) {
+  console.error('❌ Failed to import zone service:', error.message);
+  throw error;
+}
+
+/* ==================== ZONE DETAILS ==================== */
+
 /**
- * GET /api/zones/:zoneId/tours
- * Params:
- *  - :zoneId   (string, ví dụ "hue-thien-mu")
- * Query:
- *  - categories=views,food  (map sang tags)
- *  - limit=12
+ * GET /api/zones/:zoneId
+ * Get zone details by ID
  */
-router.get("/:zoneId/tours", async (req, res) => {
+router.get('/:zoneId', async (req, res) => {
   try {
     const { zoneId } = req.params;
-    const { categories, limit = 12 } = req.query;
 
-    if (!zoneId) return res.status(400).json({ ok: false, error: "Missing zoneId" });
-
-    // ensure zone tồn tại (Zone có trường id dạng string) 
+    if (!zoneId || zoneId.length < 3) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'Invalid zone ID' 
+      });
+    }
     const zone = await zoneService.getZoneById(zoneId);
-    if (!zone || zone.isActive === false) return res.status(404).json({ ok: false, error: "Zone not found" });
+    
+    if (!zone) {
+      return res.status(404).json({ 
+        ok: false, 
+        error: 'Zone not found' 
+      });
+    }
+    
+    res.json({ ok: true, zone });
+    
+  } catch (error) {
+    console.error('❌ Error in GET /zones/:zoneId:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
 
-  // build filter theo field "zoneIds" (mảng ObjectId zone._id) trên Tour
-const filter = {
-  isHidden: { $ne: true },       // ⬅️ thay vì isHidden: false
-  zoneIds: zone._id,
-};
-    // Bỏ lọc theo category/tags, chỉ lấy tất cả tour thuộc zone này
-    console.log('[ZoneTours] Query filter:', filter);
-    const tours = await Tour.find(filter)
+/* ==================== TOURS ==================== */
+
+/**
+ * GET /api/zones/:zoneId/tours
+ * Get tours for a zone
+ */
+router.get('/:zoneId/tours', async (req, res) => {
+  try {
+    const { zoneId } = req.params;
+    const { limit = 12 } = req.query;
+
+    if (!zoneId) {
+      return res.status(400).json({ ok: false, error: "Missing zoneId" });
+    }
+    
+    const zone = await zoneService.getZoneById(zoneId);
+    if (!zone || zone.isActive === false) {
+      return res.status(404).json({ ok: false, error: "Zone not found" });
+    }
+
+    const tours = await Tour.find({
+      isHidden: { $ne: true },
+      zoneIds: zone._id,
+    })
       .populate("agencyId", "name phone image address")
       .populate("locations", "name coordinates")
       .sort({ usageCount: -1, createdAt: -1 })
       .limit(parseInt(limit, 10) || 12)
       .lean();
-    console.log(`[ZoneTours] Found ${tours.length} tours for zoneId=${zoneId}`);
+    
+    console.log(`[ZoneTours] Found ${tours.length} tours for ${zoneId}`);
 
     const data = tours.map(t => {
       const firstLoc = Array.isArray(t.locations) && t.locations[0] ? t.locations[0] : null;
@@ -72,68 +111,22 @@ const filter = {
     return res.status(500).json({ ok: false, error: err.message });
   }
 });
-const { findPOIsByCategory, loadPriorityPOIs } = require('../services/zones/poi-finder');
-const { getPlaceDetails, autocompletePlaces } = require('../services/ai/libs/map4d');
 
-// Check if service file exists
-let zoneService;
-try {
-  zoneService = require('../services/zones');
-  console.log('✅ Zone service imported successfully');
-  console.log('   Available methods:', Object.keys(zoneService));
-  console.log('   getZonePOIs:', typeof zoneService.getZonePOIs);
-} catch (error) {
-  console.error('❌ Failed to import zone service:', error.message);
-  throw error;
-}
+/* ==================== POIs ==================== */
 
 /**
- * GET /api/zones/:zoneId
- * Get zone details
- */
-router.get('/:zoneId', async (req, res) => {
-  try {
-    const { zoneId } = req.params;
-
-    if (!zoneId || zoneId.length < 3) {
-      return res.status(400).json({ 
-        ok: false, 
-        error: 'Invalid zone ID' 
-      });
-    }
-    const zone = await zoneService.getZoneById(zoneId);
-    
-    // Handle not found
-    if (!zone) {
-      return res.status(404).json({ 
-        ok: false, 
-        error: 'Zone not found' 
-      });
-    }
-    
-    // Success response
-    res.json({ ok: true, zone });
-    
-  } catch (error) {
-    console.error('❌ Error in GET /zones/:zoneId:', error);
-    res.status(500).json({ ok: false, error: error.message });
-  }
-});
-
-/**
- * GET /api/zones/:id/pois
- * Get POIs for a zone with preferences
+ * GET /api/zones/:zoneId/pois
+ * Get all POIs for a zone (with optional vibes filter)
  */
 router.get('/:zoneId/pois', async (req, res) => {
   try {
     const { zoneId } = req.params;
     const { vibes, limit } = req.query;
 
-    // ✅ ADD THIS LINE (get zone data first)
     const zone = await zoneService.getZoneById(zoneId);
     
     if (!zone) {
-      return res.status(404).json({ error: 'Zone not found' });
+      return res.status(404).json({ ok: false, error: 'Zone not found' });
     }
 
     const preferences = {
@@ -144,55 +137,31 @@ router.get('/:zoneId/pois', async (req, res) => {
     const pois = await zoneService.getZonePOIs(zoneId, preferences);
 
     res.json({
-      success: true,
+      ok: true,
       zoneId,
-      zoneName: zone.name, // ✅ NOW this works
+      zoneName: zone.name,
       pois
     });
   } catch (error) {
     console.error('❌ [Route] Error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/**
- * GET /api/zones/province/:province
- * Get all zones in province
- */
-router.get('/province/:province', async (req, res) => {
-  try {
-    const { province } = req.params;
-    
-    const zones = await zoneService.getZonesByProvince(province);
-    
-    res.json({ 
-      ok: true, 
-      zones, 
-      total: zones.length 
-    });
-    
-  } catch (error) {
-    console.error('❌ Error in GET /zones/province/:province:', error);
     res.status(500).json({ ok: false, error: error.message });
   }
 });
 
-// ✅ NEW: Get POIs by category
+/**
+ * GET /api/zones/:zoneId/pois/:category
+ * Get POIs by specific category
+ */
 router.get('/:zoneId/pois/:category', async (req, res) => {
   try {
     const { zoneId, category } = req.params;
     const { limit = 7 } = req.query;
 
-    console.log(`\n📥 [API] GET /zones/${zoneId}/pois/${category}`);
-
     const pois = await findPOIsByCategory(zoneId, category, {
       limit: parseInt(limit),
     });
 
-    res.set({
-      'Cache-Control': 'public, max-age=1800', // Cache 30 min
-    });
-
+    res.set({ 'Cache-Control': 'public, max-age=1800' });
     res.json({ ok: true, category, pois });
 
   } catch (error) {
@@ -201,22 +170,25 @@ router.get('/:zoneId/pois/:category', async (req, res) => {
   }
 });
 
-// ✅ NEW: Load all priority POIs at once
+/**
+ * GET /api/zones/:zoneId/pois-priority
+ * Get priority POIs (curated list, sorted by proximity if user location provided)
+ */
 router.get('/:zoneId/pois-priority', async (req, res) => {
   try {
     const { zoneId } = req.params;
-    const { limit = 7 } = req.query;
-
-    console.log(`\n📥 [API] GET /zones/${zoneId}/pois-priority`);
+    const { limit = 7, userLat, userLng } = req.query;
+    
+    const userLocation = (userLat && userLng) 
+      ? { lat: parseFloat(userLat), lng: parseFloat(userLng) }
+      : null;
 
     const poisByCategory = await loadPriorityPOIs(zoneId, {
       limit: parseInt(limit),
+      userLocation,
     });
 
-    res.set({
-      'Cache-Control': 'public, max-age=1800',
-    });
-
+    res.set({ 'Cache-Control': 'public, max-age=1800' });
     res.json({ ok: true, data: poisByCategory });
 
   } catch (error) {
@@ -225,42 +197,12 @@ router.get('/:zoneId/pois-priority', async (req, res) => {
   }
 });
 
-// ✅ Get POI details (on click)
-router.get('/poi/:placeId/details', async (req, res) => {
-  try {
-    const { placeId } = req.params;
+/* ==================== SEARCH & DETAILS ==================== */
 
-    console.log(`\n📥 [API] GET /poi/${placeId}/details`);
-
-    const details = await getPlaceDetails(placeId);
-
-    if (!details) {
-      console.log(`   ⚠️ Place not found: ${placeId}`);
-      return res.status(404).json({ ok: false, error: 'Place not found' });
-    }
-
-    console.log(`   ✅ Returning place details:`, {
-      id: details.id,
-      name: details.name,
-      address: details.address,
-      phone: details.phone,
-      website: details.website,
-      rating: details.rating
-    });
-
-    res.set({
-      'Cache-Control': 'public, max-age=3600',
-    });
-
-    res.json({ ok: true, place: details });
-
-  } catch (error) {
-    console.error('❌ Error in GET /poi/:placeId/details:', error);
-    res.status(500).json({ ok: false, error: error.message });
-  }
-});
-
-// ✅ NEW: Autocomplete search within zone
+/**
+ * GET /api/zones/:zoneId/search
+ * Autocomplete search within zone
+ */
 router.get('/:zoneId/search', async (req, res) => {
   try {
     const { zoneId } = req.params;
@@ -269,8 +211,6 @@ router.get('/:zoneId/search', async (req, res) => {
     if (!q || q.length < 2) {
       return res.json({ ok: true, results: [] });
     }
-
-    console.log(`\n📥 [API] GET /zones/${zoneId}/search?q=${q}`);
 
     const zone = await zoneService.getZoneById(zoneId);
     if (!zone) {
@@ -291,18 +231,68 @@ router.get('/:zoneId/search', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/zones/poi/:placeId/details
+ * Get POI details by place ID
+ */
+router.get('/poi/:placeId/details', async (req, res) => {
+  try {
+    const { placeId } = req.params;
 
+    const details = await getPlaceDetails(placeId);
+
+    if (!details) {
+      return res.status(404).json({ ok: false, error: 'Place not found' });
+    }
+
+    res.set({ 'Cache-Control': 'public, max-age=3600' });
+    res.json({ ok: true, place: details });
+
+  } catch (error) {
+    console.error('❌ Error in GET /poi/:placeId/details:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/zones/province/:province
+ * Get all zones in a province
+ */
+router.get('/province/:province', async (req, res) => {
+  try {
+    const { province } = req.params;
+    
+    const zones = await zoneService.getZonesByProvince(province);
+    
+    res.json({ 
+      ok: true, 
+      zones, 
+      total: zones.length 
+    });
+    
+  } catch (error) {
+    console.error('❌ Error in GET /zones/province/:province:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/* ==================== MAP4D PROXY (DEPRECATED) ==================== */
+
+/**
+ * @deprecated Use /api/zones/poi/:placeId/details instead
+ */
 router.get("/place/detail", async (req, res) => {
   try {
     const { placeId } = req.query;
-    if (!placeId) return res.status(400).json({ ok: false, error: "Missing placeId" });
+    if (!placeId) {
+      return res.status(400).json({ ok: false, error: "Missing placeId" });
+    }
 
     const key = process.env.MAP4D_API_KEY;
     const url = `https://api.map4d.vn/map/place/detail?key=${encodeURIComponent(key)}&place_id=${encodeURIComponent(placeId)}`;
     const r = await fetch(url);
     const j = await r.json();
 
-    // Chuẩn hoá output
     return res.json({ ok: true, result: j.result || j.data || j });
   } catch (e) {
     console.error("Map4D detail proxy error:", e);

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRef } from "react";
 import { AuthCtx } from "./context";
+import { identifyUser, resetPostHog } from '../utils/posthog';
 const API_BASE = "http://localhost:4000";
 
 // helper fetch: luôn gửi cookie (để BE đọc refresh_token)
@@ -94,6 +95,13 @@ export default function AuthProvider({ children }) {
     if (res?.user) {
       // 👇 gộp token vào user luôn
       setUser({ ...res.user, token: res.accessToken });
+      
+      // ✅ Identify user in PostHog for tracking
+      identifyUser(res.user._id, {
+        email: res.user.email,
+        username: res.user.username,
+        role: 'user'
+      });
     }
 
     return res?.user;
@@ -114,6 +122,13 @@ export default function AuthProvider({ children }) {
 
     if (res?.user) {
       setUser({ ...res.user, token: res.accessToken, role: "admin" });
+      
+      // ✅ Identify admin in PostHog
+      identifyUser(res.user._id, {
+        email: res.user.email,
+        username: res.user.username,
+        role: 'admin'
+      });
     }
 
     return res?.user;
@@ -266,6 +281,13 @@ export default function AuthProvider({ children }) {
               setUser({ ...me, token: r.accessToken });
               setBannedInfo(null);
               sessionStorage.removeItem("bannedInfo");
+              
+              // ✅ Identify user in PostHog (OAuth login)
+              identifyUser(me._id, {
+                email: me.email,
+                username: me.username,
+                role: me.role || 'user'
+              });
             }
           } catch (err) {
             // If backend returns 403 for banned accounts, capture and expose it
@@ -333,6 +355,9 @@ export default function AuthProvider({ children }) {
 
       localStorage.clear();
       sessionStorage.clear();
+      
+      // ✅ Reset PostHog session (clear user identity)
+      resetPostHog();
 
       // 🧠 Xóa cookie (nếu không phải HttpOnly)
       document.cookie.split(";").forEach((c) => {

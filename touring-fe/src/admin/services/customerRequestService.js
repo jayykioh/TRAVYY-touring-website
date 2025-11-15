@@ -5,7 +5,7 @@ const API_URL = "http://localhost:4000/api";
  * Helper: Fetch with authentication
  */
 const fetchWithAuth = async (url, options = {}) => {
-  const token = sessionStorage.getItem("admin_token");
+  const token = localStorage.getItem("admin_token");
 
   if (!token) {
     window.location.href = "/admin/login";
@@ -22,8 +22,8 @@ const fetchWithAuth = async (url, options = {}) => {
   });
 
   if (response.status === 401) {
-    sessionStorage.removeItem("admin_token");
-    sessionStorage.removeItem("admin_user");
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_user");
     window.location.href = "/admin/login";
     throw new Error("Phiên đăng nhập hết hạn");
   }
