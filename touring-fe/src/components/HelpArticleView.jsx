@@ -24,7 +24,7 @@ export default function HelpArticleView() {
   useEffect(() => {
     const art = helpArticlesBySlug[slug];
     if (!art) {
-      navigate("/profile/help");
+      navigate("/help");
       return;
     }
     setArticle(art);
@@ -87,15 +87,12 @@ export default function HelpArticleView() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-gray-600 mb-6 flex-wrap">
-        <Link
-          to="/profile"
-          className="hover:text-blue-600 flex items-center gap-1"
-        >
+        <Link to="/" className="hover:text-blue-600 flex items-center gap-1">
           <Home className="w-4 h-4" />
-          Profile
+          Trang chủ
         </Link>
         <ChevronRight className="w-4 h-4" />
-        <Link to="/profile/help" className="hover:text-blue-600">
+        <Link to="/help" className="hover:text-blue-600">
           Trợ giúp
         </Link>
         <ChevronRight className="w-4 h-4" />
@@ -225,7 +222,7 @@ export default function HelpArticleView() {
             {article.relatedArticles.map((related) => (
               <Link
                 key={related._id}
-                to={`/profile/help/article/${related.slug}`}
+                to={`/help/article/${related.slug}`}
                 className="block p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-500 hover:shadow-md transition-all"
               >
                 <div className="flex items-center gap-3">
