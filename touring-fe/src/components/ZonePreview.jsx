@@ -16,7 +16,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-export default function ZonePreview({ zone, onExplore, verbose = true }) {
+function ZonePreview({ zone, onExplore, verbose = true }) {
   const card =
     "bg-white/70 backdrop-blur-xl border border-white/20 rounded-xl shadow-md overflow-hidden h-full flex flex-col";
   const heroH = "h-36";
@@ -34,17 +34,11 @@ export default function ZonePreview({ zone, onExplore, verbose = true }) {
     );
   }
 
-  // ✅ FIXED: Calculate from finalScore
-  const matchPercent = zone.finalScore
-    ? Math.round(zone.finalScore * 100)
-    : null;
-
-  // ✅ Debug log
-  console.log("[ZonePreview]", {
-    name: zone.name,
-    finalScore: zone.finalScore,
-    matchPercent,
-  });
+  // ✅ tính từ finalScore, cho cả trường hợp = 0
+  const matchPercent =
+    typeof zone.finalScore === "number"
+      ? Math.round(zone.finalScore * 100)
+      : null;
 
   const imgSrc = zone.heroImg || zone.gallery?.[0];
 
@@ -82,13 +76,20 @@ export default function ZonePreview({ zone, onExplore, verbose = true }) {
     }
   };
 
+  // ✅ link Google Maps: ưu tiên theo toạ độ, fallback theo tên
+  const mapsHref = zone?.center?.lat && zone?.center?.lng
+    ? `https://www.google.com/maps/search/?api=1&query=${zone.center.lat},${zone.center.lng}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(zone.name || "")}`;
+
   return (
     <motion.div
       key={zone.id}
-      initial={{ opacity: 0, x: 10, scale: 0.98 }}
+      initial={{ opacity: 0, x: 8, scale: 0.98 }}
       animate={{ opacity: 1, x: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.97 }}
-      transition={{ duration: 0.25 }}
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.99 }}
+      transition={{ duration: 0.22, ease: "easeOut" }}
       className={card}
     >
       {/* Hero */}
@@ -97,6 +98,7 @@ export default function ZonePreview({ zone, onExplore, verbose = true }) {
           <img
             src={imgSrc}
             alt={zone.name}
+            loading="lazy"
             className="w-full h-full object-cover"
           />
         ) : (
@@ -106,11 +108,12 @@ export default function ZonePreview({ zone, onExplore, verbose = true }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
 
-        {/* ✅ Match Badge - FIXED */}
+        {/* Match Badge */}
         {matchPercent !== null && (
           <motion.span
-            initial={{ y: -8, opacity: 0 }}
+            initial={{ y: -6, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
             className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/70 text-white backdrop-blur px-2.5 py-0.5 text-[10px] font-medium"
           >
             <TrendingUp className="h-3 w-3" />
@@ -166,7 +169,7 @@ export default function ZonePreview({ zone, onExplore, verbose = true }) {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.15, duration: 0.18, ease: "easeOut" }}
             className="text-[12px] text-slate-600 space-y-1"
           >
             {zone.funActivities?.length > 0 && (
@@ -194,19 +197,19 @@ export default function ZonePreview({ zone, onExplore, verbose = true }) {
       {/* Actions */}
       <div className="mt-auto border-t border-slate-200/60 bg-white/60 backdrop-blur-md px-3 py-2.5 flex gap-2">
         <a
-          href={`https://www.google.com/maps/search/?api=1&query=${zone?.center?.lat},${zone?.center?.lng}`}
+          href={mapsHref}
           target="_blank"
           rel="noreferrer"
           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md border border-slate-300/70 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50 transition"
         >
           <MapPin className="w-3.5 h-3.5" />
-          Bản đồ - Xem trên Google Map
+          Bản đồ
         </a>
 
         <motion.button
           whileHover={{ y: -1 }}
           whileTap={{ scale: 0.98 }}
-          onClick={onExplore}
+          onClick={() => onExplore && onExplore(zone)}
           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-slate-900 px-2.5 py-1.5 text-[12px] font-semibold text-white hover:bg-slate-700 transition"
         >
           <Compass className="w-3.5 h-3.5" />
@@ -216,3 +219,6 @@ export default function ZonePreview({ zone, onExplore, verbose = true }) {
     </motion.div>
   );
 }
+
+// ✅ nếu dùng nhiều trong list, có thể memo để tối ưu thêm
+export default React.memo(ZonePreview);

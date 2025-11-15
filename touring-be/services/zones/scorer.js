@@ -1,117 +1,146 @@
-const { calculateSemanticMatch } = require('../ai/libs/keyword-matcher');
-
 /**
- * scoreZone now accepts the full prefs object so we can use:
- * - prefs.vibes (array)
- * - prefs.avoid (array)
- * - prefs.keywords (array) from LLM/heuristic
- * - prefs._rawText (string)
+ * Calculate distance between two coordinates using Haversine formula
+ * @param {number} lat1 - Latitude of point 1
+ * @param {number} lng1 - Longitude of point 1
+ * @param {number} lat2 - Latitude of point 2
+ * @param {number} lng2 - Longitude of point 2
+ * @returns {number} Distance in kilometers
  */
-function scoreZone(zone, prefs = {}) {
-  const vibes = Array.isArray(prefs.vibes) ? prefs.vibes : [];
-  const avoidList = Array.isArray(prefs.avoid) ? prefs.avoid : [];
-  const lmKeywords = Array.isArray(prefs.keywords) ? prefs.keywords : [];
-  const rawText = prefs._rawText || '';
-
-  let score = 0;
-  const reasons = [];
-
-  const desc = (zone.description || zone.desc || '').toLowerCase();
-  const name = (zone.name || '').toLowerCase();
-  const zoneTags = (zone.tags || []).map(t => (t || '').toLowerCase());
-  const zoneVibes = (zone.vibes || []).map(v => (v || '').toLowerCase());
-
-  // 1) Vibe matches (strong boost) - list which vibes matched
-  const matchedVibes = [];
-  for (const v of vibes) {
-    const vl = v.toLowerCase();
-    if (zoneTags.includes(vl) || zoneVibes.includes(vl) || desc.includes(vl) || name.includes(vl)) {
-      matchedVibes.push(vl);
-    }
-  }
-  if (matchedVibes.length > 0) {
-    const vibeScore = Math.min(0.6, matchedVibes.length * 0.15); // cap
-    score += vibeScore;
-    reasons.push(`${matchedVibes.length} vibe matches (+${(vibeScore * 100).toFixed(0)}%): ${matchedVibes.join(', ')}`);
-  }
-
-  // 2) Avoid matches (strong penalty) - supports both simple avoids and avoid-as-tag
-  const matchedAvoids = [];
-  for (const av of avoidList) {
-    const avl = av.toLowerCase();
-    if (desc.includes(avl) || name.includes(avl) || zoneTags.includes(avl)) matchedAvoids.push(avl);
-  }
-  if (matchedAvoids.length > 0) {
-    const penalty = Math.min(0.8, matchedAvoids.length * 0.2);
-    score -= penalty;
-    reasons.push(`${matchedAvoids.length} avoid matches (-${(penalty * 100).toFixed(0)}%): ${matchedAvoids.join(', ')}`);
-  }
-
-  // 3) Keyword matches: combine LLM keywords + extracted words from rawText
-  const extracted = extractKeywords(rawText);
-  const combinedKeywords = [...new Set([...(lmKeywords || []), ...extracted])].map(k => k.toLowerCase());
-  const matchedKeywords = combinedKeywords.filter(kw => desc.includes(kw) || name.includes(kw) || zoneTags.includes(kw));
-  if (matchedKeywords.length > 0) {
-    const kwScore = Math.min(0.4, matchedKeywords.length * 0.05);
-    score += kwScore;
-    reasons.push(`${matchedKeywords.length} keyword matches (+${(kwScore * 100).toFixed(0)}%): ${matchedKeywords.slice(0,6).join(', ')}`);
-  }
-
-  // 4) Semantic category match (optional deeper match)
-  try {
-    // calculateSemanticMatch expects (userText, zoneKeywords)
-    const zoneKeywords = zone.keywords || zone.payload?.keywords || zone.tags || [];
-    const sem = calculateSemanticMatch(rawText, zoneKeywords);
-    const semScore = sem?.score || (typeof sem === 'number' ? sem : 0);
-    if (semScore && semScore > 0) {
-      // small boost proportional to semantic confidence
-      const normalized = Math.min(0.2, semScore * 0.2);
-      score += normalized;
-      if (normalized > 0) reasons.push(`semantic match (+${(normalized * 100).toFixed(0)}%)`);
-    }
-  } catch (e) {
-    // fail silently; calculateSemanticMatch is best-effort
-  }
-
-  // 5) Rating bonus
-  if (zone.rating && zone.rating >= 4.0) {
-    const ratingBonus = Math.min(0.1, (zone.rating - 3.0) * 0.05);
-    score += ratingBonus;
-    reasons.push(`rating ${zone.rating} (+${(ratingBonus * 100).toFixed(0)}%)`);
-  }
-
-  // 6) Popular tags small bonus
-  const popularTags = ['beach', 'photo', 'nature', 'culture'];
-  const popularMatches = zoneTags.filter(t => popularTags.includes(t)).length;
-  if (popularMatches > 0) score += popularMatches * 0.03;
-
-  // Final clamp 0..1
-  const final = Math.max(0, Math.min(1, score));
-
-  return {
-    score: final,
-    reasons,
-    details: {
-      matchedVibes,
-      matchedAvoids,
-      matchedKeywords
-    }
-  };
+function calculateDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLng = (lng2 - lng1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
-function extractKeywords(text) {
-  if (!text || typeof text !== 'string') return [];
-  const lower = text.toLowerCase();
+/**
+ * Calculate two components of contextual score:
+ * 1. hardVibeScore: percentage of user's hardVibes that match zone.vibeKeywords (0-1)
+ * 2. contextScore: avoid penalties + proximity bonuses (0-1)
+ * 
+ * Formula in matcher.js: finalScore = (hardVibeScore × 0.6) + (embedScore × 0.4)
+ * 
+ * Input:
+ *   - prefs.vibes: array of hardVibes selected by user
+ *   - prefs.freeText: optional text input (for avoid keyword matching)
+ *   - userLocation: optional GPS location
+ * 
+ * Output:
+ *   - hardVibeScore: 0-1 (match percentage)
+ *   - contextScore: 0-1 (avoid + proximity)
+ *   - reasons: explanation of scoring
+ */
+function scoreZone(zone, prefs = {}, userLocation = null) {
+  const hardVibes = Array.isArray(prefs.vibes) ? prefs.vibes : [];
+  const freeText = (prefs.freeText || '').toLowerCase();
   
-  // Vietnamese stopwords (extend as needed)
-  const stopwords = ['của', 'và', 'có', 'là', 'được', 'trong', 'để', 'cho', 'đi', 'với', 'một', 'và', 'nhưng'];
+  const reasons = [];
+
+  // ========================================
+  // 1️⃣ HARDVIBE SCORE (Match %)
+  // ========================================
+  // Check how many of user's hardVibes match zone.tags
   
-  const words = lower
-    .replace(/[^\wÀ-ỹ\s]/g, ' ')
-    .split(/\s+/)
-    .filter(w => w.length > 2 && !stopwords.includes(w));
+  const zoneTags = (zone.tags || []).map(t => t.toLowerCase());
   
-  return [...new Set(words)];
+  let matchedHardVibes = 0;
+  
+  if (hardVibes.length > 0) {
+    for (const userVibe of hardVibes) {
+      const userVibeLower = userVibe.toLowerCase();
+      
+      // Check if zone has this tag (exact match)
+      const isMatch = zoneTags.includes(userVibeLower);
+      
+      if (isMatch) {
+        matchedHardVibes++;
+      }
+    }
+  }
+  
+  // hardVibeScore = percentage of hardvibes matched (0-1)
+  const hardVibeScore = hardVibes.length > 0 
+    ? matchedHardVibes / hardVibes.length
+    : 0;
+  
+  if (hardVibes.length > 0) {
+    reasons.push(`🔥 HardVibe match: ${matchedHardVibes}/${hardVibes.length} (${(hardVibeScore * 100).toFixed(0)}%)`);
+  }
+
+  // ========================================
+  // 2️⃣ CONTEXT SCORE (Avoid + Proximity)
+  // ========================================
+  
+  let contextScore = 0;
+  const zoneAvoidKeywords = (zone.avoidKeywords || []).map(a => a.toLowerCase());
+  
+  // A) Avoid keyword match (penalty)
+  if (freeText.length > 0) {
+    const matchedAvoids = zoneAvoidKeywords.filter(avoid => 
+      freeText.includes(avoid)
+    );
+    
+    if (matchedAvoids.length > 0) {
+      const avoidPenalty = Math.min(0.3, matchedAvoids.length * 0.15);
+      contextScore -= avoidPenalty;
+      reasons.push(`❌ Avoid match: ${matchedAvoids.join(', ')} (-${(avoidPenalty * 100).toFixed(0)}%)`);
+    }
+  }
+  
+  // B) Proximity bonus (if user location provided)
+  let proximityScore = 0;
+  let distanceKm = null;
+  
+  if (userLocation?.lat && userLocation?.lng && zone.center?.lat && zone.center?.lng) {
+    distanceKm = calculateDistance(
+      userLocation.lat,
+      userLocation.lng,
+      zone.center.lat,
+      zone.center.lng
+    );
+    
+    // Proximity scoring:
+    // - Within 50km: +0.25 bonus (very close) - increased from +0.15
+    // - Within 100km: +0.15 bonus (close) - increased from +0.10
+    // - Within 200km: +0.08 bonus (nearby) - increased from +0.05
+    // - Beyond 200km: no bonus
+    if (distanceKm < 50) {
+      proximityScore = 0.25;
+      reasons.push(`📍 Very close (${distanceKm.toFixed(0)}km) (+25%)`);
+    } else if (distanceKm < 100) {
+      proximityScore = 0.15;
+      reasons.push(`📍 Close (${distanceKm.toFixed(0)}km) (+15%)`);
+    } else if (distanceKm < 200) {
+      proximityScore = 0.08;
+      reasons.push(`📍 Nearby (${distanceKm.toFixed(0)}km) (+8%)`);
+    }
+    
+    contextScore += proximityScore;
+  }
+  
+  // Clamp contextScore to 0-1
+  const finalContextScore = Math.max(0, Math.min(1, contextScore));
+
+  return {
+    hardVibeScore,        // Main score (0-1): % of hardvibes matched
+    contextScore: finalContextScore,  // Context score (0-1): avoid + proximity
+    proximityScore,       // Breakdown
+    distanceKm,           // Breakdown
+    reasons,              // Explanation
+    details: {
+      matchedHardVibes,
+      zoneTags,
+      userLocation: userLocation ? `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}` : null,
+      zoneCenter: zone.center ? `${zone.center.lat.toFixed(4)}, ${zone.center.lng.toFixed(4)}` : null
+    }
+  };
 }
 
 module.exports = { scoreZone };

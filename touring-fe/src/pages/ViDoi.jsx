@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 // VibeSelectPage.fx.jsx — Animated restyle (logic preserved)
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Sparkles,
   MapPin,
@@ -28,45 +28,48 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../auth/context";
 
-// ✅ STANDARDIZED: Match with backend vibePatterns
+// ✅ SYNCED WITH DATABASE: Top 16 tags from zone.tags
+// Based on frequency analysis: photo(32), nature(19), local(13), history(12), culture(12), food(11), beach(8), temple(7), sunset(7), view(6), architecture(5), nightlife(5), adventure(4), market(4), shopping(4), cave(3)
 const vibeOptions = [
-  { id: "beach", label: "🏖️ Biển", color: "blue" },
-  { id: "mountain", label: "🏔️ Núi", color: "green" },
-  { id: "food", label: "🍜 Ẩm thực", color: "orange" },
-  { id: "culture", label: "🏛️ Văn hóa", color: "purple" },
-  { id: "nature", label: "🌿 Thiên nhiên", color: "green" },
-  { id: "relax", label: "🧘 Nghỉ ngơi", color: "teal" },
-  { id: "romantic", label: "💕 Lãng mạn", color: "pink" },
-  { id: "adventure", label: "🗺️ Khám phá", color: "red" },
   { id: "photo", label: "📸 Chụp ảnh", color: "yellow" },
+  { id: "nature", label: "� Thiên nhiên", color: "green" },
+  { id: "local", label: "�️ Bản địa", color: "brown" },
+  { id: "history", label: "📜 Lịch sử", color: "purple" },
+  { id: "culture", label: "🏛️ Văn hóa", color: "purple" },
+  { id: "food", label: "� Ẩm thực", color: "orange" },
+  { id: "beach", label: "🏖️ Biển", color: "blue" },
+  { id: "temple", label: "⛩️ Tâm linh", color: "pink" },
   { id: "sunset", label: "🌅 Hoàng hôn", color: "amber" },
+  { id: "view", label: "🏞️ Cảnh đẹp", color: "teal" },
+  { id: "architecture", label: "�️ Kiến trúc", color: "indigo" },
   { id: "nightlife", label: "🍻 Nightlife", color: "violet" },
+  { id: "adventure", label: "�️ Khám phá", color: "red" },
+  { id: "market", label: "🏪 Chợ", color: "orange" },
   { id: "shopping", label: "🛍️ Shopping", color: "pink" },
-  { id: "temple", label: "⛩️ Tâm linh", color: "gold" },
-  { id: "local", label: "🏘️ Bản địa", color: "brown" },
-  { id: "island", label: "🏝️ Đảo", color: "cyan" },
+  { id: "cave", label: "�️ Hang động", color: "gray" }
 ];
 
 const ALL_VIBES = vibeOptions.map((v) => v.id);
 const MAX = 3;
 
-// 🎨 Subtle accent colors per vibe (used only for styling, logic unchanged)
+// 🎨 Subtle accent colors per tag (synced with database)
 const VIBE_ACCENTS = {
-  beach: { hex: "#6366F1", rgba: "rgba(99,102,241,0.35)" },
-  mountain: { hex: "#10B981", rgba: "rgba(16,185,129,0.35)" },
-  food: { hex: "#F59E0B", rgba: "rgba(245,158,11,0.35)" },
-  culture: { hex: "#8B5CF6", rgba: "rgba(139,92,246,0.35)" },
-  nature: { hex: "#22C55E", rgba: "rgba(34,197,94,0.35)" },
-  relax: { hex: "#14B8A6", rgba: "rgba(20,184,166,0.35)" },
-  romantic: { hex: "#EC4899", rgba: "rgba(236,72,153,0.35)" },
-  adventure: { hex: "#EF4444", rgba: "rgba(239,68,68,0.35)" },
   photo: { hex: "#EAB308", rgba: "rgba(234,179,8,0.35)" },
-  sunset: { hex: "#FB923C", rgba: "rgba(251,146,60,0.35)" },
-  nightlife: { hex: "#7C3AED", rgba: "rgba(124,58,237,0.35)" },
-  shopping: { hex: "#F472B6", rgba: "rgba(244,114,182,0.35)" },
-  temple: { hex: "#FB7185", rgba: "rgba(251,113,133,0.35)" },
+  nature: { hex: "#22C55E", rgba: "rgba(34,197,94,0.35)" },
   local: { hex: "#64748B", rgba: "rgba(100,116,139,0.35)" },
-  island: { hex: "#06B6D4", rgba: "rgba(6,182,212,0.35)" },
+  history: { hex: "#8B5CF6", rgba: "rgba(139,92,246,0.35)" },
+  culture: { hex: "#8B5CF6", rgba: "rgba(139,92,246,0.35)" },
+  food: { hex: "#F59E0B", rgba: "rgba(245,158,11,0.35)" },
+  beach: { hex: "#6366F1", rgba: "rgba(99,102,241,0.35)" },
+  temple: { hex: "#FB7185", rgba: "rgba(251,113,133,0.35)" },
+  sunset: { hex: "#FB923C", rgba: "rgba(251,146,60,0.35)" },
+  view: { hex: "#14B8A6", rgba: "rgba(20,184,166,0.35)" },
+  architecture: { hex: "#6366F1", rgba: "rgba(99,102,241,0.35)" },
+  nightlife: { hex: "#7C3AED", rgba: "rgba(124,58,237,0.35)" },
+  adventure: { hex: "#EF4444", rgba: "rgba(239,68,68,0.35)" },
+  market: { hex: "#F59E0B", rgba: "rgba(245,158,11,0.35)" },
+  shopping: { hex: "#F472B6", rgba: "rgba(244,114,182,0.35)" },
+  cave: { hex: "#6B7280", rgba: "rgba(107,114,128,0.35)" }
 };
 
 const getAccent = (v) =>
@@ -100,8 +103,6 @@ export default function VibeSelectPage() {
   const [useMyLoc, setUseMyLoc] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [parsedPreview, setParsedPreview] = useState(null);
-  const [parsing, setParsing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -131,11 +132,9 @@ export default function VibeSelectPage() {
     e?.preventDefault();
     e?.stopPropagation();
 
-    console.log("🟢 handleSubmit called!", { selected, freeText });
-
     if (selected.length === 0 && !freeText.trim()) {
       setErrorMsg("Hãy chọn ít nhất 1 vibe HOẶC mô tả rõ hơn!");
-      toast("⚠️ No vibes and no meaningful text");
+      toast.error("Vui lòng chọn vibes hoặc nhập mô tả");
       return;
     }
 
@@ -143,14 +142,10 @@ export default function VibeSelectPage() {
       setErrorMsg(
         "Mô tả quá ngắn! Hãy cho biết bạn thích gì (ví dụ: biển, núi, ẩm thực...)"
       );
-      console.warn("⚠️ Text too short:", freeText);
       return;
     }
 
-    if (submitting) {
-      console.warn("⚠️ Already submitting");
-      return;
-    }
+    if (submitting) return;
 
     setErrorMsg("");
     setSubmitting(true);
@@ -158,15 +153,13 @@ export default function VibeSelectPage() {
     try {
       let origin = null;
       if (useMyLoc && navigator.geolocation) {
-        console.log("🔵 Getting geolocation...");
         origin = await new Promise((resolve) =>
           navigator.geolocation.getCurrentPosition(
             (pos) => {
-              console.log("🟢 Got location:", pos.coords);
               resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
             },
             (err) => {
-              console.warn("⚠️ Geolocation error:", err);
+              console.warn("Geolocation error:", err);
               resolve(null);
             },
             { enableHighAccuracy: true, timeout: 6000 }
@@ -174,56 +167,37 @@ export default function VibeSelectPage() {
         );
       }
 
-      const combinedText = [...selected, freeText].filter(Boolean).join(", ");
-
       const body = {
-        text: combinedText,
-        province: null,
+        vibes: selected,
+        freeText: freeText.trim(),
+        ...(origin && { userLocation: origin })
       };
 
-      console.log("🔵 Sending request:", body);
-
-      const r = await fetch("/api/discover/parse", {
+      // ✅ Use withAuth for secure API call with automatic token handling
+      const data = await withAuth("/api/discover/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
-      console.log("🔵 Response status:", r.status);
-
-      if (!r.ok) {
-        const err = await r.text();
-        console.error("🔴 Error response:", err);
-        throw new Error(`Server trả lỗi ${r.status}: ${err}`);
-      }
-
-      const data = await r.json();
-      console.log("🟢 Response data:", data);
-
+      // Save to sessionStorage
       try {
         window.sessionStorage.setItem("discover_result", JSON.stringify(data));
-        console.log("🟢 Saved to sessionStorage");
       } catch (storageErr) {
-        console.error("🔴 SessionStorage error:", storageErr);
+        console.error("SessionStorage error:", storageErr);
       }
 
-      // 💾 Save to user history if logged in
+      // Save to history if logged in
       if (isAuth) {
-        console.log("🟢 User is authenticated, saving to history...", {
-          vibes: selected,
-          freeText,
-          zonesCount: data.zones?.length,
-        });
         saveToHistory(selected, freeText, data.prefs, data.zones);
-      } else {
-        console.warn("⚠️ User not authenticated, skipping history save");
       }
 
-      console.log("🔵 Navigating to results...");
-      navigate("/discover/results", { state: { data } });
+      // ✅ Navigate to Wrapped view for top 3 reveal
+      navigate("/discover-wrapped", { state: { data } });
     } catch (e) {
-      console.error("🔴 Submit error:", e);
+      console.error("Submit error:", e);
       setErrorMsg(e?.message || "Có lỗi xảy ra. Vui lòng thử lại.");
+      toast.error("Không thể tạo gợi ý. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }
@@ -232,14 +206,7 @@ export default function VibeSelectPage() {
   // 💾 Save search to history
   async function saveToHistory(vibes, freeText, parsedPrefs, zoneResults) {
     try {
-      console.log("📤 Sending history to backend:", {
-        vibes,
-        freeText,
-        parsedPrefs,
-        zonesCount: zoneResults?.length,
-      });
-
-      const response = await withAuth("/api/discover/save-history", {
+      await withAuth("/api/discover/save-history", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -250,17 +217,15 @@ export default function VibeSelectPage() {
         }),
       });
 
-      console.log("✅ History saved successfully:", response);
-
       // Reload history to update UI
       loadHistory();
     } catch (error) {
-      console.error("❌ Failed to save history:", error);
+      console.error("Failed to save history:", error);
     }
   }
 
   // 📜 Load history
-  async function loadHistory() {
+  const loadHistory = useCallback(async () => {
     if (!isAuth) return;
     setLoadingHistory(true);
     try {
@@ -269,11 +234,11 @@ export default function VibeSelectPage() {
         setHistory(data.history || []);
       }
     } catch (error) {
-      console.error("❌ Failed to load history:", error);
+      console.error("Failed to load history:", error);
     } finally {
       setLoadingHistory(false);
     }
-  }
+  }, [isAuth, withAuth]);
 
   // 🔄 Load from history entry
   function loadFromHistory(entry) {
@@ -338,8 +303,6 @@ export default function VibeSelectPage() {
       fallback: false,
     };
 
-    console.log("[ViDoi] Reconstructed data for history:", data);
-
     // Save to sessionStorage
     try {
       window.sessionStorage.setItem("discover_result", JSON.stringify(data));
@@ -347,9 +310,9 @@ export default function VibeSelectPage() {
       console.error("SessionStorage error:", err);
     }
 
-    // Navigate to results
+    // Navigate to results (skip wrapped for history view)
     setShowHistory(false);
-    navigate("/discover/results", { state: { data } });
+    navigate("/discover-results", { state: { data } });
   }
 
   // 🗑️ Delete single history entry
@@ -402,7 +365,7 @@ export default function VibeSelectPage() {
     if (isAuth) {
       loadHistory();
     }
-  }, [isAuth]);
+  }, [isAuth, loadHistory]);
 
   const vibes = useMemo(() => {
     const hot = [
@@ -418,32 +381,6 @@ export default function VibeSelectPage() {
     const rest = ALL_VIBES.filter((v) => !setHot.has(v));
     return [...hot, ...rest];
   }, []);
-
-  async function handlePreviewParse() {
-    if (!freeText) return;
-    setParsing(true);
-    try {
-      const combinedText = [...selected, freeText].filter(Boolean).join(", ");
-
-      const r = await fetch("/api/discover/parse", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: combinedText }),
-      });
-
-      if (!r.ok) {
-        throw new Error(`Error ${r.status}`);
-      }
-
-      const data = await r.json();
-      setParsedPreview(data.prefs);
-    } catch (e) {
-      console.error("❌ Preview error:", e);
-      setParsedPreview(null);
-    } finally {
-      setParsing(false);
-    }
-  }
 
   // ====== Animation presets ======
   const fadeInUp = {
@@ -740,42 +677,6 @@ export default function VibeSelectPage() {
                   />
                 </div>
 
-                {/* Preview parse */}
-                <motion.button
-                  whileHover={{ y: -1 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handlePreviewParse}
-                  disabled={parsing || !freeText}
-                  className="text-xs px-3 py-1.5 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-50"
-                >
-                  {parsing ? "Đang phân tích..." : "🔍 Xem hệ thống hiểu gì"}
-                </motion.button>
-
-                <AnimatePresence>
-                  {parsedPreview && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      className="bg-indigo-50 border border-indigo-200 rounded p-2 text-xs"
-                    >
-                      <p className="font-medium">Hệ thống hiểu:</p>
-                      {parsedPreview.pace && (
-                        <p>• Nhịp độ: {parsedPreview.pace}</p>
-                      )}
-                      {parsedPreview.budget && (
-                        <p>• Ngân sách: {parsedPreview.budget}</p>
-                      )}
-                      {parsedPreview.durationDays > 0 && (
-                        <p>• Thời gian: {parsedPreview.durationDays} ngày</p>
-                      )}
-                      {parsedPreview.avoid?.length > 0 && (
-                        <p>• Tránh: {parsedPreview.avoid.join(", ")}</p>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -812,10 +713,7 @@ export default function VibeSelectPage() {
                     type="button"
                     whileHover={{ y: -1 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={(e) => {
-                      console.log("🟢 Submit button clicked!");
-                      handleSubmit(e);
-                    }}
+                    onClick={handleSubmit}
                     disabled={submitting || selected.length === 0}
                     className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium disabled:bg-slate-300 disabled:cursor-not-allowed"
                   >

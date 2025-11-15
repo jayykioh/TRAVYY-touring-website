@@ -14,6 +14,8 @@ from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
 from pathlib import Path
 
+from embedding_logger import logger
+
 load_dotenv()
 
 # =================== Config ===================
@@ -159,34 +161,65 @@ def embed(req: EmbedRequest):
 
 @app.post("/upsert")
 def upsert(req: UpsertRequest):
-    """Add/update vectors"""
+    """Add/update vectors by rebuilding index"""
     try:
-        texts = [item.text for item in req.items]
-        embeddings = model.encode(
-            texts,
-            normalize_embeddings=True,
-            show_progress_bar=False,
-            convert_to_numpy=True
-        )
+        global metadata, index
         
-        # Remove old entries
+        upsert_start = time.time()
+        logger.start_operation("Upsert")
+        logger.log_upsert_start("http://localhost:8088/upsert", len(req.items))
+        
+        # Step 1: Update metadata (remove old, keep the rest)
         ids_set = {item.id for item in req.items}
-        global metadata
+        old_metadata = metadata.copy()
         old_count = len(metadata)
         metadata = [m for m in metadata if m["id"] not in ids_set]
         removed = old_count - len(metadata)
         
-        # Add new
-        for item, emb in zip(req.items, embeddings):
-            index.add(np.array([emb], dtype=np.float32))
-            metadata.append({
+        logger.log_metadata_update(removed, len(req.items), old_count, len(metadata))
+        
+        # Step 2: Add new items to metadata first
+        new_items = []
+        for item in req.items:
+            new_items.append({
                 "id": item.id,
                 "type": item.type,
                 "text": item.text,
                 "payload": item.payload or {}
             })
         
+        metadata.extend(new_items)
+        
+        # Step 3: Rebuild entire index from metadata
+        if len(metadata) == 0:
+            index = faiss.IndexFlatIP(DIM)
+            logger.log("� [Upsert] Created empty index")
+        else:
+            # Extract texts and re-embed all
+            all_texts = [m.get("text", "") for m in metadata]
+            logger.log_embedding_start(len(all_texts))
+            
+            embed_start = time.time()
+            all_embeddings = model.encode(
+                all_texts,
+                normalize_embeddings=True,
+                show_progress_bar=False,
+                convert_to_numpy=True
+            )
+            embed_duration = time.time() - embed_start
+            logger.log_embedding_complete(len(all_texts), embed_duration)
+            
+            # Create fresh index
+            index = faiss.IndexFlatIP(DIM)
+            index.add(all_embeddings)
+            logger.log_index_rebuild(index.ntotal)
+        
         save_index()
+        
+        # Verify consistency
+        logger.log_consistency_check(index.ntotal, len(metadata), index.ntotal == len(metadata))
+        logger.end_operation()
+        logger.save()
         
         return {
             "ok": True,
@@ -195,6 +228,10 @@ def upsert(req: UpsertRequest):
             "total": index.ntotal
         }
     except Exception as e:
+        logger.log(f"❌ [Upsert] Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        logger.save()
         raise HTTPException(500, f"Upsert failed: {str(e)}")
 
 @app.post("/search")
@@ -203,6 +240,8 @@ def search(req: SearchRequest):
     try:
         if index.ntotal == 0:
             return {"hits": []}
+        
+        search_start = time.time()
         
         query_emb = model.encode(
             [req.query],
@@ -238,6 +277,9 @@ def search(req: SearchRequest):
                 "text": meta["text"],
                 "payload": meta["payload"]
             })
+        
+        search_duration = time.time() - search_start
+        logger.log_search(req.query, len(hits), search_duration)
         
         return {"hits": hits}
     except Exception as e:

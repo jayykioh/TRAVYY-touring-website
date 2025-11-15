@@ -2,13 +2,9 @@
 
 const EMBED_URL = process.env.EMBED_SERVICE_URL || 'http://localhost:8088';
 
-/**
- * Helper: Fetch with timeout
- */
 async function fetchWithTimeout(url, options = {}, timeout = 10000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
-
   try {
     const response = await fetch(url, {
       ...options,
@@ -25,15 +21,12 @@ async function fetchWithTimeout(url, options = {}, timeout = 10000) {
   }
 }
 
-/**
- * Generate embeddings for texts
- */
 async function embed(texts) {
   const res = await fetchWithTimeout(`${EMBED_URL}/embed`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ texts })
-  });
+  }, 60000); // Increased timeout: 10s → 60s for long text
   
   if (!res.ok) {
     const text = await res.text();
@@ -51,7 +44,7 @@ async function upsert(items) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ items })
-  }, 30000);
+  }, 60000); // Increased timeout: 30s → 60s for large batches
   
   if (!res.ok) {
     const text = await res.text();
@@ -86,10 +79,6 @@ async function search(query, options = {}) {
   
   return res.json();
 }
-
-/**
- * Enhanced hybrid search with vibes + free text
- */
 async function hybridSearch(options = {}) {
   const {
     free_text,
@@ -105,8 +94,25 @@ async function hybridSearch(options = {}) {
     url: `${EMBED_URL}/hybrid-search`,
     free_text: free_text?.substring(0, 50),
     vibes: vibes.slice(0, 3),
-    avoid: avoid.slice(0, 2),
+    ...(avoid && avoid.length > 0 && { avoid: avoid.slice(0, 2) }),  // Only show if not empty
     filter_type
+  });
+  
+  // 📊 LOG: Detailed vector comparison info
+  console.log('📊 [EmbedClient] Vector comparison details:', {
+    freeTextFull: free_text || '(empty)',
+    freeTextLength: free_text?.length || 0,
+    
+    vibesArray: vibes,
+    boostVibes: boost_vibes,
+    topK: top_k,
+    process: [
+      '1. AI converts freeText into 384-dimensional vector',
+      '2. AI converts each vibe into vector',
+      '3. Combines vectors with boost_vibes weight',
+      '4. Compares combined vector with all zone vectors using cosine similarity',
+      '5. Returns top_k most similar zones'
+    ]
   });
   
   try {
@@ -116,7 +122,7 @@ async function hybridSearch(options = {}) {
       body: JSON.stringify({
         free_text,
         vibes,
-        avoid,
+        ...(avoid && avoid.length > 0 && { avoid }),  // Only include if not empty
         top_k,
         filter_type,
         filter_province,
@@ -135,6 +141,18 @@ async function hybridSearch(options = {}) {
       strategy: result.strategy
     });
     
+    // 🎯 LOG: Show similarity scores breakdown
+    if (result.hits && result.hits.length > 0) {
+      console.log('🎯 [EmbedClient] Vector similarity scores (cosine distance 0-1):');
+      result.hits.slice(0, 3).forEach((hit, idx) => {
+        console.log(`   ${idx + 1}. Zone ${hit.id}: ${hit.score.toFixed(4)} (${(hit.score * 100).toFixed(1)}% similar)`);
+      });
+      
+      if (free_text) {
+        console.log(`📝 [EmbedClient] Your freeText "${free_text}" was converted to vector and matched against ${result.hits.length} zones`);
+      }
+    }
+    
     return result;
   } catch (error) {
     console.error('❌ [EmbedClient] hybridSearch error:', error.message);
@@ -142,9 +160,6 @@ async function hybridSearch(options = {}) {
   }
 }
 
-/**
- * ✅ FIX: Get service health with proper error handling
- */
 async function health() {
   try {
     const res = await fetchWithTimeout(`${EMBED_URL}/healthz`, {}, 3000);
@@ -181,9 +196,6 @@ async function health() {
   }
 }
 
-/**
- * ✅ FIX: Check if embedding service is available
- */
 async function isAvailable() {
   try {
     const h = await health();
@@ -210,8 +222,6 @@ async function isAvailable() {
     return false;
   }
 }
-
-// ✅ Export all functions
 module.exports = {
   embed,
   upsert,

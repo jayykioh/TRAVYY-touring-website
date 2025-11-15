@@ -140,11 +140,46 @@ export default function ZoneDetail() {
     return () => { ignore = true; };
   }, [zoneId]);
 
-  // Priority POIs — GIỮ NGUYÊN
+  // Priority POIs — ✅ WITH USER LOCATION
   useEffect(() => {
     async function loadPriorityPOIs() {
       try {
-        const res = await fetch(`/api/zones/${zoneId}/pois-priority?limit=7`);
+        // Try to get user location
+        let userLocation = null;
+        if (navigator.geolocation) {
+          try {
+            console.log('📍 Requesting user location for POI sorting...');
+            const position = await new Promise((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: false,
+                timeout: 3000,
+                maximumAge: 60000 // Cache for 1 minute
+              });
+            });
+            userLocation = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            console.log('✅ User location obtained:', userLocation);
+          } catch (err) {
+            console.warn('⚠️ Could not get user location for POIs:', err.message);
+            // User denied permission or timeout - continue without location
+          }
+        } else {
+          console.warn('⚠️ Geolocation not supported by browser');
+        }
+        
+        // Build query params
+        const params = new URLSearchParams({ limit: '7' });
+        if (userLocation) {
+          params.append('userLat', userLocation.lat);
+          params.append('userLng', userLocation.lng);
+          console.log('📤 Sending POI request WITH user location');
+        } else {
+          console.log('📤 Sending POI request WITHOUT user location');
+        }
+        
+        const res = await fetch(`/api/zones/${zoneId}/pois-priority?${params}`);
         const json = await res.json();
         if (json.ok) {
           setPoisByCategory((prev) => ({
@@ -293,8 +328,8 @@ export default function ZoneDetail() {
             <button
               onClick={() => {
                 const discoverData = location.state?.data || null;
-                if (discoverData) navigate("/discover/results", { state: { data: discoverData } });
-                else navigate("/discover/results");
+                if (discoverData) navigate("/discover-results", { state: { data: discoverData } });
+                else navigate("/discover-results");
               }}
               className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-sm px-3 py-1.5 text-xs font-semibold text-slate-700 border border-white/40 shadow-sm hover:bg-white"
               aria-label="Quay lại"

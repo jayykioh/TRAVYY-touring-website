@@ -37,25 +37,26 @@ import AvailableToursPage from "./pages/AvailableToursPage";
 import AITourCreator from "./pages/AITourCreator";
 import PaymentCallback from "./pages/PaymentCallback";
 import PreferencesPage from "./pages/ViDoi";
+import DiscoverWrapped from "./pages/DiscoverWrapped";
 import DiscoverResults from "./pages/DiscoverResults";
 import ZoneDetail from "./pages/ZoneDetail";
 import ItineraryView from "./pages/ItineraryView";
 import ItineraryResult from "./pages/ItineraryResult"; // ✅ ADD THIS IMPORT
 import RefundRequest from "./pages/RefundRequest";
 import UserRefundList from "./components/UserRefundList";
+// ✅ NEW: Personalized Recommendations
+import DiscoveryWrappedNew from "./pages/DiscoveryWrappedNew";
 // import ItineraryView from "./pages/ItineraryView";
 
 // ✅ THÊM: Import Admin components
 // import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
 import AdminRoutes from "./admin/routes/AdminRoutes";
-
-// Import Guide Routes
 import GuideRoutes from "./guide/routes/guideRoutes";
 
 // Route guard
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
-  if (booting) return <p className="p-6">Loading...</p>;
+  if (booting) return 
   if (!isAuth) return <Navigate to="/login" replace />;
   return children;
 }
@@ -187,7 +188,15 @@ export default function App() {
           }
         />
         <Route
-          path="/discover/results"
+          path="/discover-wrapped"
+          element={
+            <ProtectedRoute>
+              <DiscoverWrapped />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/discover-results"
           element={
             <ProtectedRoute>
               <DiscoverResults />
@@ -195,6 +204,23 @@ export default function App() {
           }
         />
 
+        {/* ✅ NEW: Personalized Recommendations - Using new Spotify-style component */}
+        <Route
+          path="/recommendations/profile"
+          element={
+            <ProtectedRoute>
+              <DiscoveryWrappedNew />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recommendations/wrapped"
+          element={
+            <ProtectedRoute>
+              <DiscoveryWrappedNew />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/zone/:zoneId" element={<ZoneDetail />} />
         {/* ✅ ADD: Itinerary routes */}
         <Route
