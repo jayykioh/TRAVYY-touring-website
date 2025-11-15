@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { AuthCtx } from "./context";
 import { identifyUser, resetPostHog } from '../utils/posthog';
 const API_BASE = "http://localhost:4000";
@@ -154,14 +154,36 @@ export default function AuthProvider({ children }) {
 
   // ✅ thêm flag để tránh refresh sau khi logout
   const [isLoggedOut, setIsLoggedOut] = useState(false);
+  const hasCheckedLogout = useRef(false); // ✅ Prevent double-check in Strict Mode
 
   // App mount: sau khi Google redirect về, gọi refresh để lấy access, rồi gọi /me (Bearer)
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        if (isLoggedOut || cancelled) return; // 👈 tránh auto refresh sau logout
+        // ✅ Check if user just logged out (prevent auto-login on F5)
+        // Use ref to ensure this only runs once even in React Strict Mode
+        if (!hasCheckedLogout.current) {
+          const justLoggedOut = localStorage.getItem("justLoggedOut");
+          if (justLoggedOut === "true") {
+            console.log("🚫 Just logged out detected - SKIPPING auto-login");
+            localStorage.removeItem("justLoggedOut"); // Clear flag
+            hasCheckedLogout.current = true; // Mark as checked
+            setBooting(false);
+            setUser(null);
+            setAccessToken(null);
+            return;
+          }
+          hasCheckedLogout.current = true; // Mark as checked even if no logout flag
+        }
 
+        if (isLoggedOut || cancelled) {
+          console.log("🚫 isLoggedOut or cancelled - SKIPPING refresh");
+          setBooting(false);
+          return;
+        }
+
+        console.log("� Attempting auto-login via refresh...");
         const r = await api(`${API_BASE}/api/auth/refresh`, { method: "POST" });
         console.log("🔄 Refresh response:", {
           accountStatus: r?.accountStatus,
@@ -241,12 +263,17 @@ export default function AuthProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [isLoggedOut]); // 👈 thêm dependency để khi logout => dừng refresh
+  }, []); // ✅ Only run once on mount - isLoggedOut check is inside the function
 
   // expose a helper to clear banned info (e.g., after logout)
   const clearBannedInfo = () => setBannedInfo(null);
 
   async function logout() {
+    // ✅ Set flag IMMEDIATELY before any async operation
+    console.log("🚪 Setting justLoggedOut flag BEFORE logout");
+    localStorage.setItem("justLoggedOut", "true");
+    setIsLoggedOut(true);
+
     try {
       await api(`${API_BASE}/api/auth/logout`, { method: "POST" });
     } catch (err) {
@@ -255,7 +282,6 @@ export default function AuthProvider({ children }) {
       // 🧹 Dọn sạch session phía client
       setAccessToken(null);
       setUser(null);
-      setIsLoggedOut(true);
 
       // ✅ Keep trustedDeviceToken in localStorage (don't remove on logout)
       // User can still skip 2FA on next login if they chose "Remember this device"
@@ -281,6 +307,10 @@ export default function AuthProvider({ children }) {
           .replace(/^ +/, "")
           .replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
       });
+
+      // 🚀 Force redirect to login page to prevent auto-refresh
+      console.log("🚀 Redirecting to login page...");
+      window.location.href = "/";
     }
   }
 

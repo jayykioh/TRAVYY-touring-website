@@ -267,10 +267,21 @@ export default function AdminHeader({ toggleSidebar, isSidebarOpen }) {
               >
                 <img
                   src={
-                    user?.avatar ||
-                    "https://ui-avatars.com/api/?name=Admin&background=3B82F6&color=fff"
+                    user?._id
+                      ? `${
+                          import.meta.env.VITE_API_URL ||
+                          "http://localhost:4000"
+                        }/api/profile/avatar/${user._id}?v=${Date.now()}`
+                      : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                          user?.name || "Admin"
+                        )}&background=3B82F6&color=fff`
                   }
                   alt="Profile"
+                  onError={(e) => {
+                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                      user?.name || "Admin"
+                    )}&background=3B82F6&color=fff`;
+                  }}
                   className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover ring-2 ring-white/50"
                 />
                 <div className="hidden md:block text-left">
@@ -295,10 +306,21 @@ export default function AdminHeader({ toggleSidebar, isSidebarOpen }) {
                     <div className="p-4 border-b border-gray-200 flex items-center gap-3">
                       <img
                         src={
-                          user?.avatar ||
-                          "https://ui-avatars.com/api/?name=Admin&background=3B82F6&color=fff"
+                          user?._id
+                            ? `${
+                                import.meta.env.VITE_API_URL ||
+                                "http://localhost:4000"
+                              }/api/profile/avatar/${user._id}?v=${Date.now()}`
+                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                user?.name || "Admin"
+                              )}&background=3B82F6&color=fff`
                         }
                         alt="Profile"
+                        onError={(e) => {
+                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                            user?.name || "Admin"
+                          )}&background=3B82F6&color=fff`;
+                        }}
                         className="w-12 h-12 rounded-full object-cover"
                       />
                       <div>

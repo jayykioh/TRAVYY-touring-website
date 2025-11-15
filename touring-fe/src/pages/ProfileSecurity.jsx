@@ -38,6 +38,14 @@ export default function ProfileSecurity() {
   const [trustedDevices, setTrustedDevices] = useState([]);
   const [deletingDeviceId, setDeletingDeviceId] = useState(null);
 
+  // Delete confirmation modal states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteType, setDeleteType] = useState(null); // 'single' | 'all'
+  const [deviceToDelete, setDeviceToDelete] = useState(null);
+
+  // API URL
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
   // ✅ Fetch security settings (có thể gọi lại)
   const fetchSecuritySettings = async () => {
     try {
@@ -199,25 +207,22 @@ export default function ProfileSecurity() {
 
   // =================== TRUSTED DEVICES HANDLERS ===================
 
-  const handleRemoveDevice = async (deviceId) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa thiết bị này?")) return;
+  const handleRemoveDevice = (deviceId) => {
+    setDeviceToDelete(deviceId);
+    setDeleteType("single");
+    setShowDeleteModal(true);
+  };
 
+  const confirmRemoveDevice = async () => {
     try {
-      setDeletingDeviceId(deviceId);
+      setDeletingDeviceId(deviceToDelete);
+      setShowDeleteModal(false);
 
-      const response = await fetch(
-        `${
-          import.meta.env.VITE_API_URL
-        }/api/security/trusted-devices/${deviceId}`,
-        {
-          method: "DELETE",
-          headers: await withAuth(),
-        }
+      // ✅ withAuth is a fetch wrapper, not a header generator
+      await withAuth(
+        `${API_URL}/api/security/trusted-devices/${deviceToDelete}`,
+        { method: "DELETE" }
       );
-
-      if (!response.ok) {
-        throw new Error("Không thể xóa thiết bị");
-      }
 
       handleSave("✅ Đã xóa thiết bị thành công");
       await fetchSecuritySettings(); // Refresh list
@@ -227,31 +232,24 @@ export default function ProfileSecurity() {
       });
     } finally {
       setDeletingDeviceId(null);
+      setDeviceToDelete(null);
     }
   };
 
-  const handleRemoveAllDevices = async () => {
-    if (
-      !confirm(
-        "Bạn có chắc chắn muốn xóa TẤT CẢ thiết bị đã tin cậy? Bạn sẽ phải verify 2FA lại lần đăng nhập sau."
-      )
-    )
-      return;
+  const handleRemoveAllDevices = () => {
+    setDeleteType("all");
+    setShowDeleteModal(true);
+  };
 
+  const confirmRemoveAllDevices = async () => {
     try {
       setSaving(true);
+      setShowDeleteModal(false);
 
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/security/trusted-devices`,
-        {
-          method: "DELETE",
-          headers: await withAuth(),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Không thể xóa thiết bị");
-      }
+      // ✅ withAuth is a fetch wrapper, not a header generator
+      await withAuth(`${API_URL}/api/security/trusted-devices`, {
+        method: "DELETE",
+      });
 
       handleSave("✅ Đã xóa tất cả thiết bị thành công");
       await fetchSecuritySettings(); // Refresh list
@@ -607,6 +605,52 @@ export default function ProfileSecurity() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Xác nhận xóa thiết bị
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {deleteType === "all"
+                    ? "Bạn có chắc chắn muốn xóa TẤT CẢ thiết bị đã tin cậy? Bạn sẽ phải verify 2FA lại lần đăng nhập sau."
+                    : "Bạn có chắc chắn muốn xóa thiết bị này? Bạn sẽ phải verify 2FA lại khi đăng nhập trên thiết bị này."}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeviceToDelete(null);
+                  setDeleteType(null);
+                }}
+                className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={
+                  deleteType === "all"
+                    ? confirmRemoveAllDevices
+                    : confirmRemoveDevice
+                }
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+              >
+                Xác nhận xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

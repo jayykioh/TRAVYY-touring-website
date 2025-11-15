@@ -64,6 +64,7 @@ function Login() {
       // Step 1: Initial login to check credentials
       const response = await fetch(`${API}/api/auth/login`, {
         method: "POST",
+        credentials: "include", // ✅ CRITICAL: Send/receive cookies
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: form.username,

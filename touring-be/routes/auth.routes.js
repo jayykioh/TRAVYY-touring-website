@@ -183,13 +183,21 @@ router.post("/set-role", authJwt, async (req, res) => {
 
 router.post("/logout", async (req, res) => {
   try {
-    // 🧹 Xoá cookie refresh_token triệt để
+    console.log("🚪 Logout request - clearing refresh_token cookie");
+    console.log(
+      "   Cookie before clear:",
+      req.cookies?.refresh_token ? "EXISTS" : "NOT FOUND"
+    );
+
+    // 🧹 Xoá cookie refresh_token - MUST match the exact path used when setting!
     res.clearCookie("refresh_token", {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? "none" : "lax",
-      path: "/", // 👈 QUAN TRỌNG: phải để "/" để xoá toàn bộ scope cookie
+      path: "/api/auth", // ✅ CRITICAL: Must match the path when cookie was set!
     });
+
+    console.log("   ✅ Sent clearCookie command with path=/api/auth");
 
     // 🧠 Có thể trả thêm header cho FE confirm
     return res.status(200).json({ ok: true, message: "Logged out" });
