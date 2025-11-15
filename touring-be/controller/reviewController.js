@@ -482,11 +482,19 @@ const getReviewableBookings = async (req, res) => {
         (id) => id.toString() === booking._id.toString()
       );
 
-      // Kiểm tra tour date đã qua (user phải đi tour rồi mới được review)
+      // ✅ Kiểm tra tour date đã qua (user phải đi tour rồi mới được review)
+      // Check if ANY item in the booking has a date that has passed
       const hasTourPassed =
         booking.items &&
         booking.items.length > 0 &&
-        new Date(booking.items[0].date) <= now;
+        booking.items.some((item) => {
+          if (!item.date) return false;
+          const tourDate = new Date(item.date);
+          // ✅ Tour must have happened at least 1 day ago to be reviewable
+          const oneDayAgo = new Date(now);
+          oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+          return tourDate <= oneDayAgo;
+        });
 
       return notReviewedYet && hasTourPassed;
     });

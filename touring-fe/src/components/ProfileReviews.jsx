@@ -1,16 +1,28 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Star, MessageCircle, ThumbsUp, Calendar, User, ChevronDown, ChevronUp, Camera, Trash2, Users } from "lucide-react";
+import {
+  X,
+  Star,
+  MessageCircle,
+  ThumbsUp,
+  Calendar,
+  User,
+  ChevronDown,
+  ChevronUp,
+  Camera,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../auth/context";
 import { useNavigate } from "react-router-dom";
 // =============== ReviewModal Component ===============
-function ReviewModal({ 
-  isOpen, 
-  onClose, 
-  tourId, 
+function ReviewModal({
+  isOpen,
+  onClose,
+  tourId,
   tourTitle,
   bookingId,
-  onReviewSubmitted 
+  onReviewSubmitted,
 }) {
   const { user, withAuth } = useAuth();
   const [rating, setRating] = useState(0);
@@ -25,20 +37,21 @@ function ReviewModal({
   // Handle image upload
   const handleImageUpload = async (files) => {
     if (!files || files.length === 0) return;
-    
+
     setUploadingImages(true);
     const newImages = [];
-    
+
     try {
       for (const file of files) {
         // Validate file type and size
-        if (!file.type.startsWith('image/')) {
-          toast.error('Chỉ chấp nhận file hình ảnh');
+        if (!file.type.startsWith("image/")) {
+          toast.error("Chỉ chấp nhận file hình ảnh");
           continue;
         }
-        
-        if (file.size > 5 * 1024 * 1024) { // 5MB limit
-          toast.error('Kích thước file không được vượt quá 5MB');
+
+        if (file.size > 5 * 1024 * 1024) {
+          // 5MB limit
+          toast.error("Kích thước file không được vượt quá 5MB");
           continue;
         }
 
@@ -48,32 +61,31 @@ function ReviewModal({
           reader.onload = (e) => resolve(e.target.result);
           reader.readAsDataURL(file);
         });
-        
+
         newImages.push({
           id: Date.now() + Math.random(),
           url: base64,
           file: file,
-          name: file.name
+          name: file.name,
         });
       }
-      
-      setImages(prev => [...prev, ...newImages].slice(0, 5)); // Max 5 images
-      
+
+      setImages((prev) => [...prev, ...newImages].slice(0, 5)); // Max 5 images
     } catch (error) {
-      console.error('Error uploading images:', error);
-      toast.error('Có lỗi khi tải hình ảnh');
+      console.error("Error uploading images:", error);
+      toast.error("Có lỗi khi tải hình ảnh");
     } finally {
       setUploadingImages(false);
     }
   };
 
   const removeImage = (imageId) => {
-    setImages(prev => prev.filter(img => img.id !== imageId));
+    setImages((prev) => prev.filter((img) => img.id !== imageId));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!user?.token) {
       toast.error("Vui lòng đăng nhập để đánh giá");
       return;
@@ -97,22 +109,26 @@ function ReviewModal({
         bookingId,
         rating,
         title: `Đánh giá ${rating} sao`,
-        content: comment.trim()
+        content: comment.trim(),
       });
-      
+
       // Ensure IDs are primitive strings when sending to the API
       const payload = {
-        tourId: typeof tourId === 'object' ? (tourId._id || tourId.toString()) : tourId,
-        bookingId: typeof bookingId === 'object' ? (bookingId._id || bookingId.toString()) : bookingId,
+        tourId:
+          typeof tourId === "object" ? tourId._id || tourId.toString() : tourId,
+        bookingId:
+          typeof bookingId === "object"
+            ? bookingId._id || bookingId.toString()
+            : bookingId,
         rating,
         title: `Đánh giá ${rating} sao`,
         content: comment.trim(),
-        images: images.map(img => ({ url: img.url, name: img.name }))
+        images: images.map((img) => ({ url: img.url, name: img.name })),
       };
 
-      const data = await withAuth('/api/reviews', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const data = await withAuth("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
@@ -125,20 +141,20 @@ function ReviewModal({
       setImages([]);
     } catch (error) {
       console.error("Error submitting review:", error);
-      
+
       // Try to get error message from response
       let errorMessage = "Không thể gửi đánh giá. Vui lòng thử lại";
-      
+
       if (error?.message) {
         // If error has a message, use it
         errorMessage = error.message;
       }
-      
+
       // Check if it's a 409 conflict (duplicate review)
-      if (error?.message?.includes('409') || error?.status === 409) {
+      if (error?.message?.includes("409") || error?.status === 409) {
         errorMessage = "Bạn đã đánh giá tour này rồi. Vui lòng tải lại trang.";
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -150,9 +166,7 @@ function ReviewModal({
       <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Đánh giá tour
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-900">Đánh giá tour</h2>
           <button
             onClick={onClose}
             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -190,8 +204,8 @@ function ReviewModal({
                     <Star
                       className={`w-8 h-8 transition-colors ${
                         star <= (hoverRating || rating)
-                          ? 'text-yellow-400 fill-current'
-                          : 'text-gray-300'
+                          ? "text-yellow-400 fill-current"
+                          : "text-gray-300"
                       }`}
                     />
                   </button>
@@ -208,55 +222,65 @@ function ReviewModal({
               )}
             </div>
 
-                          {/* Comment */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Chia sẻ trải nghiệm của bạn *
-                  </label>
-                  <textarea
-                    value={comment}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value.length > 200) {
-                        toast.error("Đã vượt quá 700 ký tự cho phép");
-                        return; 
-                      }
-                      setComment(value);
-                    }}
-                    placeholder="Hãy chia sẻ cảm nhận của bạn về tour này..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                    rows={4}
-                    disabled={isSubmitting}
-                    required
-                    minLength={10}
-                  />
-                  <div className="flex justify-between text-xs mt-1">
-                    <p className={`${comment.length < 10 ? "text-red-500" : "text-gray-500"}`}>
-                      
-                    </p>
-                    <p className={`${comment.length > 200 ? "text-red-500" : "text-gray-500"}`}>
-                      Tối đa 200 ký tự
-                    </p>
-                  </div>
-                </div>
+            {/* Comment */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Chia sẻ trải nghiệm của bạn *
+              </label>
+              <textarea
+                value={comment}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.length > 200) {
+                    toast.error("Đã vượt quá 700 ký tự cho phép");
+                    return;
+                  }
+                  setComment(value);
+                }}
+                placeholder="Hãy chia sẻ cảm nhận của bạn về tour này..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                rows={4}
+                disabled={isSubmitting}
+                required
+                minLength={10}
+              />
+              <div className="flex justify-between text-xs mt-1">
+                <p
+                  className={`${
+                    comment.length < 10 ? "text-red-500" : "text-gray-500"
+                  }`}
+                ></p>
+                <p
+                  className={`${
+                    comment.length > 200 ? "text-red-500" : "text-gray-500"
+                  }`}
+                >
+                  Tối đa 200 ký tự
+                </p>
+              </div>
+            </div>
             {/* Image Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Thêm hình ảnh (tùy chọn)
               </label>
-              
+
               {/* Upload Button */}
               <div className="flex items-center gap-3 mb-3">
                 <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
                   <Camera className="w-4 h-4" />
-                  {uploadingImages ? 'Đang tải...' : 'Chọn hình ảnh'}
+                  {uploadingImages ? "Đang tải..." : "Chọn hình ảnh"}
                   <input
                     type="file"
                     multiple
                     accept="image/*"
-                    onChange={(e) => handleImageUpload(Array.from(e.target.files))}
+                    onChange={(e) =>
+                      handleImageUpload(Array.from(e.target.files))
+                    }
                     className="hidden"
-                    disabled={isSubmitting || uploadingImages || images.length >= 5}
+                    disabled={
+                      isSubmitting || uploadingImages || images.length >= 5
+                    }
                   />
                 </label>
                 <span className="text-xs text-gray-500">
@@ -301,7 +325,9 @@ function ReviewModal({
               <button
                 type="submit"
                 className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                disabled={isSubmitting || rating === 0 || comment.trim().length < 10}
+                disabled={
+                  isSubmitting || rating === 0 || comment.trim().length < 10
+                }
               >
                 {isSubmitting ? (
                   <>
@@ -309,7 +335,7 @@ function ReviewModal({
                     Đang gửi...
                   </>
                 ) : (
-                  'Gửi đánh giá'
+                  "Gửi đánh giá"
                 )}
               </button>
             </div>
@@ -325,10 +351,10 @@ function ReviewCard({ review }) {
   const [showFullContent, setShowFullContent] = useState(false);
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: 'long', 
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString("vi-VN", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -337,7 +363,7 @@ function ReviewCard({ review }) {
       <Star
         key={index}
         className={`w-4 h-4 ${
-          index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+          index < rating ? "text-yellow-400 fill-current" : "text-gray-300"
         }`}
       />
     ));
@@ -353,7 +379,7 @@ function ReviewCard({ review }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <p className="font-medium text-gray-900">
-              {review.userId?.name || 'Ẩn danh'}
+              {review.userId?.name || "Ẩn danh"}
             </p>
             <div className="flex items-center gap-1">
               {renderStars(review.rating)}
@@ -378,7 +404,10 @@ function ReviewCard({ review }) {
           {showFullContent ? (
             <p>{review.content}</p>
           ) : (
-            <p>{review.content?.slice(0, 150)}{review.content?.length > 150 ? '...' : ''}</p>
+            <p>
+              {review.content?.slice(0, 150)}
+              {review.content?.length > 150 ? "..." : ""}
+            </p>
           )}
           {review.content?.length > 150 && (
             <button
@@ -386,9 +415,13 @@ function ReviewCard({ review }) {
               className="text-blue-600 hover:text-blue-700 mt-1 inline-flex items-center gap-1 text-xs"
             >
               {showFullContent ? (
-                <>Thu gọn <ChevronUp className="w-3 h-3" /></>
+                <>
+                  Thu gọn <ChevronUp className="w-3 h-3" />
+                </>
               ) : (
-                <>Xem thêm <ChevronDown className="w-3 h-3" /></>
+                <>
+                  Xem thêm <ChevronDown className="w-3 h-3" />
+                </>
               )}
             </button>
           )}
@@ -406,7 +439,7 @@ function ReviewCard({ review }) {
                   className="w-full h-20 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
                   onClick={() => {
                     // Open image in modal (you can implement this later)
-                    window.open(image.url, '_blank');
+                    window.open(image.url, "_blank");
                   }}
                 />
               ))}
@@ -430,7 +463,9 @@ function ReviewCard({ review }) {
             <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
               <MessageCircle className="w-3 h-3 text-blue-600" />
             </div>
-            <span className="text-sm font-medium text-gray-900">Phản hồi từ nhà cung cấp</span>
+            <span className="text-sm font-medium text-gray-900">
+              Phản hồi từ nhà cung cấp
+            </span>
           </div>
           <p className="text-sm text-gray-700">{review.response.content}</p>
         </div>
@@ -444,20 +479,22 @@ function TourReviews({ tourId }) {
   const [reviews, setReviews] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState('newest');
+  const [sortBy, setSortBy] = useState("newest");
 
   const fetchReviews = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/reviews/tour/${tourId}?sort=${sortBy}`);
+      const response = await fetch(
+        `/api/reviews/tour/${tourId}?sort=${sortBy}`
+      );
       const data = await response.json();
-      
+
       if (response.ok) {
         setReviews(data.reviews || []);
         setStats(data.stats || null);
       }
     } catch (error) {
-      console.error('Error fetching reviews:', error);
+      console.error("Error fetching reviews:", error);
     } finally {
       setLoading(false);
     }
@@ -471,25 +508,23 @@ function TourReviews({ tourId }) {
     if (!stats?.ratingDistribution) return null;
 
     const total = stats.totalReviews || 1;
-    
+
     return (
       <div className="space-y-2">
         {[5, 4, 3, 2, 1].map((rating) => {
           const count = stats.ratingDistribution[rating] || 0;
           const percentage = Math.round((count / total) * 100);
-          
+
           return (
             <div key={rating} className="flex items-center gap-2 text-sm">
               <span className="w-8 text-right">{rating}★</span>
               <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-amber-400 transition-all duration-500"
                   style={{ width: `${percentage}%` }}
                 />
               </div>
-              <span className="text-gray-500 w-8 text-right">
-                {count}
-              </span>
+              <span className="text-gray-500 w-8 text-right">{count}</span>
             </div>
           );
         })}
@@ -543,7 +578,7 @@ function TourReviews({ tourId }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="text-center">
               <div className="text-3xl font-bold text-gray-900 mb-2">
-                {stats.averageRating?.toFixed(1) || '0.0'}
+                {stats.averageRating?.toFixed(1) || "0.0"}
               </div>
               <div className="flex justify-center gap-1 mb-2">
                 {Array.from({ length: 5 }, (_, i) => (
@@ -551,8 +586,8 @@ function TourReviews({ tourId }) {
                     key={i}
                     className={`w-5 h-5 ${
                       i < Math.round(stats.averageRating || 0)
-                        ? 'text-yellow-400 fill-current'
-                        : 'text-gray-300'
+                        ? "text-yellow-400 fill-current"
+                        : "text-gray-300"
                     }`}
                   />
                 ))}
@@ -561,9 +596,7 @@ function TourReviews({ tourId }) {
                 Dựa trên {stats.totalReviews} đánh giá
               </p>
             </div>
-            <div>
-              {renderRatingDistribution()}
-            </div>
+            <div>{renderRatingDistribution()}</div>
           </div>
         </div>
       )}
@@ -571,9 +604,7 @@ function TourReviews({ tourId }) {
       {/* Sort Controls */}
       {reviews.length > 0 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600">
-            {reviews.length} đánh giá
-          </p>
+          <p className="text-sm text-gray-600">{reviews.length} đánh giá</p>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
@@ -613,35 +644,43 @@ export default function ProfileReviews() {
   const [pendingBookings, setPendingBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reviewModal, setReviewModal] = useState(null);
-  const [activeTab, setActiveTab] = useState('reviewed'); // 'reviewed' or 'pending'
+  const [activeTab, setActiveTab] = useState("reviewed"); // 'reviewed' or 'pending'
 
   // ✅ Add effect to log state changes
   useEffect(() => {
-    console.log('📊 State changed - Reviews:', userReviews.length, 'Pending:', pendingBookings.length);
+    console.log(
+      "📊 State changed - Reviews:",
+      userReviews.length,
+      "Pending:",
+      pendingBookings.length
+    );
   }, [userReviews, pendingBookings]);
 
   // Fetch user's reviews and pending bookings
   useEffect(() => {
     const fetchData = async () => {
       if (!user?.token) return;
-      
+
       try {
         setLoading(true);
-        
+
         // ✅ Fetch both reviews and reviewable tours from backend
         const [reviewsData, reviewableData] = await Promise.all([
-          withAuth('/api/reviews/my?limit=50'), // ✅ Increase limit to fetch more reviews
-          withAuth('/api/reviews/reviewable-bookings')
+          withAuth("/api/reviews/my?limit=50"), // ✅ Increase limit to fetch more reviews
+          withAuth("/api/reviews/reviewable-bookings"),
         ]);
-        
+
         const reviews = reviewsData.reviews || [];
         // Backend returns { bookings: [...] }
         const reviewableBookings = reviewableData.bookings || [];
 
-        console.log('✅ Fetched reviews:', reviews.length);
-        console.log('⏳ Reviewable bookings:', reviewableBookings.length);
-        console.log('📋 Reviewable bookings data:', reviewableBookings);
-        console.log('📊 Total reviews in pagination:', reviewsData.pagination?.totalReviews);
+        console.log("✅ Fetched reviews:", reviews.length);
+        console.log("⏳ Reviewable bookings:", reviewableBookings.length);
+        console.log("📋 Reviewable bookings data:", reviewableBookings);
+        console.log(
+          "📊 Total reviews in pagination:",
+          reviewsData.pagination?.totalReviews
+        );
 
         // Map backend Booking docs into the compact shape the component expects
         const mapped = reviewableBookings.map((booking) => {
@@ -657,8 +696,8 @@ export default function ProfileReviews() {
         setUserReviews(reviews);
         setPendingBookings(mapped);
       } catch (error) {
-        console.error('Error fetching data:', error);
-        toast.error('Không thể tải dữ liệu đánh giá');
+        console.error("Error fetching data:", error);
+        toast.error("Không thể tải dữ liệu đánh giá");
       } finally {
         setLoading(false);
       }
@@ -670,7 +709,9 @@ export default function ProfileReviews() {
   if (!user) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">Vui lòng đăng nhập để xem đánh giá của bạn</p>
+        <p className="text-gray-500">
+          Vui lòng đăng nhập để xem đánh giá của bạn
+        </p>
       </div>
     );
   }
@@ -701,284 +742,324 @@ export default function ProfileReviews() {
   return (
     <div key={`reviews-${userReviews.length}-${pendingBookings.length}`}>
       <h1 className="text-xl font-bold mb-4">Đánh giá của bạn</h1>
-      
+
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab('reviewed')}
-          className={`px-4 py-2 font-medium transition-colors relative ${
-            activeTab === 'reviewed'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          Đã đánh giá
-          {userReviews.length > 0 && (
-            <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded-full">
-              {userReviews.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('pending')}
-          className={`px-4 py-2 font-medium transition-colors relative ${
-            activeTab === 'pending'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          Chờ đánh giá
-          {pendingBookings.length > 0 && (
-            <span className="ml-2 px-2 py-0.5 bg-orange-100 text-orange-600 text-xs rounded-full">
-              {pendingBookings.length}
-            </span>
-          )}
-        </button>
+      <div className="mb-6">
+        <div className="flex gap-2 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab("reviewed")}
+            className={`px-4 py-2 font-medium transition-colors relative ${
+              activeTab === "reviewed"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Đã đánh giá
+            {userReviews.length > 0 && (
+              <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded-full">
+                {userReviews.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("pending")}
+            className={`px-4 py-2 font-medium transition-colors relative ${
+              activeTab === "pending"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Chờ đánh giá
+            {pendingBookings.length > 0 && (
+              <span className="ml-2 px-2 py-0.5 bg-orange-100 text-orange-600 text-xs rounded-full">
+                {pendingBookings.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Info banner for pending tab */}
+        {activeTab === "pending" && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
+            <MessageCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-800">
+              <p className="font-medium mb-1">📌 Quy định đánh giá</p>
+              <p>
+                Bạn chỉ có thể đánh giá tour sau khi đã hoàn thành chuyến đi (ít
+                nhất 1 ngày sau ngày khởi hành). Điều này giúp đảm bảo đánh giá
+                dựa trên trải nghiệm thực tế.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'reviewed' ? (
+      {activeTab === "reviewed" ? (
         // Reviewed tab content
         userReviews.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
             <p>Bạn chưa có đánh giá nào</p>
-            <p className="text-sm">Hãy đặt tour và chia sẻ trải nghiệm của bạn!</p>
-          </div>
-        ) : (
-          <div className="space-y-4">{userReviews.map((review) => (
-            <div key={review._id} className="border rounded-lg p-4 bg-white">
-              <div className="flex items-start gap-4 mb-3">
-                {/* Tour Image */}
-                {review.tourId?.imageItems && review.tourId.imageItems.length > 0 && (
-                  <img
-                    src={review.tourId.imageItems[0].imageUrl}
-                    alt={review.tourId.title}
-                    className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
-                  />
-                )}
-                
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
-                     <h3
-                      onClick={() => {
-                        if (review.tourId?._id) {
-                          navigate(`/tours/${review.tourId._id}`);
-                          // Scroll to reviews section after navigation
-                          setTimeout(() => {
-                            const reviewsSection = document.getElementById('reviews');
-                            if (reviewsSection) {
-                              reviewsSection.scrollIntoView({ behavior: 'smooth' });
-                            }
-                          }, 100);
-                        }
-                      }}
-                      className="font-semibold text-gray-900 hover:text-blue-600 cursor-pointer transition-colors"
-                    >
-                      {review.tourId?.title || "Tour đã bị xóa"}
-                    </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: 5 }, (_, i) => (
-                            <Star
-                              key={i}
-                              className={`w-4 h-4 ${
-                                i < review.rating 
-                                  ? 'text-yellow-400 fill-current' 
-                                  : 'text-gray-300'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-sm text-gray-500">
-                          {new Date(review.createdAt).toLocaleDateString('vi-VN')}
-                        </span>
-                      </div>
-                    </div>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      review.status === 'approved' 
-                        ? 'bg-green-100 text-green-700' 
-                        : review.status === 'pending'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}>
-                      {review.status === 'approved' && 'Đã duyệt'}
-                      {review.status === 'pending' && 'Chờ duyệt'}
-                      {review.status === 'rejected' && 'Từ chối'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              <h4 className="font-medium mb-2">{review.title}</h4>
-              <p className="text-gray-700 text-sm mb-3">{review.content}</p>
-              
-              {/* Review Images in Profile */}
-              {review.images && review.images.length > 0 && (
-                <div className="mb-3">
-                  <div className="grid grid-cols-3 gap-2">
-                    {review.images.map((image, index) => (
-                      <img
-                        key={index}
-                        src={image.url}
-                        alt={`Review image ${index + 1}`}
-                        className="w-full h-16 object-cover rounded border border-gray-200"
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {review.response && (
-                <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                  <div className="flex items-center gap-2 mb-1">
-                    <MessageCircle className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-900">
-                      Phản hồi từ nhà cung cấp
-                    </span>
-                  </div>
-                  <p className="text-sm text-blue-800">{review.response.content}</p>
-                </div>
-              )}
-              
-              <div className="flex items-center justify-between mt-3 text-sm text-gray-500">
-                <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1">
-                    <ThumbsUp className="w-4 h-4" />
-                    {review.likesCount || 0} hữu ích
-                  </span>
-                  {review.tourId?._id && (
-                    <button
-                      onClick={() => {
-                        navigate(`/tours/${review.tourId._id}`);
-                        // Scroll to reviews section after navigation
-                        setTimeout(() => {
-                          const reviewsSection = document.getElementById('reviews');
-                          if (reviewsSection) {
-                            reviewsSection.scrollIntoView({ behavior: 'smooth' });
-                          }
-                        }, 100);
-                      }}
-                      className="text-blue-600 hover:text-blue-700 transition-colors text-xs"
-                    >
-                      Xem trang tour →
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        )
-      ) : (
-        // Pending reviews tab content - show individual tours that haven't been reviewed
-        pendingBookings.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Star className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p>Không có tour nào cần đánh giá</p>
-            <p className="text-sm">Hoàn thành tour để đánh giá nhé!</p>
+            <p className="text-sm">
+              Hãy đặt tour và chia sẻ trải nghiệm của bạn!
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {pendingBookings.map((item, idx) => {
-              // Backend returns: { bookingId, tourId, tourInfo, date, adults, children, bookingDate }
-              const tourId = item.tourId;
-              const tourInfo = item.tourInfo || {};
-              
-              // ✅ Get first image URL from imageItems array (array of objects with imageUrl property)
-              const tourImage = tourInfo.imageItems && tourInfo.imageItems.length > 0 
-                ? tourInfo.imageItems[0].imageUrl 
-                : null;
-              
-              console.log('Pending tour item:', { 
-                tourId, 
-                title: tourInfo.title, 
-                imageItems: tourInfo.imageItems,
-                firstImageObj: tourInfo.imageItems?.[0],
-                tourImage 
-              });
-              
-              return (
-                <div key={`${item.bookingId}-${tourId}-${idx}`} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                  {/* Header */}
-                  <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-600">
-                          Đặt ngày: {formatDateVN(item.bookingDate)}
-                        </span>
+            {userReviews.map((review) => (
+              <div key={review._id} className="border rounded-lg p-4 bg-white">
+                <div className="flex items-start gap-4 mb-3">
+                  {/* Tour Image */}
+                  {review.tourId?.imageItems &&
+                    review.tourId.imageItems.length > 0 && (
+                      <img
+                        src={review.tourId.imageItems[0].imageUrl}
+                        alt={review.tourId.title}
+                        className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                      />
+                    )}
+
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3
+                          onClick={() => {
+                            if (review.tourId?._id) {
+                              navigate(`/tours/${review.tourId._id}`);
+                              // Scroll to reviews section after navigation
+                              setTimeout(() => {
+                                const reviewsSection =
+                                  document.getElementById("reviews");
+                                if (reviewsSection) {
+                                  reviewsSection.scrollIntoView({
+                                    behavior: "smooth",
+                                  });
+                                }
+                              }, 100);
+                            }
+                          }}
+                          className="font-semibold text-gray-900 hover:text-blue-600 cursor-pointer transition-colors"
+                        >
+                          {review.tourId?.title || "Tour đã bị xóa"}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-4 h-4 ${
+                                  i < review.rating
+                                    ? "text-yellow-400 fill-current"
+                                    : "text-gray-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-gray-500">
+                            {new Date(review.createdAt).toLocaleDateString(
+                              "vi-VN"
+                            )}
+                          </span>
+                        </div>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
-                        Chưa đánh giá
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          review.status === "approved"
+                            ? "bg-green-100 text-green-700"
+                            : review.status === "pending"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {review.status === "approved" && "Đã duyệt"}
+                        {review.status === "pending" && "Chờ duyệt"}
+                        {review.status === "rejected" && "Từ chối"}
                       </span>
                     </div>
                   </div>
+                </div>
 
-                  {/* Tour content */}
-                  <div className="p-4">
-                    <div className="flex gap-3">
-                      {/* Tour image */}
-                      <div className="w-20 h-20 rounded-lg border border-gray-200 flex-shrink-0 overflow-hidden">
-                        {tourImage ? (
-                          <img
-                            src={tourImage}
-                            alt={tourInfo.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                            <Camera className="w-8 h-8 text-gray-400" />
+                <h4 className="font-medium mb-2">{review.title}</h4>
+                <p className="text-gray-700 text-sm mb-3">{review.content}</p>
+
+                {/* Review Images in Profile */}
+                {review.images && review.images.length > 0 && (
+                  <div className="mb-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      {review.images.map((image, index) => (
+                        <img
+                          key={index}
+                          src={image.url}
+                          alt={`Review image ${index + 1}`}
+                          className="w-full h-16 object-cover rounded border border-gray-200"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {review.response && (
+                  <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                    <div className="flex items-center gap-2 mb-1">
+                      <MessageCircle className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-900">
+                        Phản hồi từ nhà cung cấp
+                      </span>
+                    </div>
+                    <p className="text-sm text-blue-800">
+                      {review.response.content}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between mt-3 text-sm text-gray-500">
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center gap-1">
+                      <ThumbsUp className="w-4 h-4" />
+                      {review.likesCount || 0} hữu ích
+                    </span>
+                    {review.tourId?._id && (
+                      <button
+                        onClick={() => {
+                          navigate(`/tours/${review.tourId._id}`);
+                          // Scroll to reviews section after navigation
+                          setTimeout(() => {
+                            const reviewsSection =
+                              document.getElementById("reviews");
+                            if (reviewsSection) {
+                              reviewsSection.scrollIntoView({
+                                behavior: "smooth",
+                              });
+                            }
+                          }, 100);
+                        }}
+                        className="text-blue-600 hover:text-blue-700 transition-colors text-xs"
+                      >
+                        Xem trang tour →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      ) : // Pending reviews tab content - show individual tours that haven't been reviewed
+      pendingBookings.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          <Star className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+          <p className="font-medium">Không có tour nào cần đánh giá</p>
+          <p className="text-sm mt-2">
+            Tour phải hoàn thành ít nhất 1 ngày trước khi có thể đánh giá
+          </p>
+          <p className="text-sm text-gray-400 mt-1">
+            Hãy đặt tour và trải nghiệm nhé! 🌟
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {pendingBookings.map((item, idx) => {
+            // Backend returns: { bookingId, tourId, tourInfo, date, adults, children, bookingDate }
+            const tourId = item.tourId;
+            const tourInfo = item.tourInfo || {};
+
+            // ✅ Get first image URL from imageItems array (array of objects with imageUrl property)
+            const tourImage =
+              tourInfo.imageItems && tourInfo.imageItems.length > 0
+                ? tourInfo.imageItems[0].imageUrl
+                : null;
+
+            console.log("Pending tour item:", {
+              tourId,
+              title: tourInfo.title,
+              imageItems: tourInfo.imageItems,
+              firstImageObj: tourInfo.imageItems?.[0],
+              tourImage,
+            });
+
+            return (
+              <div
+                key={`${item.bookingId}-${tourId}-${idx}`}
+                className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+              >
+                {/* Header */}
+                <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-600">
+                        Đặt ngày: {formatDateVN(item.bookingDate)}
+                      </span>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                      Chưa đánh giá
+                    </span>
+                  </div>
+                </div>
+
+                {/* Tour content */}
+                <div className="p-4">
+                  <div className="flex gap-3">
+                    {/* Tour image */}
+                    <div className="w-20 h-20 rounded-lg border border-gray-200 flex-shrink-0 overflow-hidden">
+                      {tourImage ? (
+                        <img
+                          src={tourImage}
+                          alt={tourInfo.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                          <Camera className="w-8 h-8 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 mb-2">
+                        {tourInfo.title || "Tour"}
+                      </h3>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                        {item.date && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Calendar className="w-4 h-4" />
+                            <span>Khởi hành: {formatDateVN(item.date)}</span>
                           </div>
                         )}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 mb-2">
-                          {tourInfo.title || 'Tour'}
-                        </h3>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-                          {item.date && (
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <Calendar className="w-4 h-4" />
-                              <span>Khởi hành: {formatDateVN(item.date)}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Users className="w-4 h-4" />
-                            <span>
-                              {item.adults > 0 && `${item.adults} người lớn`}
-                              {item.adults > 0 && item.children > 0 && ", "}
-                              {item.children > 0 && `${item.children} trẻ em`}
-                            </span>
-                          </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Users className="w-4 h-4" />
+                          <span>
+                            {item.adults > 0 && `${item.adults} người lớn`}
+                            {item.adults > 0 && item.children > 0 && ", "}
+                            {item.children > 0 && `${item.children} trẻ em`}
+                          </span>
                         </div>
-
-                        {/* Review button */}
-                        <button
-                          onClick={() => {
-                            setReviewModal({
-                              isOpen: true,
-                              tourId: tourId,
-                              tourTitle: tourInfo.title || 'Tour',
-                              bookingId: item.bookingId
-                            });
-                          }}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
-                        >
-                          <Star className="w-4 h-4" />
-                          Đánh giá tour này
-                        </button>
                       </div>
+
+                      {/* Review button */}
+                      <button
+                        onClick={() => {
+                          setReviewModal({
+                            isOpen: true,
+                            tourId: tourId,
+                            tourTitle: tourInfo.title || "Tour",
+                            bookingId: item.bookingId,
+                          });
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+                      >
+                        <Star className="w-4 h-4" />
+                        Đánh giá tour này
+                      </button>
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {/* Review Modal */}
@@ -992,68 +1073,102 @@ export default function ProfileReviews() {
           onReviewSubmitted={async () => {
             // Close modal first
             setReviewModal(null);
-            
+
             // Show loading toast
-            toast.loading('Đang cập nhật...', { id: 'refresh-reviews' });
-            
+            toast.loading("Đang cập nhật...", { id: "refresh-reviews" });
+
             // Refresh data to update both tabs
             try {
-              console.log('🔄 Refreshing review data...');
-              
+              console.log("🔄 Refreshing review data...");
+
               // ✅ Increase delay to 2 seconds to ensure backend has committed the review
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+
               // ✅ Fetch fresh data from backend
               const [reviewsData, reviewableData] = await Promise.all([
-                withAuth('/api/reviews/my?limit=50'), // ✅ Increase limit to fetch more reviews
-                withAuth('/api/reviews/reviewable-bookings')
+                withAuth("/api/reviews/my?limit=50"), // ✅ Increase limit to fetch more reviews
+                withAuth("/api/reviews/reviewable-bookings"),
               ]);
-              
+
               const reviews = reviewsData.reviews || [];
               const reviewableBookings = reviewableData.bookings || [];
 
-              console.log('✅ Updated reviews count:', reviews.length);
-              console.log('⏳ Updated reviewable count:', reviewableBookings.length);
-              console.log('📊 New reviews:', reviews.map(r => r._id));
-              console.log('📋 New reviewable bookings:', reviewableBookings.map(b => b._id));
-              console.log('📈 Total reviews in DB:', reviewsData.pagination?.totalReviews);
-                console.log('📊 New reviews:', reviews.map(r => r._id));
-                console.log('📋 New reviewable bookings:', reviewableBookings.map(b => b._id));
-                console.log('📈 Total reviews in DB:', reviewsData.pagination?.totalReviews);
+              console.log("✅ Updated reviews count:", reviews.length);
+              console.log(
+                "⏳ Updated reviewable count:",
+                reviewableBookings.length
+              );
+              console.log(
+                "📊 New reviews:",
+                reviews.map((r) => r._id)
+              );
+              console.log(
+                "📋 New reviewable bookings:",
+                reviewableBookings.map((b) => b._id)
+              );
+              console.log(
+                "📈 Total reviews in DB:",
+                reviewsData.pagination?.totalReviews
+              );
+              console.log(
+                "📊 New reviews:",
+                reviews.map((r) => r._id)
+              );
+              console.log(
+                "📋 New reviewable bookings:",
+                reviewableBookings.map((b) => b._id)
+              );
+              console.log(
+                "📈 Total reviews in DB:",
+                reviewsData.pagination?.totalReviews
+              );
 
-                // Map bookings -> compact pending items
-                const mapped = reviewableBookings.map((booking) => {
-                  const firstItem = (booking.items && booking.items[0]) || {};
-                  return {
-                    bookingId: booking._id,
-                    tourId: firstItem.tourId?._id || firstItem.tourId,
-                    tourInfo: firstItem.tourId || {},
-                    bookingDate: firstItem.date || booking.createdAt,
-                  };
-                });
+              // Map bookings -> compact pending items
+              const mapped = reviewableBookings.map((booking) => {
+                const firstItem = (booking.items && booking.items[0]) || {};
+                return {
+                  bookingId: booking._id,
+                  tourId: firstItem.tourId?._id || firstItem.tourId,
+                  tourInfo: firstItem.tourId || {},
+                  bookingDate: firstItem.date || booking.createdAt,
+                };
+              });
 
-                // ✅ Force state update with new array references
-                console.log('🔄 Before setState - userReviews:', userReviews.length, 'pendingBookings:', pendingBookings.length);
+              // ✅ Force state update with new array references
+              console.log(
+                "🔄 Before setState - userReviews:",
+                userReviews.length,
+                "pendingBookings:",
+                pendingBookings.length
+              );
 
-                setUserReviews([...reviews]); // Create new array reference
-                setPendingBookings([...mapped]); // Create new array reference
-              
-              console.log('✅ After setState - should be:', reviews.length, mapped ? mapped.length : reviewableBookings.length);
-              
+              setUserReviews([...reviews]); // Create new array reference
+              setPendingBookings([...mapped]); // Create new array reference
+
+              console.log(
+                "✅ After setState - should be:",
+                reviews.length,
+                mapped ? mapped.length : reviewableBookings.length
+              );
+
               // Wait a tick for state to propagate
-              await new Promise(resolve => setTimeout(resolve, 100));
-              
-              console.log('✅ State updated successfully');
-              
+              await new Promise((resolve) => setTimeout(resolve, 100));
+
+              console.log("✅ State updated successfully");
+
               // Dismiss loading and show success
-              toast.success('Đã thêm đánh giá thành công!', { id: 'refresh-reviews' });
-              
+              toast.success("Đã thêm đánh giá thành công!", {
+                id: "refresh-reviews",
+              });
+
               // Switch to reviewed tab to show the new review
-              setActiveTab('reviewed');
-              
+              setActiveTab("reviewed");
             } catch (error) {
-              console.error('❌ Error refreshing data:', error);
-              toast.error('Không thể cập nhật danh sách. Vui lòng tải lại trang.', { id: 'refresh-reviews' });
+              console.error("❌ Error refreshing data:", error);
+              toast.error(
+                "Không thể cập nhật danh sách. Vui lòng tải lại trang.",
+                { id: "refresh-reviews" }
+              );
             }
           }}
         />

@@ -37,6 +37,7 @@ export default function CustomerAccountsPage() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -48,16 +49,65 @@ export default function CustomerAccountsPage() {
   const [lockReason, setLockReason] = useState("");
   const [expandedLockItems, setExpandedLockItems] = useState({});
 
-  // Fetch customers on mount
+  // ✅ Debounce search term to avoid excessive API calls
   useEffect(() => {
-    loadCustomers();
-  }, []);
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // Wait 500ms after user stops typing
 
-  const loadCustomers = async () => {
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // ✅ Fetch customers with abort controller to cancel stale requests
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    const loadCustomers = async () => {
+      setLoading(true);
+      try {
+        const result = await customerService.getCustomers(
+          {
+            search: debouncedSearchTerm,
+            status: statusFilter,
+          },
+          abortController.signal
+        );
+
+        if (result.success) {
+          const transformedCustomers = result.data.map(
+            customerService.transformUserToCustomer
+          );
+          setCustomers(transformedCustomers);
+        } else {
+          toast.error(result.error || "Không thể tải dữ liệu khách hàng");
+          setCustomers([]);
+        }
+      } catch (error) {
+        // Ignore abort errors
+        if (error.name === "AbortError") {
+          console.log("🔄 Request cancelled");
+          return;
+        }
+        console.error("❌ Load customers error:", error);
+        toast.error("Có lỗi xảy ra khi tải dữ liệu");
+        setCustomers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCustomers();
+
+    // Cleanup: abort request if component unmounts or filters change
+    return () => abortController.abort();
+  }, [debouncedSearchTerm, statusFilter]);
+
+  // ✅ Manual reload function for refresh button
+  const handleRefresh = async () => {
     setLoading(true);
     try {
       const result = await customerService.getCustomers({
-        search: searchTerm,
+        search: debouncedSearchTerm,
         status: statusFilter,
       });
 
@@ -66,47 +116,37 @@ export default function CustomerAccountsPage() {
           customerService.transformUserToCustomer
         );
         setCustomers(transformedCustomers);
+        toast.success("Đã làm mới dữ liệu");
       } else {
-        toast.error(result.error || "Không thể tải dữ liệu khách hàng");
-        setCustomers([]);
+        toast.error(result.error || "Không thể tải dữ liệu");
       }
     } catch (error) {
-      console.error("❌ Load customers error:", error);
-      toast.error("Có lỗi xảy ra khi tải dữ liệu");
-      setCustomers([]);
+      console.error("❌ Refresh error:", error);
+      toast.error("Có lỗi xảy ra");
     } finally {
       setLoading(false);
     }
   };
 
-  // Calculate statistics
+  // ✅ Calculate statistics (memoized to avoid recalculation)
   const stats = useMemo(
     () => customerService.calculateCustomerStats(customers),
     [customers]
   );
 
-  // Filter customers
-  const filteredCustomers = useMemo(() => {
-    return customers.filter((customer) => {
-      const matchesSearch =
-        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.phone.includes(searchTerm) ||
-        customer.id.toLowerCase().includes(searchTerm.toLowerCase());
+  // ✅ No need to filter again - backend already filtered by search & status
+  // Just use customers directly since API returns filtered results
+  const filteredCustomers = customers;
 
-      const matchesStatus =
-        statusFilter === "all" || customer.accountStatus === statusFilter;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [customers, searchTerm, statusFilter]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
-  const paginatedCustomers = filteredCustomers.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // ✅ Pagination (memoized)
+  const { totalPages, paginatedCustomers } = useMemo(() => {
+    const total = Math.ceil(filteredCustomers.length / itemsPerPage);
+    const paginated = filteredCustomers.slice(
+      (currentPage - 1) * itemsPerPage,
+      currentPage * itemsPerPage
+    );
+    return { totalPages: total, paginatedCustomers: paginated };
+  }, [filteredCustomers, currentPage, itemsPerPage]);
 
   const handleViewDetail = (customerId) => {
     navigate(`/admin/customers/${customerId}`);
@@ -128,6 +168,29 @@ export default function CustomerAccountsPage() {
     try {
       const newStatus =
         actionType === "lock" || actionType === "ban" ? "banned" : "active";
+
+      // ✅ Optimistic update - Update UI immediately
+      const optimisticCustomers = customers.map((customer) =>
+        customer.id === selectedAccount.id
+          ? {
+              ...customer,
+              accountStatus: newStatus,
+              lockInfo: lockReason.trim()
+                ? {
+                    reason: lockReason.trim(),
+                    lockedAt: new Date().toISOString(),
+                  }
+                : null,
+            }
+          : customer
+      );
+      setCustomers(optimisticCustomers);
+
+      // Close modal immediately for better UX
+      setShowActionModal(false);
+      setLockReason("");
+
+      // Call API in background
       const result = await customerService.updateCustomerStatus(
         selectedAccount.id,
         newStatus,
@@ -135,23 +198,18 @@ export default function CustomerAccountsPage() {
       );
 
       if (result.success) {
-        // Reload customers
-        await loadCustomers();
         toast.success(result.message || "Cập nhật thành công");
-        setShowActionModal(false);
-        setLockReason("");
       } else {
+        // Rollback on failure
+        setCustomers(customers);
         toast.error(result.error || "Cập nhật thất bại");
       }
     } catch (error) {
+      // Rollback on error
+      setCustomers(customers);
       console.error("❌ Update customer status error:", error);
       toast.error("Có lỗi xảy ra khi cập nhật");
     }
-  };
-
-  const handleRefresh = () => {
-    loadCustomers();
-    toast.success("Đã làm mới dữ liệu");
   };
 
   const closeModal = () => {

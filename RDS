@@ -1,0 +1,46 @@
+RDS
+
+1. Assumptions & Dependencies
+
+Ghi chú: Liệt kê các giả định (AS-*) và phụ thuộc chính (DE-*) áp dụng cho phạm vi dự án TRAVYY - touring website, bao gồm backend Node.js/Express, MongoDB, tích hợp thanh toán, email và quy trình xử lý hoàn tiền.
+
+AS-1: Hệ thống backend chạy trên Node.js (>= v16, khuyến nghị v18+) và sử dụng Express + Mongoose, có khả năng mở rộng theo ngang (horizontal scale).
+AS-2: Dữ liệu giao dịch, booking và refund được lưu trữ trên MongoDB (>= v4.4, khuyến nghị v6+) với replica set và backup định kỳ để đảm bảo bền vững dữ liệu.
+AS-3: Ứng dụng sẽ có môi trường staging và production tách biệt; mọi tích hợp với cổng thanh toán (MoMo, PayPal) đều phải có sandbox để kiểm thử.
+AS-4: Các bên liên quan (Admin, Finance) sẵn sàng thao tác thủ công khi yêu cầu hoàn tiền cần xử lý bằng tay (manual processing) — có quy trình và người phụ trách.
+AS-5: Người dùng cung cấp thông tin ngân hàng chính xác khi được yêu cầu; hệ thống sẽ lưu trữ thông tin này theo chính sách bảo mật (cấp độ mã hóa/hoặc field-level encryption cho các trường nhạy cảm theo roadmap).
+AS-6: Hệ thống email (SendGrid, Nodemailer hoặc tương đương) hoạt động ổn định để gửi thông báo phê duyệt/hoàn tiền; nếu email thất bại sẽ có retry và log cho vận hành.
+AS-7: Cron job (node-cron hoặc một job scheduler tương đương) có quyền chạy định kỳ để thực hiện nhiệm vụ như auto-expire refunds > 7 ngày.
+AS-8: Các bên cung cấp dịch vụ bên thứ ba (MoMo, PayPal) duy trì API và endpoint cần thiết; hệ thống có cơ chế fallback nếu API bên thứ ba bị lỗi (manual processing flow).
+AS-9: Có team vận hành/finance/CS sẵn sàng cho các trường hợp hoàn tiền thủ công, kiểm tra bằng chứng (post-trip evidence), và liên hệ ngân hàng/khách hàng khi cần.
+
+DE-1: MoMo refund API và PayPal refund API là phụ thuộc chính cho quy trình tự động hoàn tiền; cần có giấy phép/tài khoản ngân hàng/đăng ký merchant hợp lệ.
+DE-2: Hệ thống lưu trữ file (evidence photos, logs) cần một object storage (S3-compatible hoặc GCS) với access key/secret được quản lý an toàn.
+DE-3: Cần có dịch vụ email transactional (SendGrid, Mailgun hoặc SMTP với SLA) để gửi thông báo người dùng và admin.
+DE-4: CI/CD (ví dụ GitHub Actions) và môi trường hosting (Ví dụ: DigitalOcean, AWS, Heroku, hoặc server tự quản) có cấu hình để triển khai backend, frontend và worker cron jobs.
+DE-5: Giấy tờ pháp lý / hợp đồng với ngân hàng đối tác (nếu cần thanh toán rút vốn qua chuyển khoản ngân hàng) để thực hiện thanh toán thủ công hoặc tích hợp payout (nếu mở rộng sau này).
+DE-6: Hệ thống giám sát và logging (Sentry/LogDNA/ELK) để phát hiện lỗi refund/payment và audit trail.
+DE-7: Nếu mở rộng theo vùng (multi-region) thì cần CDN và cấu hình DNS/SSL phù hợp để giảm độ trễ và bảo mật.
+
+2. Limitations & Exclusions
+
+Ghi chú: Đây là các tính năng / mong đợi mà stakeholders có thể nghĩ tới nhưng KHÔNG nằm trong scope hiện tại (phiên bản MVP / hiện tại của hệ thống TRAVYY):
+
+LX-1: Không cung cấp hệ thống trả tiền tự động qua chuyển khoản ngân hàng (bank payout) theo API ngân hàng trực tiếp. Hiện tại chỉ hỗ trợ refund qua original payment provider (MoMo/PayPal) hoặc xử lý thủ công (admin thực hiện chuyển khoản và xác nhận).
+LX-2: Không hỗ trợ hoàn tiền tức thời (instant refunds) cho mọi trường hợp; thời gian hoàn tùy thuộc vào provider (MoMo/PayPal) và có thể mất 1-5 ngày làm việc cho settlement.
+LX-3: Không hỗ trợ multi-currency settlement ngoài VND và USD trong scope ban đầu. Nếu cần thêm tiền tệ khác, sẽ yêu cầu thay đổi thiết kế thanh toán và currency conversion flow.
+LX-4: Không bao gồm chứng nhận PCI-DSS cho lưu trữ và xử lý thẻ thanh toán; nếu cần xử lý trực tiếp thẻ, phải bổ sung và đạt compliance (hiện đang dùng gateway redirect/tokenization của PayPal/MoMo).
+LX-5: Không bao gồm tích hợp kế toán tự động (ERP/Accounting reconciliation) hoặc báo cáo tài chính chi tiết cho mục đích audit doanh nghiệp (một integration riêng sẽ cần roadmap).
+LX-6: Không cung cấp hệ thống giải quyết tranh chấp (dispute management) đầy đủ — chỉ có workflow báo cáo post-trip và admin review; quản lý chargeback/dispute với card networks là task ngoại vi.
+LX-7: Không bao gồm khả năng xử lý hoàn tiền hàng loạt tự động theo rule-based (ví dụ, hoàn toàn tự động cho X% trường hợp) — tất cả trường hợp quan trọng vẫn cần admin review hoặc có flags `requiresManualProcessing`.
+LX-8: Không triển khai field-level encryption cho bank account trong phiên bản đầu — lưu trữ bảo mật sẽ dựa trên application-level encryption at rest; mục tiêu thêm encryption mạnh hơn là backlog.
+LX-9: Không bao gồm tích hợp thanh toán nội địa khác ngoài MoMo (ví dụ: ZaloPay, VNPAY) trong scope hiện tại; sẽ cần effort tích hợp thêm.
+LX-10: Không cung cấp SLA xử lý hoàn tiền trong thời gian cụ thể (ví dụ refund trong 24h) trừ khi được thỏa thuận với team vận hành/finance và ngân hàng.
+
+---
+
+Nếu bạn muốn, tôi có thể:
+- Bổ sung mã hóa field-level (kế hoạch kỹ thuật + libs), hoặc
+- Chuẩn hóa thành template RDS với metadata (owner, last-updated, version) và thêm checklist cho handoff cho Finance/Operations.
+
+Bạn muốn tôi thêm thông tin nào nữa (ví dụ: owner, liên hệ ngân hàng, timeline rollout, hoặc template kiểm thử)?

@@ -3,7 +3,7 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 // Helper: Get admin token
 const getAdminToken = () => {
-  return sessionStorage.getItem("admin_token");
+  return localStorage.getItem("admin_token");
 };
 
 // Helper: Fetch with auth

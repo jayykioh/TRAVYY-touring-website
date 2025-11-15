@@ -129,43 +129,77 @@ const RefundCard = ({
             </svg>
             <div className="flex-1">
               <p className="text-xs font-semibold text-red-800 mb-1">
-                Lý do từ chối:
+                ❌ Yêu cầu hoàn tiền bị từ chối
               </p>
-              <p className="text-xs text-red-700 line-clamp-2">
-                {refund.reviewNote}
+              <p className="text-xs text-red-700 mb-1">
+                Lý do: {refund.reviewNote}
+              </p>
+              <p className="text-xs font-medium text-red-900 bg-red-50 px-2 py-1 rounded mt-2 inline-block">
+                ✅ Tour vẫn sẽ diễn ra bình thường theo lịch trình
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Approval Alert */}
-      {["approved", "processing", "completed"].includes(refund.status) &&
-        refund.reviewNote && (
-          <div className="mb-3 bg-green-100 border border-green-300 rounded-lg p-3">
-            <div className="flex items-start gap-2">
-              <svg
-                className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-green-800 mb-1">
-                  Ghi chú từ admin:
-                </p>
-                <p className="text-xs text-green-700 line-clamp-2">
-                  {refund.reviewNote}
-                </p>
-              </div>
+      {/* Rejection Alert - No note */}
+      {refund.status === "rejected" && !refund.reviewNote && (
+        <div className="mb-3 bg-red-100 border border-red-300 rounded-lg p-3">
+          <div className="flex items-start gap-2">
+            <svg
+              className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-red-800 mb-1">
+                ❌ Yêu cầu hoàn tiền bị từ chối
+              </p>
+              <p className="text-xs font-medium text-red-900 bg-red-50 px-2 py-1 rounded mt-2 inline-block">
+                ✅ Tour vẫn sẽ diễn ra bình thường theo lịch trình
+              </p>
             </div>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Approval/Completed Alert - Tour Cancelled */}
+      {["approved", "processing", "completed"].includes(refund.status) && (
+        <div className="mb-3 bg-green-100 border border-green-300 rounded-lg p-3">
+          <div className="flex items-start gap-2">
+            <svg
+              className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-green-800 mb-1">
+                ✅ Yêu cầu hoàn tiền đã được chấp nhận
+              </p>
+              {refund.reviewNote && (
+                <p className="text-xs text-green-700 mb-1">
+                  Ghi chú: {refund.reviewNote}
+                </p>
+              )}
+              <p className="text-xs font-medium text-orange-900 bg-orange-50 px-2 py-1 rounded mt-2 inline-block border border-orange-200">
+                ⚠️ Tour đã bị hủy và sẽ KHÔNG khởi hành
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 mb-3">
         <div>
