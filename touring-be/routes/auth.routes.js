@@ -58,12 +58,16 @@ router.get(
       // (access token không cần trả ở redirect; FE sẽ gọi /refresh)
       const refreshToken = signRefresh({ jti, userId: user.id });
 
-      // Set refresh cookie theo môi trường
+      // Set refresh cookie according to environment
+      // Make refresh cookie available site-wide during development so the
+      // frontend dev server and websocket handshakes can access it.
+      // In dev: use sameSite: "None" to allow cross-site (requires secure in prod).
+      // In prod: use sameSite: "None" + secure: true.
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
-        secure: isProd, // dev: false, prod: true (HTTPS)
-        sameSite: isProd ? "none" : "lax", // dev: 'lax'
-        path: "/api/auth",
+        secure: isProd,
+        sameSite: "none",
+        path: "/",
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 ngày
       });
 
@@ -97,11 +101,15 @@ router.get(
 
       const refreshToken = signRefresh({ jti, userId: user.id });
 
+      // Make refresh cookie available site-wide during development so the
+      // frontend dev server and websocket handshakes can access it.
+      // In dev: use sameSite: "None" to allow cross-site (requires secure in prod).
+      // In prod: use sameSite: "None" + secure: true.
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
         secure: isProd,
-        sameSite: isProd ? "none" : "lax",
-        path: "/api/auth",
+        sameSite: "none",
+        path: "/",
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
@@ -187,7 +195,7 @@ router.post("/logout", async (req, res) => {
     res.clearCookie("refresh_token", {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd ? "none" : "lax",
+      sameSite: "none",
       path: "/", // 👈 QUAN TRỌNG: phải để "/" để xoá toàn bộ scope cookie
     });
 

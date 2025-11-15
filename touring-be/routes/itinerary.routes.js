@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 const Itinerary = require("../models/Itinerary");
 const { verifyToken } = require("../middlewares/authJwt");
+const authJwt = verifyToken; // Alias for consistency
 const { tripV2 } = require("../services/ai/libs/goong");
 const { generateAIInsightsAsync } = require("../services/itinerary/optimizer");
 const polyline = require('polyline');
@@ -149,11 +150,19 @@ router.get('/:id', verifyToken, async (req, res) => {
     }
 
     // Ensure custom tour flag is correct
-    updateCustomTourFlag(itinerary);
+    const hasItems = itinerary.items && itinerary.items.length > 0;
+    if (itinerary.isCustomTour !== hasItems) {
+      itinerary.isCustomTour = hasItems;
+    }
     
     // Ensure tour request state is valid
     if (itinerary.isCustomTour && (!itinerary.tourGuideRequest || !['pending','accepted'].includes(itinerary.tourGuideRequest.status))) {
-      itinerary.tourGuideRequest = resetTourGuideRequest();
+      itinerary.tourGuideRequest = {
+        status: 'none',
+        guideId: null,
+        requestedAt: null,
+        respondedAt: null,
+      };
       await itinerary.save();
     }
 
@@ -227,17 +236,40 @@ router.post("/:id/items", verifyToken, async (req, res) => {
 
     // Add to itinerary
     itinerary.items.push(newItem);
-    updateCustomTourFlag(itinerary);
-    itinerary.isOptimized = false;
 
-    await itinerary.save();
+    // Mark as custom tour if it has ANY items (POIs or tours)
+    // This allows users to request guides for POI-only itineraries
+    itinerary.isCustomTour = itinerary.items.length > 0;
+    
+    // luôn reset trạng thái về 'none' cho rõ ràng
+    itinerary.tourGuideRequest = {
+      status: 'none',
+      guideId: null,
+      requestedAt: null,
+      respondedAt: null,
+    };
 
+    // Logging for debug
+    const poiCount = itinerary.items.filter(i => i.itemType === 'poi').length;
+    const tourCount = itinerary.items.filter(i => i.itemType === 'tour').length;
+    const hasTour = tourCount > 0;
     console.log('[Itinerary ADD ITEM]', {
       itineraryId: itinerary._id,
       item: newItem.name,
       isCustomTour: itinerary.isCustomTour,
       totalItems: itinerary.items.length,
+      poiCount,
+      tourCount,
+      items: itinerary.items.map(i => ({ name: i.name, type: i.itemType }))
     });
+
+    // Warn if too many POIs with a tour
+    if (hasTour && poiCount > 3) {
+      console.warn('[Itinerary WARNING] Too many POIs with a tour:', { itineraryId: itinerary._id.toString(), poiCount });
+    }
+
+    itinerary.isOptimized = false;
+    await itinerary.save();
 
     res.json({ success: true, itinerary });
   } catch (error) {
@@ -259,7 +291,21 @@ router.delete("/:id/items/:poiId", verifyToken, async (req, res) => {
     itinerary.items = itinerary.items.filter((item) => item.poiId !== req.params.poiId);
     updateCustomTourFlag(itinerary);
     itinerary.isOptimized = false;
-
+    
+    // Recompute custom-tour flags after removal
+    const hasItems = itinerary.items.length > 0;
+    itinerary.isCustomTour = hasItems;
+    
+    // Reset tour guide request if no items left
+    if (!hasItems) {
+      itinerary.tourGuideRequest = {
+        status: 'none',
+        guideId: null,
+        requestedAt: null,
+        respondedAt: null,
+      };
+    }
+    
     await itinerary.save();
 
     res.json({ success: true, itinerary });
@@ -415,72 +461,6 @@ router.post('/:id/optimize-ai', verifyToken, async (req, res) => {
   }
 });
 
-/**
- * POST /api/itinerary/:id/request-tour-guide
- * Request tour guide for custom tour
- */
-router.post('/:id/request-tour-guide', verifyToken, async (req, res) => {
-  try {
-    const userId = getUserId(req.user);
-    const itinerary = await Itinerary.findOne({ _id: req.params.id, userId });
-    
-    if (!itinerary) return res.status(404).json({ success: false, error: 'Itinerary not found' });
-    
-    if (!itinerary.isCustomTour) {
-      return res.status(400).json({ success: false, error: 'Itinerary is not a custom tour' });
-    }
-    
-    // Only allow if not already pending or accepted
-    if (itinerary.tourGuideRequest && ['pending','accepted'].includes(itinerary.tourGuideRequest.status)) {
-      return res.status(400).json({ success: false, error: 'Tour guide request already sent or accepted' });
-    }
-    
-    // Create request
-    itinerary.tourGuideRequest = {
-      status: 'pending',
-      requestedAt: new Date(),
-      respondedAt: null,
-      guideId: null
-    };
-    
-    await itinerary.save();
-
-    console.log('[TourGuideRequest] Sent for itinerary:', {
-      itineraryId: itinerary._id,
-      zoneName: itinerary.zoneName,
-      itemsCount: itinerary.items.length,
-    });
-
-    res.json({ success: true, itinerary, message: 'Tour guide request sent' });
-  } catch (error) {
-    console.error('Error sending tour guide request:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-/**
- * GET /api/itinerary/guide/requests
- * Get pending tour guide requests (for TourGuide role only)
- */
-router.get('/guide/requests', verifyToken, async (req, res) => {
-  try {
-    if (!req.user || req.user.role !== 'TourGuide') {
-      return res.status(403).json({ success: false, error: 'Permission denied' });
-    }
-    
-    const requests = await Itinerary.find({
-      isCustomTour: true,
-      'tourGuideRequest.status': 'pending'
-    })
-      .sort({ 'tourGuideRequest.requestedAt': -1 })
-      .populate({ path: 'userId', select: 'name email phone avatar' });
-    
-    res.json({ success: true, requests });
-  } catch (error) {
-    console.error('[GuideAPI] Error fetching requests:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
 
 /**
  * GET /api/itinerary/:id/export.gpx
@@ -534,6 +514,552 @@ router.get('/:id/export.gpx', verifyToken, async (req, res) => {
   } catch (err) {
     console.error('Export GPX error:', err);
     return res.status(500).json({ success: false, message: 'Export failed' });
+  }
+});
+
+router.get('/guide/requests', authJwt, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'TourGuide') {
+      return res.status(403).json({ success: false, error: 'Permission denied: Only TourGuide can access.' });
+    }
+    
+    const guideUserId = getUserId(req.user);
+    
+    // ✅ FIXED: Only show requests directly assigned to this guide
+    const requests = await Itinerary.find({
+      isCustomTour: true,
+      'tourGuideRequest.status': 'pending',
+      'tourGuideRequest.guideId': guideUserId // ⬅️ Filter by guide ID
+    })
+      .sort({ 'tourGuideRequest.requestedAt': -1 })
+      .populate({ path: 'userId', select: 'name email phone avatar' });
+    
+    console.log(`[GuideAPI] Found ${requests.length} pending requests for guide ${guideUserId}`);
+    res.json({ success: true, requests });
+  } catch (error) {
+    console.error('[GuideAPI] Error fetching requests:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get all accepted tours for this guide
+router.get('/guide/accepted-tours', authJwt, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'TourGuide') {
+      return res.status(403).json({ success: false, error: 'Permission denied: Only TourGuide can access.' });
+    }
+    
+    const guideUserId = getUserId(req.user);
+    
+    // Find all tours where this guide has accepted
+    const tours = await Itinerary.find({
+      isCustomTour: true,
+      'tourGuideRequest.status': 'accepted',
+      'tourGuideRequest.guideId': guideUserId
+    })
+      .sort({ 'preferredDate': 1, 'tourGuideRequest.respondedAt': -1 })
+      .populate({ path: 'userId', select: 'name email phone avatar' });
+
+    console.log('[GuideAPI] Found', tours.length, 'accepted tours for guide:', guideUserId);
+
+    // Fetch agreement data from TourCustomRequest for each tour
+    const TourCustomRequest = require('../models/TourCustomRequest');
+    const toursWithAgreement = await Promise.all(
+      tours.map(async (tour) => {
+        const tourObj = tour.toObject();
+        try {
+          // Find the corresponding TourCustomRequest
+          const tourRequest = await TourCustomRequest.findOne({
+            itineraryId: tour._id
+          }).select('agreement status');
+          
+          if (tourRequest) {
+            tourObj.agreement = tourRequest.agreement || {};
+            tourObj.tourRequestStatus = tourRequest.status;
+            tourObj.bothAgreed = tourRequest.agreement?.userAgreed && tourRequest.agreement?.guideAgreed;
+            console.log('[GuideAPI] Tour', tour._id, 'agreement:', {
+              bothAgreed: tourObj.bothAgreed,
+              userAgreed: tourRequest.agreement?.userAgreed,
+              guideAgreed: tourRequest.agreement?.guideAgreed
+            });
+          } else {
+            tourObj.agreement = {};
+            tourObj.bothAgreed = false;
+            console.log('[GuideAPI] Tour', tour._id, 'has no TourCustomRequest');
+          }
+        } catch (err) {
+          console.error('[GuideAPI] Error fetching agreement for tour:', tour._id, err);
+          tourObj.agreement = {};
+          tourObj.bothAgreed = false;
+        }
+        return tourObj;
+      })
+    );
+    
+    console.log('[GuideAPI] Returning', toursWithAgreement.length, 'tours with agreement data');
+    res.json({ success: true, tours: toursWithAgreement });
+  } catch (error) {
+    console.error('[GuideAPI] Error fetching accepted tours:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get specific tour detail for guide (can view tours they've accepted)
+router.get('/guide/tours/:id', authJwt, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'TourGuide') {
+      return res.status(403).json({ success: false, error: 'Permission denied: Only TourGuide can access.' });
+    }
+    
+    const guideUserId = getUserId(req.user);
+    const itinerary = await Itinerary.findOne({
+      _id: req.params.id,
+      isCustomTour: true,
+      'tourGuideRequest.guideId': guideUserId
+    }).populate({ path: 'userId', select: 'name email phone avatar' });
+    
+    if (!itinerary) {
+      return res.status(404).json({ success: false, error: 'Tour not found or you do not have access' });
+    }
+
+    // Include customer info for the guide
+    const responseData = itinerary.toObject();
+    if (itinerary.userId) {
+      responseData.customerInfo = {
+        name: itinerary.userId.name,
+        email: itinerary.userId.email,
+        phone: itinerary.userId.phone,
+        avatar: itinerary.userId.avatar
+      };
+    }
+
+    // Fetch agreement data from TourCustomRequest
+    try {
+      const TourCustomRequest = require('../models/TourCustomRequest');
+      const tourRequest = await TourCustomRequest.findOne({
+        itineraryId: itinerary._id
+      }).select('agreement status');
+      
+      if (tourRequest) {
+        responseData.agreement = tourRequest.agreement || {};
+        responseData.tourRequestStatus = tourRequest.status;
+        responseData.bothAgreed = tourRequest.agreement?.userAgreed && tourRequest.agreement?.guideAgreed;
+      } else {
+        responseData.agreement = {};
+        responseData.bothAgreed = false;
+      }
+    } catch (err) {
+      console.error('[GuideAPI] Error fetching agreement for tour:', itinerary._id, err);
+      responseData.agreement = {};
+      responseData.bothAgreed = false;
+    }
+    
+    console.log('[GuideAPI] Tour detail for guide:', responseData._id, 'bothAgreed:', responseData.bothAgreed);
+    res.json(responseData);
+  } catch (error) {
+    console.error('[GuideAPI] Error fetching tour detail:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get specific request detail for guide (pending requests)
+router.get('/guide/requests/:id', authJwt, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'TourGuide') {
+      return res.status(403).json({ success: false, error: 'Permission denied: Only TourGuide can access.' });
+    }
+    
+    const guideUserId = getUserId(req.user);
+    
+    // ✅ FIXED: Only allow guide to view requests assigned to them
+    const itinerary = await Itinerary.findOne({
+      _id: req.params.id,
+      isCustomTour: true,
+      'tourGuideRequest.status': 'pending',
+      'tourGuideRequest.guideId': guideUserId // ⬅️ Must be assigned to this guide
+    }).populate({ path: 'userId', select: 'name email phone avatar' });
+    
+    if (!itinerary) {
+      return res.status(404).json({ success: false, error: 'Request not found or you do not have access to this request' });
+    }
+
+    // Include customer info for the guide
+    const responseData = itinerary.toObject();
+    if (itinerary.userId) {
+      responseData.customerInfo = {
+        name: itinerary.userId.name,
+        email: itinerary.userId.email,
+        phone: itinerary.userId.phone,
+        avatar: itinerary.userId.avatar
+      };
+    }
+    
+    console.log('[GuideAPI] Request detail for guide:', guideUserId, 'request:', responseData._id);
+    res.json(responseData);
+  } catch (error) {
+    console.error('[GuideAPI] Error fetching request detail:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Guide accepts tour request
+router.post('/:id/accept-tour-guide', authJwt, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'TourGuide') {
+      return res.status(403).json({ success: false, error: 'Permission denied: Only TourGuide can accept.' });
+    }
+    
+    const guideUserId = getUserId(req.user);
+    const itinerary = await Itinerary.findById(req.params.id);
+    
+    if (!itinerary) {
+      return res.status(404).json({ success: false, error: 'Itinerary not found' });
+    }
+    
+    if (!itinerary.tourGuideRequest || itinerary.tourGuideRequest.status !== 'pending') {
+      return res.status(400).json({ success: false, error: 'No pending tour guide request found' });
+    }
+    
+    // Update tour guide request status
+    itinerary.tourGuideRequest.status = 'accepted';
+    itinerary.tourGuideRequest.guideId = guideUserId;
+    itinerary.tourGuideRequest.respondedAt = new Date();
+    
+    await itinerary.save();
+    
+    // Send notification to customer
+    try {
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        userId: itinerary.userId,
+        type: 'tour_guide_accepted',
+        title: 'Hướng dẫn viên đã chấp nhận',
+        message: `Yêu cầu tour "${itinerary.name}" của bạn đã được chấp nhận bởi hướng dẫn viên`,
+        relatedId: itinerary._id,
+        relatedModel: 'Itinerary'
+      });
+    } catch (notifError) {
+      console.error('Error creating notification:', notifError);
+    }
+    
+    res.json({ success: true, message: 'Tour request accepted', itinerary });
+  } catch (error) {
+    console.error('Error accepting tour guide request:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Guide rejects tour request
+router.post('/:id/reject-tour-guide', authJwt, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'TourGuide') {
+      return res.status(403).json({ success: false, error: 'Permission denied: Only TourGuide can reject.' });
+    }
+    
+    const itinerary = await Itinerary.findById(req.params.id);
+    
+    if (!itinerary) {
+      return res.status(404).json({ success: false, error: 'Itinerary not found' });
+    }
+    
+    if (!itinerary.tourGuideRequest || itinerary.tourGuideRequest.status !== 'pending') {
+      return res.status(400).json({ success: false, error: 'No pending tour guide request found' });
+    }
+    
+    // Update tour guide request status
+    itinerary.tourGuideRequest.status = 'rejected';
+    itinerary.tourGuideRequest.respondedAt = new Date();
+    
+    await itinerary.save();
+    
+    // Send notification to customer
+    try {
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        userId: itinerary.userId,
+        type: 'tour_guide_rejected',
+        title: 'Yêu cầu tour bị từ chối',
+        message: `Yêu cầu tour "${itinerary.name}" của bạn đã bị từ chối`,
+        relatedId: itinerary._id,
+        relatedModel: 'Itinerary'
+      });
+    } catch (notifError) {
+      console.error('Error creating notification:', notifError);
+    }
+    
+    res.json({ success: true, message: 'Tour request rejected' });
+  } catch (error) {
+    console.error('Error rejecting tour guide request:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Create deposit payment for custom tour (after guide accepts)
+router.post('/:id/create-deposit-payment', authJwt, async (req, res) => {
+  try {
+    const userId = getUserId(req.user);
+    const { provider } = req.body; // 'momo' or 'paypal'
+    
+    const itinerary = await Itinerary.findOne({ _id: req.params.id, userId });
+    
+    if (!itinerary) {
+      return res.status(404).json({ success: false, error: 'Itinerary not found' });
+    }
+    
+    if (!itinerary.isCustomTour || itinerary.tourGuideRequest?.status !== 'accepted') {
+      return res.status(400).json({ success: false, error: 'Tour guide must accept request before payment' });
+    }
+    
+    if (itinerary.paymentInfo?.status !== 'pending') {
+      return res.status(400).json({ success: false, error: 'Deposit already paid or invalid status' });
+    }
+    
+    // Calculate deposit (30% of total cost)
+    const depositAmount = Math.round(itinerary.estimatedCost * 0.3);
+    
+    // Initialize payment info if not exists
+    if (!itinerary.paymentInfo) {
+      itinerary.paymentInfo = {
+        status: 'pending',
+        depositAmount,
+        totalAmount: itinerary.estimatedCost
+      };
+    }
+    
+    itinerary.paymentInfo.depositAmount = depositAmount;
+    itinerary.paymentInfo.totalAmount = itinerary.estimatedCost;
+    
+    await itinerary.save();
+    
+    // Create payment with provider
+    let paymentUrl;
+    if (provider === 'momo') {
+      const crypto = require('crypto');
+      const axios = require('axios');
+      
+      const partnerCode = process.env.MOMO_PARTNER_CODE;
+      const accessKey = process.env.MOMO_ACCESS_KEY;
+      const secretKey = process.env.MOMO_SECRET_KEY;
+      const redirectUrl = `${process.env.FRONTEND_URL}/itinerary/${itinerary._id}/payment-result`;
+      const ipnUrl = `${process.env.BACKEND_URL}/api/payments/deposit/momo/callback`;
+      const requestType = 'payWithMethod';
+      const orderId = `DEPOSIT_${itinerary._id}_${Date.now()}`;
+      const requestId = orderId;
+      const orderInfo = `Đặt cọc tour: ${itinerary.name}`;
+      const amount = depositAmount.toString();
+      
+      const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
+      const signature = crypto.createHmac('sha256', secretKey).update(rawSignature).digest('hex');
+      
+      const requestBody = {
+        partnerCode,
+        accessKey,
+        requestId,
+        amount,
+        orderId,
+        orderInfo,
+        redirectUrl,
+        ipnUrl,
+        requestType,
+        extraData: JSON.stringify({ itineraryId: itinerary._id.toString(), type: 'deposit' }),
+        signature,
+        lang: 'vi'
+      };
+      
+      const response = await axios.post('https://test-payment.momo.vn/v2/gateway/api/create', requestBody);
+      
+      if (response.data.resultCode === 0) {
+        paymentUrl = response.data.payUrl;
+        itinerary.paymentInfo.depositOrderId = orderId;
+        itinerary.paymentInfo.depositProvider = 'momo';
+        await itinerary.save();
+      } else {
+        return res.status(400).json({ success: false, error: 'Failed to create MoMo payment' });
+      }
+    } else if (provider === 'paypal') {
+      // TODO: Implement PayPal payment
+      return res.status(400).json({ success: false, error: 'PayPal payment not implemented yet' });
+    } else {
+      return res.status(400).json({ success: false, error: 'Invalid payment provider' });
+    }
+    
+    res.json({ 
+      success: true, 
+      paymentUrl,
+      depositAmount,
+      orderId: itinerary.paymentInfo.depositOrderId
+    });
+  } catch (error) {
+    console.error('[Itinerary] Create deposit payment error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ✅ POST /api/itinerary/:id/request-tour-guide
+// Simple broadcast request - sends to all guides
+// For direct requests with specific guide selection, use POST /api/tour-requests/create
+router.post('/:id/request-tour-guide', authJwt, async (req, res) => {
+  try {
+    const userId = getUserId(req.user);
+    const itinerary = await Itinerary.findOne({ _id: req.params.id, userId });
+    
+    if (!itinerary) {
+      return res.status(404).json({ success: false, error: 'Itinerary not found' });
+    }
+    
+    // Check if itinerary has items
+    if (!itinerary.items || itinerary.items.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Itinerary has no items. Please add at least one location first.' 
+      });
+    }
+    
+    // Auto-set isCustomTour if it has items but flag is false
+    if (!itinerary.isCustomTour) {
+      itinerary.isCustomTour = true;
+      console.log('[TourGuideRequest] Auto-enabled isCustomTour for itinerary:', itinerary._id);
+    }
+    
+    // Only allow if not already requested or status is none/rejected
+    if (itinerary.tourGuideRequest && ['pending','accepted'].includes(itinerary.tourGuideRequest.status)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Tour guide request already sent or accepted' 
+      });
+    }
+    
+    // ✅ CHECK: If there's already a TourCustomRequest, don't create duplicate
+    const TourCustomRequest = require('../models/TourCustomRequest');
+    const existingRequest = await TourCustomRequest.findOne({
+      itineraryId: itinerary._id,
+      userId,
+      status: { $in: ['pending', 'negotiating', 'agreement_pending'] }
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({
+        success: false,
+        error: 'You already have an active request for this itinerary',
+        requestId: existingRequest._id
+      });
+    }
+    
+    // ✅ CREATE TourCustomRequest (broadcast - no specific guide)
+    const User = require('../models/Users');
+    const user = await User.findById(userId).select('name email phone');
+    
+    // Extract tour details from itinerary
+    const tourDetails = {
+      zoneName: itinerary.zoneName || itinerary.name,
+      numberOfDays: itinerary.preferences?.durationDays || 1,
+      numberOfGuests: itinerary.numberOfPeople || 1,
+      preferences: {
+        vibes: itinerary.preferences?.vibes || [],
+        pace: itinerary.preferences?.pace || 'moderate',
+        budget: itinerary.preferences?.budget || 'mid',
+        bestTime: itinerary.preferences?.bestTime || 'anytime'
+      },
+      items: itinerary.items.map(item => ({
+        poiId: item.poiId,
+        name: item.name,
+        address: item.address,
+        location: item.location,
+        itemType: item.itemType,
+        startTime: item.startTime,
+        endTime: item.endTime,
+        duration: item.duration,
+        day: item.day,
+        timeSlot: item.timeSlot
+      }))
+    };
+
+    // Create broadcast request (no specific guide - any guide can accept)
+    const tourRequest = new TourCustomRequest({
+      userId,
+      itineraryId: itinerary._id,
+      guideId: null, // ⬅️ NULL = broadcast to all guides
+      isDirectRequest: false, // ⬅️ FALSE = open request
+      tourDetails,
+      initialBudget: {
+        amount: itinerary.estimatedCost || 0,
+        currency: 'VND'
+      },
+      specialRequirements: '',
+      contactInfo: {
+        phone: user?.phone || '',
+        email: user?.email || '',
+        preferredContactMethod: 'app'
+      },
+      preferredDates: [],
+      status: 'pending',
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      itinerarySynced: true,
+      itinerarySyncedAt: new Date()
+    });
+
+    await tourRequest.save();
+    
+    // Update itinerary
+    const now = new Date();
+    itinerary.tourGuideRequest = {
+      status: 'pending',
+      requestedAt: now,
+      respondedAt: null,
+      guideId: null
+    };
+    await itinerary.save();
+    
+    console.log('[TourGuideRequest] Created TourCustomRequest (broadcast):', {
+      requestId: tourRequest._id,
+      requestNumber: tourRequest.requestNumber,
+      itineraryId: itinerary._id.toString(),
+      userId,
+      zoneName: itinerary.zoneName
+    });
+    
+    // ✅ Send notification to all active tour guides
+    try {
+      const GuideNotification = require('../models/guide/GuideNotification');
+      const Guide = require('../models/guide/Guide');
+
+      // Find all guide profiles
+      const guides = await Guide.find({}).select('_id');
+      
+      console.log(`[TourRequest] Found ${guides.length} guides to notify`);
+      
+      if (guides.length === 0) {
+        console.warn('[TourRequest] ⚠️ No guides found in database!');
+      }
+      
+      // Create notification for each guide profile
+      const notificationPromises = guides.map(guide => 
+        GuideNotification.create({
+          guideId: guide._id,
+          notificationId: `guide-${guide._id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: 'new_request',
+          title: 'Yêu cầu tour mới',
+          message: `${user?.name || 'Khách hàng'} có yêu cầu tour tại ${itinerary.zoneName}`,
+          tourId: tourRequest._id.toString(), // ⬅️ Link to TourCustomRequest
+          priority: 'medium'
+        })
+      );
+      
+      await Promise.all(notificationPromises);
+      console.log(`[TourRequest] ✅ Sent ${guides.length} notifications successfully`);
+    } catch (notifError) {
+      console.error('[TourRequest] ❌ Error creating guide notifications:', notifError);
+    }
+    
+    res.json({ 
+      success: true, 
+      itinerary,
+      tourRequest,
+      message: 'Tour guide request sent to all available guides' 
+    });
+  } catch (error) {
+    console.error('[TourGuideRequest] Error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

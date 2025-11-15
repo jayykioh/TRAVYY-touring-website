@@ -2,6 +2,8 @@
 const Review = require("../models/Review");
 const Booking = require("../models/Bookings");
 const Tour = require("../models/agency/Tours");
+const TourCustomRequest = require("../models/TourCustomRequest");
+const Guide = require("../models/guide/Guide");
 const User = require("../models/Users");
 const mongoose = require("mongoose");
 
@@ -459,56 +461,100 @@ const responseToReview = async (req, res) => {
   }
 };
 
-// 8. Lấy bookings có thể đánh giá
+// 8. Lấy bookings có thể đánh giá (bao gồm cả regular tours và custom tours)
 const getReviewableBookings = async (req, res) => {
   try {
     const userId = req.user?.sub || req.user?._id;
 
-    // Lấy các booking đã hoàn thành
+    // Lấy các booking đã hoàn thành (bao gồm cả regular tours và custom tours)
     const bookings = await Booking.find({
       userId,
-      status: "paid",
-    }).populate("items.tourId", "title imageItems basePrice");
+      status: { $in: ["paid", "completed"] }, // Include both paid and completed
+    })
+      .populate("items.tourId", "title imageItems basePrice")
+      .populate("customTourRequest.guideId", "name avatar rating location");
 
-    // Lấy danh sách bookingId đã review
-    const reviewedBookingIds = await Review.distinct("bookingId", { userId });
+    // Lấy danh sách đã review
+    const reviewedItems = await Review.find({ userId }).select("bookingId tourId customTourRequestId");
 
     const now = new Date();
 
-    // Lọc ra bookings chưa review VÀ tour date đã qua
-    const reviewableBookings = bookings.filter((booking) => {
-      // Kiểm tra chưa review
-      const notReviewedYet = !reviewedBookingIds.some(
-        (id) => id.toString() === booking._id.toString()
-      );
+    // Process bookings to separate regular tours and custom tours
+    const reviewableItems = [];
 
-      // ✅ Kiểm tra tour date đã qua (user phải đi tour rồi mới được review)
-      // Check if ANY item in the booking has a date that has passed
-      const hasTourPassed =
-        booking.items &&
-        booking.items.length > 0 &&
-        booking.items.some((item) => {
-          if (!item.date) return false;
+    bookings.forEach((booking) => {
+      // Check for regular tours
+      if (booking.items && booking.items.length > 0) {
+        booking.items.forEach((item) => {
           const tourDate = new Date(item.date);
-          // ✅ Tour must have happened at least 1 day ago to be reviewable
-          const oneDayAgo = new Date(now);
-          oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-          return tourDate <= oneDayAgo;
-        });
+          const hasTourPassed = tourDate <= now;
+          
+          // Check if already reviewed
+          const alreadyReviewed = reviewedItems.some(
+            (review) => 
+              review.bookingId?.toString() === booking._id.toString() &&
+              review.tourId?.toString() === item.tourId?._id?.toString()
+          );
 
-      return notReviewedYet && hasTourPassed;
+          if (hasTourPassed && !alreadyReviewed && item.tourId) {
+            reviewableItems.push({
+              type: 'regular_tour',
+              bookingId: booking._id,
+              bookingCode: booking.bookingCode,
+              tourId: item.tourId._id,
+              tourName: item.tourId.title,
+              tourImage: item.tourId.imageItems?.[0],
+              tourDate: item.date,
+              price: item.price || item.tourId.basePrice
+            });
+          }
+        });
+      }
+
+      // Check for custom tour
+      if (booking.customTourRequest && booking.customTourRequest.requestId) {
+        const tourDate = booking.customTourRequest.startDate 
+          ? new Date(booking.customTourRequest.startDate) 
+          : booking.createdAt;
+        const hasTourPassed = new Date(tourDate) <= now;
+        
+        // Only show if booking is completed (guide marked as done)
+        const isCompleted = booking.status === 'completed';
+        
+        // Check if already reviewed
+        const alreadyReviewed = reviewedItems.some(
+          (review) => 
+            review.bookingId?.toString() === booking._id.toString() &&
+            review.customTourRequestId?.toString() === booking.customTourRequest.requestId?.toString()
+        );
+
+        if (isCompleted && hasTourPassed && !alreadyReviewed && booking.customTourRequest.guideId) {
+          reviewableItems.push({
+            type: 'custom_tour',
+            bookingId: booking._id,
+            bookingCode: booking.bookingCode,
+            customTourRequestId: booking.customTourRequest.requestId,
+            guideId: booking.customTourRequest.guideId._id,
+            guideName: booking.customTourRequest.guideId.name,
+            guideAvatar: booking.customTourRequest.guideId.avatar,
+            guideRating: booking.customTourRequest.guideId.rating,
+            tourDate: tourDate,
+            price: booking.payment?.amount || booking.customTourRequest.agreedPrice
+          });
+        }
+      }
     });
 
     res.json({
       success: true,
-      bookings: reviewableBookings,
-      total: reviewableBookings.length,
+      reviewableItems,
+      total: reviewableItems.length,
     });
   } catch (error) {
     console.error("getReviewableBookings error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Lỗi khi lấy danh sách booking có thể đánh giá",
+      message: error.message || "Lỗi khi lấy danh sách có thể đánh giá",
     });
   }
 };
@@ -553,6 +599,272 @@ async function updateTourRating(tourId) {
     // Don't throw - review should succeed even if tour update fails
   }
 }
+
+/**
+ * Helper: Update guide rating and review count
+ * Calculate average rating from all approved guide reviews
+ */
+async function updateGuideRating(guideId) {
+  try {
+    const reviews = await Review.find({
+      guideId,
+      reviewType: 'custom_tour',
+      status: "approved",
+    }).select("rating");
+
+    const totalReviews = reviews.length;
+
+    if (totalReviews === 0) {
+      // No reviews - reset to 0
+      await Guide.findByIdAndUpdate(guideId, {
+        rating: 0,
+        totalTours: 0,
+      });
+      console.log(`✅ Reset rating for guide ${guideId} (no reviews)`);
+      return;
+    }
+
+    // Calculate average rating
+    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+    const averageRating = Math.round((totalRating / totalReviews) * 10) / 10; // Round to 1 decimal
+
+    await Guide.findByIdAndUpdate(guideId, {
+      rating: averageRating,
+      totalTours: totalReviews,
+    });
+
+    console.log(
+      `✅ Updated guide ${guideId}: rating=${averageRating}, reviews=${totalReviews}`
+    );
+  } catch (error) {
+    console.error("❌ Error updating guide rating:", error);
+    // Don't throw - review should succeed even if guide update fails
+  }
+}
+
+// ===== GUIDE REVIEW FUNCTIONS =====
+
+// Create guide review (for custom tour)
+const createGuideReview = async (req, res) => {
+  try {
+    const userId = req.user?.sub || req.user?._id;
+    const {
+      customTourRequestId,
+      guideId,
+      bookingId,
+      rating,
+      title,
+      content,
+      detailedRatings,
+      images,
+      isAnonymous,
+      tourDate,
+    } = req.body;
+
+    // Validate required fields
+    if (!customTourRequestId || !guideId || !bookingId || !rating || !title || !content) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu thông tin bắt buộc: customTourRequestId, guideId, bookingId, rating, title, content",
+      });
+    }
+
+    // Kiểm tra booking có thuộc về user và đã completed
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      userId,
+      status: "paid",
+    });
+
+    console.log("Found booking:", booking ? {
+      _id: booking._id,
+      userId: booking.userId,
+      status: booking.status,
+      customTourRequest: booking.customTourRequest
+    } : null);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy booking hợp lệ hoặc booking chưa hoàn thành",
+      });
+    }
+
+    // Kiểm tra custom tour request có trong booking không
+    if (!booking.customTourRequest || 
+        booking.customTourRequest.requestId?.toString() !== customTourRequestId?.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: "Custom tour request không có trong booking này",
+        debug: {
+          requestedId: customTourRequestId,
+          bookingRequestId: booking.customTourRequest?.requestId?.toString()
+        }
+      });
+    }
+
+    // Verify guide ID matches
+    const tourRequest = await TourCustomRequest.findById(customTourRequestId);
+    if (!tourRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy tour request",
+      });
+    }
+
+    if (tourRequest.guideId?.toString() !== guideId?.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: "Guide ID không khớp với tour request",
+      });
+    }
+
+    // Check if tour date has passed
+    const tourDateObj = tourDate ? new Date(tourDate) : new Date(booking.createdAt);
+    const now = new Date();
+
+    if (tourDateObj > now) {
+      return res.status(400).json({
+        success: false,
+        message: "Bạn chỉ có thể đánh giá sau khi đã hoàn thành tour",
+        tourDate: tourDateObj,
+        currentDate: now,
+      });
+    }
+
+    // Check if already reviewed
+    const existingReview = await Review.findOne({ 
+      userId, 
+      customTourRequestId,
+      bookingId 
+    });
+
+    if (existingReview) {
+      return res.status(409).json({
+        success: false,
+        message: "Bạn đã đánh giá tour này rồi",
+      });
+    }
+
+    // Create guide review
+    const review = await Review.create({
+      userId,
+      reviewType: 'custom_tour',
+      customTourRequestId,
+      guideId,
+      bookingId,
+      rating: parseInt(rating),
+      title: title.trim(),
+      content: content.trim(),
+      detailedRatings,
+      images: images || [],
+      isAnonymous: isAnonymous || false,
+      tourDate: tourDateObj,
+      isVerified: true,
+      status: "pending",
+    });
+
+    console.log("✅ Guide review created successfully:", {
+      reviewId: review._id,
+      userId,
+      guideId,
+      customTourRequestId,
+      rating: review.rating,
+    });
+
+    // Update guide rating
+    await updateGuideRating(guideId);
+
+    const populatedReview = await Review.findById(review._id)
+      .populate("userId", "name avatar")
+      .populate("guideId", "name avatar rating location")
+      .populate("customTourRequestId", "requestNumber tourDetails")
+      .populate("bookingId", "bookingCode");
+
+    console.log("📤 Sending guide review response:", {
+      reviewId: populatedReview._id,
+      status: populatedReview.status,
+    });
+
+    res.status(201).json({
+      success: true,
+      review: populatedReview,
+      message: "Đánh giá hướng dẫn viên đã được tạo thành công",
+    });
+  } catch (error) {
+    console.error("createGuideReview error:", error);
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "Bạn đã đánh giá guide này rồi",
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message || "Lỗi khi tạo đánh giá hướng dẫn viên",
+    });
+  }
+};
+
+// Get guide reviews
+const getGuideReviews = async (req, res) => {
+  try {
+    const { guideId } = req.params;
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      rating = null,
+    } = req.query;
+
+    if (!mongoose.isValidObjectId(guideId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid guide ID",
+      });
+    }
+
+    const sortOrderNum = sortOrder === "desc" ? -1 : 1;
+
+    const reviews = await Review.getGuideReviews(guideId, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sortBy,
+      sortOrder: sortOrderNum,
+      rating: rating ? parseInt(rating) : null,
+    });
+
+    // Get rating stats
+    const ratingStats = await Review.getGuideAverageRating(guideId);
+
+    const totalReviews = await Review.countDocuments({
+      guideId,
+      reviewType: 'custom_tour',
+      status: "approved",
+    });
+
+    res.json({
+      success: true,
+      reviews,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalReviews,
+        totalPages: Math.ceil(totalReviews / limit),
+      },
+      ratingStats: ratingStats[0] || null,
+    });
+  } catch (error) {
+    console.error("getGuideReviews error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Lỗi khi lấy đánh giá hướng dẫn viên",
+    });
+  }
+};
 
 // ===== ADMIN FUNCTIONS =====
 
@@ -736,6 +1048,9 @@ module.exports = {
   toggleReviewLike,
   responseToReview,
   getReviewableBookings,
+  // Guide review functions
+  createGuideReview,
+  getGuideReviews,
   // Admin functions
   getAllReviews,
   approveReview,

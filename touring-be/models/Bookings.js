@@ -121,6 +121,12 @@ const bookingSchema = new mongoose.Schema(
     orderRef: { type: String, unique: true, sparse: true }, // Mã booking hiển thị cho user (TRAV-XXXXXX)
     qrCode: { type: String }, // Link QR code
 
+    // ===== GUIDE ASSIGNMENT =====
+    guideId: { type: mongoose.Schema.Types.ObjectId, ref: "Guide" }, // Assigned guide for regular tours
+    guideAssignedAt: { type: Date }, // When guide was assigned
+    tourScheduledAt: { type: Date }, // When tour is scheduled to start
+    tourCompletedAt: { type: Date }, // When tour was marked as completed
+
     // ===== NOTES & CONTACT =====
     customerNote: { type: String }, // Ghi chú từ khách hàng
     adminNote: { type: String }, // Ghi chú nội bộ
@@ -129,6 +135,13 @@ const bookingSchema = new mongoose.Schema(
       phone: { type: String },
       fullName: { type: String },
     },
+  
+  // ===== CUSTOM TOUR REQUEST LINK =====
+  customTourRequest: {
+    requestId: { type: mongoose.Schema.Types.ObjectId, ref: "TourCustomRequest" },
+    guideId: { type: mongoose.Schema.Types.ObjectId, ref: "Guide" },
+    itineraryId: { type: mongoose.Schema.Types.ObjectId, ref: "Itinerary" }
+  },
 
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },

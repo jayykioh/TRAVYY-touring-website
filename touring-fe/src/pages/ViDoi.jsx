@@ -26,6 +26,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import FloatingChatButton from "../components/FloatingChatButton";
 import { useAuth } from "../auth/context";
 
 // ✅ SYNCED WITH DATABASE: Top 16 tags from zone.tags
@@ -518,13 +519,13 @@ export default function VibeSelectPage() {
                     "group relative inline-flex items-center gap-2 px-4 py-3 rounded-2xl text-base font-semibold border transition focus:outline-none focus:ring-2 focus:ring-offset-2",
                     active
                       ? "text-white border-transparent"
-                      : "text-slate-800 bg-white border-slate-200",
+                        : "text-slate-800 bg-white border-slate-200",
                     disabled ? "opacity-50 cursor-not-allowed" : "",
                   ].join(" ")}
                   style={{
                     borderColor: active ? "transparent" : hex,
                     background: undefined,
-                    backgroundColor: active ? rgba : "white",
+                    backgroundColor: active ? rgba : "rgba(255,255,255,1)",
                     boxShadow: active ? `0 8px 26px ${rgba}` : undefined,
                   }}
                 >
@@ -654,7 +655,7 @@ export default function VibeSelectPage() {
                             className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium"
                             style={{
                               color: hex,
-                              backgroundColor: "white",
+                              backgroundColor: "rgba(255,255,255,1)",
                               border: `1px solid ${hex}20`,
                             }}
                           >
@@ -729,6 +730,9 @@ export default function VibeSelectPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating Chat Button */}
+      <FloatingChatButton />
 
       {/* History Modal */}
       <AnimatePresence>
