@@ -60,11 +60,17 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
     if (!isOpen) return;
 
     const checkAndLoadGuides = async () => {
+      console.log('[RequestGuide] Modal opened, checking for active requests...');
+      
       // 1. Check for active request (fast check first)
       if (itineraryId) {
         try {
+          console.log('[RequestGuide] Checking active request for itinerary:', itineraryId);
           const result = await checkActiveRequest(itineraryId);
+          console.log('[RequestGuide] Active request check result:', result);
+          
           if (result?.hasActive) {
+            console.log('[RequestGuide] User already has active request:', result.requestId);
             toast.error('Bạn đã có yêu cầu đang chờ xử lý cho lộ trình này. Hãy xem trang "Yêu cầu của tôi".', {
               duration: 4000,
               action: {
@@ -78,12 +84,13 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
             return; // Don't load guides if already has active request
           }
         } catch (error) {
-          console.warn('[RequestGuide] Active request check failed:', error);
-          // Continue loading guides even if check fails
+          console.warn('[RequestGuide] Active request check failed (continuing anyway):', error.message);
+          // Continue loading guides even if check fails - don't block the modal
         }
       }
 
       // 2. Load available guides in parallel
+      console.log('[RequestGuide] Loading available guides...');
       loadGuides();
     };
 
@@ -140,17 +147,24 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
     setSubmitting(true);
     try {
       // Check for active request again (race condition prevention)
-      const activeCheck = await checkActiveRequest(itineraryId);
-      if (activeCheck?.hasActive) {
-        toast.error('Bạn đã có yêu cầu đang chờ xử lý cho lộ trình này.', {
-          duration: 3000,
-          action: {
-            label: 'Xem yêu cầu',
-            onClick: () => navigate('/my-tour-requests')
-          }
-        });
-        setSubmitting(false);
-        return;
+      console.log('[RequestGuide] Checking for active request (pre-submit)...');
+      try {
+        const activeCheck = await checkActiveRequest(itineraryId);
+        console.log('[RequestGuide] Pre-submit active check:', activeCheck);
+        if (activeCheck?.hasActive) {
+          toast.error('Bạn đã có yêu cầu đang chờ xử lý cho lộ trình này.', {
+            duration: 3000,
+            action: {
+              label: 'Xem yêu cầu',
+              onClick: () => navigate('/my-tour-requests')
+            }
+          });
+          setSubmitting(false);
+          return;
+        }
+      } catch (checkError) {
+        console.warn('[RequestGuide] Pre-submit check failed, proceeding anyway:', checkError.message);
+        // Continue with submission - backend will validate
       }
 
       // Build request body with minimal overhead

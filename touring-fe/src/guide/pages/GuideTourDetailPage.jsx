@@ -379,10 +379,18 @@ const GuideTourDetailPage = () => {
   };
 
   const handleCompleteTour = async () => {
-    try {
-      console.log("[GuideTourDetail] Completing tour:", id, completionNotes);
+    // Check if booking is paid first
+    if (tour.paymentStatus !== 'paid') {
+      toast.error('❌ Tour chưa được thanh toán! Khách hàng cần thanh toán trước khi hoàn thành tour.');
+      return;
+    }
 
-      const response = await withAuth(`/api/guide/tours/${id}/complete`, {
+    try {
+      console.log("[GuideTourDetail] Completing tour:", tour._id || id, completionNotes);
+
+      // Use correct endpoint: /api/bookings/:bookingId/complete
+      const bookingId = tour._id || id;
+      const response = await withAuth(`/api/bookings/${bookingId}/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -964,11 +972,18 @@ const GuideTourDetailPage = () => {
 
                 {isOngoing && (
                   <>
+                    {/* Show payment status warning if not paid */}
+                    {tour.paymentStatus !== 'paid' && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 mb-2">
+                        ⚠️ Chờ khách hàng thanh toán trước khi hoàn thành tour
+                      </div>
+                    )}
                     <Button
                       variant="primary"
                       fullWidth
                       onClick={() => setShowCompleteModal(true)}
-                      className="rounded-full px-4 py-2.5 text-sm font-semibold"
+                      disabled={tour.paymentStatus !== 'paid'}
+                      className="rounded-full px-4 py-2.5 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{ backgroundColor: PRIMARY, color: "#fff" }}
                     >
                       Hoàn thành Tour
