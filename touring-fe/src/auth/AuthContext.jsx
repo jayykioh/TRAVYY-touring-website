@@ -235,8 +235,20 @@ export default function AuthProvider({ children }) {
       setUser(null);
       setIsLoggedOut(true);
 
-      localStorage.clear();
+      // ✅ Keep trustedDeviceToken in localStorage (don't remove on logout)
+      // User can still skip 2FA on next login if they chose "Remember this device"
+      // To remove trusted device, user should go to Security Settings
+
+      // ✅ Keep rememberedUsername in sessionStorage (don't remove on logout)
+      const rememberedUsername = sessionStorage.getItem("rememberedUsername");
+
+      // Clear other session data
       sessionStorage.clear();
+
+      // ✅ Restore rememberedUsername after clear
+      if (rememberedUsername) {
+        sessionStorage.setItem("rememberedUsername", rememberedUsername);
+      }
 
       // 🧠 Xóa cookie (nếu không phải HttpOnly)
       document.cookie.split(";").forEach((c) => {
