@@ -172,17 +172,12 @@ async function getMatchingZones(prefs, options = {}) {
 
     return {
       ...zone,
-      // Main scores
       hardVibeScore: scoreResult.hardVibeScore,
       embedScore: zone.embedScore || 0,
       finalScore,
-      
-      // Context breakdown
       contextScore: scoreResult.contextScore,
       proximityScore: scoreResult.proximityScore,
       distanceKm: scoreResult.distanceKm,
-      
-      // Explanation
       reasons: scoreResult.reasons,
       details: scoreResult.details || null
     };

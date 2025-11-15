@@ -9,31 +9,7 @@ const BASE_V1 = "https://rsapi.goong.io";
 const BASE_V2 = "https://rsapi.goong.io/v2"; // ✅ Correct with /v2
 const KEY = process.env.GOONG_API_KEY;
 
-/**
- * Map vibes to Vietnamese search terms
- */
-const VIBE_TO_VIETNAMESE = {
-  food: ["quán ăn", "nhà hàng", "cafe"],
-  photo: ["điểm tham quan", "check-in"],
-  sunset: ["bãi biển", "viewpoint", "hoàng hôn"],
-  beach: [
-    "bãi biển",
-    "resort",
-    "bãi tắm",
-    "du lịch biển",
-    "biển đẹp",
-    "đảo",
-    "hải sản",
-  ],
-  nature: ["công viên", "thiên nhiên"],
-  culture: ["bảo tàng", "đình chùa", "di tích"],
-  shopping: ["trung tâm thương mại", "chợ"],
-  nightlife: ["bar", "quán nhậu"],
-};
 
-/**
- * Generate MINIMAL Vietnamese search terms
- */
 function generateSearchTerms(vibes) {
   const terms = new Set();
 

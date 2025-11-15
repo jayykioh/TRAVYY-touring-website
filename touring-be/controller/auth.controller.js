@@ -112,13 +112,12 @@ exports.register = async (req, res) => {
     const jti = newId();
     const refresh = signRefresh({ jti, userId: user.id });
     // Set refresh cookie for entire site so it is available to refresh endpoints
-    // and websocket handshakes during development. Use SameSite=None to allow
-    // cross-origin requests from the frontend dev server; keep `secure` only
-    // in production where HTTPS is used.
+    // In dev: use sameSite "lax" for localhost (Chrome blocks "none" without HTTPS)
+    // In prod: use sameSite "none" + secure for cross-origin support
     res.cookie("refresh_token", refresh, {
       httpOnly: true,
       secure: isProd,
-      sameSite: "none",
+      sameSite: isProd ? "none" : "lax",
       path: "/",
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
@@ -207,13 +206,12 @@ exports.login = async (req, res) => {
     const jti = newId();
     const refresh = signRefresh({ jti, userId: user.id });
     // Set refresh cookie for entire site so it is available to refresh endpoints
-    // and websocket handshakes during development. Use SameSite=None to allow
-    // cross-origin requests from the frontend dev server; keep `secure` only
-    // in production where HTTPS is used.
+    // In dev: use sameSite "lax" for localhost (Chrome blocks "none" without HTTPS)
+    // In prod: use sameSite "none" + secure for cross-origin support
     res.cookie("refresh_token", refresh, {
       httpOnly: true,
       secure: isProd,
-      sameSite: "none",
+      sameSite: isProd ? "none" : "lax",
       path: "/",
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });

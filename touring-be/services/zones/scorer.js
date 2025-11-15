@@ -1,11 +1,4 @@
-/**
- * Calculate distance between two coordinates using Haversine formula
- * @param {number} lat1 - Latitude of point 1
- * @param {number} lng1 - Longitude of point 1
- * @param {number} lat2 - Latitude of point 2
- * @param {number} lng2 - Longitude of point 2
- * @returns {number} Distance in kilometers
- */
+
 function calculateDistance(lat1, lng1, lat2, lng2) {
   const R = 6371; // Earth's radius in km
   const dLat = (lat2 - lat1) * (Math.PI / 180);

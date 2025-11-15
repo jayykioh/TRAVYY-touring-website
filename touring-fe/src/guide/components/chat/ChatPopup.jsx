@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-// ❌ Bỏ import icon thư viện
-// import { X, MessageCircle, ArrowLeft, Bell } from 'lucide-react';
+import { X, ArrowLeft, Clock, Users } from 'lucide-react';
 import { useAuth } from "../../../auth/context";
 import { useSocket } from "../../../context/SocketContext";
 import ChatBox from "./ChatBox";
 import TravellerChatBox from "../../../components/TravellerChatBox";
 
-const PRIMARY = "#02A0AA";
+const PRIMARY = "#007AFF";
 
 const ChatPopup = ({ isOpen, onClose, userRole }) => {
   const { user, withAuth } = useAuth();
@@ -224,69 +223,58 @@ const ChatPopup = ({ isOpen, onClose, userRole }) => {
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop with smooth fade */}
       <div
-        className="fixed inset-0 z-[9998] transition-opacity"
+        className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={handleClose}
-        style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
       />
 
-      {/* Popup */}
-      <div className="fixed bottom-24 right-8 w-[420px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[85vh] bg-white rounded-2xl shadow-2xl z-[9999] flex flex-col overflow-hidden animate-slideUp">
-        {/* Header */}
-        <div
-          className="flex items-center justify-between p-4 text-white"
-          style={{
-            background: `linear-gradient(90deg, ${PRIMARY} 0%, #32c6cf 100%)`,
-          }}
-        >
-          <div className="flex items-center gap-2">
-            {/* Nút back (không dùng icon) */}
+      {/* Popup - Apple style with smooth slide up animation */}
+      <div className="fixed bottom-24 right-8 w-[440px] max-w-[calc(100vw-2rem)] h-[600px] max-h-[85vh] bg-white rounded-[20px] shadow-2xl z-[9999] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300">
+        {/* Header - Clean Apple style */}
+        <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
+          <div className="flex items-center gap-3">
+            {/* Back button */}
             {selectedRequest && (
               <button
                 onClick={handleBackToList}
-                className="px-2 h-7 rounded-full hover:bg-white/20 transition-colors mr-1 text-sm font-semibold"
+                className="p-1.5 hover:bg-white/20 rounded-full transition-all duration-200 active:scale-95"
                 aria-label="Quay lại"
               >
-                ←
+                <ArrowLeft className="w-5 h-5" />
               </button>
             )}
 
-            {/* Điểm nhấn chat (dấu chấm) */}
-            <span
-              className="inline-block w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: "white" }}
-              aria-hidden="true"
-            />
-            <h3 className="font-semibold">
-              {selectedRequest
-                ? (userRole || user?.role) === "TourGuide"
-                  ? selectedRequest.userId?.name || "Khách hàng"
-                  : selectedRequest.guideId?.name || "Hướng dẫn viên"
-                : (userRole || user?.role) === "TourGuide"
-                ? "Chat với Khách hàng"
-                : "Chat với Hướng dẫn viên"}
-            </h3>
+            {/* Title with icon */}
+            <div className="flex items-center gap-2.5">
+              <div className="w-2 h-2 bg-white rounded-full shadow-md" />
+              <h3 className="font-semibold text-[15px] leading-tight">
+                {selectedRequest
+                  ? (userRole || user?.role) === "TourGuide"
+                    ? selectedRequest.userId?.name || "Khách hàng"
+                    : selectedRequest.guideId?.name || "Hướng dẫn viên"
+                  : (userRole || user?.role) === "TourGuide"
+                  ? "Chat với Khách hàng"
+                  : "Chat với Hướng dẫn viên"}
+              </h3>
+            </div>
 
-            {/* Tổng unread (dấu chấm + số) */}
+            {/* Unread badge */}
             {!selectedRequest && totalUnread > 0 && (
-              <span
-                className="ml-2 px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1"
-                style={{ backgroundColor: "#ef4444" }}
-              >
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-white" />
+              <div className="px-2.5 py-1 bg-red-500 rounded-full text-xs font-bold shadow-md flex items-center gap-1.5 animate-in zoom-in duration-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-white" />
                 {totalUnread}
-              </span>
+              </div>
             )}
           </div>
 
-          {/* Nút đóng (không dùng icon) */}
+          {/* Close button */}
           <button
             onClick={handleClose}
-            className="px-2 h-7 rounded-full hover:bg-white/20 transition-colors text-sm font-semibold"
+            className="p-1.5 hover:bg-white/20 rounded-full transition-all duration-200 active:scale-95"
             aria-label="Đóng"
           >
-            Đóng
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -311,6 +299,7 @@ const ChatPopup = ({ isOpen, onClose, userRole }) => {
                   totalPrice:
                     selectedRequest.finalPrice?.amount ||
                     selectedRequest.initialBudget?.amount,
+                  items: selectedRequest.tourDetails?.items || selectedRequest.itineraryId?.items || [],
                 }}
               />
             ) : (
@@ -336,26 +325,20 @@ const ChatPopup = ({ isOpen, onClose, userRole }) => {
             )}
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-5 bg-gradient-to-b from-gray-50/50 to-white">
             {loading ? (
               <div className="flex items-center justify-center h-full">
-                <div
-                  className="animate-spin rounded-full h-8 w-8 border-2 border-b-transparent"
-                  style={{ borderColor: PRIMARY }}
-                />
+                <div className="h-9 w-9 border-[3px] border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
               </div>
             ) : activeRequests.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                {/* Vòng tròn mô phỏng icon chat (không dùng icon) */}
-                <div
-                  className="mb-4 w-16 h-16 rounded-full border-4 opacity-60"
-                  style={{ borderColor: PRIMARY }}
-                  aria-hidden="true"
-                />
-                <p className="text-center">
+              <div className="flex flex-col items-center justify-center h-full text-gray-500 animate-in fade-in zoom-in-95 duration-500">
+                <div className="mb-5 w-20 h-20 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+                  <span className="text-4xl">💬</span>
+                </div>
+                <p className="text-center font-semibold text-gray-700">
                   Chưa có yêu cầu tour nào đang hoạt động
                 </p>
-                <p className="text-sm text-center mt-2 text-gray-400">
+                <p className="text-sm text-center mt-2 text-gray-500 max-w-[280px]">
                   {(userRole || user?.role) === "TourGuide"
                     ? "Chấp nhận yêu cầu để bắt đầu chat với khách hàng"
                     : "Tạo yêu cầu tour để bắt đầu chat với hướng dẫn viên"}
@@ -381,70 +364,56 @@ const ChatPopup = ({ isOpen, onClose, userRole }) => {
                     <button
                       key={request._id}
                       onClick={() => handleSelectRequest(request)}
-                      className="w-full p-4 bg-gradient-to-br from-gray-50 to-gray-100 hover:from-[#f0fbfc] hover:to-[#e6f7f8] rounded-xl border-2 border-gray-200 hover:border-[#7bd4da] transition-all text-left group relative"
+                      className="w-full p-4 bg-white hover:bg-gradient-to-br hover:from-blue-50/50 hover:to-white rounded-2xl border border-gray-200/60 hover:border-blue-300 hover:shadow-lg transition-all duration-200 text-left group relative active:scale-[0.98] animate-in fade-in slide-in-from-bottom-2"
+                      style={{ animationDelay: `${activeRequests.indexOf(request) * 50}ms` }}
                     >
-                      {/* Badge unread (dấu chấm + số) */}
+                      {/* Unread badge */}
                       {requestUnread > 0 && (
-                        <div className="absolute -top-1 -right-1 px-2 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold animate-bounce shadow-lg gap-1">
-                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-white" />
+                        <div className="absolute -top-2 -right-2 px-2.5 py-1 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-lg gap-1.5 animate-in zoom-in duration-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white" />
                           {requestUnread}
                         </div>
                       )}
 
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h4
-                            className="font-semibold text-gray-900 transition-colors group-hover:text-[#129aa3]"
-                            style={{}}
-                          >
+                      <div className="flex items-start gap-3 mb-3">
+                        {/* Avatar */}
+                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-base shadow-md flex-shrink-0">
+                          {(displayName || "K")[0].toUpperCase()}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors leading-tight">
                             {tourName}
                           </h4>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-gray-600 mt-0.5 leading-tight">
                             {displayName}
                           </p>
                         </div>
-                        {requestUnread > 0 && (
-                          <span
-                            className="text-xs font-bold px-2 py-1 rounded-full shadow-md text-white"
-                            style={{
-                              background:
-                                "linear-gradient(90deg,#ef4444,#ec4899)",
-                            }}
-                          >
-                            {requestUnread} mới
-                          </span>
-                        )}
                       </div>
 
-                      <div className="flex items-center gap-4 text-xs text-gray-500 mt-3">
-                        <span className="flex items-center gap-1">
-                          <span
-                            className="inline-block w-1.5 h-1.5 rounded-full"
-                            style={{ backgroundColor: PRIMARY }}
-                          />
+                      <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-blue-500" />
                           {days} ngày
                         </span>
-                        <span className="flex items-center gap-1">
-                          <span
-                            className="inline-block w-1.5 h-1.5 rounded-full"
-                            style={{ backgroundColor: PRIMARY }}
-                          />
+                        <span className="flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-blue-500" />
                           {guests} khách
                         </span>
                       </div>
 
                       {request.latestMessage && (
                         <div
-                          className={`mt-3 p-2 rounded-lg border ${
+                          className={`p-2.5 rounded-xl border transition-all ${
                             requestUnread > 0
-                              ? "bg-[#e6f7f8] border-[#7bd4da]"
-                              : "bg-white/80 border-gray-200"
+                              ? "bg-blue-50 border-blue-200"
+                              : "bg-gray-50 border-gray-200"
                           }`}
                         >
                           <p
-                            className={`text-sm truncate ${
+                            className={`text-sm truncate leading-tight ${
                               requestUnread > 0
-                                ? "text-[#087c83] font-medium"
+                                ? "text-blue-700 font-medium"
                                 : "text-gray-700"
                             }`}
                           >
@@ -460,31 +429,22 @@ const ChatPopup = ({ isOpen, onClose, userRole }) => {
           </div>
         )}
 
-        {/* Footer - Only show when no request selected */}
+        {/* Footer - Clean Apple style */}
         {!selectedRequest && (
-          <div
-            className="p-4 border-t border-gray-200"
-            style={{ background: "linear-gradient(90deg,#f9fafb,#fff)" }}
-          >
+          <div className="px-5 py-4 border-t border-gray-200/80 bg-gradient-to-br from-gray-50/50 to-white">
             <div className="flex items-center justify-between text-xs">
-              <p className="text-gray-500">
-                Click vào yêu cầu để xem chi tiết và chat
+              <p className="text-gray-500 font-medium">
+                Click vào yêu cầu để xem chi tiết
               </p>
               {socket?.connected ? (
-                <div
-                  className="flex items-center gap-1"
-                  style={{ color: "#16a34a" }}
-                >
-                  <span
-                    className="w-2 h-2 rounded-full animate-pulse"
-                    style={{ backgroundColor: "#22c55e" }}
-                  />
-                  <span className="font-medium">Live</span>
+                <div className="flex items-center gap-1.5 text-green-600">
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-sm" />
+                  <span className="font-semibold">Live</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1 text-gray-400">
+                <div className="flex items-center gap-1.5 text-gray-400">
                   <span className="w-2 h-2 rounded-full bg-gray-400" />
-                  <span>Offline</span>
+                  <span className="font-medium">Offline</span>
                 </div>
               )}
             </div>

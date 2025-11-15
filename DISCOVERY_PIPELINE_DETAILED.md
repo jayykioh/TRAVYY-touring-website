@@ -85,7 +85,6 @@ FE (DiscoverResults.jsx)
 // ✅ Lấy user location (nếu có)
 const userLocation = getUserLocation(fullUser, req.body);
 // Returns: { lat, lng, source, accuracy, provinceName? }
-
 // ✅ Build preferences
 const prefs = {
   vibes,           // ['beach', 'culture']

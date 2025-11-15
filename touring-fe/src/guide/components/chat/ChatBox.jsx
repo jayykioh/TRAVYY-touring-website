@@ -1,17 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import {
-  Send,
-  MapPin,
-  Calendar,
-  Users,
-  Clock,
-  DollarSign,
-  CheckCircle,
-  XCircle,
-  Map,
-  X,
-  AlertCircle,
-} from "lucide-react";
+import { Send, MapPin, ChevronDown, ChevronUp } from "lucide-react";
 
 import { useAuth } from "../../../auth/context";
 import { useTourRequestChat } from "../../../hooks/useTourRequestChat";
@@ -110,96 +98,116 @@ const ChatBox = ({ requestId, tourInfo }) => {
      📌 RENDER UI
   ====================================================== */
   return (
-    <div className="flex flex-col h-full bg-[#f5f5f7] overflow-hidden rounded-2xl shadow-xl">
-      {/* HEADER - Minimalist style */}
-      {/* HEADER - Minimalist style */}
-      <div className="px-6 py-4 bg-white border-b border-gray-100">
+    <div className="flex flex-col h-full bg-white overflow-hidden">
+      {/* HEADER - Apple/Facebook Style */}
+      <div className="px-5 py-4 bg-white border-b border-gray-200/80 backdrop-blur-xl">
         <div className="flex items-center justify-between">
-          {/* Left: avatar + name + status (giữ nguyên nhưng gọn hơn) */}
           <div className="flex items-center gap-3">
+            {/* Avatar with online status */}
             <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                <span className="text-lg">💬</span>
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-lg shadow-md">
+                {(customerName || "K")[0].toUpperCase()}
               </div>
               {connected && (
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-[2.5px] border-white shadow-sm" />
               )}
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 text-base">
+              <h3 className="font-semibold text-gray-900 text-base leading-tight">
                 {customerName || "Khách hàng"}
               </h3>
-              <p className="text-xs text-gray-500">
-                {connected ? "Đang hoạt động" : "Đang kết nối..."}
+              <p className="text-xs text-gray-500 mt-0.5 leading-tight">
+                {connected ? (
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                    Đang hoạt động
+                  </span>
+                ) : (
+                  "Đang kết nối..."
+                )}
               </p>
             </div>
           </div>
 
-          {/* Right: nút toggle chi tiết (ẩn = ! ; hiện = ×) */}
+          {/* Toggle tour info button */}
           <button
             onClick={() => setShowTourInfo((p) => !p)}
             aria-label="Bật/tắt chi tiết tour"
-            className={`w-5 h-5 rounded-full border transition-colors flex items-center justify-center
-        ${
-          showTourInfo
-            ? "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-        }`}
+            className="p-2 hover:bg-gray-100 rounded-full transition-all duration-200"
           >
-            <span className="text-sm leading-none select-none">
-              {showTourInfo ? "×" : "!"}
-            </span>
+            {showTourInfo ? (
+              <ChevronUp className="w-5 h-5 text-gray-600" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-600" />
+            )}
           </button>
         </div>
       </div>
 
-      {/* BODY - Clean background */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {/* Tour Info - Subtle card */}
+      {/* BODY - Clean background with subtle gradient */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-gradient-to-b from-gray-50/30 to-white">
+        {/* Tour Info - Elegant card with smooth animation */}
         {showTourInfo && (requestDetails || tourInfo) && (
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <div className="font-semibold text-gray-900 text-sm">
-                  <div className="text-base font-bold">
-                    {(requestDetails?.tourDetails?.zoneName || tourInfo?.tourName || tourInfo?.name) || 'Tour'}
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    {requestDetails?.tourDetails?.numberOfDays || tourInfo?.duration || ''} • {requestDetails?.tourDetails?.numberOfGuests || tourInfo?.numberOfGuests || ''} khách
-                  </div>
+          <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-4 border border-gray-200/60 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <h4 className="text-base font-bold text-gray-900 leading-tight">
+                  {(requestDetails?.tourDetails?.zoneName || tourInfo?.tourName || tourInfo?.name) || 'Tour'}
+                </h4>
+                <div className="flex items-center gap-3 mt-2 text-sm text-gray-600">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                    {requestDetails?.tourDetails?.numberOfDays || tourInfo?.duration || ''}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                    {requestDetails?.tourDetails?.numberOfGuests || tourInfo?.numberOfGuests || ''} khách
+                  </span>
                 </div>
-
-                <div className="flex flex-col items-end gap-2">
-                  <button
-                    onClick={() => setShowItinerary((s) => !s)}
-                    className="text-xs px-3 py-1 bg-white/60 rounded-lg hover:bg-white/80"
-                  >
-                    {showItinerary ? 'Ẩn hành trình' : 'Xem hành trình'}
-                  </button>
-                </div>
+                {tourInfo?.location && (
+                  <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-2">
+                    <MapPin className="w-4 h-4 text-blue-500" />
+                    {tourInfo.location}
+                  </p>
+                )}
               </div>
-              {tourInfo.location && (
-                <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5" />
-                  {tourInfo.location}
-                </p>
-              )}
             </div>
 
-            {/* Itinerary list - prefer requestDetails.tourDetails.items */}
+            <button
+              onClick={() => setShowItinerary((s) => !s)}
+              className="w-full mt-2 py-2.5 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              {showItinerary ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  Ẩn hành trình
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  Xem hành trình
+                </>
+              )}
+            </button>
+
+            {/* Itinerary list with smooth animation */}
             {showItinerary && (
-              <div className="mt-3 space-y-2 text-sm text-gray-700">
+              <div className="mt-3 space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-300">
                 {(requestDetails?.tourDetails?.items || tourInfo?.items || []).length === 0 ? (
-                  <div className="text-xs text-gray-500">Hành trình chưa có chi tiết</div>
+                  <div className="text-sm text-gray-500 text-center py-4">Hành trình chưa có chi tiết</div>
                 ) : (
                   (requestDetails?.tourDetails?.items || tourInfo?.items || []).map((it, idx) => (
-                    <div key={idx} className="flex items-start gap-3 p-2 bg-white/80 rounded-lg border">
-                      <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center text-xs font-semibold">{idx+1}</div>
-                      <div className="flex-1">
-                        <div className="font-medium">{it.name || it.title || it.placeName}</div>
-                        {it.address && <div className="text-xs text-gray-500">{it.address}</div>}
+                    <div key={idx} className="flex items-start gap-3 p-3 bg-white rounded-xl border border-gray-200/60 hover:shadow-md transition-all duration-200">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center text-sm font-semibold shadow-sm flex-shrink-0">
+                        {idx+1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-900 text-sm leading-tight">{it.name || it.title || it.placeName}</div>
+                        {it.address && <div className="text-xs text-gray-500 mt-1 leading-tight">{it.address}</div>}
                         {(it.startTime || it.endTime) && (
-                          <div className="text-xs text-gray-400 mt-1">{it.startTime || ''}{it.startTime && it.endTime ? ' - ' : ''}{it.endTime || ''}</div>
+                          <div className="text-xs text-gray-400 mt-1.5 leading-tight">
+                            {it.startTime || ''}{it.startTime && it.endTime ? ' - ' : ''}{it.endTime || ''}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -221,15 +229,19 @@ const ChatBox = ({ requestId, tourInfo }) => {
           />
         )}
 
-        {/* MESSAGES - iMessage style */}
-        <div className="space-y-2">
+        {/* MESSAGES - Apple iMessage Style */}
+        <div className="space-y-1">
           {loading && messages.length === 0 ? (
-            <div className="flex justify-center py-12">
-              <div className="h-8 w-8 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+            <div className="flex justify-center py-16">
+              <div className="h-9 w-9 border-[3px] border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
             </div>
           ) : messages.length === 0 ? (
-            <div className="text-center text-gray-400 py-12 text-sm">
-              Chưa có tin nhắn nào
+            <div className="text-center text-gray-400 py-16">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                <span className="text-2xl">💬</span>
+              </div>
+              <p className="text-sm">Chưa có tin nhắn nào</p>
+              <p className="text-xs mt-1 text-gray-400">Bắt đầu cuộc trò chuyện</p>
             </div>
           ) : (
             messages.map((msg, idx) => {
@@ -251,27 +263,27 @@ const ChatBox = ({ requestId, tourInfo }) => {
                   5 * 60 * 1000;
 
               return (
-                <div key={msg._id}>
+                <div key={msg._id} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                   {showTime && (
-                    <div className="flex justify-center my-3">
-                      <span className="text-xs text-gray-400 px-3 py-1 bg-white rounded-full">
+                    <div className="flex justify-center my-4">
+                      <span className="text-xs text-gray-400 px-3 py-1.5 bg-white/80 backdrop-blur-sm rounded-full shadow-sm font-medium">
                         {formatTime(msg.createdAt)}
                       </span>
                     </div>
                   )}
 
                   <div
-                    className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                    className={`flex ${isMe ? "justify-end" : "justify-start"} px-1`}
                   >
-                    {/* Bubble - iMessage style */}
+                    {/* Bubble - iMessage style with better shadows */}
                     <div
-                      className={`rounded-[20px] px-4 py-2.5 max-w-[75%] ${
+                      className={`rounded-[22px] px-4 py-2.5 max-w-[75%] transition-all duration-200 ${
                         isMe
-                          ? "bg-[#007AFF] text-white shadow-sm"
-                          : "bg-white text-gray-900 shadow-sm border border-gray-100"
+                          ? "bg-gradient-to-br from-[#007AFF] to-[#0051D5] text-white shadow-md hover:shadow-lg"
+                          : "bg-white text-gray-900 shadow-md hover:shadow-lg border border-gray-100/50"
                       }`}
                     >
-                      <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">
+                      <p className="text-[15px] leading-[1.4] whitespace-pre-wrap break-words">
                         {msg.content}
                       </p>
                     </div>
@@ -282,11 +294,11 @@ const ChatBox = ({ requestId, tourInfo }) => {
           )}
         </div>
 
-        {/* Typing indicator */}
-        {typingArray.length > 0 && (
-          <div className="flex justify-start">
-            <div className="bg-white rounded-[20px] px-4 py-3 shadow-sm border border-gray-100">
-              <div className="flex gap-1">
+        {/* Typing indicator - only show when customer is typing */}
+        {typingArray.filter(t => t !== user?.id && t !== user?._id?.toString()).length > 0 && (
+          <div className="flex justify-start px-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="bg-white rounded-[22px] px-5 py-3.5 shadow-md border border-gray-100/50">
+              <div className="flex gap-1.5">
                 <span
                   className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
                   style={{ animationDelay: "0ms" }}
@@ -307,26 +319,32 @@ const ChatBox = ({ requestId, tourInfo }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* INPUT - Clean minimal design */}
+      {/* INPUT - Apple Messages Style */}
       <form
         onSubmit={handleSendMessage}
-        className="px-4 py-3 bg-white border-t border-gray-100"
+        className="px-4 py-3.5 bg-white border-t border-gray-200/80 backdrop-blur-xl"
       >
-        <div className="flex items-center gap-2 bg-gray-100 rounded-[24px] px-4 py-2">
+        <div className="flex items-center gap-2.5 bg-gray-100 rounded-[26px] px-4 py-2.5 hover:bg-gray-150 transition-colors duration-200">
           <input
             type="text"
             value={newMessage}
             onChange={handleInputChange}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage(e);
+              }
+            }}
             placeholder="Tin nhắn..."
             disabled={sending || !connected}
-            className="flex-1 bg-transparent border-none outline-none text-[15px] text-gray-900 placeholder-gray-400"
+            className="flex-1 bg-transparent border-none outline-none text-[15px] text-gray-900 placeholder-gray-400 leading-tight"
           />
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
-            className={`p-2 rounded-full transition-all ${
+            className={`p-2 rounded-full transition-all duration-200 ${
               newMessage.trim() && !sending
-                ? "bg-[#007AFF] text-white hover:bg-[#0051D5]"
+                ? "bg-gradient-to-br from-[#007AFF] to-[#0051D5] text-white hover:shadow-lg hover:scale-105 active:scale-95"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
           >

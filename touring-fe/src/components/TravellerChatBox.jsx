@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, MapPin, Calendar, Users, Clock, X, Paperclip, Download, MoreVertical, Edit2, Trash2, CheckCheck, Check, AlertCircle, Wifi, WifiOff, DollarSign, Map } from 'lucide-react';
+import { Send, MapPin, X, Paperclip, Download, Edit2, Trash2, AlertCircle, ChevronDown, ChevronUp, Calendar, CheckCheck, Check, Users, Clock, Map } from 'lucide-react';
 import { useAuth } from '../auth/context';
 import { useNavigate } from 'react-router-dom';
 import { useTourRequestChat } from '../hooks/useTourRequestChat';
@@ -247,38 +247,49 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-900 overflow-hidden rounded-lg shadow-xl">
-      {/* Header */}
-      <div className="p-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md border-b-2 border-teal-400">
+    <div className="flex flex-col h-full bg-white overflow-hidden">
+      {/* HEADER - Apple Style */}
+      <div className="px-5 py-4 bg-white border-b border-gray-200/80 backdrop-blur-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              {connected ? (
-                <Wifi className="w-4 h-4 text-green-400" />
-              ) : (
-                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+            {/* Avatar */}
+            <div className="relative">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-semibold text-lg shadow-md">
+                {(guideName || "G")[0].toUpperCase()}
+              </div>
+              {connected && (
+                <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-[2.5px] border-white shadow-sm" />
               )}
-              <span className="text-sm font-medium">
-                {connected ? 'Online' : 'Connecting...'}
-              </span>
             </div>
-            {unreadCount > 0 && (
-              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
-                {unreadCount}
-              </span>
+            <div>
+              <h3 className="font-semibold text-gray-900 text-base leading-tight">
+                {guideName || "Tour Guide"}
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5 leading-tight">
+                {connected ? (
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                    Đang hoạt động
+                  </span>
+                ) : (
+                  "Đang kết nối..."
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Toggle tour info */}
+          <button
+            onClick={() => setShowTourInfo((p) => !p)}
+            aria-label="Bật/tắt chi tiết tour"
+            className="p-2 hover:bg-gray-100 rounded-full transition-all duration-200"
+          >
+            {showTourInfo ? (
+              <ChevronUp className="w-5 h-5 text-gray-600" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-600" />
             )}
-          </div>
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold">Chat với {guideName || 'Tour Guide'}</h3>
-            <button
-              onClick={() => setShowTourInfo(!showTourInfo)}
-              className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
-              aria-label={showTourInfo ? "Hide tour details" : "Show tour details"}
-              aria-expanded={showTourInfo}
-            >
-              {showTourInfo ? '🔼' : '🔽'} Chi tiết tour
-            </button>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -821,21 +832,27 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
               );
             })}
             
-            {/* Typing indicator */}
-            {typingUsers.size > 0 && (
-              <div className="flex gap-2 justify-start" aria-label="Someone is typing">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow-md">
-                  {guideName?.charAt(0).toUpperCase() || 'G'}
-                </div>
-                <div className="bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-2xl rounded-tl-sm px-4 py-3 shadow-md">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            {/* Typing indicator - only show when guide is typing (not self) */}
+            {typingUsers && typingUsers.size > 0 && (() => {
+              const typingArray = Array.from(typingUsers);
+              const currentUserId = user?._id?.toString() || user?.id;
+              const otherTyping = typingArray.filter(t => t !== currentUserId);
+              
+              return otherTyping.length > 0 && (
+                <div className="flex gap-2 justify-start" aria-label="Someone is typing">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow-md">
+                    {guideName?.charAt(0).toUpperCase() || 'G'}
+                  </div>
+                  <div className="bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-2xl rounded-tl-sm px-4 py-3 shadow-md">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </>
         )}
         <div ref={messagesEndRef} />
@@ -867,13 +884,37 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
         </div>
       )}
 
-      {/* Input */}
+      {/* INPUT - Apple Messages Style */}
       <form 
         onSubmit={handleSendMessage}
-        className="p-3 border-t-2 border-gray-100 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900"
+        className="px-4 py-3.5 bg-white border-t border-gray-200/80 backdrop-blur-xl"
       >
-        <div className="flex items-end gap-2">
-          {/* File upload button */}
+        {/* Attached Files Preview */}
+        {selectedFiles.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {selectedFiles.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-xl border border-blue-200"
+              >
+                <Paperclip className="w-4 h-4 text-blue-600" />
+                <span className="text-sm truncate max-w-[150px] text-gray-700">
+                  {file.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeFile(index)}
+                  className="p-1 hover:bg-blue-100 rounded-full transition-colors"
+                >
+                  <X className="w-3.5 h-3.5 text-red-500" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2.5 bg-gray-100 rounded-[26px] px-4 py-2.5 hover:bg-gray-150 transition-colors duration-200">
+          {/* File Upload Button */}
           <input
             ref={fileInputRef}
             type="file"
@@ -886,73 +927,56 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={sending || !connected}
-            className="p-2.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md"
-            title="Attach files"
+            className="p-1.5 hover:bg-gray-200 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+            title="Đính kèm file"
           >
-            <Paperclip className="w-5 h-5" />
+            <Paperclip className="w-5 h-5 text-gray-600" />
           </button>
 
-          <div className="flex-1 relative">
-            <textarea
-              value={newMessage}
-              onChange={handleInputChange}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage(e);
-                }
-              }}
-              placeholder="Nhập tin nhắn của bạn... (Shift+Enter để xuống dòng)"
-              className="w-full px-3 py-2.5 pr-10 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm resize-none min-h-[40px] max-h-[120px]"
-              disabled={sending || !connected}
-              rows={1}
-              style={{ height: 'auto' }}
-              onInput={(e) => {
-                e.target.style.height = 'auto';
-                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-              }}
-            />
-            {newMessage.trim() && (
-              <span className="absolute right-3 top-2.5 text-xs text-gray-400 dark:text-gray-500">
-                {newMessage.length}
-              </span>
-            )}
-          </div>
+          {/* Message Input */}
+          <textarea
+            value={newMessage}
+            onChange={handleInputChange}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage(e);
+              }
+            }}
+            placeholder="Tin nhắn..."
+            className="flex-1 bg-transparent border-none outline-none text-[15px] text-gray-900 placeholder-gray-400 leading-tight resize-none min-h-[40px] max-h-[120px]"
+            disabled={sending || !connected}
+            rows={1}
+            style={{ height: 'auto' }}
+            onInput={(e) => {
+              e.target.style.height = 'auto';
+              e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+            }}
+          />
+          
           <button
             type="submit"
-            disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || !connected}
-            className="p-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-xl hover:from-teal-600 hover:to-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-teal-500 disabled:hover:to-cyan-500 transition-all shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
+            disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending}
+            className={`p-2 rounded-full transition-all duration-200 ${
+              (newMessage.trim() || selectedFiles.length > 0) && !sending
+                ? "bg-gradient-to-br from-[#007AFF] to-[#0051D5] text-white hover:shadow-lg hover:scale-105 active:scale-95"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            }`}
           >
             {sending ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               <Send className="w-5 h-5" />
             )}
           </button>
         </div>
         
-        {/* File upload info */}
-        {selectedFiles.length > 0 && (
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-            {selectedFiles.length} file(s) sẽ được gửi cùng tin nhắn
+        {!connected && (
+          <div className="flex items-center justify-center gap-2 mt-2 text-xs text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg animate-pulse">
+            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+            Đang kết nối chat...
           </div>
         )}
-        
-        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center justify-between">
-          <span>Max 5 files, 10MB each. Supported: Images, PDF, DOC, XLS, TXT</span>
-          {newMessage.length > 0 && (
-            <span className={`${newMessage.length > 1000 ? 'text-red-500' : 'text-gray-400'}`}>
-              {newMessage.length}/1000
-            </span>
-          )}
-        </div>
-        
-        {!connected && (
-          <div className="flex items-center justify-center gap-2 mt-2 text-xs text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-lg">
-            <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-          Đang kết nối chat...
-        </div>
-      )}
       </form>
 
       {/* Payment Confirmation Modal */}

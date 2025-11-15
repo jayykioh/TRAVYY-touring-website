@@ -59,14 +59,12 @@ router.get(
       const refreshToken = signRefresh({ jti, userId: user.id });
 
       // Set refresh cookie according to environment
-      // Make refresh cookie available site-wide during development so the
-      // frontend dev server and websocket handshakes can access it.
-      // In dev: use sameSite: "None" to allow cross-site (requires secure in prod).
-      // In prod: use sameSite: "None" + secure: true.
+      // In dev: use sameSite "lax" for localhost (Chrome blocks "none" without HTTPS)
+      // In prod: use sameSite "none" + secure for cross-origin support
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
         secure: isProd,
-        sameSite: "none",
+        sameSite: isProd ? "none" : "lax",
         path: "/",
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 ngày
       });
@@ -101,14 +99,12 @@ router.get(
 
       const refreshToken = signRefresh({ jti, userId: user.id });
 
-      // Make refresh cookie available site-wide during development so the
-      // frontend dev server and websocket handshakes can access it.
-      // In dev: use sameSite: "None" to allow cross-site (requires secure in prod).
-      // In prod: use sameSite: "None" + secure: true.
+      // In dev: use sameSite "lax" for localhost (Chrome blocks "none" without HTTPS)
+      // In prod: use sameSite "none" + secure for cross-origin support
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
         secure: isProd,
-        sameSite: "none",
+        sameSite: isProd ? "none" : "lax",
         path: "/",
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
@@ -192,18 +188,24 @@ router.post("/set-role", authJwt, async (req, res) => {
 router.post("/logout", async (req, res) => {
   try {
     // 🧹 Xoá cookie refresh_token triệt để
-    res.clearCookie("refresh_token", {
+    // CRITICAL: clearCookie phải match CHÍNH XÁC các options khi set cookie
+    const cookieOptions = {
       httpOnly: true,
       secure: isProd,
-      sameSite: "none",
-      path: "/", // 👈 QUAN TRỌNG: phải để "/" để xoá toàn bộ scope cookie
-    });
+      sameSite: isProd ? "none" : "lax",
+      path: "/",
+    };
+    
+    // Clear cookie với đúng options
+    res.clearCookie("refresh_token", cookieOptions);
+    
+    // Set header để client biết phải clear cache
+    res.set("Clear-Site-Data", '"cache", "cookies", "storage"');
 
-    // 🧠 Có thể trả thêm header cho FE confirm
     return res.status(200).json({ ok: true, message: "Logged out" });
   } catch (e) {
     console.error("logout error:", e);
-    return res.status(200).json({ ok: false, message: "Logout error" });
+    return res.status(500).json({ ok: false, message: "Logout error" });
   }
 });
 

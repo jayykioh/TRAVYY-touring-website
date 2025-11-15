@@ -37,11 +37,7 @@ const VIBE_MAPPING = {
 exports.getProfileSummary = async (req, res) => {
   try {
     const userId = req.userId;
-    
-    // Get user profile from MongoDB
     const profile = await UserProfile.findOne({ userId }).lean();
-    
-    // NEW USERS: Return empty profile structure instead of 404
     if (!profile) {
       return res.json({
         summary: {

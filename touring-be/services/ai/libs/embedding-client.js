@@ -1,5 +1,3 @@
-
-
 const EMBED_URL = process.env.EMBED_SERVICE_URL || 'http://localhost:8088';
 
 async function fetchWithTimeout(url, options = {}, timeout = 10000) {
@@ -26,7 +24,7 @@ async function embed(texts) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ texts })
-  }, 60000); // Increased timeout: 10s → 60s for long text
+  }, 20000); // Increased timeout: 10s → 20s for long text
   
   if (!res.ok) {
     const text = await res.text();
