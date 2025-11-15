@@ -16,19 +16,30 @@ export const AdminAuthProvider = ({ children }) => {
         console.log("[AdminAuthContext] Initializing auth...");
         const authenticated = adminAuthService.isAuthenticated();
         console.log("[AdminAuthContext] isAuthenticated:", authenticated);
-        setIsAuthenticated(authenticated);
 
         if (authenticated) {
           const currentAdmin = adminAuthService.getCurrentAdmin();
-          const storedToken = sessionStorage.getItem("admin_token");
+          const storedToken = localStorage.getItem("admin_token");
           console.log("[AdminAuthContext] Setting admin:", currentAdmin);
           console.log(
             "[AdminAuthContext] Setting token:",
             storedToken ? "exists" : "null"
           );
-          setAdmin(currentAdmin);
-          setToken(storedToken);
+
+          // ✅ Validate admin role
+          if (currentAdmin?.role !== "Admin") {
+            console.log("[AdminAuthContext] User is not Admin, clearing auth");
+            adminAuthService.logout();
+            setIsAuthenticated(false);
+            setAdmin(null);
+            setToken(null);
+          } else {
+            setIsAuthenticated(true);
+            setAdmin(currentAdmin);
+            setToken(storedToken);
+          }
         } else {
+          setIsAuthenticated(false);
           setAdmin(null);
           setToken(null);
         }
@@ -47,14 +58,26 @@ export const AdminAuthProvider = ({ children }) => {
     // (in case user opens another tab, logs out, then returns to this tab)
     const handleFocus = () => {
       const authenticated = adminAuthService.isAuthenticated();
-      setIsAuthenticated(authenticated);
 
-      if (authenticated && !admin) {
+      if (authenticated) {
         const currentAdmin = adminAuthService.getCurrentAdmin();
-        const storedToken = sessionStorage.getItem("admin_token");
-        setAdmin(currentAdmin);
-        setToken(storedToken);
-      } else if (!authenticated && admin) {
+        // ✅ Validate admin role
+        if (currentAdmin?.role !== "Admin") {
+          console.log(
+            "[AdminAuthContext] Non-admin detected on focus, clearing auth"
+          );
+          adminAuthService.logout();
+          setIsAuthenticated(false);
+          setAdmin(null);
+          setToken(null);
+        } else if (!admin) {
+          const storedToken = localStorage.getItem("admin_token");
+          setIsAuthenticated(true);
+          setAdmin(currentAdmin);
+          setToken(storedToken);
+        }
+      } else if (admin) {
+        setIsAuthenticated(false);
         setAdmin(null);
         setToken(null);
       }
@@ -100,7 +123,7 @@ export const AdminAuthProvider = ({ children }) => {
 
   const updateAdmin = (updatedAdmin) => {
     setAdmin(updatedAdmin);
-    sessionStorage.setItem("admin_user", JSON.stringify(updatedAdmin));
+    localStorage.setItem("admin_user", JSON.stringify(updatedAdmin));
   };
 
   const value = {

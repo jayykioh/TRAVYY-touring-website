@@ -44,15 +44,14 @@ import ItineraryView from "./pages/ItineraryView";
 import ItineraryResult from "./pages/ItineraryResult"; // ✅ ADD THIS IMPORT
 import RefundRequest from "./pages/RefundRequest";
 import UserRefundList from "./components/UserRefundList";
+// ✅ NEW: Personalized Recommendations
+import DiscoveryWrappedNew from "./pages/DiscoveryWrappedNew";
 // import ItineraryView from "./pages/ItineraryView";
 
 // ✅ THÊM: Import Admin components
 // import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
 import AdminRoutes from "./admin/routes/AdminRoutes";
 import GuideRoutes from "./guide/routes/guideRoutes";
-
-// ✅ NEW: Daily Ask floating button
-import DailyAskTrigger from "./components/DailyAskTrigger";
 
 // Route guard
 function ProtectedRoute({ children }) {
@@ -205,6 +204,23 @@ export default function App() {
           }
         />
 
+        {/* ✅ NEW: Personalized Recommendations - Using new Spotify-style component */}
+        <Route
+          path="/recommendations/profile"
+          element={
+            <ProtectedRoute>
+              <DiscoveryWrappedNew />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recommendations/wrapped"
+          element={
+            <ProtectedRoute>
+              <DiscoveryWrappedNew />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/zone/:zoneId" element={<ZoneDetail />} />
         {/* ✅ ADD: Itinerary routes */}
         <Route
@@ -268,9 +284,6 @@ export default function App() {
       {isAuth && (!user?.role || user.role === "uninitialized") && (
         <RolePopup />
       )}
-
-      {/* ✅ NEW: Daily Ask floating button (shows when user logged in & not answered today) */}
-      <DailyAskTrigger />
     </Fragment>
   );
 }

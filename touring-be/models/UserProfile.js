@@ -9,26 +9,39 @@ const UserProfileSchema = new mongoose.Schema({
     index: true
   },
   
-  // Vibe preferences với weights
+  // Vibe preferences với weights (PostHog aggregated)
   vibeProfile: {
     type: Map,
     of: {
-      weight: { type: Number, default: 0 }, // 0-1
+      weight: { type: Number, default: 0 }, // 0-1 normalized score
       interactions: { type: Number, default: 0 },
       lastUpdated: { type: Date, default: Date.now }
     },
     default: {}
   },
   
-  // Embedding vectors
-  profileVector_short: {
-    type: [Number], // 384 dims, 7 days decay
-    default: null
+  // Province/region preferences với weights (PostHog aggregated)
+  provinceProfile: {
+    type: Map,
+    of: {
+      weight: { type: Number, default: 0 }, // 0-1 normalized score
+      interactions: { type: Number, default: 0 },
+      lastUpdated: { type: Date, default: Date.now }
+    },
+    default: {}
   },
   
-  profileVector_long: {
-    type: [Number], // 384 dims, 90 days decay
-    default: null
+  // Event counts by type (for debugging PostHog aggregation)
+  eventCounts: {
+    type: Map,
+    of: Number, // eventType → count
+    default: {}
+  },
+  
+  // Interaction summary as freeText (for AI semantic matching)
+  interactionSummary: {
+    type: String,
+    default: ''
   },
   
   // Travel preferences
@@ -98,4 +111,6 @@ const UserProfileSchema = new mongoose.Schema({
 UserProfileSchema.index({ userId: 1, lastSyncedAt: -1 });
 UserProfileSchema.index({ confidence: -1 });
 
-module.exports = mongoose.model('UserProfile', UserProfileSchema);
+// Use mainConn to ensure pipeline sync uses same connection
+const { mainConn } = require('../config/db');
+module.exports = mainConn.model('UserProfile', UserProfileSchema);

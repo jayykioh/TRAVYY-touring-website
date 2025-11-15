@@ -96,9 +96,18 @@ export default function TourDetailPage() {
               .then((data) => setIsFav(data.isFav))
               .catch(() => {});
             
-            // ✅ Track view immediately when tour loads (simplified - no duration tracking)
+            // ✅ Track view immediately when tour loads
             if (!hasTrackedInitialView.current) {
-              trackTourView(tourData._id);
+              // Get actual price from first available departure, fallback to basePrice
+              const actualPrice = tourData.departures?.[0]?.priceAdult || tourData.basePrice;
+              
+              trackTourView(tourData._id, {
+                tourName: tourData.title,
+                tags: tourData.tags || [],
+                locations: tourData.locations?.map(loc => loc.name || loc.region) || [],
+                price: actualPrice,
+                duration: tourData.duration
+              });
               hasTrackedInitialView.current = true;
             }
           }
@@ -274,6 +283,9 @@ export default function TourDetailPage() {
     
     // ✅ Track booking (HIGHEST WEIGHT!)
     trackTourBooking(getId(tour), {
+      tourName: tour.tourName,
+      tags: tour.tags || [],
+      locations: tour.locations?.map(loc => loc.name || loc.region) || [],
       adults: qtyAdult,
       children: qtyChild,
       totalPrice: snapshotSubtotal,
@@ -317,7 +329,13 @@ export default function TourDetailPage() {
       setIsFav(data.isFav);
       
       // ✅ Track bookmark action
-      trackTourBookmark(getId(tour), data.isFav);
+      const actualPrice = tour.departures?.[0]?.priceAdult || tour.basePrice;
+      trackTourBookmark(getId(tour), data.isFav, {
+        tourName: tour.title,
+        tags: tour.tags || [],
+        locations: tour.locations?.map(loc => loc.name || loc.region) || [],
+        price: actualPrice
+      });
     } catch (err) {
       console.error("Error toggling wishlist:", err);
     }
@@ -932,6 +950,7 @@ function RelatedTours({ tours }) {
         {tours.map((tour) => {
           return (
             <TourCard
+              key={tour._id}
               id={tour._id}
               to={`/tours/${tour._id}`}
               image={optimizeImage(tour.imageItems?.[0]?.imageUrl, 800)}

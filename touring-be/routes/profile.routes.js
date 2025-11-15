@@ -2,7 +2,7 @@ const router = require("express").Router();
 const authJwt = require("../middlewares/authJwt");
 const { updateProfile, getProfile, uploadAvatar, deleteAvatar, getAvatar } = require("../controller/profile.controller");
 const UserProfile = require('../models/UserProfile');
-const DailyAskAnswer = require('../models/DailyAskAnswer');
+// const DailyAskAnswer = require('../models/DailyAskAnswer'); // ❌ REMOVED: DailyAsk feature
 
 // User info routes (existing)
 router.get("/", authJwt, getProfile);
@@ -109,9 +109,6 @@ router.delete('/data', authJwt, async (req, res) => {
 
     // Delete all interactions
     await ZoneInteraction.deleteMany({ userId });
-
-    // Delete all daily ask answers
-    await DailyAskAnswer.deleteMany({ userId });
 
     // Reset profile
     await UserProfile.findOneAndUpdate(

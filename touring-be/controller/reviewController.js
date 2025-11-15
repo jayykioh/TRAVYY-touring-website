@@ -101,6 +101,24 @@ const createReview = async (req, res) => {
       name: tourInBooking.name,
     });
 
+    // ✅ Kiểm tra tour date đã qua chưa (user phải đi tour rồi mới được review)
+    const tourDateObj = new Date(tourInBooking.date);
+    const now = new Date();
+
+    if (tourDateObj > now) {
+      return res.status(400).json({
+        success: false,
+        message: "Bạn chỉ có thể đánh giá sau khi đã hoàn thành tour",
+        tourDate: tourDateObj,
+        currentDate: now,
+      });
+    }
+
+    console.log("✅ Tour date has passed, user can review:", {
+      tourDate: tourDateObj,
+      daysAgo: Math.floor((now - tourDateObj) / (1000 * 60 * 60 * 24)),
+    });
+
     // Kiểm tra đã review chưa
     const existingReview = await Review.findOne({ userId, bookingId });
     if (existingReview) {
@@ -123,7 +141,7 @@ const createReview = async (req, res) => {
       isAnonymous: isAnonymous || false,
       tourDate: tourDate || tourInBooking.date,
       isVerified: true, // Auto verify vì đã có booking
-      status: "approved", // Auto approve vì đã verify booking
+      status: "pending", // Chờ admin duyệt
     });
 
     console.log("✅ Review created successfully:", {
@@ -455,13 +473,23 @@ const getReviewableBookings = async (req, res) => {
     // Lấy danh sách bookingId đã review
     const reviewedBookingIds = await Review.distinct("bookingId", { userId });
 
-    // Lọc ra bookings chưa review
-    const reviewableBookings = bookings.filter(
-      (booking) =>
-        !reviewedBookingIds.some(
-          (id) => id.toString() === booking._id.toString()
-        )
-    );
+    const now = new Date();
+
+    // Lọc ra bookings chưa review VÀ tour date đã qua
+    const reviewableBookings = bookings.filter((booking) => {
+      // Kiểm tra chưa review
+      const notReviewedYet = !reviewedBookingIds.some(
+        (id) => id.toString() === booking._id.toString()
+      );
+
+      // Kiểm tra tour date đã qua (user phải đi tour rồi mới được review)
+      const hasTourPassed =
+        booking.items &&
+        booking.items.length > 0 &&
+        new Date(booking.items[0].date) <= now;
+
+      return notReviewedYet && hasTourPassed;
+    });
 
     res.json({
       success: true,
@@ -518,6 +546,179 @@ async function updateTourRating(tourId) {
   }
 }
 
+// ===== ADMIN FUNCTIONS =====
+
+// 9. Get all reviews (Admin)
+const getAllReviews = async (req, res) => {
+  try {
+    const {
+      status = null,
+      tourId = null,
+      page = 1,
+      limit = 20,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = req.query;
+
+    const query = {};
+    if (status) query.status = status;
+    if (tourId) query.tourId = tourId;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const sortObj = { [sortBy]: sortOrder === "desc" ? -1 : 1 };
+
+    const reviews = await Review.find(query)
+      .populate("userId", "fullName email avatar")
+      .populate("tourId", "title imageItems")
+      .populate("bookingId", "orderRef")
+      .sort(sortObj)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Review.countDocuments(query);
+
+    // Get stats
+    const stats = await Review.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    res.json({
+      success: true,
+      reviews,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit)),
+      },
+      stats,
+    });
+  } catch (error) {
+    console.error("getAllReviews error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Lỗi khi lấy danh sách reviews",
+    });
+  }
+};
+
+// 10. Approve review (Admin)
+const approveReview = async (req, res) => {
+  try {
+    const { reviewId } = req.params;
+
+    const review = await Review.findById(reviewId);
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy đánh giá",
+      });
+    }
+
+    if (review.status === "approved") {
+      return res.status(400).json({
+        success: false,
+        message: "Review đã được duyệt rồi",
+      });
+    }
+
+    review.status = "approved";
+    await review.save();
+
+    // Update tour rating
+    await updateTourRating(review.tourId);
+
+    const updatedReview = await Review.findById(reviewId)
+      .populate("userId", "fullName email avatar")
+      .populate("tourId", "title");
+
+    res.json({
+      success: true,
+      review: updatedReview,
+      message: "Đã duyệt review thành công",
+    });
+  } catch (error) {
+    console.error("approveReview error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Lỗi khi duyệt review",
+    });
+  }
+};
+
+// 11. Reject review (Admin)
+const rejectReview = async (req, res) => {
+  try {
+    const { reviewId } = req.params;
+    const { reason } = req.body;
+
+    const review = await Review.findById(reviewId);
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy đánh giá",
+      });
+    }
+
+    review.status = "rejected";
+    if (reason) {
+      review.adminNote = reason.trim();
+    }
+    await review.save();
+
+    res.json({
+      success: true,
+      message: "Đã từ chối review",
+    });
+  } catch (error) {
+    console.error("rejectReview error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Lỗi khi từ chối review",
+    });
+  }
+};
+
+// 12. Delete review (Admin)
+const adminDeleteReview = async (req, res) => {
+  try {
+    const { reviewId } = req.params;
+
+    const review = await Review.findById(reviewId);
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy đánh giá",
+      });
+    }
+
+    const tourId = review.tourId;
+    await Review.findByIdAndDelete(reviewId);
+
+    // Update tour rating after deletion
+    await updateTourRating(tourId);
+
+    res.json({
+      success: true,
+      message: "Đã xóa review thành công",
+    });
+  } catch (error) {
+    console.error("adminDeleteReview error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Lỗi khi xóa review",
+    });
+  }
+};
+
 module.exports = {
   createReview,
   getTourReviews,
@@ -527,4 +728,9 @@ module.exports = {
   toggleReviewLike,
   responseToReview,
   getReviewableBookings,
+  // Admin functions
+  getAllReviews,
+  approveReview,
+  rejectReview,
+  adminDeleteReview,
 };

@@ -26,7 +26,7 @@ async function embed(texts) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ texts })
-  });
+  }, 60000); // Increased timeout: 10s → 60s for long text
   
   if (!res.ok) {
     const text = await res.text();
@@ -44,7 +44,7 @@ async function upsert(items) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ items })
-  }, 30000);
+  }, 60000); // Increased timeout: 30s → 60s for large batches
   
   if (!res.ok) {
     const text = await res.text();

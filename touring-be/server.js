@@ -96,7 +96,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/promotions", promotionRoutes);
-app.use("/api/refunds", refundRoutes);
+app.use("/api/refunds", refundRoutes); // User refund routes
 const securityRoutes = require("./routes/security.routes");
 app.use("/api/security", securityRoutes);
 app.use("/api/locations", locationRoutes);
@@ -110,7 +110,8 @@ app.use("/api/itinerary", require("./routes/itinerary.routes"));
 
 // ✅ AI Recommendation Pipeline routes (NEW)
 app.use("/api/track", require("./routes/track.routes"));
-app.use("/api/daily-ask", require("./routes/daily-ask.routes"));
+// app.use("/api/daily-ask", require("./routes/daily-ask.routes")); // ❌ REMOVED: DailyAsk feature
+app.use("/api/recommendations", require("./routes/recommendations.routes"));
 // profile.routes already includes /travel endpoints
 
 // --- Healthcheck ---
@@ -159,9 +160,10 @@ mongoose
     // Setup refund scheduler after MongoDB is connected
     setupRefundScheduler();
 
-    // ✅ Start profile builder cron job (runs daily at 00:00)
-    const { startProfileBuilderCron } = require("./jobs/buildUserProfile");
-    startProfileBuilderCron();
+    // ✅ Start weekly PostHog sync cron (runs every Sunday at 2:00 AM)
+    // This handles ALL profile building: PostHog → Aggregation → Embedding → FAISS + MongoDB
+    const { startWeeklySyncCron } = require("./jobs/weeklyProfileSync");
+    startWeeklySyncCron();
 
     app.listen(PORT, () =>
       console.log(`🚀 API listening on http://localhost:${PORT}`)

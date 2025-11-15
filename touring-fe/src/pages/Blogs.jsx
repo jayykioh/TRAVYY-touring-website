@@ -27,9 +27,24 @@ export default function BlogPage() {
         console.log("Blog data from API:", data);
         setBlog(data);
         
-        // ✅ Track blog view immediately when blog loads (simplified - no duration/scroll tracking)
+        // ✅ Track blog view immediately when blog loads
         if (user?.token && !hasTrackedView.current) {
-          trackBlogView(slug);
+          // Extract vibes from activities/sightseeing
+          const vibes = [
+            ...(data.activities?.map(a => a.name) || []),
+            ...(data.sightseeing?.map(s => s.name) || [])
+          ].filter(Boolean).slice(0, 5);
+          
+          // Extract province from region or location.address
+          const provinces = [data.region, data.location?.address]
+            .filter(Boolean)
+            .map(p => p.split(',')[0].trim());
+          
+          trackBlogView(slug, {
+            title: data.title,
+            tags: vibes,
+            provinces: [...new Set(provinces)] // Remove duplicates
+          });
           hasTrackedView.current = true;
         }
       })

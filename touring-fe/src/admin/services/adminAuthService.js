@@ -15,9 +15,9 @@ const adminAuthService = {
     if (result.success) {
       const { accessToken, user } = result.data;
 
-      // Always store in sessionStorage only
-      sessionStorage.setItem(STORAGE_KEYS.ADMIN_TOKEN, accessToken);
-      sessionStorage.setItem(STORAGE_KEYS.ADMIN_USER, JSON.stringify(user));
+      // Store in localStorage for persistence across tabs/redirects
+      localStorage.setItem(STORAGE_KEYS.ADMIN_TOKEN, accessToken);
+      localStorage.setItem(STORAGE_KEYS.ADMIN_USER, JSON.stringify(user));
 
       return { success: true, admin: user, token: accessToken };
     }
@@ -25,20 +25,20 @@ const adminAuthService = {
   },
 
   logout: () => {
-    sessionStorage.removeItem(STORAGE_KEYS.ADMIN_TOKEN);
-    sessionStorage.removeItem(STORAGE_KEYS.ADMIN_USER);
+    localStorage.removeItem(STORAGE_KEYS.ADMIN_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.ADMIN_USER);
   },
 
   isAuthenticated: () => {
     return !!(
-      sessionStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN) &&
-      sessionStorage.getItem(STORAGE_KEYS.ADMIN_USER)
+      localStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN) &&
+      localStorage.getItem(STORAGE_KEYS.ADMIN_USER)
     );
   },
 
   getCurrentAdmin: () => {
     try {
-      const userStr = sessionStorage.getItem(STORAGE_KEYS.ADMIN_USER);
+      const userStr = localStorage.getItem(STORAGE_KEYS.ADMIN_USER);
       return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
       console.error("Error getting admin:", error);
@@ -46,7 +46,7 @@ const adminAuthService = {
     }
   },
 
-  getToken: () => sessionStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN),
+  getToken: () => localStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN),
 };
 
 export default adminAuthService;

@@ -7,6 +7,14 @@ const RefundCard = ({
   isCancelling,
   onProvideBankInfo,
 }) => {
+  // 🔍 Debug: Log refund data to check structure
+  console.log("RefundCard - refund data:", {
+    orderRef: refund.orderRef,
+    bookingId: refund.bookingId,
+    bookingIdType: typeof refund.bookingId,
+    bookingIdOrderRef: refund.bookingId?.orderRef,
+  });
+
   const getStatusColor = (status) => {
     const colors = {
       pending: "text-yellow-600 bg-yellow-50",
@@ -37,9 +45,28 @@ const RefundCard = ({
           </p>
           <p className="text-xs text-gray-500 mt-1">
             Booking:{" "}
-            {refund.bookingId?.orderRef ||
-              refund.bookingId?._id?.slice(-8) ||
-              "N/A"}
+            {(() => {
+              // Try orderRef first (direct or from populated booking)
+              if (refund.orderRef) return refund.orderRef;
+              if (refund.bookingId?.orderRef) return refund.bookingId.orderRef;
+
+              // Fallback to payment orderId
+              if (refund.bookingId?.payment?.orderId)
+                return refund.bookingId.payment.orderId;
+
+              // Fallback to ID (last 8 chars)
+              if (typeof refund.bookingId === "string") {
+                return refund.bookingId.slice(-8);
+              }
+              if (
+                refund.bookingId?._id &&
+                typeof refund.bookingId._id === "string"
+              ) {
+                return refund.bookingId._id.slice(-8);
+              }
+
+              return "N/A";
+            })()}
           </p>
         </div>
         <span

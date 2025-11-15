@@ -15,6 +15,10 @@ const refundSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    orderRef: {
+      type: String, // Booking reference/order ID for display
+      index: true,
+    },
 
     // ===== REFUND TYPE =====
     refundType: {
@@ -158,6 +162,21 @@ const refundSchema = new mongoose.Schema(
     // ===== METADATA =====
     currency: { type: String, default: "VND" },
     refundReference: { type: String, unique: true, sparse: true }, // Unique refund reference (REF-XXXXXX)
+
+    // ===== PROCESSING FLAGS =====
+    requiresManualProcessing: { type: Boolean, default: false }, // Flag when auto-refund fails
+    processingNote: { type: String }, // Note about processing issues/status
+
+    // ===== MANUAL PAYMENT INFO (for sandbox transfer) =====
+    manualPayment: {
+      orderId: { type: String }, // MoMo order ID
+      payUrl: { type: String }, // MoMo payment URL
+      qrCodeUrl: { type: String }, // QR code URL
+      deeplink: { type: String }, // MoMo app deeplink
+      deeplinkMiniApp: { type: String }, // MoMo mini app deeplink
+      createdAt: { type: Date },
+      completedAt: { type: Date },
+    },
 
     // ===== TIMESTAMPS =====
     completedAt: { type: Date },

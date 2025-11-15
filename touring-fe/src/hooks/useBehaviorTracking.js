@@ -1,105 +1,110 @@
 import { useCallback } from 'react';
 import { useAuth } from '../auth/context';
+import { trackTourView as posthogTrackTourView, trackTourBooking as posthogTrackTourBooking, trackTourBookmark as posthogTrackTourBookmark, trackBlogView as posthogTrackBlogView } from '../utils/posthog';
 
 /**
- * Hook for tracking user behavior (tours, blogs,)
- * Debounced and batched for performance
+ * Hook for tracking user behavior via PostHog
+ * All events are sent to PostHog for AI recommendation pipeline
  */
 export function useBehaviorTracking() {
   const { user } = useAuth();
 
-  // Track tour view (simplified - just send tourId, backend extracts vibes + provinces)
+  // Track tour view (via PostHog - backend will extract vibes + provinces)
   const trackTourView = useCallback(
-    async (tourId) => {
-      if (!user?.token || !tourId) return;
+    async (tourId, tourData = {}) => {
+      if (!user?._id || !tourId) return;
 
       try {
-        await fetch('/api/track/tour-view', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${user.token}`,
-          },
-          body: JSON.stringify({ tourId }),
+        // Send to PostHog with tour metadata
+        await posthogTrackTourView({
+          _id: tourId,
+          name: tourData.tourName,
+          price: tourData.price,
+          duration: tourData.duration,
+          location: { province: tourData.locations?.[0] },
+          vibes: tourData.tags || []
         });
-        console.log('👁️ Tour view tracked:', tourId);
+        console.log('👁️ [PostHog] Tour view tracked:', tourId);
       } catch (error) {
         console.error('❌ Failed to track tour view:', error);
       }
     },
-    [user?.token]
+    [user?._id]
   );
 
-  // Track tour click (when user clicks tour card from search)
+  // Track tour click - now merged with tour view (PostHog handles this automatically)
   const trackTourClick = useCallback(
-    async (tourId, source = 'search') => {
-      if (!user?.token || !tourId) return;
-
-      try {
-        await fetch('/api/track/tour-click', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${user.token}`,
-          },
-          body: JSON.stringify({ tourId, source }),
-        });
-      } catch (error) {
-        console.error('❌ Failed to track tour click:', error);
-      }
+    async (tourId, tourData = {}) => {
+      // Alias to trackTourView - PostHog will track the click as a view event
+      return trackTourView(tourId, tourData);
     },
-    [user?.token]
+    [trackTourView]
   );
 
-  // Track tour bookmark (when user adds/removes from wishlist)
+  // Track tour bookmark (via PostHog)
   const trackTourBookmark = useCallback(
-    async (tourId, bookmarked) => {
-      if (!user?.token || !tourId) return;
+    async (tourId, isAdded, tourData = {}) => {
+      if (!user?._id || !tourId) return;
 
       try {
-        await fetch('/api/track/tour-bookmark', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${user.token}`,
-          },
-          body: JSON.stringify({ tourId, bookmarked }),
-        });
+        // Send to PostHog
+        await posthogTrackTourBookmark({
+          _id: tourId,
+          name: tourData.tourName,
+          price: tourData.price,
+          vibes: tourData.tags || []
+        }, isAdded);
+        console.log(`🔖 [PostHog] Tour bookmark tracked:`, { tourId, isAdded });
       } catch (error) {
         console.error('❌ Failed to track tour bookmark:', error);
       }
     },
-    [user?.token]
+    [user?._id]
   );
 
-  // Booking interactions are tracked only when payment succeeds (highest weight ×3.0)
+  // Track tour booking (via PostHog - called from payment success handler)
   const trackTourBooking = useCallback(
-    async () => {
-      console.warn('⚠️ trackTourBooking is deprecated - booking tracking happens automatically after payment');
-    },
-    []
-  );
-
-  // Track blog view (simplified - just send blogSlug, backend extracts vibes + provinces)
-  const trackBlogView = useCallback(
-    async (blogSlug) => {
-      if (!user?.token || !blogSlug) return;
+    async (tourId, bookingData = {}) => {
+      if (!user?._id || !tourId) return;
 
       try {
-        await fetch('/api/track/blog-view', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${user.token}`,
-          },
-          body: JSON.stringify({ blogSlug }),
+        // Send to PostHog
+        await posthogTrackTourBooking({
+          tourId,
+          _id: bookingData._id,
+          totalPrice: bookingData.totalPrice,
+          participants: (bookingData.adults || 0) + (bookingData.children || 0),
+          bookingDate: bookingData.departureDate,
+          ...bookingData
         });
-        console.log('📖 Blog view tracked:', blogSlug);
+        console.log('💰 [PostHog] Tour booking tracked:', tourId);
+      } catch (error) {
+        console.error('❌ Failed to track tour booking:', error);
+      }
+    },
+    [user?._id]
+  );
+
+  // Track blog view (via PostHog)
+  const trackBlogView = useCallback(
+    async (blogSlug, blogData = {}) => {
+      if (!user?._id || !blogSlug) return;
+
+      try {
+        // Send to PostHog
+        await posthogTrackBlogView({
+          _id: blogSlug,
+          slug: blogSlug,
+          title: blogData.title,
+          vibes: blogData.tags || [],
+          provinces: blogData.provinces || []
+        });
+        console.log('📖 [PostHog] Blog view tracked:', blogSlug);
       } catch (error) {
         console.error('❌ Failed to track blog view:', error);
       }
     },
-    [user?.token]
+    [user?._id]
   );
 
   // ⚠️ REMOVED: trackBlogScroll - Not needed for itinerary creation
@@ -118,29 +123,12 @@ export function useBehaviorTracking() {
     []
   );
 
-  // Track search queries
+  // Track search queries (deprecated - PostHog autocapture handles this)
   const trackSearch = useCallback(
-    async (query, vibes = [], results = []) => {
-      if (!user?.token || !query) return;
-
-      try {
-        await fetch('/api/track/search', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${user.token}`,
-          },
-          body: JSON.stringify({
-            query,
-            vibes,
-            resultsCount: results.length,
-          }),
-        });
-      } catch (error) {
-        console.error('❌ Failed to track search:', error);
-      }
+    async () => {
+      console.warn('⚠️ trackSearch is deprecated - PostHog autocapture handles search events');
     },
-    [user?.token]
+    []
   );
 
   return {
