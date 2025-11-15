@@ -28,7 +28,7 @@ export const enable2FA = (withAuth, token) => {
 };
 
 export const verify2FA = (withAuth, code, userId = null) => {
-  const body = userId ? { code, userId } : { code };
+  const body = userId ? { token: code, userId } : { token: code };
 
   return withAuth("/api/security/2fa/verify", {
     method: "POST",
@@ -47,11 +47,11 @@ export const disable2FA = (withAuth, password) => {
 
 // =================== EMAIL VERIFICATION FUNCTIONS ===================
 
-export const requestEmailVerificationToggle = (withAuth, enable) => {
+export const requestEmailVerificationToggle = (withAuth, enabled) => {
   return withAuth("/api/security/email-verification/request-toggle", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ enable }),
+    body: JSON.stringify({ enabled }),
   });
 };
 
