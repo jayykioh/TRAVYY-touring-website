@@ -121,15 +121,30 @@ const RequestsPage = () => {
     async (isInitialLoad = false) => {
       if (isInitialLoad) setLoading(true);
       try {
+        // First try to get ALL requests to see what's available
+        const dataAll = await withAuth("/api/guide/custom-requests");
+        console.log("[RequestsPage] ALL requests response:", dataAll);
+
+        // Then get filtered requests
         const data = await withAuth(
-          "/api/guide/custom-requests?status=pending,negotiating"
+          "/api/guide/custom-requests?status=pending,negotiating,awaiting_guide"
         );
-        console.log("[RequestsPage] Raw API response:", data);
+        console.log("[RequestsPage] Filtered API response:", data);
+        console.log("[RequestsPage] Response keys:", Object.keys(data || {}));
+        console.log("[RequestsPage] tourRequests:", data?.tourRequests);
+        console.log("[RequestsPage] requests:", data?.requests);
 
         const requestsArray = data.tourRequests || data.requests || [];
+        console.log(
+          "[RequestsPage] Requests array length:",
+          requestsArray.length
+        );
+        console.log("[RequestsPage] First request sample:", requestsArray[0]);
 
         if (Array.isArray(requestsArray)) {
           const mapped = requestsArray.map(mapBackendRequest);
+          console.log("[RequestsPage] Mapped requests:", mapped.length);
+          console.log("[RequestsPage] First mapped request:", mapped[0]);
 
           if (!isInitialLoad && mapped.length > lastCountRef.current) {
             setShowBanner(true);
@@ -144,6 +159,7 @@ const RequestsPage = () => {
         }
       } catch (e) {
         console.error("[RequestsPage] Error fetching requests:", e);
+        console.error("[RequestsPage] Error details:", e.message, e.stack);
         if (isInitialLoad) toast.error("Không thể tải danh sách yêu cầu");
       } finally {
         if (isInitialLoad) setLoading(false);

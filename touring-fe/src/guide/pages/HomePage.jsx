@@ -67,11 +67,31 @@ const HomePage = () => {
           : [];
         setRequests(reqs);
 
-        // Map tours
+        // Map tours with images like MyToursPage
         const myTours =
           tourData.success && Array.isArray(tourData.tours)
-            ? tourData.tours
+            ? tourData.tours.map((tour) => {
+                // Extract images from itinerary items
+                const imageItems = (tour.items || []).flatMap((item) =>
+                  item.imageUrl
+                    ? [{ imageUrl: item.imageUrl }]
+                    : item.photos
+                    ? item.photos.map((photo) => ({ imageUrl: photo }))
+                    : []
+                );
+
+                return {
+                  ...tour,
+                  // Add imageItems array for TourCard to use
+                  imageItems,
+                  // Keep existing fields
+                  coverImage: tour.coverImage,
+                  imageUrl: tour.imageUrl || imageItems[0]?.imageUrl,
+                };
+              })
             : [];
+
+        console.log("[HomePage] Mapped tours with images:", myTours);
         setTours(myTours);
 
         // Set earnings

@@ -186,7 +186,7 @@ exports.createTourRequest = async (req, res) => {
         name: user.name
       },
       messageType: 'system',
-      content: `🎉 ${user.name} đã tạo yêu cầu tour cho ${tourDetails.zoneName}`,
+      content: ` ${user.name} đã tạo yêu cầu tour cho ${tourDetails.zoneName}`,
       isRead: false
     }).catch(err => console.error('[TourRequest] Chat room creation error:', err));
 
@@ -408,7 +408,7 @@ exports.userMakeOffer = async (req, res) => {
             currency,
             guideProfile
           );
-          console.log(`[TourRequest] 🔔 Sent price offer notification to guide ${guideProfile._id}`);
+          console.log(`[TourRequest] Sent price offer notification to guide ${guideProfile._id}`);
         }
       } catch (notifError) {
         console.error('[TourRequest] Error creating notification:', notifError);
@@ -471,7 +471,7 @@ exports.userSendMessage = async (req, res) => {
             guideProfile, // recipient
             false // isGuide = false (sender is user)
           );
-          console.log(`[TourRequest] 🔔 Sent new message notification to guide ${guideProfile._id}`);
+          console.log(`[TourRequest] Sent new message notification to guide ${guideProfile._id}`);
         }
       } catch (notifError) {
         console.error('[TourRequest] Error creating notification:', notifError);
@@ -539,7 +539,7 @@ exports.cancelTourRequest = async (req, res) => {
             guideProfile,
             reason
           );
-          console.log(`[TourRequest] 🔔 Sent cancellation notification to guide ${guideProfile._id}`);
+          console.log(`[TourRequest] Sent cancellation notification to guide ${guideProfile._id}`);
         }
       } catch (notifError) {
         console.error('[TourRequest] Error creating notification:', notifError);
@@ -620,7 +620,7 @@ exports.acceptGuideOffer = async (req, res) => {
             relatedModel: 'TourCustomRequest',
             priority: 'high'
           });
-          console.log(`[TourRequest] 🔔 Sent offer accepted notification to guide ${guideProfile._id}`);
+          console.log(`[TourRequest] Sent offer accepted notification to guide ${guideProfile._id}`);
         }
       } catch (notifError) {
         console.error('[TourRequest] Error creating notification:', notifError);
