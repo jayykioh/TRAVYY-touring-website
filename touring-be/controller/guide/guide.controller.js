@@ -1194,8 +1194,8 @@ const guideAgreeToTerms = async (req, res) => {
       });
     }
 
-    // Allow agreement on pending or negotiating status
-    if (!['pending', 'negotiating'].includes(tourRequest.status)) {
+    // Allow agreement on pending, negotiating, or accepted status
+    if (!['pending', 'negotiating', 'accepted'].includes(tourRequest.status)) {
       return res.status(400).json({
         success: false,
         error: `Cannot agree to terms on ${tourRequest.status} request`
@@ -1206,6 +1206,9 @@ const guideAgreeToTerms = async (req, res) => {
     if (tourRequest.status === 'pending') {
       tourRequest.status = 'negotiating';
     }
+    
+    // Keep accepted status as is (don't change it)
+    // Only change pending to negotiating
 
     // Guide agrees to the terms
     await tourRequest.guideAgreeToTerms(terms);

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Check, Clock, AlertCircle } from 'lucide-react';
+import { Check, X, DollarSign } from 'lucide-react';
+import { toast } from 'sonner';
 
 // Lightweight PriceAgreementCard used by traveller/guide chat components.
 // Props:
@@ -16,6 +17,10 @@ const PriceAgreementCard = ({
   loading = false,
 }) => {
   const [agreeing, setAgreeing] = useState(false);
+  const [showOfferDialog, setShowOfferDialog] = useState(false);
+  const [offerInput, setOfferInput] = useState('');
+  const [submittingOffer, setSubmittingOffer] = useState(false);
+  
   const latestOffer = requestDetails?.latestOffer;
   const initialBudget = requestDetails?.initialBudget;
   const agreement = requestDetails?.agreement;
@@ -38,20 +43,40 @@ const PriceAgreementCard = ({
     return userAgreed && guideAgreed;
   }, [userAgreed, guideAgreed]);
 
+  // Format number - remove non-digits
+  const formatNumber = (str) => {
+    return str.replace(/[^0-9]/g, '');
+  };
+
+  // Display formatted number with thousands separator
+  const getDisplayFormattedNumber = (str) => {
+    const cleaned = formatNumber(str);
+    return cleaned ? parseInt(cleaned).toLocaleString('vi-VN') : '';
+  };
+
   const handleSendOffer = async () => {
-    // naive prompt for quick development; callers should replace with real UI
-    const input = window.prompt('Enter offer amount (VND)', displayAmount || '0');
-    if (!input) return;
-    const amount = Number(input.replace(/[^0-9.-]+/g, '')) || 0;
+    const cleanedAmount = formatNumber(offerInput);
+    const amount = Number(cleanedAmount) || 0;
     
+    if (!amount || amount <= 0) {
+      toast.error('Vui lòng nhập số tiền > 0');
+      return;
+    }
+
+    setSubmittingOffer(true);
     try {
       const success = await onSendOffer({ amount });
-      if (!success) {
-        alert('Gửi đề xuất thất bại. Vui lòng thử lại.');
+      if (success) {
+        toast.success(`Đã gửi đề xuất: ${amount.toLocaleString('vi-VN')} VND`);
+        setShowOfferDialog(false);
+        setOfferInput('');
+      } else {
+        toast.error('Gửi đề xuất thất bại. Vui lòng thử lại.');
       }
     } catch (err) {
-      // Show specific error message (e.g., minPrice validation)
-      alert(err.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+      toast.error(err.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+    } finally {
+      setSubmittingOffer(false);
     }
   };
 
@@ -62,11 +87,11 @@ const PriceAgreementCard = ({
       const success = await onAgree();
       console.log('[PriceAgreementCard] Agree result:', success);
       if (!success) {
-        alert('Đồng ý thất bại. Vui lòng thử lại.');
+        toast.error('Đồng ý thất bại. Vui lòng thử lại.');
       }
     } catch (err) {
       console.error('Error agreeing:', err);
-      alert('Có lỗi xảy ra. Vui lòng thử lại.');
+      toast.error('Có lỗi xảy ra. Vui lòng thử lại.');
     } finally {
       setAgreeing(false);
     }
@@ -126,7 +151,7 @@ const PriceAgreementCard = ({
           {userRole === 'guide' ? (
             <>
               <button
-                onClick={handleSendOffer}
+                onClick={() => setShowOfferDialog(true)}
                 disabled={loading || agreeing}
                 className="px-3 py-2 rounded-md bg-gradient-to-br from-purple-500 to-pink-500 text-white text-sm font-medium hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
@@ -159,7 +184,7 @@ const PriceAgreementCard = ({
           ) : (
             <>
               <button
-                onClick={handleSendOffer}
+                onClick={() => setShowOfferDialog(true)}
                 disabled={loading}
                 className="px-3 py-2 rounded-md bg-teal-500 text-white text-sm font-medium hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
@@ -194,6 +219,100 @@ const PriceAgreementCard = ({
         
         {/* Payment button - REMOVED: Now handled by Payment Initiation Card in TravellerChatBox */}
       </div>
+
+      {/* Offer Dialog */}
+      {showOfferDialog && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-2 sm:slide-in-from-center">
+            {/* Header */}
+            <div className="sticky top-0 flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-teal-600" />
+                Đề xuất giá
+              </h2>
+              <button
+                onClick={() => {
+                  setShowOfferDialog(false);
+                  setOfferInput('');
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Số tiền (VND)
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={getDisplayFormattedNumber(offerInput)}
+                    onChange={(e) => setOfferInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSendOffer();
+                      }
+                    }}
+                    placeholder="Nhập số tiền (VD: 2000000)"
+                    className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:bg-gray-700 dark:text-white outline-none transition-all"
+                    autoFocus
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                    VND
+                  </div>
+                </div>
+                {displayAmount && (
+                  <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                    📌 Ngân sách ban đầu: <span className="font-semibold">{displayAmount.toLocaleString('vi-VN')} VND</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
+                <p className="text-xs text-gray-700 dark:text-gray-300">
+                  💡 <span className="font-medium">Mẹo:</span> Nhập số tiền dễ dàng mà không cần chấm phẩy hoặc dấu cách
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="sticky bottom-0 flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+              <button
+                onClick={() => {
+                  setShowOfferDialog(false);
+                  setOfferInput('');
+                }}
+                className="flex-1 px-4 py-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-medium hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSendOffer}
+                disabled={submittingOffer || !offerInput.trim()}
+                className="flex-1 px-4 py-3 rounded-lg bg-teal-600 text-white font-medium hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              >
+                {submittingOffer ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Gửi...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Gửi đề xuất
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

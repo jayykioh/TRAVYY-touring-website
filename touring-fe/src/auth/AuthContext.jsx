@@ -39,9 +39,12 @@ async function api(input, init = {}) {
     ? await r.json().catch(() => null)
     : null;
   if (!r.ok) {
-    const err = new Error(String(r.status));
+    const serverMessage = body?.error || body?.message || null;
+    const errMsg = serverMessage || `HTTP ${r.status}`;
+    const err = new Error(errMsg);
     err.status = r.status;
     err.body = body;
+    // include full server debug when available (non-production)
     throw err;
   }
   return body;

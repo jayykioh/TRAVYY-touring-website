@@ -186,14 +186,11 @@ export default function TourRequestDetailsPage() {
 
           {/* Chat Section */}
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold">💬 Chat với Tour Guide</h3>
-            </div>
-            
             <div className="p-4">
               <TourRequestChat
                 requestId={requestId}
                 currentUser={currentUser}
+                tourRequest={tourRequest}
               />
             </div>
           </div>

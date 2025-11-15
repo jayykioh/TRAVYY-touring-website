@@ -541,8 +541,45 @@ router.get('/guide/accepted-tours', authJwt, async (req, res) => {
     })
       .sort({ 'preferredDate': 1, 'tourGuideRequest.respondedAt': -1 })
       .populate({ path: 'userId', select: 'name email phone avatar' });
+
+    console.log('[GuideAPI] Found', tours.length, 'accepted tours for guide:', guideUserId);
+
+    // Fetch agreement data from TourCustomRequest for each tour
+    const TourCustomRequest = require('../models/TourCustomRequest');
+    const toursWithAgreement = await Promise.all(
+      tours.map(async (tour) => {
+        const tourObj = tour.toObject();
+        try {
+          // Find the corresponding TourCustomRequest
+          const tourRequest = await TourCustomRequest.findOne({
+            itineraryId: tour._id
+          }).select('agreement status');
+          
+          if (tourRequest) {
+            tourObj.agreement = tourRequest.agreement || {};
+            tourObj.tourRequestStatus = tourRequest.status;
+            tourObj.bothAgreed = tourRequest.agreement?.userAgreed && tourRequest.agreement?.guideAgreed;
+            console.log('[GuideAPI] Tour', tour._id, 'agreement:', {
+              bothAgreed: tourObj.bothAgreed,
+              userAgreed: tourRequest.agreement?.userAgreed,
+              guideAgreed: tourRequest.agreement?.guideAgreed
+            });
+          } else {
+            tourObj.agreement = {};
+            tourObj.bothAgreed = false;
+            console.log('[GuideAPI] Tour', tour._id, 'has no TourCustomRequest');
+          }
+        } catch (err) {
+          console.error('[GuideAPI] Error fetching agreement for tour:', tour._id, err);
+          tourObj.agreement = {};
+          tourObj.bothAgreed = false;
+        }
+        return tourObj;
+      })
+    );
     
-    res.json({ success: true, tours });
+    console.log('[GuideAPI] Returning', toursWithAgreement.length, 'tours with agreement data');
+    res.json({ success: true, tours: toursWithAgreement });
   } catch (error) {
     console.error('[GuideAPI] Error fetching accepted tours:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -577,8 +614,29 @@ router.get('/guide/tours/:id', authJwt, async (req, res) => {
         avatar: itinerary.userId.avatar
       };
     }
+
+    // Fetch agreement data from TourCustomRequest
+    try {
+      const TourCustomRequest = require('../models/TourCustomRequest');
+      const tourRequest = await TourCustomRequest.findOne({
+        itineraryId: itinerary._id
+      }).select('agreement status');
+      
+      if (tourRequest) {
+        responseData.agreement = tourRequest.agreement || {};
+        responseData.tourRequestStatus = tourRequest.status;
+        responseData.bothAgreed = tourRequest.agreement?.userAgreed && tourRequest.agreement?.guideAgreed;
+      } else {
+        responseData.agreement = {};
+        responseData.bothAgreed = false;
+      }
+    } catch (err) {
+      console.error('[GuideAPI] Error fetching agreement for tour:', itinerary._id, err);
+      responseData.agreement = {};
+      responseData.bothAgreed = false;
+    }
     
-    console.log('[GuideAPI] Tour detail for guide:', responseData._id);
+    console.log('[GuideAPI] Tour detail for guide:', responseData._id, 'bothAgreed:', responseData.bothAgreed);
     res.json(responseData);
   } catch (error) {
     console.error('[GuideAPI] Error fetching tour detail:', error);

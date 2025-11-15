@@ -227,6 +227,8 @@ async function getFetch() {
   }
 }
 
+const isProd = process.env.NODE_ENV === 'production';
+
 // Build raw signature according to MoMo docs (v2)
 function buildRawSignature(payload) {
   return [
@@ -442,7 +444,9 @@ async function buildMoMoCharge(userId, body) {
     }
 
     if (tourRequest.status !== 'accepted') {
-      throw Object.assign(new Error("REQUEST_NOT_ACCEPTED"), { status: 400 });
+      if (tourRequest.status !== 'accepted' && tourRequest.status !== 'agreement_pending') {
+        throw Object.assign(new Error("REQUEST_NOT_ACCEPTED"), { status: 400 });
+      }
     }
 
     // Get the final amount (either from latest offer or initial budget)
@@ -688,8 +692,15 @@ exports.createMoMoPayment = async (req, res) => {
       ...(process.env.NODE_ENV !== "production" ? { rawSignature } : {}),
     });
   } catch (e) {
-    console.error("createMoMoPayment error", e);
-    res.status(500).json({ error: "INTERNAL_ERROR" });
+    console.error("createMoMoPayment error", e && e.stack ? e.stack : e);
+    const status = e && e.status ? e.status : 500;
+    const errBody = {
+      error: e && e.message ? e.message : "INTERNAL_ERROR",
+    };
+    if (!isProd) {
+      errBody.debug = { name: e && e.name, code: e && e.code, detail: e && e.detail };
+    }
+    res.status(status).json(errBody);
   }
 };
 
@@ -1152,7 +1163,14 @@ exports.getBookingByPayment = async (req, res) => {
 
     if (booking) {
       console.log(`[Payment] ✅ Found booking:`, booking._id);
-      return res.json({ success: true, booking });
+      const paymentStatus =
+        booking.status === "paid"
+          ? "paid"
+          : booking.payment?.status === "completed"
+          ? "paid"
+          : booking.payment?.status || "pending";
+      const paymentMethod = booking.payment?.provider || booking.payment?.method || "";
+      return res.json({ success: true, booking: { ...booking, paymentStatus, paymentMethod } });
     }
 
     // If no booking yet, check payment session status
@@ -1180,7 +1198,14 @@ exports.getBookingByPayment = async (req, res) => {
       );
       try {
         const newBooking = await createBookingFromSession(session, { lateCreation: true });
-        return res.json({ success: true, booking: newBooking });
+        const paymentStatusNew =
+          newBooking.status === "paid"
+            ? "paid"
+            : newBooking.payment?.status === "completed"
+            ? "paid"
+            : newBooking.payment?.status || "pending";
+        const paymentMethodNew = newBooking.payment?.provider || newBooking.payment?.method || "";
+        return res.json({ success: true, booking: { ...newBooking, paymentStatus: paymentStatusNew, paymentMethod: paymentMethodNew } });
       } catch (createErr) {
         console.error(
           "[Payment] Failed to create booking from paid session:",

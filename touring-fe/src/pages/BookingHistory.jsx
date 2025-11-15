@@ -82,6 +82,12 @@ export default function BookingHistory() {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("refundUpdated", handleRefundUpdate);
 
+    // Only listen for visibility and refund updates here.
+    // Payment updates are handled on the guide side only to avoid
+    // triggering automatic refreshes in the traveller booking history.
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("refundUpdated", handleRefundUpdate);
+
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("refundUpdated", handleRefundUpdate);

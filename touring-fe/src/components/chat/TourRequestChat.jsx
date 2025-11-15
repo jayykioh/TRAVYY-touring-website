@@ -7,7 +7,7 @@ import { useSocket } from '../../context/SocketContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
-export default function TourRequestChat({ requestId, currentUser }) {
+export default function TourRequestChat({ requestId, currentUser, tourRequest }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -20,12 +20,42 @@ export default function TourRequestChat({ requestId, currentUser }) {
   const [editingMessage, setEditingMessage] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [connectionStatus, setConnectionStatus] = useState('connecting');
+  const [tourData, setTourData] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const chatContainerRef = useRef(null);
   const editInputRef = useRef(null);
 
   const { joinRoom, leaveRoom, on } = useSocket() || {};
+
+  // Fetch tour request details if not provided
+  useEffect(() => {
+    if (tourRequest) {
+      setTourData(tourRequest);
+    } else if (requestId) {
+      const fetchTourData = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const isGuide = currentUser?.role === 'guide';
+          const endpoint = isGuide
+            ? `/api/guide/custom-requests/${requestId}`
+            : `/api/tour-requests/${requestId}`;
+          
+          const response = await axios.get(`${API_URL}${endpoint}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          if (response.data.tourRequest) {
+            setTourData(response.data.tourRequest);
+          }
+        } catch (error) {
+          console.warn('Failed to fetch tour request details:', error);
+        }
+      };
+      
+      fetchTourData();
+    }
+  }, [requestId, tourRequest, currentUser?.role]);
 
   // Scroll to bottom
   const scrollToBottom = () => {
@@ -339,31 +369,132 @@ export default function TourRequestChat({ requestId, currentUser }) {
         }
       `}</style>
       <div className="flex flex-col h-[600px] bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-      {/* Header */}
-      <div className="p-4 border-b-2 border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            {connectionStatus === 'connected' ? (
-              <Wifi className="w-4 h-4 text-green-500" />
-            ) : connectionStatus === 'connecting' ? (
-              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              <WifiOff className="w-4 h-4 text-red-500" />
+      {/* Header with Tour Info */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 border-b-2 border-gray-200 dark:border-gray-700">
+        {/* Connection Status Bar */}
+        <div className="p-3 px-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/50">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              {connectionStatus === 'connected' ? (
+                <Wifi className="w-4 h-4 text-green-500" />
+              ) : connectionStatus === 'connecting' ? (
+                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <WifiOff className="w-4 h-4 text-red-500" />
+              )}
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                {connectionStatus === 'connected' ? 'Online' : 
+                 connectionStatus === 'connecting' ? 'Connecting...' : 'Offline'}
+              </span>
+            </div>
+            {unreadCount > 0 && (
+              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
+                {unreadCount}
+              </span>
             )}
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {connectionStatus === 'connected' ? 'Online' : 
-               connectionStatus === 'connecting' ? 'Connecting...' : 'Offline'}
-            </span>
           </div>
-          {unreadCount > 0 && (
-            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
-              {unreadCount}
-            </span>
-          )}
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            Đang chat với {currentUser.role === 'user' ? 'Tour Guide' : 'Khách hàng'}
+          </h3>
         </div>
-        <h3 className="font-semibold text-gray-900 dark:text-white">
-          Chat with {currentUser.role === 'user' ? 'Tour Guide' : 'Traveller'}
-        </h3>
+
+        {/* Tour Request Info */}
+        {tourData && (
+          <div className="p-4 space-y-3">
+            <div className="bg-white dark:bg-gray-700 rounded-lg p-4 space-y-3">
+              {/* Zone & Details */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-white text-lg">
+                    {tourData.tourDetails?.zoneName || 'Tour Request'}
+                  </h4>
+                  <div className="flex flex-wrap gap-3 mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    {tourData.tourDetails?.numberOfDays && (
+                      <span>📅 {tourData.tourDetails.numberOfDays} ngày</span>
+                    )}
+                    {tourData.tourDetails?.numberOfGuests && (
+                      <span>👥 {tourData.tourDetails.numberOfGuests} khách</span>
+                    )}
+                    {tourData.initialBudget?.amount && (
+                      <span>💰 {tourData.initialBudget.amount.toLocaleString('vi-VN')} {tourData.initialBudget.currency}</span>
+                    )}
+                  </div>
+                </div>
+                <div className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                  tourData.status === 'accepted' ? 'bg-green-100 text-green-700' :
+                  tourData.status === 'agreement_pending' ? 'bg-blue-100 text-blue-700' :
+                  tourData.status === 'negotiating' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {tourData.status === 'accepted' ? '✅ Đã chấp nhận' :
+                   tourData.status === 'agreement_pending' ? '⏳ Chờ xác nhận' :
+                   tourData.status === 'negotiating' ? '🤝 Thương lượng' :
+                   '📋 Mới tạo'}
+                </div>
+              </div>
+
+              {/* Agreement Status */}
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                      tourData.travellerAgreed ? 'bg-green-500' : 'bg-gray-300'
+                    }`}>
+                      {tourData.travellerAgreed ? '✓' : '○'}
+                    </div>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      {currentUser.role === 'user' ? 'Bạn' : 'Khách hàng'} đã động ý
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                      tourData.guideAgreed ? 'bg-green-500' : 'bg-gray-300'
+                    }`}>
+                      {tourData.guideAgreed ? '✓' : '○'}
+                    </div>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      {currentUser.role === 'guide' ? 'Bạn' : 'Guide'} đã động ý
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons - Only show if not fully agreed */}
+              {(!tourData.travellerAgreed || !tourData.guideAgreed) && (
+                <div className="border-t border-gray-200 dark:border-gray-600 pt-3 flex gap-2">
+                  <button className="flex-1 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
+                    💰 Gọi ý giá
+                  </button>
+                  <button className="flex-1 px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors">
+                    ✓ Động ý
+                  </button>
+                </div>
+              )}
+
+              {/* Final Price & Decision */}
+              {tourData.finalPrice?.amount && (
+                <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-600 dark:to-gray-700 rounded-lg p-3">
+                    <div className="text-xs text-gray-600 dark:text-gray-300 mb-1">💡 Quyết định yêu cầu</div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        Giá cuối cùng: {tourData.finalPrice.amount.toLocaleString('vi-VN')} {tourData.finalPrice.currency}
+                      </span>
+                      <div className="flex gap-2">
+                        <button className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors">
+                          ✓ Chấp nhận
+                        </button>
+                        <button className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded transition-colors">
+                          ✕ Từ chối
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Error Banner */}

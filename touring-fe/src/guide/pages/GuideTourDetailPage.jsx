@@ -33,8 +33,8 @@ const GuideTourDetailPage = () => {
   const [completionNotes, setCompletionNotes] = useState("");
 
   const { withAuth } = useAuth();
-  const { socket, on, joinRoom } = useSocket();
-  const isRequestView = window.location.pathname.includes("/requests/");
+  const { socket, on, joinRoom, connected } = useSocket();
+  // Removed: isRequestView is no longer needed - we now try both endpoints
 
   // ========= LỊCH TRÌNH THEO TAB (PHẦN 1/PHẦN 2) =========
   const [activePartIdx, setActivePartIdx] = useState(0);
@@ -43,16 +43,32 @@ const GuideTourDetailPage = () => {
   const fetchTourData = useCallback(async () => {
     setLoading(true);
     try {
-      // Use different endpoint based on whether viewing request or accepted tour
-      const endpoint = isRequestView
-        ? `/api/guide/custom-requests/${id}`
-        : `/api/itinerary/guide/tours/${id}`;
+      // Try custom-requests first (for both pending requests and accepted/agreement_pending tours)
+      // This endpoint works for all statuses now
+      let data = null;
 
-      const data = await withAuth(endpoint);
+      try {
+        const response = await withAuth(`/api/guide/custom-requests/${id}`);
+        data = response;
+        console.log("[GuideTourDetail] Successfully fetched from custom-requests:", data);
+      } catch (customError) {
+        console.log("[GuideTourDetail] Custom-requests failed, trying itinerary endpoint");
+        
+        // Fall back to itinerary endpoint only if custom-requests fails
+        try {
+          const response = await withAuth(`/api/itinerary/guide/tours/${id}`);
+          data = response;
+          console.log("[GuideTourDetail] Successfully fetched from itinerary:", data);
+        } catch (itineraryError) {
+          console.error("[GuideTourDetail] Both endpoints failed. Custom error:", customError, "Itinerary error:", itineraryError);
+          throw itineraryError;
+        }
+      }
+
       console.log("[GuideTourDetail] Raw data from API:", data);
 
       // API returns { success: true, tourRequest: {...} } for custom requests
-      if (data && (data.success || data._id)) {
+      if (data && (data.success || data._id || data.tourRequest)) {
         const tourRequest = data.tourRequest || data; // Handle both wrapped and unwrapped responses
         const itinerary = tourRequest.itineraryId || data;
         const customer = tourRequest.userId || data.userId || data.customerInfo;
@@ -109,21 +125,18 @@ const GuideTourDetailPage = () => {
             ? `${tourRequest.tourDetails.numberOfDays} ngày`
             : "N/A",
 
-          // Pricing
-          totalPrice:
-            tourRequest.initialBudget?.amount ||
-            tourRequest.finalPrice?.amount ||
-            data.estimatedCost ||
-            0,
-          currency:
-            tourRequest.initialBudget?.currency ||
-            tourRequest.finalPrice?.currency ||
-            "VND",
-          earnings:
-            (tourRequest.initialBudget?.amount ||
-              tourRequest.finalPrice?.amount ||
-              data.estimatedCost ||
-              0) * 0.8, // 80% for guide
+          // Pricing - use agreed price if available, fallback to initial budget
+          totalPrice: tourRequest.finalPrice?.amount || tourRequest.initialBudget?.amount || 0,
+          currency: tourRequest.finalPrice?.currency || tourRequest.initialBudget?.currency || "VND",
+          earnings: (tourRequest.finalPrice?.amount || tourRequest.initialBudget?.amount || 0) * 0.8, // 80% for guide
+          
+          // Pricing details for display
+          agreedPrice: tourRequest.finalPrice?.amount,
+          initialBudget: tourRequest.initialBudget?.amount,
+
+          // ✅ Agreement status - only show payment if both parties agreed
+          agreement: tourRequest.agreement || {},
+          bothAgreed: tourRequest.agreement?.userAgreed && tourRequest.agreement?.guideAgreed,
 
           // Customer info
           customerName: customer?.name || "Khách hàng",
@@ -198,6 +211,12 @@ const GuideTourDetailPage = () => {
           finalPrice: tourRequest.finalPrice,
           estimatedCost: data.estimatedCost,
         });
+        console.log("[GuideTourDetail] Agreement status:", {
+          rawAgreement: tourRequest.agreement,
+          userAgreed: tourRequest.agreement?.userAgreed,
+          guideAgreed: tourRequest.agreement?.guideAgreed,
+          bothAgreed: transformedTour.bothAgreed,
+        });
         setTour(transformedTour);
       } else {
         console.error("[GuideTourDetail] Invalid data format:", data);
@@ -209,7 +228,7 @@ const GuideTourDetailPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, withAuth, isRequestView]);
+  }, [id, withAuth]);
 
   useEffect(() => {
     fetchTourData();
@@ -217,7 +236,7 @@ const GuideTourDetailPage = () => {
 
   // Join socket room and listen for real-time updates
   useEffect(() => {
-    if (!socket || !tour?._id) return;
+    if (!socket || !connected || !tour?._id) return;
 
     // Join booking-specific room to receive payment and completion updates
     joinRoom(`booking-${tour._id}`);
@@ -250,7 +269,7 @@ const GuideTourDetailPage = () => {
       unsubscribePayment?.();
       unsubscribePaymentSuccess?.();
     };
-  }, [socket, tour?.id, tour?._id, joinRoom, fetchTourData, on]);
+  }, [socket, connected, tour?.id, tour?._id, joinRoom, fetchTourData, on]);
 
   // Helper group itinerary -> các "Phần"
   const buildItineraryParts = useCallback((items = []) => {
@@ -855,67 +874,106 @@ const GuideTourDetailPage = () => {
                   Thanh toán
                 </h2>
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                    <span className="text-gray-600">Tổng giá trị</span>
-                    <span className="text-xl font-bold text-gray-900">
-                      {tour.totalPrice?.toLocaleString("vi-VN") || 0} ₫
-                    </span>
-                  </div>
-
-                  {tour.earnings !== undefined && tour.earnings !== null ? (
-                    <>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500">
-                          Phí nền tảng (20%)
-                        </span>
-                        <span className="text-gray-700 font-medium">
-                          -
-                          {(tour.totalPrice - tour.earnings).toLocaleString(
-                            "vi-VN"
-                          )}{" "}
-                          ₫
-                        </span>
-                      </div>
-
-                      <div
-                        className="rounded-lg p-4 border"
-                        style={{
-                          background: "#ecfeff",
-                          borderColor: "#bae6fd",
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-gray-900">
-                            Thu nhập
+            {/* ✅ Show pricing ONLY if both parties agreed */}
+                {tour.bothAgreed ? (
+                  <div className="space-y-3">
+                    {/* Show agreed price vs initial budget if different */}
+                    {tour.agreedPrice && tour.initialBudget && tour.agreedPrice !== tour.initialBudget ? (
+                      <div className="pb-3 border-b border-gray-100 space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Ngân sách khách đề xuất</span>
+                          <span className="text-gray-500 line-through text-sm">
+                            {tour.initialBudget?.toLocaleString("vi-VN") || 0} ₫
                           </span>
-                          <span
-                            className="text-2xl font-bold"
-                            style={{ color: PRIMARY }}
-                          >
-                            {tour.earnings?.toLocaleString("vi-VN") || 0} ₫
+                        </div>
+                        <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                          <span className="text-gray-900 font-semibold">Giá thỏa thuận</span>
+                          <span className="text-xl font-bold text-emerald-600">
+                            {tour.agreedPrice?.toLocaleString("vi-VN") || 0} ₫
                           </span>
                         </div>
                       </div>
-                    </>
-                  ) : null}
+                    ) : (
+                      <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                        <span className="text-gray-600">Tổng giá trị</span>
+                        <span className="text-xl font-bold text-gray-900">
+                          {tour.totalPrice?.toLocaleString("vi-VN") || 0} ₫
+                        </span>
+                      </div>
+                    )}
 
-                  {tour.paymentStatus && (
-                    <div className="flex items-center justify-between text-sm pt-3 border-t border-gray-100">
-                      <span className="text-gray-600">Trạng thái</span>
-                      <Badge
-                        variant={
-                          tour.paymentStatus === "paid" ? "success" : "warning"
-                        }
-                        className="rounded-full px-2.5 py-1 text-xs"
-                      >
-                        {tour.paymentStatus === "paid"
-                          ? "Đã thanh toán"
-                          : "Chưa thanh toán"}
-                      </Badge>
+                    {tour.earnings !== undefined && tour.earnings !== null ? (
+                      <>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-500">
+                            Phí nền tảng (20%)
+                          </span>
+                          <span className="text-gray-700 font-medium">
+                            -
+                            {(tour.totalPrice - tour.earnings).toLocaleString(
+                              "vi-VN"
+                            )}{" "}
+                            ₫
+                          </span>
+                        </div>
+
+                        <div
+                          className="rounded-lg p-4 border"
+                          style={{
+                            background: "#ecfeff",
+                            borderColor: "#bae6fd",
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-gray-900">
+                              Thu nhập
+                            </span>
+                            <span
+                              className="text-2xl font-bold"
+                              style={{ color: PRIMARY }}
+                            >
+                              {tour.earnings?.toLocaleString("vi-VN") || 0} ₫
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    ) : null}
+
+                    {tour.paymentStatus && (
+                      <div className="flex items-center justify-between text-sm pt-3 border-t border-gray-100">
+                        <span className="text-gray-600">Trạng thái</span>
+                        <Badge
+                          variant={
+                            tour.paymentStatus === "paid" ? "success" : "warning"
+                          }
+                          className="rounded-full px-2.5 py-1 text-xs"
+                        >
+                          {tour.paymentStatus === "paid"
+                            ? "Đã thanh toán"
+                            : "Chưa thanh toán"}
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    className="p-4 rounded-lg border-l-4 bg-amber-50"
+                    style={{ borderLeftColor: "#f59e0b" }}
+                  >
+                    <p className="text-sm text-gray-700 mb-3">
+                      <span className="font-semibold">⏳ Đang đàm phán</span>
+                    </p>
+                    <div className="bg-white rounded-lg p-3 border border-amber-100">
+                      <p className="text-xs text-gray-600 mb-1">Ngân sách khách đề xuất:</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {tour.initialBudget?.toLocaleString("vi-VN") || 0} ₫
+                      </p>
                     </div>
-                  )}
-                </div>
+                    <p className="text-xs text-gray-600 mt-3">
+                      Giá thanh toán sẽ được xác định sau khi cả hai bên đồng ý về điều khoản.
+                    </p>
+                  </div>
+                )}
               </div>
             </Card>
 
@@ -924,7 +982,7 @@ const GuideTourDetailPage = () => {
               <div className="p-5 space-y-2">
                 {/* Debug info */}
                 <div className="text-xs text-gray-400 mb-2">
-                  Status: {tour.status || "undefined"}
+                  Status: {tour.status || "undefined"} | Agreement: {tour.bothAgreed ? "✅ Both agreed" : "⏳ Negotiating"}
                 </div>
 
                 {isRequest && (

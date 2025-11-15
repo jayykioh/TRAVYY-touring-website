@@ -27,14 +27,15 @@ const MyToursPage = () => {
 
     setLoading(true);
     try {
-      const data = await withAuth("/api/itinerary/guide/accepted-tours");
+      // Fetch all accepted/negotiating/agreement_pending tour requests
+      const data = await withAuth("/api/guide/custom-requests?status=accepted,negotiating,agreement_pending");
       console.log("[MyToursPage] Raw API response:", data);
 
-      if (data.success && Array.isArray(data.tours)) {
-        // Map tours to include image data like GuideTourDetailPage
-        const mappedTours = data.tours.map((tour) => {
-          // Extract images from itinerary items
-          const imageItems = (tour.items || []).flatMap((item) =>
+      if (data.tourRequests && Array.isArray(data.tourRequests)) {
+        // Map tour requests to include image and agreement data
+        const mappedTours = data.tourRequests.map((tourRequest) => {
+          // Extract images from itinerary items if available
+          const imageItems = (tourRequest.tourDetails?.items || tourRequest.itineraryId?.items || []).flatMap((item) =>
             item.imageUrl
               ? [{ imageUrl: item.imageUrl }]
               : item.photos
@@ -43,16 +44,32 @@ const MyToursPage = () => {
           );
 
           return {
-            ...tour,
+            ...tourRequest,
             // Add imageItems array for TourCard to use
             imageItems,
             // Keep existing fields
-            coverImage: tour.coverImage,
-            imageUrl: tour.imageUrl || imageItems[0]?.imageUrl,
+            coverImage: tourRequest.coverImage,
+            imageUrl: tourRequest.imageUrl || imageItems[0]?.imageUrl,
+            // ✅ Add agreement status
+            agreement: tourRequest.agreement || {},
+            bothAgreed: tourRequest.agreement?.userAgreed && tourRequest.agreement?.guideAgreed,
+            // Map tour request fields to expected fields
+            _id: tourRequest._id,
+            name: tourRequest.tourDetails?.zoneName || tourRequest.itineraryId?.zoneName || "Tour",
+            zoneName: tourRequest.tourDetails?.zoneName || tourRequest.itineraryId?.zoneName || "Tour",
+            numberOfPeople: tourRequest.tourDetails?.numberOfGuests || 1,
+            preferredDate: tourRequest.preferredDates?.[0]?.startDate,
+            totalDuration: tourRequest.tourDetails?.numberOfDays ? tourRequest.tourDetails.numberOfDays * 480 : 0,
           };
         });
 
-        console.log("[MyToursPage] Mapped tours with images:", mappedTours);
+        console.log("[MyToursPage] Mapped tours with images and agreement:", mappedTours);
+        console.log("[MyToursPage] Agreement details:", mappedTours.map(t => ({
+          tourName: t.name,
+          bothAgreed: t.bothAgreed,
+          agreement: t.agreement,
+          status: t.status
+        })));
         setTours(mappedTours);
       } else {
         setTours([]);

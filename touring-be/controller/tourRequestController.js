@@ -321,9 +321,13 @@ exports.getTourRequestDetails = async (req, res) => {
     const userId = getUserId(req.user);
     const { requestId } = req.params;
 
+    // ✅ FIXED: Allow both user and guide to view details
     const tourRequest = await TourCustomRequest.findOne({
       _id: requestId,
-      userId
+      $or: [
+        { userId: userId },
+        { guideId: userId }
+      ]
     })
       .populate('guideId', 'name email phone avatar')
       .populate('itineraryId', 'name zoneName items')
@@ -352,6 +356,7 @@ exports.getTourRequestDetails = async (req, res) => {
 };
 
 // User makes a counter-offer or updates budget
+// ✅ FIXED: Allow both user (creator) and guide to make offers
 exports.userMakeOffer = async (req, res) => {
   try {
     const userId = getUserId(req.user);
@@ -365,9 +370,13 @@ exports.userMakeOffer = async (req, res) => {
       });
     }
 
+    // Allow either the creator (userId) or the assigned guide (guideId) to make an offer
     const tourRequest = await TourCustomRequest.findOne({
       _id: requestId,
-      userId
+      $or: [
+        { userId: userId },
+        { guideId: userId }
+      ]
     });
 
     if (!tourRequest) {
@@ -446,9 +455,13 @@ exports.userSendMessage = async (req, res) => {
       });
     }
 
+    // ✅ FIXED: Allow both user and guide to send messages
     const tourRequest = await TourCustomRequest.findOne({
       _id: requestId,
-      userId
+      $or: [
+        { userId: userId },
+        { guideId: userId }
+      ]
     });
 
     if (!tourRequest) {
@@ -500,9 +513,10 @@ exports.cancelTourRequest = async (req, res) => {
     const { requestId } = req.params;
     const { reason } = req.body;
 
+    // ✅ FIXED: Allow user to cancel their own requests
     const tourRequest = await TourCustomRequest.findOne({
       _id: requestId,
-      userId
+      userId: userId
     });
 
     if (!tourRequest) {
@@ -566,9 +580,10 @@ exports.acceptGuideOffer = async (req, res) => {
     const userId = getUserId(req.user);
     const { requestId } = req.params;
 
+    // ✅ FIXED: Only allow the request creator to accept the offer
     const tourRequest = await TourCustomRequest.findOne({
       _id: requestId,
-      userId
+      userId: userId
     });
 
     if (!tourRequest) {
@@ -672,8 +687,8 @@ exports.userAgreeToTerms = async (req, res) => {
       });
     }
 
-    // Allow agreement on pending or negotiating status
-    if (!['pending', 'negotiating'].includes(tourRequest.status)) {
+    // Allow agreement on pending, negotiating, or accepted status
+    if (!['pending', 'negotiating', 'accepted'].includes(tourRequest.status)) {
       return res.status(400).json({
         success: false,
         error: `Cannot agree to terms on ${tourRequest.status} request`
@@ -684,6 +699,9 @@ exports.userAgreeToTerms = async (req, res) => {
     if (tourRequest.status === 'pending') {
       tourRequest.status = 'negotiating';
     }
+    
+    // Keep accepted status as is (don't change it)
+    // Only change pending to negotiating
 
     // Mark appropriate party as agreed
     if (userRole === 'TourGuide' || tourRequest.guideId.toString() === userId) {
@@ -801,9 +819,13 @@ exports.getAgreementStatus = async (req, res) => {
     const userId = getUserId(req.user);
     const { requestId } = req.params;
 
+    // ✅ FIXED: Allow both user and guide to check agreement status
     const tourRequest = await TourCustomRequest.findOne({
       _id: requestId,
-      userId
+      $or: [
+        { userId: userId },
+        { guideId: userId }
+      ]
     }).select('agreement status');
 
     if (!tourRequest) {
@@ -835,9 +857,10 @@ exports.createBookingFromRequest = async (req, res) => {
     const userId = getUserId(req.user);
     const { requestId } = req.params;
 
+    // ✅ FIXED: Only allow request creator to create booking
     const tourRequest = await TourCustomRequest.findOne({
       _id: requestId,
-      userId
+      userId: userId
     })
       .populate('guideId', 'name email phone')
       .populate('itineraryId')

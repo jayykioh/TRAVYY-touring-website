@@ -30,7 +30,7 @@ const HomePage = () => {
       try {
         const [requestData, tourData, earningsData] = await Promise.all([
           withAuth("/api/guide/custom-requests?status=pending,negotiating"),
-          withAuth("/api/itinerary/guide/accepted-tours"),
+          withAuth("/api/guide/custom-requests?status=accepted,agreement_pending"),
           withAuth("/api/guide/earnings").catch(() => ({
             summary: { thisWeek: 0 },
           })),
@@ -67,10 +67,21 @@ const HomePage = () => {
           : [];
         setRequests(reqs);
 
-        // Map tours
+        // Map tours - now from tour requests instead of itinerary
+        const tourRequestsArray = tourData.tourRequests || tourData.requests || [];
         const myTours =
-          tourData.success && Array.isArray(tourData.tours)
-            ? tourData.tours
+          Array.isArray(tourRequestsArray)
+            ? tourRequestsArray.map((tourReq) => ({
+                ...tourReq,
+                _id: tourReq._id,
+                name: tourReq.tourDetails?.zoneName || tourReq.itineraryId?.zoneName || "Tour",
+                zoneName: tourReq.tourDetails?.zoneName || tourReq.itineraryId?.zoneName || "Tour",
+                numberOfPeople: tourReq.tourDetails?.numberOfGuests || 1,
+                preferredDate: tourReq.preferredDates?.[0]?.startDate,
+                totalPrice: tourReq.initialBudget?.amount || 0,
+                agreement: tourReq.agreement || {},
+                bothAgreed: tourReq.agreement?.userAgreed && tourReq.agreement?.guideAgreed,
+              }))
             : [];
         setTours(myTours);
 

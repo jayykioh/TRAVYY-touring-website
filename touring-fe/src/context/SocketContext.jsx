@@ -96,6 +96,37 @@ export function SocketProvider({ children }) {
     };
   }, [auth?.accessToken]);
 
+  // When the socket is available and the authenticated user is known,
+  // automatically join the `user-<id>` room so server emits targeted to
+  // the user's personal room (e.g., paymentSuccessful) are received.
+  useEffect(() => {
+    const s = socketRef.current;
+    const userId = auth?.user?._id || auth?.user?.id;
+    if (!s || !userId) return;
+
+    // Only attempt to join after connected
+    if (s.connected) {
+      try {
+        s.emit('joinRoom', `user-${userId}`);
+        console.info('[SocketProvider] joined user room', `user-${userId}`);
+      } catch (err) {
+        console.warn('[SocketProvider] failed to join user room', err?.message || err);
+      }
+    } else {
+      // If not connected yet, wait for connect then join once
+      const onConnectJoin = () => {
+        try {
+          s.emit('joinRoom', `user-${userId}`);
+          console.info('[SocketProvider] joined user room on connect', `user-${userId}`);
+        } catch (err) {
+          console.warn('[SocketProvider] failed to join user room on connect', err?.message || err);
+        }
+      };
+      s.on('connect', onConnectJoin);
+      return () => s.off('connect', onConnectJoin);
+    }
+  }, [auth?.user?._id, auth?.user?.id]);
+
   const emit = useCallback((event, ...args) => {
     const s = socketRef.current;
     if (!s) return;

@@ -43,7 +43,9 @@ export default function CheckoutForm({
   
   // ⬇️ NEW: Support for tour-request mode
   // Prefer props from parent, fallback to location.state
-  const requestId = requestIdProp || location.state?.requestId;
+  // Prefer prop, then location.state, then URL query param (helps if navigation omitted state)
+  const urlParams = new URLSearchParams(location.search);
+  const requestId = requestIdProp || location.state?.requestId || urlParams.get('requestId');
   const itinerary = itineraryProp || location.state?.itinerary || [];
   const zoneName = zoneNameProp || location.state?.zoneName || '';
   const tourInfo = location.state?.tourInfo || {};
@@ -224,6 +226,14 @@ export default function CheckoutForm({
       try {
         setIsProcessingPayment(true);
 
+        // Guard: tour-request must include requestId
+        if (mode === 'tour-request' && !requestId) {
+          console.error('[CheckoutForm] Missing requestId for tour-request payment');
+          alert('Không thể tiếp tục: thiếu requestId cho yêu cầu tour. Vui lòng quay lại và thử lại.');
+          setIsProcessingPayment(false);
+          return;
+        }
+
         const payload = {
           mode,
           ...(mode === "buy-now" && { item: buyNowItem }),
@@ -265,8 +275,15 @@ export default function CheckoutForm({
         window.location.href = paypalUrl;
 
       } catch (error) {
-        console.error("❌ PayPal payment error:", error);
-        alert(`Lỗi thanh toán: ${error.message}`);
+        console.error("❌ PayPal payment error:", error, error?.body || error?.stack || null);
+        // Prefer server-provided error message/body when available
+        const serverBody = error?.body || (error && error.detail) || null;
+        const userMsg = serverBody?.error || serverBody?.message || error.message || 'Lỗi khi tạo đơn PayPal';
+        if (serverBody && !import.meta.env.PROD) {
+          alert(`Lỗi thanh toán: ${userMsg}\n\nChi tiết (dev): ${JSON.stringify(serverBody)}`);
+        } else {
+          alert(`Lỗi thanh toán: ${userMsg}`);
+        }
         setIsProcessingPayment(false); // ⬅️ CHỈ RESET KHI CÓ LỖI
       }
       // ⬅️ KHÔNG CÓ finally ở đây vì sẽ redirect
@@ -301,6 +318,14 @@ export default function CheckoutForm({
           voucherCode: appliedVoucher?.code,
           discountAmount 
         });
+        // Guard: tour-request must include requestId
+        if (mode === 'tour-request' && !requestId) {
+          console.error('[CheckoutForm] Missing requestId for tour-request payment (MoMo)');
+          alert('Không thể tiếp tục: thiếu requestId cho yêu cầu tour. Vui lòng quay lại và thử lại.');
+          setIsProcessingPayment(false);
+          return;
+        }
+
         const data = await withAuth('/api/payments/momo', {
           method: 'POST',
           headers: {
@@ -335,15 +360,26 @@ export default function CheckoutForm({
 
         console.log('MoMo response:', data);
         if (!data?.payUrl) {
-          alert('Tạo phiên thanh toán MoMo thất bại');
+          const serverMsg = data?.error || data?.message || 'Tạo phiên thanh toán MoMo thất bại';
+          if (!import.meta.env.PROD) {
+            alert(`${serverMsg}\n\nChi tiết (dev): ${JSON.stringify(data)}`);
+          } else {
+            alert(serverMsg);
+          }
           setIsProcessingPayment(false);
           return;
         }
         // Redirect sang MoMo
         window.location.href = data.payUrl;
       } catch (err) {
-        console.error("MoMo error", err);
-        alert("Lỗi MoMo: " + (err.message || "Unknown"));
+        console.error("MoMo error", err, err?.body || err?.stack || null);
+        const serverBody = err?.body || (err && err.detail) || null;
+        const userMsg = serverBody?.error || serverBody?.message || err.message || 'Lỗi khi tạo MoMo payment';
+        if (serverBody && !import.meta.env.PROD) {
+          alert(`Lỗi MoMo: ${userMsg}\n\nChi tiết (dev): ${JSON.stringify(serverBody)}`);
+        } else {
+          alert(`Lỗi MoMo: ${userMsg}`);
+        }
         setIsProcessingPayment(false);
       }
     }

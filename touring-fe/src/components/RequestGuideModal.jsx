@@ -202,12 +202,9 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
       console.log('✅ [RequestGuide] Success response:', result);
 
       // Show success message
-      toast.success('Đã gửi yêu cầu thành công! Đang mở trang chat...', {
+      toast.success('Đã gửi yêu cầu thành công! Đang chuyển hướng...', {
         duration: 2000,
       });
-      
-      // Get the created request ID from response
-      const requestId = result.tourRequest?._id;
 
       // Close modal immediately (don't wait for navigation)
       onClose();
@@ -223,16 +220,11 @@ export default function RequestGuideModal({ isOpen, onClose, itineraryId, itiner
         contactPhone: '',
       });
 
-      // Redirect to tour request details page with chat (non-blocking)
-      if (requestId) {
-        setTimeout(() => {
-          navigate(`/tour-request/${requestId}`);
-        }, 300); // Shorter delay for faster response
-      } else {
-        setTimeout(() => {
-          navigate('/my-tour-requests');
-        }, 300);
-      }
+      // Redirect to tour requests list page (profile/my-tour-requests)
+      // This is more reliable than the details page which may have loading issues
+      setTimeout(() => {
+        navigate('/profile/my-tour-requests');
+      }, 300); // Shorter delay for faster response
     } catch (error) {
       console.error('❌ [RequestGuide] Error submitting request:', {
         message: error.message,

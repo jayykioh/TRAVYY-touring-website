@@ -16,25 +16,16 @@ import {
 import { useAuth } from "../../../auth/context";
 import { useTourRequestChat } from "../../../hooks/useTourRequestChat";
 import PriceAgreementCard from "../../../components/chat/PriceAgreementCard";
-import { toast } from "sonner";
 
-const ChatBox = ({ requestId, customerName, tourInfo }) => {
-  const { user, withAuth } = useAuth();
+const ChatBox = ({ requestId, tourInfo }) => {
+  const { user } = useAuth();
 
   // Input states
   const [newMessage, setNewMessage] = useState("");
   const [showTourInfo, setShowTourInfo] = useState(true);
   const [showItinerary, setShowItinerary] = useState(false);
 
-  // Price offer modals
-  const [showOfferModal, setShowOfferModal] = useState(false);
-  const [offerAmount, setOfferAmount] = useState("");
-  const [offerMessage, setOfferMessage] = useState("");
-
-  const [showMinPriceModal, setShowMinPriceModal] = useState(false);
-  const [minPriceAmount, setMinPriceAmount] = useState("");
-
-  const [processingAction, setProcessingAction] = useState(null);
+  // Price offer related state handled inside PriceAgreementCard
 
   const messagesEndRef = useRef(null);
 
@@ -45,13 +36,10 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
     loading,
     sending,
     connected,
-    typingUsers,
     sendMessage: sendMessageAPI,
     sendOffer,
     agreeToTerms,
     sendTypingIndicator,
-    setMinPrice,
-    refetchRequest,
   } = useTourRequestChat(requestId, "/api/chat");
 
   const scrollToBottom = useCallback(() => {
@@ -106,90 +94,12 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
   /* ------------------------------------------------------
      📌 Price Offers
   ------------------------------------------------------ */
-  const handleSendOffer = async () => {
-    const amount = parseFloat(offerAmount.replace(/[^0-9.]/g, ""));
-    if (!amount || amount <= 0) {
-      alert("Vui lòng nhập số tiền hợp lệ");
-      return;
-    }
-
-    const success = await sendOffer({ amount, message: offerMessage });
-    if (success) {
-      setShowOfferModal(false);
-      setOfferAmount("");
-      setOfferMessage("");
-    }
-  };
-
-  const handleSetMinPrice = async () => {
-    const amount = parseFloat(minPriceAmount.replace(/[^0-9.]/g, ""));
-    if (!amount || amount <= 0) {
-      alert("Vui lòng nhập số tiền hợp lệ");
-      return;
-    }
-
-    const success = await setMinPrice(amount, "VND");
-    if (success) {
-      setShowMinPriceModal(false);
-      setMinPriceAmount("");
-      toast.success("Đã đặt giá tối thiểu thành công");
-    }
-  };
+  // Offer/min-price actions are handled in PriceAgreementCard via props
 
   /* ------------------------------------------------------
      📌 Accept / Decline
   ------------------------------------------------------ */
-  const handleAcceptRequest = async () => {
-    if (!window.confirm("Bạn chắc chắn chấp nhận yêu cầu này?")) return;
-
-    setProcessingAction("accept");
-
-    try {
-      const res = await withAuth(
-        `/api/guide/custom-requests/${requestId}/accept`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ finalAmount: 0, currency: "VND" }),
-        }
-      );
-
-      if (res.success) {
-        toast.success("Đã chấp nhận yêu cầu");
-        await refetchRequest();
-      } else toast.error(res.error || "Không thể chấp nhận yêu cầu");
-    } catch (err) {
-      toast.error("Có lỗi xảy ra");
-    }
-
-    setProcessingAction(null);
-  };
-
-  const handleDeclineRequest = async () => {
-    if (!window.confirm("Bạn chắc chắn muốn từ chối yêu cầu?")) return;
-
-    setProcessingAction("decline");
-
-    try {
-      const res = await withAuth(
-        `/api/guide/custom-requests/${requestId}/reject`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason: "Declined by guide" }),
-        }
-      );
-
-      if (res.success) {
-        toast.success("Đã từ chối yêu cầu");
-        await refetchRequest();
-      } else toast.error(res.error || "Không thể từ chối");
-    } catch (err) {
-      toast.error("Có lỗi xảy ra");
-    }
-
-    setProcessingAction(null);
-  };
+  // Accept/decline handled via PriceAgreementCard or guide UI actions
 
   /* ======================================================
      📌 RENDER UI
@@ -225,11 +135,49 @@ const ChatBox = ({ requestId, customerName, tourInfo }) => {
       {/* BODY */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
         {/* Tour Info */}
-        {showTourInfo && tourInfo && (
+        {showTourInfo && (requestDetails || tourInfo) && (
           <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-xl p-3 border-2 border-teal-200 shadow-sm">
-            <div className="space-y-2 text-sm font-semibold">
-              {tourInfo.tourName || tourInfo.name}
+            <div className="flex items-start justify-between">
+              <div className="space-y-1 text-sm font-semibold">
+                <div className="text-base font-bold">
+                  {(requestDetails?.tourDetails?.zoneName || tourInfo?.tourName || tourInfo?.name) || 'Tour'}
+                </div>
+                <div className="text-xs text-gray-600">
+                  {requestDetails?.tourDetails?.numberOfDays || tourInfo?.duration || ''} • {requestDetails?.tourDetails?.numberOfGuests || tourInfo?.numberOfGuests || ''} khách
+                </div>
+              </div>
+
+              <div className="flex flex-col items-end gap-2">
+                <button
+                  onClick={() => setShowItinerary((s) => !s)}
+                  className="text-xs px-3 py-1 bg-white/60 rounded-lg hover:bg-white/80"
+                >
+                  {showItinerary ? 'Ẩn hành trình' : 'Xem hành trình'}
+                </button>
+              </div>
             </div>
+
+            {/* Itinerary list - prefer requestDetails.tourDetails.items */}
+            {showItinerary && (
+              <div className="mt-3 space-y-2 text-sm text-gray-700">
+                {(requestDetails?.tourDetails?.items || tourInfo?.items || []).length === 0 ? (
+                  <div className="text-xs text-gray-500">Hành trình chưa có chi tiết</div>
+                ) : (
+                  (requestDetails?.tourDetails?.items || tourInfo?.items || []).map((it, idx) => (
+                    <div key={idx} className="flex items-start gap-3 p-2 bg-white/80 rounded-lg border">
+                      <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center text-xs font-semibold">{idx+1}</div>
+                      <div className="flex-1">
+                        <div className="font-medium">{it.name || it.title || it.placeName}</div>
+                        {it.address && <div className="text-xs text-gray-500">{it.address}</div>}
+                        {(it.startTime || it.endTime) && (
+                          <div className="text-xs text-gray-400 mt-1">{it.startTime || ''}{it.startTime && it.endTime ? ' - ' : ''}{it.endTime || ''}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         )}
 

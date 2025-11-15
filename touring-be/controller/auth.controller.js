@@ -185,7 +185,20 @@ exports.login = async (req, res) => {
     if (!user)
       return res.status(400).json({ message: "Invalid username or password" });
 
-    const match = await bcrypt.compare(password, user.password);
+    // ✅ Guard: Check if user has password (OAuth users may not)
+    if (!user.password) {
+      console.warn(`[Login] User ${username} has no password hash (OAuth account?)`);
+      return res.status(400).json({ message: "Invalid username or password" });
+    }
+
+    let match = false;
+    try {
+      match = await bcrypt.compare(password, user.password);
+    } catch (bcryptErr) {
+      console.error(`[Login] bcrypt.compare error for ${username}:`, bcryptErr.message);
+      return res.status(400).json({ message: "Invalid username or password" });
+    }
+
     if (!match)
       return res.status(400).json({ message: "Invalid username or password" });
 

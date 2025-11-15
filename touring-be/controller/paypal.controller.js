@@ -245,7 +245,9 @@ async function buildChargeForUser(userId, body) {
     }
 
     if (tourRequest.status !== 'accepted') {
-      throw Object.assign(new Error("REQUEST_NOT_ACCEPTED"), { status: 400 });
+      if (tourRequest.status !== 'accepted' && tourRequest.status !== 'agreement_pending') {
+        throw Object.assign(new Error("REQUEST_NOT_ACCEPTED"), { status: 400 });
+      }
     }
 
     // Get the final amount (either from latest offer or initial budget)
@@ -299,8 +301,17 @@ exports.createOrder = async (req, res) => {
       voucherCode: req.body.promotionCode || req.body.voucherCode,
     });
 
-    if (!items.length || finalTotalVND <= 0) {
-      return res.status(400).json({ error: "EMPTY_OR_INVALID_AMOUNT" });
+    if (!items.length) {
+      const err = new Error("EMPTY_ITEMS");
+      err.status = 400;
+      throw err;
+    }
+
+    if (finalTotalVND <= 0) {
+      const err = new Error("INVALID_AMOUNT");
+      err.status = 400;
+      err.detail = { finalTotalVND, totalVND, discountAmount };
+      throw err;
     }
 
   stage = 'oauth';
@@ -397,10 +408,10 @@ exports.createOrder = async (req, res) => {
 
     if (!resp.ok) {
       console.error("PayPal create order failed:", typeof data === 'string' ? data : JSON.stringify(data, null, 2));
-      return res.status(resp.status).json({
-        error: 'PAYPAL_CREATE_FAILED',
-        ...(isProd ? {} : { debug: { stage, status: resp.status, data, hint: 'Check credentials, amount/item_total match, currency format' } })
-      });
+      const err = new Error('PAYPAL_API_ERROR');
+      err.status = resp.status;
+      err.detail = isProd ? {} : { stage, status: resp.status, data, hint: 'Check credentials, amount/item_total match, currency format' };
+      throw err;
     }
 
     // ⬇️ LƯU VÀO PaymentSession (thay vì req.session)

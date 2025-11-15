@@ -148,41 +148,7 @@ export default function Header() {
                   </NavigationMenuContent>
                 </NavigationMenuItem>
 
-                {/* Tour nổi tiếng */}
-                <NavigationMenuItem>
-                  <NavigationMenuTrigger className="rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-gray-800 hover:bg-white/30 hover:border-white/40 transition">
-                    Tour nổi tiếng
-                  </NavigationMenuTrigger>
-                  <NavigationMenuContent className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-2xl">
-                    <ul className="grid gap-2 md:w-[420px] lg:w-[520px] lg:grid-cols-[.75fr_1fr]">
-                      <li className="row-span-3">
-                        <NavigationMenuLink asChild>
-                          <Link
-                            to="/tours"
-                            className="from-muted/50 to-muted flex h-full w-full flex-col justify-end rounded-md bg-linear-to-b p-6 no-underline select-none focus:shadow-md"
-                          >
-                            <div className="mt-4 mb-2 text-lg font-medium">
-                              Khám phá tour
-                            </div>
-                            <p className="text-muted-foreground text-sm leading-tight">
-                              Hàng trăm tour chất lượng, từ city tour đến nghỉ
-                              dưỡng.
-                            </p>
-                          </Link>
-                        </NavigationMenuLink>
-                      </li>
-                      {tours.map((tour) => (
-                        <ListItem
-                          key={tour.title}
-                          href={tour.href}
-                          title={tour.title}
-                        >
-                          {tour.description}
-                        </ListItem>
-                      ))}
-                    </ul>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
+                
 
                 {/* Khám phá ngay */}
                 <NavigationMenuItem>
