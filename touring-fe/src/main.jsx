@@ -7,7 +7,9 @@ import App from "./App";
 import AuthProvider from "./auth/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import ItineraryProvider from "./context/ItineraryContext";
+import { SocketProvider } from "./context/SocketContext";
 import { Toaster } from "sonner";
+import GlobalChatListener from '@/components/GlobalChatListener';
 import { initPostHog } from "./utils/posthog";
 
 // Initialize PostHog on app mount
@@ -20,13 +22,16 @@ function AppWithAnalytics() {
     <StrictMode>
       <BrowserRouter>
         <AuthProvider>
+          <SocketProvider>
           <ItineraryProvider>
-            <CartProvider>
-              <App />
+              <CartProvider>
+                <App />
+                <GlobalChatListener />
               <Toaster richColors closeButton />
-            </CartProvider>
-          </ItineraryProvider>
-        </AuthProvider>
+              </CartProvider>
+            </ItineraryProvider>
+          </SocketProvider>
+      </AuthProvider>
       </BrowserRouter>
     </StrictMode>
   );

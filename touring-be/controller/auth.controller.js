@@ -105,11 +105,15 @@ exports.register = async (req, res) => {
     // cấp refresh cookie + access token (giống Google flow)
     const jti = newId();
     const refresh = signRefresh({ jti, userId: user.id });
+    // Set refresh cookie for entire site so it is available to refresh endpoints
+    // and websocket handshakes during development. Use SameSite=None to allow
+    // cross-origin requests from the frontend dev server; keep `secure` only
+    // in production where HTTPS is used.
     res.cookie("refresh_token", refresh, {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd ? "none" : "lax",
-      path: "/api/auth",
+      sameSite: "none",
+      path: "/",
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
@@ -162,15 +166,35 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
+<<<<<<< HEAD
     const { username, password, trustedDeviceToken } = req.body; // ✅ Accept trusted device token
     // cần lấy field password => đừng .select("-password") ở query này
     const user = await User.findOne({ username });
+=======
+    const { username, password } = req.body;
+    // Find user by email if contains @, else by username
+    const query = username.includes('@') ? { email: username } : { username };
+    const user = await User.findOne(query);
+>>>>>>> 9b265f243c0b8bffa8063c9f453cab9635fff1ac
     if (!user)
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(400).json({ message: "Invalid username or password" });
 
-    const match = await bcrypt.compare(password, user.password);
+    // ✅ Guard: Check if user has password (OAuth users may not)
+    if (!user.password) {
+      console.warn(`[Login] User ${username} has no password hash (OAuth account?)`);
+      return res.status(400).json({ message: "Invalid username or password" });
+    }
+
+    let match = false;
+    try {
+      match = await bcrypt.compare(password, user.password);
+    } catch (bcryptErr) {
+      console.error(`[Login] bcrypt.compare error for ${username}:`, bcryptErr.message);
+      return res.status(400).json({ message: "Invalid username or password" });
+    }
+
     if (!match)
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res.status(400).json({ message: "Invalid username or password" });
 
     // Block login if account is banned
     if (user.accountStatus === "banned") {
@@ -407,11 +431,15 @@ exports.login = async (req, res) => {
     // ✅ Nếu không cần verification, tạo refresh cookie + access token ngay
     const jti = newId();
     const refresh = signRefresh({ jti, userId: user.id });
+    // Set refresh cookie for entire site so it is available to refresh endpoints
+    // and websocket handshakes during development. Use SameSite=None to allow
+    // cross-origin requests from the frontend dev server; keep `secure` only
+    // in production where HTTPS is used.
     res.cookie("refresh_token", refresh, {
       httpOnly: true,
       secure: isProd,
-      sameSite: isProd ? "none" : "lax",
-      path: "/api/auth",
+      sameSite: "none",
+      path: "/",
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 

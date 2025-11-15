@@ -1,225 +1,387 @@
-import React, { useState, useEffect } from "react";
+// src/pages/guide/RequestsPage.jsx
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../../auth/context";
-import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import Card from "../components/common/Card";
-import Button from "../components/common/Button";
-import Badge from "../components/common/Badge";
-
+import RequestCard from "../components/common/RequestCard";
+import { Inbox } from "lucide-react";
+// ✅ dùng modal xác nhận dùng chung
+import { useConfirm } from "../components/common/ConfirmProvider";
 
 const RequestsPage = () => {
-  const navigate = useNavigate();
-  const [filter, setFilter] = useState("all");
-  const [requests, setRequests] = useState([]);
-  const [highlightNew, setHighlightNew] = useState(true);
-
-
-  // Fetch real requests from backend
   const { withAuth } = useAuth();
-  useEffect(() => {
-    async function fetchRequests() {
+  const confirm = useConfirm();
+
+  const [requests, setRequests] = useState([]);
+  const [filter, setFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [showBanner, setShowBanner] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const lastCountRef = useRef(0);
+
+  // Map TourCustomRequest (cuocthi API) to UI format
+  const mapBackendRequest = (req) => {
+    const itinerary = req.itineraryId || {};
+    const customer = req.userId || {};
+
+    // Get preferred date
+    const preferredDate = req.preferredDates?.[0] || {};
+    const startDate = preferredDate.startDate
+      ? new Date(preferredDate.startDate)
+      : null;
+    const endDate = preferredDate.endDate
+      ? new Date(preferredDate.endDate)
+      : null;
+
+    // Calculate duration in days
+    let durationDays = 1;
+    if (startDate && endDate) {
+      durationDays =
+        Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) || 1;
+    }
+
+    return {
+      id: req._id,
+      requestNumber: req.requestNumber || req._id.slice(-6),
+
+      // Tour info
+      tourName:
+        req.tourDetails?.zoneName ||
+        itinerary.zoneName ||
+        itinerary.name ||
+        "Custom Tour",
+      location:
+        req.tourDetails?.zoneName ||
+        itinerary.zoneName ||
+        req.tourDetails?.province ||
+        "",
+      numberOfGuests:
+        req.tourDetails?.numberOfGuests || req.tourDetails?.numberOfPeople || 1,
+      numberOfDays: durationDays,
+
+      // Customer info
+      customerId: customer._id || "",
+      customerName: customer.name || "Khách hàng",
+      customerAvatar:
+        customer.avatar?.url ||
+        customer.avatar ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          customer.name || "Khách hàng"
+        )}`,
+      customerEmail: customer.email || req.contactInfo?.email || "",
+      contactPhone: customer.phone || req.contactInfo?.phone || "",
+
+      // Dates
+      departureDate: startDate ? startDate.toISOString() : "",
+      returnDate: endDate ? endDate.toISOString() : "",
+      startTime: startDate
+        ? startDate.toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "",
+      endTime: endDate
+        ? endDate.toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "",
+
+      // Pricing
+      totalPrice: req.initialBudget?.amount || 0,
+      currency: req.initialBudget?.currency || "VND",
+      earnings: Math.round((req.initialBudget?.amount || 0) * 0.8), // 80% commission
+
+      // Duration
+      duration: itinerary.totalDuration
+        ? `${Math.floor(itinerary.totalDuration / 60)}h ${
+            itinerary.totalDuration % 60
+          }m`
+        : `${durationDays} ngày`,
+
+      // Other info
+      requestedAt: req.createdAt,
+      specialRequests:
+        req.specialRequirements || req.tourDetails?.specialRequirements || "",
+      status: req.status,
+
+      // Itinerary items
+      itinerary: (itinerary.items || []).map((item) => ({
+        title: item.name || item.placeName || "Điểm tham quan",
+      })),
+
+      // Keep raw data
+      raw: req,
+      rawItinerary: itinerary,
+    };
+  };
+
+  const fetchRequests = useCallback(
+    async (isInitialLoad = false) => {
+      if (isInitialLoad) setLoading(true);
       try {
-        const data = await withAuth("/api/itinerary/guide/requests");
-        if (data.success && Array.isArray(data.requests)) {
-          // Map backend itinerary to request format for UI
-          setRequests(data.requests.map((it) => ({
-            id: it._id,
-            tourName: it.name || it.zoneName,
-            customerId: it.userId?._id || it.userId,
-            customerName: it.userId?.name || 'Khách hàng',
-            customerAvatar: it.userId?.avatar?.url || '',
-            customerEmail: it.userId?.email || '',
-            contactPhone: it.userId?.phone || '',
-            departureDate: '',
-            startTime: '',
-            endTime: '',
-            location: it.zoneName,
-            pickupPoint: '',
-            numberOfGuests: '',
-            duration: '',
-            totalPrice: '',
-            earnings: '',
-            requestedAt: it.tourGuideRequest?.requestedAt,
-            specialRequests: '',
-            paymentStatus: '',
-            paymentMethod: '',
-            imageItems: [],
-            itinerary: it.items?.map(item => ({
-              title: item.name,
-              time: item.startTime && item.endTime ? `${item.startTime} - ${item.endTime}` : '',
-              description: item.address || ''
-            })) || [],
-            includedServices: [],
-            raw: it
-          })));
+        // First try to get ALL requests to see what's available
+        const dataAll = await withAuth("/api/guide/custom-requests");
+        console.log("[RequestsPage] ALL requests response:", dataAll);
+
+        // Then get filtered requests
+        const data = await withAuth(
+          "/api/guide/custom-requests?status=pending,negotiating,awaiting_guide"
+        );
+        console.log("[RequestsPage] Filtered API response:", data);
+        console.log("[RequestsPage] Response keys:", Object.keys(data || {}));
+        console.log("[RequestsPage] tourRequests:", data?.tourRequests);
+        console.log("[RequestsPage] requests:", data?.requests);
+
+        const requestsArray = data.tourRequests || data.requests || [];
+        console.log(
+          "[RequestsPage] Requests array length:",
+          requestsArray.length
+        );
+        console.log("[RequestsPage] First request sample:", requestsArray[0]);
+
+        if (Array.isArray(requestsArray)) {
+          const mapped = requestsArray.map(mapBackendRequest);
+          console.log("[RequestsPage] Mapped requests:", mapped.length);
+          console.log("[RequestsPage] First mapped request:", mapped[0]);
+
+          if (!isInitialLoad && mapped.length > lastCountRef.current) {
+            setShowBanner(true);
+            setTimeout(() => setShowBanner(false), 5000);
+          }
+          lastCountRef.current = mapped.length;
+
+          setRequests(mapped);
+        } else {
+          console.warn("[RequestsPage] Invalid response format:", data);
+          setRequests([]);
         }
       } catch (e) {
-        console.error('Lỗi khi lấy yêu cầu tour guide:', e);
+        console.error("[RequestsPage] Error fetching requests:", e);
+        console.error("[RequestsPage] Error details:", e.message, e.stack);
+        if (isInitialLoad) toast.error("Không thể tải danh sách yêu cầu");
+      } finally {
+        if (isInitialLoad) setLoading(false);
       }
-    }
-    fetchRequests();
-    const timer = setTimeout(() => setHighlightNew(false), 1000);
-    return () => clearTimeout(timer);
-  }, [withAuth]);
+    },
+    [withAuth]
+  );
 
-  // tính yêu cầu mới (trong 48h)
-  const isNewRequest = (requestedAt) => {
-    try {
-      return new Date() - new Date(requestedAt) < 48 * 60 * 60 * 1000;
-    } catch {
-      return false;
-    }
+  useEffect(() => {
+    fetchRequests(true);
+    const interval = setInterval(() => fetchRequests(false), 15000);
+    return () => clearInterval(interval);
+  }, [fetchRequests]);
+
+  // === FILTER THEO MỤC TIÊU NGHIỆP VỤ ===
+  const filterRequests = (all, filterValue) => {
+    if (filterValue === "all") return all;
+
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const sevenDaysAhead = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    return all.filter((r) => {
+      const requestedAt = r.requestedAt ? new Date(r.requestedAt) : null;
+      const departureDate = r.departureDate ? new Date(r.departureDate) : null;
+
+      if (filterValue === "new") {
+        return requestedAt && requestedAt >= twentyFourHoursAgo;
+      }
+
+      if (filterValue === "upcoming") {
+        return (
+          departureDate &&
+          departureDate >= now &&
+          departureDate <= sevenDaysAhead
+        );
+      }
+
+      return true;
+    });
   };
+
+  const filteredRequests = filterRequests(requests, filter);
 
   const filterOptions = [
     { value: "all", label: "Tất cả", count: requests.length },
-    { value: "today", label: "Hôm nay", count: 2 },
-    { value: "week", label: "Tuần này", count: 4 },
+    {
+      value: "new",
+      label: "Mới (24h qua)",
+      count: filterRequests(requests, "new").length,
+    },
+    {
+      value: "upcoming",
+      label: "Sắp khởi hành (7 ngày)",
+      count: filterRequests(requests, "upcoming").length,
+    },
   ];
 
-  const handleAccept = (requestId) => {
-    console.log("Accepting request:", requestId);
-    setRequests(requests.filter((r) => r.id !== requestId));
+  // === HÀNH ĐỘNG NHẤN NÚT XÁC NHẬN / TỪ CHỐI (dùng modal confirm chung) ===
+  const handleAction = async (id, type) => {
+    const isAccept = type === "accept";
+    const ok = await confirm({
+      title: isAccept
+        ? "Xác nhận chấp nhận hành trình"
+        : "Xác nhận từ chối hành trình",
+      description: isAccept
+        ? "Sau khi chấp nhận, hệ thống sẽ gửi thông báo cho người dùng và chuyển tour này vào danh sách 'Tour sắp diễn ra'."
+        : "Bạn có chắc muốn từ chối hành trình này? Hành động này không thể hoàn tác.",
+      confirmText: isAccept ? "Chấp nhận" : "Từ chối",
+      cancelText: "Hủy",
+      variant: isAccept ? "success" : "danger",
+    });
+
+    if (!ok) return;
+
+    setActionLoading(true);
+    const endpoint = isAccept
+      ? `/api/guide/custom-requests/${id}/accept`
+      : `/api/guide/custom-requests/${id}/reject`;
+
+    try {
+      console.log("[RequestsPage] Sending action to:", endpoint);
+      const res = await withAuth(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          isAccept
+            ? {
+                finalAmount: 0, // Backend will calculate from negotiation
+                currency: "VND",
+              }
+            : {
+                reason: "Declined by guide",
+              }
+        ),
+      });
+
+      console.log("[RequestsPage] Action response:", res);
+
+      if (res.success) {
+        toast.success(
+          isAccept ? "✅ Đã chấp nhận yêu cầu tour!" : "✅ Đã từ chối yêu cầu"
+        );
+        setRequests((prev) => prev.filter((r) => r.id !== id));
+        // Refetch after short delay to ensure backend state is synchronized
+        setTimeout(() => fetchRequests(false), 800);
+      } else {
+        toast.error(res.error || "Xử lý thất bại");
+      }
+    } catch (e) {
+      console.error("[RequestsPage] Error in action:", e);
+      toast.error("❌ Có lỗi xảy ra: " + (e.message || "Lỗi không xác định"));
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const handleDecline = (requestId) => {
-    console.log("Declining request:", requestId);
-    setRequests(requests.filter((r) => r.id !== requestId));
-  };
+  // Dùng để highlight các request được gửi trong HÔM NAY
+  const now = new Date();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  );
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Yêu cầu tour</h1>
-        <p className="text-gray-500">Xem và phản hồi các yêu cầu tour</p>
+    <div className="px-6 py-4 min-h-screen">
+      <div className="mb-6 ml-4">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">
+          Yêu cầu tour
+        </h1>
+        <p className="text-sm md:text-base text-gray-500">
+          Xem và phản hồi các yêu cầu tour đang chờ bạn
+        </p>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 mb-6 overflow-x-auto">
-        {filterOptions.map((option) => (
-          <button
-            key={option.value}
-            onClick={() => setFilter(option.value)}
-            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
-              filter === option.value
-                ? "bg-[#02A0AA] text-white"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
-            }`}
-          >
-            {option.label} ({option.count})
-          </button>
-        ))}
+      {showBanner && (
+        <div className="mb-4">
+          <div className="bg-[#02A0AA] text-white px-4 py-2 rounded-lg flex items-center justify-between">
+            <div className="text-sm">Bạn có yêu cầu mới</div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowBanner(false)}
+                className="text-xs px-3 py-1 bg-white/10 rounded"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="text-xs px-3 py-1 bg-white rounded text-[#02A0AA]"
+              >
+                Xem ngay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BỘ LỌC */}
+      <div className="flex justify-end mb-6">
+        <div className="flex flex-wrap gap-3">
+          {filterOptions.map((opt) => {
+            const isActive = filter === opt.value;
+            const showBadge = opt.count > 0;
+
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setFilter(opt.value)}
+                className={[
+                  "relative inline-flex items-center rounded-full",
+                  "px-4 py-1.5 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-[#02A0AA] text-white shadow-sm"
+                    : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200",
+                ].join(" ")}
+              >
+                <span>{opt.label}</span>
+                {showBadge && (
+                  <span className="absolute -top-1.5 -right-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 text-[11px] font-semibold text-white shadow">
+                    {opt.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Requests List */}
-      {requests.length === 0 ? (
+      {loading ? (
         <Card className="text-center py-12">
-          <p className="text-6xl mb-4">📬</p>
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 border-4 border-[#02A0AA] border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-gray-500">Đang tải yêu cầu...</p>
+          </div>
+        </Card>
+      ) : filteredRequests.length === 0 ? (
+        <Card className="text-center py-12">
+          <Inbox className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500 mb-2">Không có yêu cầu</p>
           <p className="text-sm text-gray-400">
             Các yêu cầu tour mới sẽ hiển thị ở đây
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {requests.map((request) => {
-            const isNew = isNewRequest(request.requestedAt);
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredRequests.map((r) => {
+            const requestedAtDate = r.requestedAt
+              ? new Date(r.requestedAt)
+              : null;
+            const isToday = requestedAtDate && requestedAtDate >= startOfToday;
+
             return (
-              <Card
-                key={request.id}
-                hover
-                className={`transition-all duration-300 ${
-                  highlightNew && isNew
-                    ? "ring-2 ring-[#02A0AA] shadow-xl animate-pulse"
-                    : ""
-                }`}
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={request.customerAvatar}
-                      alt={request.customerName}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                    <div>
-                      <p className="font-semibold text-gray-900">
-                        {request.customerName}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(request.requestedAt).toLocaleString("vi-VN")}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="warning">Mới</Badge>
-                </div>
-
-                {/* Tour Info */}
-                <h3 className="font-bold text-gray-900 mb-3 line-clamp-2">
-                  {request.tourName}
-                </h3>
-
-                <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span>📅</span>
-                    <span className="text-gray-600">
-                      {new Date(request.departureDate).toLocaleDateString(
-                        "vi-VN"
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>👥</span>
-                    <span className="text-gray-600">
-                      {request.numberOfGuests} khách
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>📍</span>
-                    <span className="text-gray-600 line-clamp-1">
-                      {request.location}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>⏱️</span>
-                    <span className="text-gray-600">{request.duration}</span>
-                  </div>
-                </div>
-
-                {/* Price */}
-                <div className="bg-emerald-50 rounded-lg p-3 mb-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Tổng giá</span>
-                    <span className="text-lg font-bold text-[#02A0AA]">
-                      {request.totalPrice.toLocaleString("vi-VN")} VND
-                    </span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    fullWidth
-                    onClick={() => navigate(`/guide/requests/${request.id}`)}
-                  >
-                    Xem chi tiết
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="md"
-                    onClick={() => handleDecline(request.id)}
-                  >
-                    ❌
-                  </Button>
-                  <Button
-                    variant="success"
-                    size="md"
-                    onClick={() => handleAccept(request.id)}
-                  >
-                    ✅
-                  </Button>
-                </div>
-              </Card>
+              <RequestCard
+                key={r.id}
+                request={r}
+                highlightNew={!!isToday}
+                onActionClick={(id, type) =>
+                  !actionLoading && handleAction(id, type)
+                }
+                disabled={actionLoading}
+              />
             );
           })}
         </div>

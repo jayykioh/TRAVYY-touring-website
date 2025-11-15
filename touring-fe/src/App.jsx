@@ -29,6 +29,8 @@ import HelpCategoryView from "./components/HelpCategoryView";
 import HelpArticleView from "./components/HelpArticleView";
 import Cart from "./pages/Cart";
 import WishlistPage from "./pages/WishlistPage";
+import MyTourRequests from "./pages/MyTourRequests";
+import CustomTourPaymentPage from "./pages/CustomTourPaymentPage";
 import LoadingScreen from "./components/LoadingScreen";
 import NotFoundPage from "./pages/NotFound";
 import BookingPage from "./pages/BookingPage";
@@ -42,6 +44,9 @@ import DiscoverResults from "./pages/DiscoverResults";
 import ZoneDetail from "./pages/ZoneDetail";
 import ItineraryView from "./pages/ItineraryView";
 import ItineraryResult from "./pages/ItineraryResult"; // ✅ ADD THIS IMPORT
+import ItineraryPaymentResult from "./pages/ItineraryPaymentResult"; // ✅ ADD DEPOSIT PAYMENT RESULT
+import TourRequestPayment from "./pages/TourRequestPayment"; // ✅ ADD TOUR REQUEST PAYMENT
+import BookingDetail from "./pages/BookingDetail"; // ✅ ADD BOOKING DETAIL PAGE
 import RefundRequest from "./pages/RefundRequest";
 import UserRefundList from "./components/UserRefundList";
 // ✅ NEW: Personalized Recommendations
@@ -112,6 +117,22 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/payment/tour-request/:requestId"
+            element={
+              <ProtectedRoute>
+                <TourRequestPayment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/booking-detail/:bookingId"
+            element={
+              <ProtectedRoute>
+                <BookingDetail />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/blog/:id" element={<BlogDetailPage />} />{" "}
           {/* ✅ THÊM ROUTE NÀY */}
           <Route path="/shoppingcarts" element={<Cart />} />
@@ -149,6 +170,7 @@ export default function App() {
             <Route path="vouchers" element={<ProfilePromotions />} />
             <Route path="favorites" element={<WishlistPage />} />
             <Route path="booking-history" element={<BookingHistory />} />
+            <Route path="my-tour-requests" element={<MyTourRequests />} />
             <Route path="refunds" element={<UserRefundList />} />
             <Route path="change-password" element={<ChangePassword />} />
             <Route path="security" element={<ProfileSecurity />} />
@@ -238,6 +260,36 @@ export default function App() {
           element={
             <ProtectedRoute>
               <ItineraryResult />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ ADD: Itinerary Deposit Payment Result */}
+        <Route
+          path="/itinerary/:id/payment-result"
+          element={
+            <ProtectedRoute>
+              <ItineraryPaymentResult />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ ADD: My Tour Requests */}
+        <Route
+          path="/my-tour-requests"
+          element={
+            <ProtectedRoute>
+              <MyTourRequests />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ ADD: Custom Tour Payment Page */}
+        <Route
+          path="/payment/custom-tour/:bookingId"
+          element={
+            <ProtectedRoute>
+              <CustomTourPaymentPage />
             </ProtectedRoute>
           }
         />

@@ -182,6 +182,97 @@ async function buildChargeForUser(userId, body) {
     };
   }
 
+  // ✅ NEW: Support for custom-tour mode
+  if (mode === "custom-tour") {
+    const bookingId = body?.bookingId;
+    if (!bookingId) {
+      throw Object.assign(new Error("MISSING_BOOKING_ID"), { status: 400 });
+    }
+
+    // Load booking to get amount
+    const Booking = require("../models/Bookings");
+    const booking = await Booking.findById(bookingId).populate('customTourRequest.itineraryId');
+    if (!booking) {
+      throw Object.assign(new Error("BOOKING_NOT_FOUND"), { status: 404 });
+    }
+
+    // Verify booking belongs to user
+    if (booking.userId.toString() !== userId.toString()) {
+      throw Object.assign(new Error("UNAUTHORIZED_BOOKING"), { status: 403 });
+    }
+
+    // Verify booking is in pending payment status
+    if (booking.payment?.status !== 'pending') {
+      throw Object.assign(new Error("BOOKING_NOT_PENDING"), { status: 400 });
+    }
+
+    const totalVND = booking.payment.totalVND;
+    const items = booking.items.map(item => ({
+      sku: `custom-tour-${bookingId}`,
+      name: item.name,
+      quantity: 1,
+      unit_amount_vnd: item.priceVND,
+      image: booking.customTourRequest?.itineraryId?.thumbnail || '',
+    }));
+
+    return {
+      currency: "USD",
+      items,
+      totalVND,
+      cartItems: [], // No cart items for custom tour
+      bookingId
+    };
+  }
+
+  // ✅ NEW: Support for tour-request mode (custom tour requests with guide negotiation)
+  if (mode === "tour-request") {
+    const TourCustomRequest = require("../models/TourCustomRequest");
+    const requestId = body?.requestId;
+    
+    if (!requestId) {
+      throw Object.assign(new Error("MISSING_REQUEST_ID"), { status: 400 });
+    }
+
+    // Load tour custom request
+    const tourRequest = await TourCustomRequest.findById(requestId).populate('userId', 'name email');
+    if (!tourRequest) {
+      throw Object.assign(new Error("REQUEST_NOT_FOUND"), { status: 404 });
+    }
+
+    // Verify request belongs to user and is accepted by guide
+    if (tourRequest.userId._id.toString() !== userId.toString()) {
+      throw Object.assign(new Error("UNAUTHORIZED_REQUEST"), { status: 403 });
+    }
+
+    if (tourRequest.status !== 'accepted') {
+      if (tourRequest.status !== 'accepted' && tourRequest.status !== 'agreement_pending') {
+        throw Object.assign(new Error("REQUEST_NOT_ACCEPTED"), { status: 400 });
+      }
+    }
+
+    // Get the final amount (either from latest offer or initial budget)
+    const finalAmount = tourRequest.latestOffer?.amount || tourRequest.initialBudget?.amount;
+    if (!finalAmount) {
+      throw Object.assign(new Error("NO_VALID_AMOUNT"), { status: 400 });
+    }
+
+    const items = [{
+      sku: `tour-request-${requestId}`,
+      name: tourRequest.title || 'Custom Tour Request',
+      quantity: 1,
+      unit_amount_vnd: finalAmount,
+      image: tourRequest.thumbnail || '',
+    }];
+
+    return {
+      currency: "USD",
+      items,
+      totalVND: finalAmount,
+      cartItems: [], // No cart items for tour request
+      customRequestId: requestId
+    };
+  }
+
   throw Object.assign(new Error("UNSUPPORTED_MODE"), { status: 400 });
 }
 
@@ -197,7 +288,7 @@ exports.createOrder = async (req, res) => {
     console.log("   body:", JSON.stringify(req.body, null, 2));
 
   stage = 'buildCharge';
-  const { items, totalVND, currency, _buyNowMeta, cartItems } = await buildChargeForUser(userId, req.body);
+  const { items, totalVND, currency, _buyNowMeta, cartItems, customRequestId } = await buildChargeForUser(userId, req.body);
 
     // Apply discount from voucher/promotion
     const discountAmount = Number(req.body.discountAmount) || 0;
@@ -210,8 +301,17 @@ exports.createOrder = async (req, res) => {
       voucherCode: req.body.promotionCode || req.body.voucherCode,
     });
 
-    if (!items.length || finalTotalVND <= 0) {
-      return res.status(400).json({ error: "EMPTY_OR_INVALID_AMOUNT" });
+    if (!items.length) {
+      const err = new Error("EMPTY_ITEMS");
+      err.status = 400;
+      throw err;
+    }
+
+    if (finalTotalVND <= 0) {
+      const err = new Error("INVALID_AMOUNT");
+      err.status = 400;
+      err.detail = { finalTotalVND, totalVND, discountAmount };
+      throw err;
     }
 
   stage = 'oauth';
@@ -308,10 +408,10 @@ exports.createOrder = async (req, res) => {
 
     if (!resp.ok) {
       console.error("PayPal create order failed:", typeof data === 'string' ? data : JSON.stringify(data, null, 2));
-      return res.status(resp.status).json({
-        error: 'PAYPAL_CREATE_FAILED',
-        ...(isProd ? {} : { debug: { stage, status: resp.status, data, hint: 'Check credentials, amount/item_total match, currency format' } })
-      });
+      const err = new Error('PAYPAL_API_ERROR');
+      err.status = resp.status;
+      err.detail = isProd ? {} : { stage, status: resp.status, data, hint: 'Check credentials, amount/item_total match, currency format' };
+      throw err;
     }
 
     // ⬇️ LƯU VÀO PaymentSession (thay vì req.session)
@@ -326,6 +426,7 @@ exports.createOrder = async (req, res) => {
         status: "pending",
         mode: mode || 'cart',
   retryBookingId: req.body?.retryBookingId, // For retry payments
+        customRequestId: customRequestId, // For tour-request or custom-tour payments
         items: items.map((i, idx) => {
           const tourId = i.sku?.split('-')[0];
           const date = _buyNowMeta?.date || i.sku?.substring(tourId?.length + 1);
@@ -584,6 +685,34 @@ await paymentSession.save();
 
       console.log("✅ Booking created:", booking._id);
 
+      // ✅ UPDATE TourCustomRequest with payment status
+      if (booking && booking.customTourRequest?.requestId) {
+        try {
+          const TourCustomRequest = require("../models/TourCustomRequest");
+          await TourCustomRequest.findByIdAndUpdate(
+            booking.customTourRequest.requestId,
+            {
+              $set: {
+                paymentStatus: "paid",
+                "payment.provider": "paypal",
+                "payment.orderId": orderID,
+                "payment.transactionId": captureData.id,
+                "payment.status": "completed",
+                "payment.paidAt": new Date(),
+                "payment.amount": booking.totalAmount,
+                "payment.currency": booking.currency,
+                bookingId: booking._id,
+                status: "accepted" // Move to accepted after payment
+              }
+            },
+            { new: true, session: mongoSession }
+          );
+          console.log(`✅ [PayPal] Updated TourCustomRequest ${booking.customTourRequest.requestId} with payment status`);
+        } catch (updateErr) {
+          console.warn(`⚠️ [PayPal] Failed to update TourCustomRequest:`, updateErr);
+        }
+      }
+
       // 6) Mark booking as paid
       console.log("\n💳 Marking booking as paid...");
       try {
@@ -630,6 +759,95 @@ await paymentSession.save();
         // Booking exists but payment status update failed
         // Return success anyway since payment was captured
         console.log("⚠️ Payment captured but status update failed. Booking ID:", booking._id);
+      }
+
+      // 🔔 Emit socket events for real-time sync
+      try {
+        const io = req.app?.get('io') || global.io;
+        if (io && booking) {
+          // Notify guide about successful payment
+          if (booking.customTourRequest?.guideId) {
+            io.to(`user-${booking.customTourRequest.guideId}`).emit('paymentSuccessful', {
+              bookingId: booking._id,
+              requestId: booking.customTourRequest?.requestId,
+              amount: booking.totalAmount,
+              tourTitle: booking.items?.[0]?.name || 'Tour',
+              status: 'paid',
+              message: 'Khách hàng đã thanh toán xong'
+            });
+            console.log(`[PayPal] 🔔 Emitted paymentSuccessful event to guide ${booking.customTourRequest.guideId}`);
+          }
+          
+          // Notify traveller about payment confirmation
+          io.to(`user-${booking.userId}`).emit('paymentConfirmed', {
+            bookingId: booking._id,
+            status: 'paid',
+            message: 'Thanh toán thành công'
+          });
+          console.log(`[PayPal] 🔔 Emitted paymentConfirmed event to traveller ${booking.userId}`);
+          
+          // Notify request room about payment
+          if (booking.customTourRequest?.requestId) {
+            io.to(`request-${booking.customTourRequest.requestId}`).emit('paymentUpdated', {
+              requestId: booking.customTourRequest.requestId,
+              paymentStatus: 'paid',
+              bookingId: booking._id
+            });
+            console.log(`[PayPal] 🔔 Emitted paymentUpdated to request room`);
+          }
+        }
+      } catch (socketErr) {
+        console.warn(`[PayPal] ⚠️ Failed to emit socket event:`, socketErr);
+        // Don't fail payment if socket emit fails
+      }
+
+      // Notify guide if this booking is linked to a TourCustomRequest
+      try {
+        const TourCustomRequest = require('../models/TourCustomRequest');
+        const Guide = require('../models/guide/Guide');
+        const GuideNotification = require('../models/guide/GuideNotification');
+
+        // Try to find the related tour request by session.customRequestId or booking.bookingId link
+        let tourRequest = null;
+        if (paymentSession && paymentSession.customRequestId) {
+          tourRequest = await TourCustomRequest.findById(paymentSession.customRequestId).lean();
+        }
+        if (!tourRequest) {
+          tourRequest = await TourCustomRequest.findOne({ bookingId: booking._id }).lean();
+        }
+
+        if (tourRequest && tourRequest.guideId) {
+          // Find guide profile to get Guide model _id
+          const guideProfile = await Guide.findOne({ userId: tourRequest.guideId }).lean();
+          const guideIdForNotif = guideProfile?._id;
+
+          // Create a guide notification record (non-blocking)
+          if (guideIdForNotif) {
+            await GuideNotification.create({
+              guideId: guideIdForNotif,
+              notificationId: `guide-${guideIdForNotif}-${Date.now()}`,
+              type: 'payment_success',
+              title: 'Thanh toán thành công',
+              message: `Khách hàng đã thanh toán cho yêu cầu ${tourRequest.requestNumber || tourRequest._id}. Mã booking: ${booking._id}`,
+              relatedId: tourRequest._id,
+              relatedModel: 'TourCustomRequest',
+              priority: 'high'
+            });
+          }
+
+          // Emit socket event to guide user room (if io available)
+          const io = req.app?.get('io') || global.io;
+          if (io) {
+            io.to(`user-${tourRequest.guideId}`).emit('tourRequestPaymentSuccess', {
+              requestId: tourRequest._id,
+              bookingId: booking._id,
+              message: 'Khách hàng đã thanh toán. Vui lòng kiểm tra booking.'
+            });
+          }
+        }
+      } catch (guideNotifError) {
+        console.error('[PayPal] Failed to create/emit guide notification:', guideNotifError);
+        // Do not fail the main flow if guide notification fails
       }
 
       console.log("\n✅ ===== PAYPAL CAPTURE ORDER SUCCESS =====");

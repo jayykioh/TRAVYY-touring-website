@@ -32,6 +32,7 @@
     "mongoose": "^8.18.2",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
+    "multer": "^2.0.2",
     "node-cache": "^5.1.2",
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
@@ -43,6 +44,7 @@
     "polyline": "^0.2.0",
     "posthog-node": "^5.11.2",
     "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1",
     "speakeasy": "^2.0.0",
     "zod": "^4.1.11"
   },

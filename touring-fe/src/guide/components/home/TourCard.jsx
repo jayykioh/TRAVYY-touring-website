@@ -1,115 +1,108 @@
+// src/pages/guide/components/home/TourCard.jsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import Card from "../common/Card";
-import Badge from "../common/Badge";
-import Button from "../common/Button";
 
-const TourCard = ({ tour }) => {
+const statusConfig = {
+  accepted: { label: "Sắp tới", textColor: "#02A0AA" },
+  inProgress: { label: "Đang diễn ra", textColor: "#2563eb" },
+  completed: { label: "Hoàn thành", textColor: "#16a34a" },
+};
+
+const formatDuration = (totalMinutes) => {
+  if (!totalMinutes || totalMinutes <= 0) return "";
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  if (hours && mins) return `${hours}h${mins}m`;
+  if (hours) return `${hours}h`;
+  return `${mins}m`;
+};
+
+const TourCard = ({ tour, status = "accepted" }) => {
   const navigate = useNavigate();
+  if (!tour) return null;
 
-  const statusColors = {
-    ongoing: "success",
-    accepted: "info",
-    completed: "default",
-    canceled: "danger",
-  };
+  const {
+    _id,
+    id,
+    zoneName,
+    name,
+    coverImage,
+    imageUrl,
+    imageItems,
+    totalDuration,
+    numberOfPeople,
+  } = tour;
 
-  const statusLabels = {
-    ongoing: "Đang diễn ra",
-    accepted: "Sắp tới",
-    completed: "Hoàn thành",
-    canceled: "Đã hủy",
+  const tourId = _id || id;
+  const title = zoneName || name || "Tour";
+  const durationText = formatDuration(totalDuration);
+  const peopleText = numberOfPeople ? `${numberOfPeople} khách` : "";
+
+  const hasInfo = durationText || peopleText;
+
+  const statusInfo = statusConfig[status] || statusConfig.accepted;
+
+  // Get image from backend - priority: imageItems > imageUrl > coverImage
+  const tourImage = imageItems?.[0]?.imageUrl || imageUrl || coverImage;
+
+  const handleClick = () => {
+    if (!tourId) return;
+    navigate(`/guide/tours/${tourId}`);
   };
 
   return (
-    <Card
-      hover
-      className="relative overflow-hidden cursor-pointer"
-      onClick={() => navigate(`/guide/tours/${tour.id}`)}
+    <div
+      onClick={handleClick}
+      className="cursor-pointer inline-flex flex-col gap-2"
     >
-      {/* Status Badge */}
-      <div className="absolute top-3 right-3">
-        <Badge variant={statusColors[tour.status]}>
-          {statusLabels[tour.status]}
-        </Badge>
-      </div>
+      {/* Ảnh + badge trạng thái */}
+      <div className="relative w-full aspect-square overflow-hidden rounded-3xl bg-gray-200 shadow-md">
+        {tourImage ? (
+          <img
+            src={tourImage}
+            alt={title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              // Switch to Travyy logo on error
+              e.target.src = "/logo.png";
+              e.target.className =
+                "w-full h-full object-contain p-8 opacity-40";
+              e.target.onerror = null;
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+            <img
+              src="/logo.png"
+              alt="Travyy"
+              className="w-full h-full object-contain p-8 opacity-40"
+            />
+          </div>
+        )}
 
-      {/* Customer */}
-      <div className="flex items-center gap-3 mb-4">
-        <img
-          src={tour.customerAvatar}
-          alt={tour.customerName}
-          className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-100"
-        />
-        <div>
-          <p className="font-semibold text-gray-900">{tour.customerName}</p>
-          <p className="text-xs text-gray-500">{tour.numberOfGuests} khách</p>
-        </div>
-      </div>
-
-      {/* Tour Name */}
-      <h3 className="font-bold text-gray-900 mb-3 line-clamp-2">
-        {tour.tourName}
-      </h3>
-
-      {/* Details */}
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span>📅</span>
-          <span>
-            {new Date(tour.departureDate).toLocaleDateString("vi-VN")}
+        {/* Badge trạng thái ở góc trên phải (thay cho '20% off') */}
+        <div className="absolute top-2 right-2 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold shadow">
+          <span style={{ color: statusInfo.textColor }}>
+            {statusInfo.label}
           </span>
-          {tour.startTime && (
-            <span className="text-[#02A0AA] font-medium ml-auto">
-              {tour.startTime}
-            </span>
-          )}
         </div>
+      </div>
 
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span>📍</span>
-          <span className="line-clamp-1">{tour.location}</span>
-        </div>
+      {/* Nội dung bên dưới */}
+      <div className="px-3">
+        {/* Tiêu đề: zoneName */}
+        <p className="text-sm font-semibold text-gray-900 truncate">{title}</p>
 
-        {tour.progress !== undefined && (
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-gray-500">Tiến độ</span>
-              <span className="font-semibold text-[#02A0AA]">
-                {tour.progress}%
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-[#02A0AA] h-2 rounded-full transition-all duration-300"
-                style={{ width: `${tour.progress}%` }}
-              />
-            </div>
+        {/* “Địa điểm”: tổng thời lượng + số khách */}
+        {hasInfo && (
+          <div className="mt-1 text-xs text-gray-500 flex items-center gap-1">
+            {/* chấm nhỏ giống location dot */}
+            <span className="inline-block h-2 w-2 rounded-full bg-[#02A0AA]" />
+            <span className="truncate">{peopleText}</span>
           </div>
         )}
       </div>
-
-      {/* Price & Action */}
-      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-        <div>
-          <p className="text-xs text-gray-500">Tổng</p>
-          <p className="text-lg font-bold text-[#02A0AA]">
-            {tour.totalPrice.toLocaleString("vi-VN")}
-          </p>
-        </div>
-
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/guide/tours/${tour.id}`);
-          }}
-        >
-          Xem chi tiết
-        </Button>
-      </div>
-    </Card>
+    </div>
   );
 };
 

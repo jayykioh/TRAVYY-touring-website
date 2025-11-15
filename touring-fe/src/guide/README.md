@@ -39,12 +39,8 @@ src/guide/
 │   ├── EarningsPage.jsx     # 💰 Thu nhập
 │   └── ProfilePage.jsx      # 👤 Profile
 │
-├── data/                    # Mock data
-│   ├── mockGuide.js         # Thông tin hướng dẫn viên
-│   ├── mockRequests.js      # Yêu cầu tour mới
-│   ├── mockTours.js         # Danh sách tours
-│   ├── mockNotifications.js # Thông báo
-│   └── mockEarnings.js      # Thu nhập
+├── data/                    # API functions
+│   └── guideAPI.js          # Centralized API calls for guide functionality
 │
 └── guide.routes.jsx         # Route configuration
 ```

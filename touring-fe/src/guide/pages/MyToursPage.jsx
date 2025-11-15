@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from "react";
+// src/pages/guide/MyToursPage.jsx
+import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import Card from "../components/common/Card";
 import Badge from "../components/common/Badge";
-import Button from "../components/common/Button";
-import TourCard from "../components/home/TourCard";
-
+import { Clock, CheckCircle } from "lucide-react";
 import { useAuth } from "../../auth/context";
+import { useSocket } from "../../context/SocketContext";
+import { toast } from "sonner";
+import TourCard from "../components/home/TourCard";
 
 const MyToursPage = () => {
   const [searchParams] = useSearchParams();
-
-  const tabFromUrl = searchParams.get("tab") || "ongoing";
+  const tabFromUrl = searchParams.get("tab") || "accepted";
   const [activeTab, setActiveTab] = useState(tabFromUrl);
   const { user, withAuth } = useAuth();
+  const { socket, on, joinRoom } = useSocket();
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -20,152 +22,256 @@ const MyToursPage = () => {
     setActiveTab(tabFromUrl);
   }, [tabFromUrl]);
 
-  useEffect(() => {
-    async function fetchTours() {
-      setLoading(true);
-      try {
-        const data = await withAuth("/api/tours");
-        // Filter tours by current user's agencyId
-        const myTours = Array.isArray(data)
-          ? data.filter((tour) =>
-              tour.agencyId &&
-              (tour.agencyId._id === user?.agencyId || tour.agencyId === user?.agencyId)
-            )
-          : [];
-        setTours(myTours);
-      } catch {
+  const fetchTours = useCallback(async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      // Fetch all accepted/negotiating/agreement_pending tour requests
+      const data = await withAuth("/api/guide/custom-requests?status=accepted,negotiating,agreement_pending");
+      console.log("[MyToursPage] Raw API response:", data);
+
+      if (data.tourRequests && Array.isArray(data.tourRequests)) {
+        // Map tour requests to include image and agreement data
+        const mappedTours = data.tourRequests.map((tourRequest) => {
+          // Extract images from itinerary items if available
+          const imageItems = (tourRequest.tourDetails?.items || tourRequest.itineraryId?.items || []).flatMap((item) =>
+            item.imageUrl
+              ? [{ imageUrl: item.imageUrl }]
+              : item.photos
+              ? item.photos.map((photo) => ({ imageUrl: photo }))
+              : []
+          );
+
+          return {
+            ...tourRequest,
+            // Add imageItems array for TourCard to use
+            imageItems,
+            // Keep existing fields
+            coverImage: tourRequest.coverImage,
+            imageUrl: tourRequest.imageUrl || imageItems[0]?.imageUrl,
+            // ✅ Add agreement status
+            agreement: tourRequest.agreement || {},
+            bothAgreed: tourRequest.agreement?.userAgreed && tourRequest.agreement?.guideAgreed,
+            // Map tour request fields to expected fields
+            _id: tourRequest._id,
+            name: tourRequest.tourDetails?.zoneName || tourRequest.itineraryId?.zoneName || "Tour",
+            zoneName: tourRequest.tourDetails?.zoneName || tourRequest.itineraryId?.zoneName || "Tour",
+            numberOfPeople: tourRequest.tourDetails?.numberOfGuests || 1,
+            preferredDate: tourRequest.preferredDates?.[0]?.startDate,
+            totalDuration: tourRequest.tourDetails?.numberOfDays ? tourRequest.tourDetails.numberOfDays * 480 : 0,
+          };
+        });
+
+        console.log("[MyToursPage] Mapped tours with images and agreement:", mappedTours);
+        console.log("[MyToursPage] Agreement details:", mappedTours.map(t => ({
+          tourName: t.name,
+          bothAgreed: t.bothAgreed,
+          agreement: t.agreement,
+          status: t.status
+        })));
+        setTours(mappedTours);
+      } else {
         setTours([]);
-      } finally {
-        setLoading(false);
       }
+    } catch (error) {
+      console.error("Error fetching tours:", error);
+      toast.error("Không thể tải danh sách tour");
+      setTours([]);
+    } finally {
+      setLoading(false);
     }
-    if (user?.agencyId) fetchTours();
-  }, [user?.agencyId, withAuth]);
+  }, [user, withAuth]);
+
+  useEffect(() => {
+    fetchTours();
+  }, [fetchTours]);
+
+  // Join socket room for real-time updates
+  useEffect(() => {
+    if (!socket || !user?._id) return;
+
+    // Join user-specific room to receive payment and tour completion notifications
+    joinRoom(`user-${user._id}`);
+
+    // Listen for payment success
+    const unsubscribePayment = on("paymentSuccessful", (data) => {
+      console.log("🔔 Payment successful:", data);
+      toast.success(`Khách hàng đã thanh toán cho ${data.tourTitle || "tour"}`);
+      // Optionally refetch tours to update status
+      fetchTours();
+    });
+
+    // Listen for tour marked as done
+    const unsubscribeTourDone = on("tourMarkedDone", (data) => {
+      console.log("🔔 Tour marked done:", data);
+      toast.success(
+        `Tour "${data.tourTitle || "Không xác định"}" đã hoàn thành!`
+      );
+      fetchTours();
+    });
+
+    // Listen for tour completion notification
+    const unsubscribeTourCompleted = on("tourCompleted", (data) => {
+      console.log("🔔 Tour completed:", data);
+      toast.info(
+        `Tour "${data.tourTitle || "Không xác định"}" được đánh dấu hoàn thành`
+      );
+      fetchTours();
+    });
+
+    return () => {
+      unsubscribePayment?.();
+      unsubscribeTourDone?.();
+      unsubscribeTourCompleted?.();
+    };
+  }, [socket, user?._id, joinRoom, fetchTours, on]);
 
   // Categorize tours by status/dates
   const categorizeTours = (tours) => {
     const now = new Date();
     const result = {
-      ongoing: [],
+      accepted: [],
       upcoming: [],
       completed: [],
-      canceled: [],
+      inProgress: [],
     };
+
     tours.forEach((tour) => {
-      // You may need to adjust this logic based on your real tour data structure
-      // Example: check tour.status or compare tour.departures dates
-      if (tour.isHidden || tour.status === "canceled") {
-        result.canceled.push(tour);
-      } else if (tour.status === "completed") {
+      const preferredDate = tour.preferredDate
+        ? new Date(tour.preferredDate)
+        : null;
+
+      if (tour.tourGuideRequest?.status === "completed") {
         result.completed.push(tour);
-      } else if (tour.departures && tour.departures.length > 0) {
-        // Find the next departure
-        const nextDeparture = tour.departures.find((d) => {
-          if (!d.date) return false;
-          const depDate = new Date(d.date);
-          return depDate >= now;
-        });
-        if (nextDeparture) {
-          result.upcoming.push(tour);
-        } else {
-          // If all departures are in the past, mark as completed
-          result.completed.push(tour);
-        }
+      } else if (
+        preferredDate &&
+        preferredDate.toDateString() === now.toDateString()
+      ) {
+        result.inProgress.push(tour);
+      } else if (preferredDate && preferredDate > now) {
+        result.upcoming.push(tour);
+        result.accepted.push(tour);
       } else {
-        // If no departures, treat as ongoing
-        result.ongoing.push(tour);
+        result.accepted.push(tour);
       }
     });
+
     return result;
   };
 
   const categorized = categorizeTours(tours);
+
   const tabs = [
     {
-      value: "ongoing",
-      label: "Đang diễn ra",
-      count: categorized.ongoing.length,
+      value: "accepted",
+      label: "Sắp tới",
+      count: categorized.accepted.length,
       color: "success",
+      icon: <CheckCircle className="w-4 h-4" />,
     },
     {
-      value: "upcoming",
-      label: "Sắp tới",
-      count: categorized.upcoming.length,
+      value: "inProgress",
+      label: "Đang diễn ra",
+      count: categorized.inProgress.length,
       color: "info",
+      icon: <Clock className="w-4 h-4" />,
     },
     {
       value: "completed",
       label: "Hoàn thành",
       count: categorized.completed.length,
       color: "default",
-    },
-    {
-      value: "canceled",
-      label: "Đã hủy",
-      count: categorized.canceled.length,
-      color: "danger",
+      icon: <CheckCircle className="w-4 h-4" />,
     },
   ];
 
   const currentTours = categorized[activeTab] || [];
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Tour của tôi</h1>
-        <p className="text-gray-500">Quản lý tất cả tour của bạn tại một nơi</p>
+    <div className="px-6 py-4 min-h-screen">
+      <div className="mb-6 ml-4">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">
+          Tour của tôi
+        </h1>
+        <p className="text-gray-500 text-sm sm:text-base">
+          Quản lý tất cả tour của bạn tại một nơi
+        </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setActiveTab(tab.value)}
-            className={`px-6 py-3 rounded-lg font-medium whitespace-nowrap transition-all flex items-center gap-2 ${
-              activeTab === tab.value
-                ? "bg-[#02A0AA] text-white shadow-lg"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
-            }`}
-          >
-            {tab.label}
-            <Badge
-              variant={activeTab === tab.value ? "default" : tab.color}
-              className={
-                activeTab === tab.value ? "bg-white text-[#02A0AA]" : ""
-              }
+      {/* Tabs - nhỏ gọn, dạng pill */}
+      <div className="flex flex-wrap gap-2 mb-4 sm:mb-6 items-center">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.value;
+          return (
+            <button
+              key={tab.value}
+              onClick={() => setActiveTab(tab.value)}
+              className={[
+                "inline-flex items-center gap-1.5 rounded-full",
+                "px-3 py-1.5 text-xs sm:text-sm font-medium",
+                "border transition-colors",
+                isActive
+                  ? "bg-[#02A0AA] text-white border-transparent shadow-sm"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50",
+              ].join(" ")}
             >
-              {tab.count}
-            </Badge>
-          </button>
-        ))}
+              <span className="hidden sm:inline-flex">{tab.icon}</span>
+              <span className="truncate">{tab.label}</span>
+              <Badge
+                variant={isActive ? "default" : tab.color}
+                className={`ml-1 px-2 py-[1px] text-[11px] ${
+                  isActive ? "bg-white text-[#02A0AA]" : ""
+                }`}
+              >
+                {tab.count}
+              </Badge>
+            </button>
+          );
+        })}
       </div>
 
       {/* Tours Grid */}
       {loading ? (
-        <Card className="text-center py-16">Đang tải dữ liệu tour...</Card>
+        <Card className="text-center py-12 sm:py-16">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-[#02A0AA] border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-gray-500 text-sm sm:text-base">
+              Đang tải dữ liệu tour...
+            </p>
+          </div>
+        </Card>
       ) : currentTours.length === 0 ? (
-        <Card className="text-center py-16">
-          <p className="text-6xl mb-4">
-            {activeTab === "ongoing" && "🚀"}
-            {activeTab === "upcoming" && "📆"}
-            {activeTab === "completed" && "✅"}
-            {activeTab === "canceled" && "❌"}
+        <Card className="text-center py-12 sm:py-16">
+          <div className="mb-3 sm:mb-4 flex items-center justify-center text-gray-400">
+            {activeTab === "accepted" && (
+              <CheckCircle className="w-10 h-10 sm:w-14 sm:h-14 text-emerald-500" />
+            )}
+            {activeTab === "inProgress" && (
+              <Clock className="w-10 h-10 sm:w-14 sm:h-14 text-blue-500" />
+            )}
+            {activeTab === "completed" && (
+              <CheckCircle className="w-10 h-10 sm:w-14 sm:h-14 text-emerald-500" />
+            )}
+          </div>
+          <p className="text-gray-500 text-sm sm:text-base mb-1">
+            Không có tour{" "}
+            {tabs.find((t) => t.value === activeTab)?.label.toLowerCase()}
           </p>
-          <p className="text-gray-500 mb-2">
-            Không có tour {tabs.find((t) => t.value === activeTab)?.label.toLowerCase()}
-          </p>
-          <p className="text-sm text-gray-400">
-            {activeTab === "ongoing" && "Không có tour nào đang diễn ra"}
-            {activeTab === "upcoming" && "Chấp nhận yêu cầu mới để lên lịch tour"}
+          <p className="text-xs sm:text-sm text-gray-400">
+            {activeTab === "accepted" && "Các tour sắp tới sẽ hiện ở đây"}
+            {activeTab === "inProgress" && "Không có tour nào đang diễn ra"}
             {activeTab === "completed" && "Tour đã hoàn thành sẽ hiện ở đây"}
-            {activeTab === "canceled" && "Tour đã hủy sẽ hiện ở đây"}
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {currentTours.map((tour) => (
-            <TourCard key={tour._id || tour.id} tour={tour} />
+            <TourCard
+              key={tour._id}
+              tour={tour}
+              status={activeTab} // 'accepted' | 'inProgress' | 'completed'
+            />
           ))}
         </div>
       )}

@@ -61,6 +61,7 @@ export default function ProfileLayout() {
                 ["Thông tin khách hàng", "info", true],
                 ["Yêu thích", "favorites", true],
                 ["Lịch sử chuyến đi", "booking-history", true],
+                ["Yêu cầu tour tùy chỉnh", "my-tour-requests", true],
                 ["Hoàn tiền", "refunds", true],
                 ["Mã giảm giá", "vouchers", true],
                 ["Đánh giá", "reviews", true],

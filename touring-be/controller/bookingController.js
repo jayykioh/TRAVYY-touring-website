@@ -138,7 +138,17 @@ exports.getUserBookings = async (req, res) => {
           image: item.image || t?.imageItems?.[0]?.imageUrl || "",
         };
       });
-      return { ...booking, items };
+      // Provide frontend-friendly top-level properties for payment
+      const paymentStatus =
+        booking.status === "paid"
+          ? "paid"
+          : booking.payment?.status === "completed"
+          ? "paid"
+          : booking.payment?.status || "pending";
+
+      const paymentMethod = booking.payment?.provider || booking.payment?.method || "";
+
+      return { ...booking, items, paymentStatus, paymentMethod };
     });
 
     res.json({
@@ -211,9 +221,18 @@ exports.getBookingById = async (req, res) => {
       };
     });
 
+    const paymentStatus =
+      booking.status === "paid"
+        ? "paid"
+        : booking.payment?.status === "completed"
+        ? "paid"
+        : booking.payment?.status || "pending";
+
+    const paymentMethod = booking.payment?.provider || booking.payment?.method || "";
+
     res.json({
       success: true,
-      data: { ...booking, items },
+      data: { ...booking, items, paymentStatus, paymentMethod },
     });
   } catch (e) {
     console.error("getBookingById error", e);
