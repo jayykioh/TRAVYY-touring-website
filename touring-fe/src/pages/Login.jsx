@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Mail,
@@ -13,16 +13,35 @@ import {
   User,
   Star,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { useAuth } from "../auth/context";
 const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const isDev = import.meta.env.DEV; // Vite's built-in dev mode check
+
 function Login() {
   const [form, setForm] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberDevice, setRememberDevice] = useState(false); // ✅ Remember device for 2FA skip
   const navigate = useNavigate();
   const { login, adminLogin } = useAuth();
+
+  // 2FA states
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [twoFACode, setTwoFACode] = useState("");
+  const [pendingUserId, setPendingUserId] = useState(null);
+  const [pendingUserData, setPendingUserData] = useState(null);
+
+  // ✅ Auto-fill username on mount if remembered
+  useEffect(() => {
+    const savedUsername = sessionStorage.getItem("rememberedUsername");
+    if (savedUsername) {
+      setForm((prev) => ({ ...prev, username: savedUsername }));
+      setRememberDevice(true); // Keep checkbox ticked
+    }
+  }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -32,37 +51,127 @@ function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // Check if there's a saved redirect URL
-      const redirectUrl = sessionStorage.getItem("redirect_after_login");
-
-      if (form.username.includes("@") && form.username.includes("travyy.com")) {
-        // Admin login
-        await adminLogin(form.username, form.password);
-        toast.success("Đăng nhập admin thành công");
-
-        // Clear redirect URL and navigate
-        if (redirectUrl) {
-          sessionStorage.removeItem("redirect_after_login");
-          window.location.href = redirectUrl; // Use window.location to ensure full reload
-        } else {
-          navigate("/admin/dashboard", { replace: true });
-        }
+      // ✅ Save/remove username based on "Remember device" checkbox
+      if (rememberDevice) {
+        sessionStorage.setItem("rememberedUsername", form.username);
       } else {
-        await login(form.username, form.password);
-        toast.success(
-          `Chào mừng ${form.username} đã trở lại. Khám phá những chuyến đi tuyệt vời!`
-        );
-
-        // Clear redirect URL and navigate
-        if (redirectUrl) {
-          sessionStorage.removeItem("redirect_after_login");
-          window.location.href = redirectUrl; // Use window.location to ensure full reload
-        } else {
-          navigate("/home", { replace: true });
-        }
+        sessionStorage.removeItem("rememberedUsername");
       }
+
+      // ✅ Get trusted device token from localStorage (persists after browser close)
+      const trustedDeviceToken = localStorage.getItem("trustedDeviceToken");
+
+      // Step 1: Initial login to check credentials
+      const response = await fetch(`${API}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: form.username,
+          password: form.password,
+          trustedDeviceToken, // ✅ Send trusted device token
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      console.log("Login response:", data);
+
+      // Check if 2FA is required
+      if (data.requires2FA) {
+        setPendingUserId(data.userId);
+        setPendingUserData(data);
+        setShow2FAModal(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // ✅ No 2FA needed - Check if it's because of trusted device
+      if (data.trustedDevice) {
+        toast.success("✅ Thiết bị đã tin cậy - Bỏ qua xác thực 2FA!");
+      }
+
+      // No 2FA needed - proceed with login
+      await completeLogin(data);
     } catch (err) {
-      toast.error(err?.body?.message || "Login failed");
+      toast.error(err?.message || "Login failed");
+      setIsLoading(false);
+    }
+  };
+
+  const completeLogin = async (data) => {
+    try {
+      // Data from backend should contain: accessToken, user
+      if (!data.accessToken || !data.user) {
+        throw new Error("Invalid login response from server");
+      }
+
+      // ✅ Save trusted device token to localStorage (persists after browser close)
+      if (data.trustedDeviceToken) {
+        localStorage.setItem("trustedDeviceToken", data.trustedDeviceToken);
+        console.log("✅ Saved trusted device token");
+        const expiryMsg = isDev
+          ? "🧪 Không cần 2FA trong 5 phút!"
+          : "🔒 Không cần 2FA trong 30 ngày!";
+        toast.success(`Thiết bị đã được ghi nhớ - ${expiryMsg}`);
+      }
+
+      const isAdmin =
+        data.user.role === "Admin" || data.user.email?.includes("travyy.com");
+
+      toast.success(
+        `Chào mừng ${data.user.name || data.user.username} đã trở lại!`
+      );
+
+      // ✅ Backend already set the refresh_token cookie in the response
+      // Just reload the page and AuthContext will use that cookie to get user info
+      setTimeout(() => {
+        if (isAdmin) {
+          window.location.href = "/admin/dashboard";
+        } else {
+          window.location.href = "/home";
+        }
+      }, 500);
+    } catch (err) {
+      console.error("Complete login error:", err);
+      toast.error(err?.message || "Đăng nhập thất bại");
+      setIsLoading(false);
+    }
+  };
+
+  const handle2FAVerification = async () => {
+    try {
+      setIsLoading(true);
+
+      const response = await fetch(`${API}/api/security/2fa/verify`, {
+        method: "POST",
+        credentials: "include", // ✅ CRITICAL: Include cookies
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: pendingUserId,
+          token: twoFACode,
+          isLoginFlow: true,
+          rememberDevice, // ✅ Send remember device choice
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Mã 2FA không đúng");
+      }
+
+      toast.success("✅ Xác thực 2FA thành công!");
+      setShow2FAModal(false);
+      setTwoFACode("");
+
+      // Login complete, backend returned token
+      await completeLogin(data);
+    } catch (err) {
+      toast.error(err?.message || "Xác thực 2FA thất bại");
     } finally {
       setIsLoading(false);
     }
@@ -164,6 +273,7 @@ function Login() {
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Username */}
                 <div>
                   <div className="relative">
                     <Mail
@@ -177,6 +287,7 @@ function Login() {
                       value={form.username}
                       onChange={handleChange}
                       required
+                      autoComplete="username" // ✅ Browser autofill
                       className="w-full pl-12 pr-4 py-3.5 rounded-2xl backdrop-blur-md bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-white/30 transition-all"
                     />
                   </div>
@@ -196,6 +307,7 @@ function Login() {
                       value={form.password}
                       onChange={handleChange}
                       required
+                      autoComplete="current-password" // ✅ Browser autofill
                       className="w-full pl-12 pr-12 py-3.5 rounded-2xl backdrop-blur-md bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-white/30 transition-all"
                     />
                     <button
@@ -222,6 +334,32 @@ function Login() {
                   >
                     Register
                   </a>
+                </div>
+
+                {/* ✅ Remember Device Checkbox */}
+                <div className="backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl p-4">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="rememberDevice"
+                      checked={rememberDevice}
+                      onChange={(e) => setRememberDevice(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 border-white/30 rounded focus:ring-blue-500 cursor-pointer mt-0.5 bg-white/20"
+                    />
+                    <div className="flex-1">
+                      <label
+                        htmlFor="rememberDevice"
+                        className="text-sm font-medium text-white cursor-pointer select-none block"
+                      >
+                        Ghi nhớ thiết bị này
+                      </label>
+                      <p className="text-xs text-white/70 mt-0.5">
+                        {isDev
+                          ? "🧪 Tự động điền tài khoản & bỏ qua 2FA trong 5 phút"
+                          : "Tự động điền tài khoản & bỏ qua 2FA trong 30 ngày"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Login Button */}
@@ -303,6 +441,89 @@ function Login() {
           </div>
         </div>
       </div>
+
+      {/* 2FA Modal */}
+      {show2FAModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-8 h-8 text-blue-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Xác thực 2FA
+              </h2>
+              <p className="text-gray-600 text-sm">
+                Nhập mã 6 số đã được gửi đến email của bạn
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <input
+                type="text"
+                value={twoFACode}
+                onChange={(e) =>
+                  setTwoFACode(e.target.value.replace(/\D/g, ""))
+                }
+                placeholder="000000"
+                maxLength={6}
+                className="w-full px-4 py-3 text-center text-2xl font-mono tracking-widest border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                autoFocus
+              />
+
+              {/* Resend code button */}
+              <div className="text-center">
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch(
+                        `${API}/api/security/2fa/resend`,
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ userId: pendingUserId }),
+                        }
+                      );
+
+                      if (response.ok) {
+                        toast.success("📧 Đã gửi lại mã xác thực!");
+                      } else {
+                        const data = await response.json();
+                        throw new Error(data.message || "Không thể gửi lại mã");
+                      }
+                    } catch (err) {
+                      toast.error(err?.message || "Không thể gửi lại mã");
+                    }
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Gửi lại mã
+                </button>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShow2FAModal(false);
+                    setTwoFACode("");
+                    setIsLoading(false);
+                  }}
+                  className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handle2FAVerification}
+                  disabled={twoFACode.length !== 6 || isLoading}
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isLoading ? "Đang xác thực..." : "Xác nhận"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Toaster richColors closeButton />
     </div>

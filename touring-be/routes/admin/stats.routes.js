@@ -11,6 +11,10 @@ const {
   getToursByRegion,
   getAgeDistribution,
   getTopTravelers,
+  getTopPopularTours,
+  getRecentReviews,
+  getAvailableGuides,
+  getRefundStats,
 } = require("../../controller/admin/admin.stats.controller");
 
 /**
@@ -68,5 +72,33 @@ router.get("/age-distribution", authJwt, getAgeDistribution);
  * @access  Private (Admin only)
  */
 router.get("/top-travelers", authJwt, getTopTravelers);
+
+/**
+ * @route   GET /api/admin/top-popular-tours
+ * @desc    Get top 5 most popular tours by booking count
+ * @access  Private (Admin only)
+ */
+router.get("/top-popular-tours", authJwt, getTopPopularTours);
+
+/**
+ * @route   GET /api/admin/recent-reviews
+ * @desc    Get 5 most recent reviews that need response
+ * @access  Private (Admin only)
+ */
+router.get("/recent-reviews", authJwt, getRecentReviews);
+
+/**
+ * @route   GET /api/admin/available-guides
+ * @desc    Get available tour guides (users with role TourGuide)
+ * @access  Private (Admin only)
+ */
+router.get("/available-guides", authJwt, getAvailableGuides);
+
+/**
+ * @route   GET /api/admin/refund-stats
+ * @desc    Get refund statistics (total, by status)
+ * @access  Private (Admin only)
+ */
+router.get("/refund-stats", authJwt, getRefundStats);
 
 module.exports = router;

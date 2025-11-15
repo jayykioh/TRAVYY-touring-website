@@ -39,15 +39,27 @@ const userSchema = new mongoose.Schema(
     // 🔒 Reset password fields
     resetPasswordToken: String,
     resetPasswordExpires: Date,
-    // 🔐 Two-Factor Authentication
+    // 🔐 Two-Factor Authentication (Email-based OTP)
     twoFactorEnabled: { type: Boolean, default: false },
-    twoFactorSecret: String, // TOTP secret for authenticator app
+    twoFactorCode: String, // 6-digit code sent via email
+    twoFactorCodeExpires: Date, // Code expiry time
+    twoFactorSecret: String, // DEPRECATED: TOTP secret (no longer used)
     twoFactorConfirmToken: String, // Token để confirm việc bật 2FA
     twoFactorConfirmExpires: Date,
+    // 🔐 Trusted devices for "Remember Me" on 2FA
+    trustedDevices: [
+      {
+        deviceToken: String, // Unique token for this device
+        deviceName: String, // Browser/Device info
+        createdAt: { type: Date, default: Date.now },
+        expiresAt: Date, // 30 days from creation
+        lastUsed: Date,
+      },
+    ],
     // ✉️ Email verification
     emailVerificationEnabled: { type: Boolean, default: false },
     emailVerificationCode: String,
-    emailVerificationExpires: Date,
+    emailVerificationCodeExpires: Date,
     emailVerificationConfirmToken: String, // Token để confirm việc bật/tắt email verification
     emailVerificationConfirmExpires: Date,
     emailVerificationPendingState: Boolean, // Trạng thái pending (true/false)

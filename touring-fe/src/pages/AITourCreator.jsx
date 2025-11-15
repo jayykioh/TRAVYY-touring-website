@@ -164,114 +164,91 @@ export default function AITourCreator() {
       </div>
 
       {/* Shadcn Dialog for How it works */}
-      <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto bg-white/95 backdrop-blur-xl border border-slate-200/80">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-slate-900">
-              Cách hệ thống hoạt động
-            </DialogTitle>
-            <DialogDescription className="text-slate-600 text-base">
-              Hai cách tạo lịch trình phù hợp với từng nhu cầu
-            </DialogDescription>
-          </DialogHeader>
+     {/* Shadcn Dialog for How it works - Refactored for Modern/Apple Aesthetic */}
+<Dialog open={showModal} onOpenChange={setShowModal}>
+  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white/90 backdrop-blur-2xl rounded-2xl border-none shadow-2xl p-8">
+    <DialogHeader className="text-center mb-4">
+      <DialogTitle className="text-3xl font-semibold tracking-tight text-slate-900">
+        Cách hệ thống hoạt động
+      </DialogTitle>
+      <DialogDescription className="text-lg text-slate-500 pt-2">
+        Chọn cách tạo lịch trình phù hợp với nhu cầu của bạn
+      </DialogDescription>
+    </DialogHeader>
 
-          <div className="space-y-6 py-4">
-            {/* Method 1: Manual */}
-            <div className="border border-slate-200 rounded-xl p-6 bg-white/80">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-slate-100 rounded-xl shrink-0">
-                  <CompassIcon className="w-8 h-8 text-slate-900" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-slate-900 mb-2 flex items-center gap-2">
-                    <span>🗺️</span>
-                    <span>Tự tạo lịch trình</span>
-                  </h3>
-                  <p className="text-sm text-slate-600 mb-2">
-                    Hoàn toàn kiểm soát chuyến đi:
-                  </p>
-                  <ul className="space-y-1 text-sm text-slate-500">
-                    <li>• Chọn địa điểm theo sở thích cá nhân</li>
-                    <li>• Sắp xếp thứ tự tùy ý</li>
-                    <li>• Điều chỉnh thời gian linh hoạt</li>
-                    <li>• Không cần tài khoản</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Method 2: AI */}
-            <div className="border-2 border-[#02A0AA]/30 rounded-xl p-6 bg-linear-to-br from-[#02A0AA]/5 to-cyan-50/50">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-white rounded-xl shrink-0 shadow-sm">
-                  <SparklesIcon className="w-8 h-8 text-[#02A0AA]" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-slate-900 mb-2 flex items-center gap-2">
-                    <span>✨</span>
-                    <span>Gợi ý chính xác</span>
-                  </h3>
-                  <p className="text-sm text-slate-600 mb-2">
-                    Dựa trên hồ sơ của bạn:
-                  </p>
-                  <ul className="space-y-1 text-sm text-slate-500">
-                    <li>• Hiển thị báo cáo tuần (giống Spotify Wrapped)</li>
-                    <li>• Tự động tìm tour phù hợp</li>
-                    <li>• Tối ưu lịch trình di chuyển</li>
-                    <li>• Cải thiện theo thời gian</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Comparison Card */}
-            <div className="bg-slate-50 rounded-xl p-6 border border-slate-100">
-              <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5 text-[#02A0AA]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-                <span>So sánh hai phương thức</span>
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-[#02A0AA] text-sm">Tự tạo</h4>
-                  <ul className="text-xs text-slate-600 space-y-1">
-                    <li>✓ Bạn chọn sở thích</li>
-                    <li>✓ Kết quả ngay lập tức</li>
-                    <li>✓ Không cần đăng nhập</li>
-                    <li>✓ Phù hợp cho lần đầu</li>
-                  </ul>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-blue-600 text-sm">Gợi ý AI</h4>
-                  <ul className="text-xs text-slate-600 space-y-1">
-                    <li>✓ AI tự động phân tích</li>
-                    <li>✓ Càng dùng càng chính xác</li>
-                    <li>✓ Cần đăng nhập</li>
-                    <li>✓ Báo cáo tuần qua</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* CTA Button */}
-            <button
-              onClick={() => {
-                setShowModal(false);
-                if (!isAuth) {
-                  navigate('/login', { state: { from: '/recommendations/wrapped' } });
-                } else {
-                  navigate('/recommendations/wrapped');
-                }
-              }}
-              className="w-full bg-[#02A0AA] hover:bg-[#029099] text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2"
-            >
-              Dùng thử AI ngay
-              <ArrowRightIcon className="w-5 h-5" />
-            </button>
+    {/* Main content grid */}
+    <div className="py-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* Method 1: Manual */}
+        <div className="flex flex-col rounded-3xl bg-gray-50 p-8 transition-all hover:shadow-lg hover:shadow-gray-500/10 border border-gray-200/50">
+          <div className="p-3 bg-gray-200 rounded-xl self-start mb-5">
+            <CompassIcon className="w-8 h-8 text-gray-800" />
           </div>
-        </DialogContent>
-      </Dialog>
+          <h3 className="font-semibold text-xl text-slate-900 mb-3">
+            🗺️ Tự tạo lịch trình
+          </h3>
+          <p className="text-slate-600 mb-5 text-base">
+            Hoàn toàn kiểm soát chuyến đi, phù hợp khi bạn muốn tự tay sắp xếp.
+          </p>
+          <ul className="space-y-2 text-sm text-slate-600 list-disc list-inside">
+            <li>Bạn chủ động chọn sở thích</li>
+            <li>Kết quả ngay lập tức</li>
+            <li>Không cần đăng nhập</li>
+            <li>Linh hoạt điều chỉnh bất cứ lúc nào</li>
+          </ul>
+        </div>
+
+        {/* Method 2: AI */}
+        <div className="flex flex-col rounded-3xl bg-white p-8 border-2 border-[#02A0AA] shadow-xl shadow-[#02A0AA]/20">
+          <div className="p-3 bg-[#02A0AA]/10 rounded-xl self-start mb-5">
+            <SparklesIcon className="w-8 h-8 text-[#02A0AA]" />
+          </div>
+          <h3 className="font-semibold text-xl text-slate-900 mb-3">
+            ✨ Gợi ý chính xác (AI)
+          </h3>
+          <p className="text-slate-600 mb-5 text-base">
+            Để AI phân tích và tự động tối ưu chuyến đi cho bạn.
+          </p>
+          <ul className="space-y-2 text-sm text-slate-600 list-disc list-inside">
+            <li>AI tự động phân tích sở thích</li>
+            <li>Càng dùng, gợi ý càng chính xác</li>
+            <li>Yêu cầu đăng nhập để cá nhân hóa</li>
+            <li>Tự động tối ưu lịch trình di chuyển</li>
+            <li>Nhận báo cáo du lịch hàng tuần</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+    {/* CTA Section */}
+    <div className="flex flex-col items-center pt-4">
+      <button
+        onClick={() => {
+          setShowModal(false);
+          if (!isAuth) {
+            navigate('/login', { state: { from: '/recommendations/wrapped' } });
+          } else {
+            navigate('/recommendations/wrapped');
+          }
+        }}
+        className="w-full bg-[#02A0AA] hover:bg-[#029099] text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 text-base"
+      >
+        Dùng thử Gợi ý AI
+        <ArrowRightIcon className="w-5 h-5" />
+      </button>
+      
+      <button
+        onClick={() => setShowModal(false)} // Just close the modal
+        className="text-center text-sm text-slate-600 hover:text-slate-900 mt-4 h-10 px-4 transition-colors"
+      >
+        Tôi muốn tự tạo
+      </button>
+    </div>
+    
+  </DialogContent>
+</Dialog>
     </div>
   );
 }

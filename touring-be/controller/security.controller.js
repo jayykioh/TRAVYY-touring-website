@@ -148,7 +148,7 @@ exports.verify2FA = async (req, res) => {
   try {
     // Try to get userId from auth token first, then from body
     const userId = req.user?.sub || req.user?._id || req.body.userId;
-    const { token } = req.body;
+    const { token, isLoginFlow, rememberDevice } = req.body;
 
     if (!userId) {
       return res.status(400).json({
@@ -166,57 +166,235 @@ exports.verify2FA = async (req, res) => {
 
     const user = await User.findById(userId);
 
-    if (!user || !user.twoFactorSecret) {
-      return res.status(400).json({
-        error: "2FA_NOT_SETUP",
-        message: "Vui lòng thiết lập 2FA trước",
+    if (!user) {
+      return res.status(404).json({
+        error: "USER_NOT_FOUND",
+        message: "Không tìm thấy người dùng",
       });
     }
 
-    // Verify token
-    const verified = speakeasy.totp.verify({
-      secret: user.twoFactorSecret,
-      encoding: "base32",
-      token: token,
-      window: 2, // Allow 2 time steps before/after
-    });
+    // ✅ LOGIN FLOW: Verify email-based OTP code
+    if (isLoginFlow) {
+      // Check if code exists and not expired
+      if (!user.twoFactorCode || !user.twoFactorCodeExpires) {
+        return res.status(400).json({
+          error: "NO_CODE",
+          message: "Không tìm thấy mã xác thực. Vui lòng gửi lại mã.",
+        });
+      }
 
-    if (!verified) {
-      return res.status(400).json({
-        error: "INVALID_TOKEN",
-        message: "Mã xác thực không đúng",
+      // Check if code expired
+      if (Date.now() > user.twoFactorCodeExpires) {
+        return res.status(400).json({
+          error: "CODE_EXPIRED",
+          message: "Mã xác thực đã hết hạn. Vui lòng gửi lại mã.",
+        });
+      }
+
+      // Check if code matches
+      if (user.twoFactorCode !== token) {
+        return res.status(400).json({
+          error: "INVALID_CODE",
+          message: "Mã xác thực không đúng",
+        });
+      }
+
+      // ✅ Code is valid - clear it
+      user.twoFactorCode = undefined;
+      user.twoFactorCodeExpires = undefined;
+      await user.save();
+
+      // Generate tokens for login
+      const { signAccess, signRefresh, newId } = require("../utils/jwt");
+      const crypto = require("crypto");
+      const isProd = process.env.NODE_ENV === "production";
+
+      // ✅ Generate trusted device token if user chose "Remember Me"
+      let trustedDeviceToken = null;
+      if (rememberDevice) {
+        trustedDeviceToken = crypto.randomBytes(32).toString("hex");
+        const expiresAt = new Date();
+
+        // ⏰ For testing: 5 minutes in dev, 30 days in production
+        const isDev = process.env.NODE_ENV !== "production";
+        if (isDev) {
+          expiresAt.setMinutes(expiresAt.getMinutes() + 5); // 5 minutes for testing
+          console.log("🧪 DEV MODE: Trusted device expires in 5 minutes");
+        } else {
+          expiresAt.setDate(expiresAt.getDate() + 1); // 30 days in production
+        }
+
+        // Get device info from User-Agent
+        const userAgent = req.headers["user-agent"] || "Unknown Device";
+        const deviceName = userAgent.substring(0, 100); // Limit length
+
+        // Add to trusted devices array
+        if (!user.trustedDevices) {
+          user.trustedDevices = [];
+        }
+
+        // Remove old expired devices
+        user.trustedDevices = user.trustedDevices.filter(
+          (d) => new Date() < d.expiresAt
+        );
+
+        // Add new trusted device
+        user.trustedDevices.push({
+          deviceToken: trustedDeviceToken,
+          deviceName,
+          createdAt: new Date(),
+          expiresAt,
+          lastUsed: new Date(),
+        });
+
+        await user.save();
+        console.log(
+          `✅ Created trusted device token for user: ${
+            user.email
+          } (expires: ${expiresAt.toLocaleString()})`
+        );
+      }
+
+      // Clear old cookie first
+      res.clearCookie("refresh_token", { path: "/api/auth" });
+
+      const jti = newId();
+      const refresh = signRefresh({ jti, userId: user.id });
+
+      res.cookie("refresh_token", refresh, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? "none" : "lax",
+        path: "/api/auth",
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      });
+
+      const accessToken = signAccess({
+        id: user.id,
+        role: user.role || "Traveler",
+      });
+
+      return res.json({
+        success: true,
+        accessToken,
+        trustedDeviceToken, // Return token to save in frontend
+        user: {
+          _id: user.id,
+          email: user.email,
+          role: user.role,
+          name: user.name,
+          username: user.username || "",
+          phone: user.phone || "",
+          location: user.location,
+        },
+        message: "Đăng nhập thành công",
       });
     }
 
-    // Activate 2FA
-    user.twoFactorEnabled = true;
-    await user.save();
-
-    // Send confirmation email
-    try {
-      await sendMail(
-        user.email,
-        "🔐 2FA đã được bật",
-        `
-          <h2>Xác thực hai yếu tố đã được kích hoạt</h2>
-          <p>Xin chào ${user.name || user.email},</p>
-          <p>2FA đã được bật thành công cho tài khoản của bạn.</p>
-          <p>Từ giờ, bạn sẽ cần nhập mã xác thực từ ứng dụng Authenticator khi đăng nhập.</p>
-          <p>Nếu bạn không thực hiện thay đổi này, vui lòng liên hệ hỗ trợ ngay lập tức.</p>
-        `
-      );
-    } catch (emailError) {
-      console.error("📧 Email notification failed:", emailError);
-    }
-
-    res.json({
-      success: true,
-      message: "2FA đã được bật thành công",
+    // ✅ ENABLE 2FA FLOW: This shouldn't happen anymore since we use email-based
+    // But keep for backward compatibility
+    return res.status(400).json({
+      error: "INVALID_FLOW",
+      message: "Flow không hợp lệ",
     });
   } catch (error) {
     console.error("❌ Verify 2FA error:", error);
     res.status(500).json({
       error: "VERIFY_2FA_FAILED",
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * Resend 2FA code - For login flow when user needs new code
+ */
+exports.resend2FACode = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        error: "MISSING_USER_ID",
+        message: "Thiếu thông tin người dùng",
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        error: "USER_NOT_FOUND",
+        message: "Không tìm thấy người dùng",
+      });
+    }
+
+    // Generate new 6-digit code
+    const twoFactorCode = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
+    user.twoFactorCode = twoFactorCode;
+    user.twoFactorCodeExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    await user.save();
+
+    // Send email with new code
+    try {
+      await sendMail(
+        user.email,
+        "Mã xác thực 2FA mới - TRAVYY",
+        `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">🔐 Mã 2FA mới</h1>
+            </div>
+            
+            <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">
+                Xin chào <strong>${user.name || user.username}</strong>,
+              </p>
+              
+              <p style="font-size: 16px; color: #374151; margin-bottom: 30px;">
+                Mã xác thực 2FA mới của bạn là:
+              </p>
+              
+              <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 30px;">
+                <h2 style="color: #1f2937; font-size: 36px; letter-spacing: 8px; margin: 0; font-family: monospace;">
+                  ${twoFactorCode}
+                </h2>
+              </div>
+              
+              <p style="font-size: 14px; color: #6b7280; margin-bottom: 20px;">
+                ⏰ Mã này sẽ hết hạn sau <strong>10 phút</strong>
+              </p>
+              
+              <p style="font-size: 14px; color: #6b7280; margin-bottom: 0;">
+                Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              <p style="font-size: 12px; color: #9ca3af; margin: 0;">
+                © ${new Date().getFullYear()} TRAVYY. All rights reserved.
+              </p>
+            </div>
+          </div>
+        `
+      );
+
+      res.json({
+        success: true,
+        message: "Mã 2FA mới đã được gửi đến email của bạn",
+      });
+    } catch (emailError) {
+      console.error("❌ Resend 2FA code - Email error:", emailError);
+      return res.status(500).json({
+        error: "EMAIL_SEND_FAILED",
+        message: "Không thể gửi mã xác thực. Vui lòng thử lại sau.",
+      });
+    }
+  } catch (error) {
+    console.error("❌ Resend 2FA code error:", error);
+    res.status(500).json({
+      error: "RESEND_FAILED",
       message: error.message,
     });
   }
@@ -587,21 +765,109 @@ exports.getSecuritySettings = async (req, res) => {
   try {
     const userId = req.user?.sub || req.user?._id;
     const user = await User.findById(userId).select(
-      "twoFactorEnabled emailVerificationEnabled"
+      "twoFactorEnabled emailVerificationEnabled googleId facebookId password trustedDevices"
     );
 
     if (!user) {
       return res.status(404).json({ error: "USER_NOT_FOUND" });
     }
 
+    // ✅ Pure OAuth user = no password (created via OAuth only)
+    // Hybrid user = has password + OAuth (linked accounts)
+    const isPureOAuthUser = !user.password;
+
+    // ✅ Format trusted devices for frontend
+    const trustedDevices = (user.trustedDevices || []).map((device) => ({
+      id: device._id.toString(),
+      deviceName: device.deviceName,
+      createdAt: device.createdAt,
+      expiresAt: device.expiresAt,
+      lastUsed: device.lastUsed,
+      isExpired: new Date() > device.expiresAt,
+    }));
+
     res.json({
       twoFactorEnabled: user.twoFactorEnabled || false,
       emailVerificationEnabled: user.emailVerificationEnabled || false,
+      isOAuthUser: isPureOAuthUser, // Only true if user has no password
+      trustedDevices, // ✅ Add trusted devices list
     });
   } catch (error) {
     console.error("❌ Get security settings error:", error);
     res.status(500).json({
       error: "FETCH_FAILED",
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * Remove a specific trusted device
+ */
+exports.removeTrustedDevice = async (req, res) => {
+  try {
+    const userId = req.user?.sub || req.user?._id;
+    const { deviceId } = req.params;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "USER_NOT_FOUND" });
+    }
+
+    // Remove the specific device
+    const initialLength = user.trustedDevices?.length || 0;
+    user.trustedDevices = (user.trustedDevices || []).filter(
+      (device) => device._id.toString() !== deviceId
+    );
+
+    if (user.trustedDevices.length === initialLength) {
+      return res.status(404).json({
+        error: "DEVICE_NOT_FOUND",
+        message: "Không tìm thấy thiết bị",
+      });
+    }
+
+    await user.save();
+
+    res.json({
+      message: "Đã xóa thiết bị thành công",
+      remainingDevices: user.trustedDevices.length,
+    });
+  } catch (error) {
+    console.error("❌ Remove trusted device error:", error);
+    res.status(500).json({
+      error: "REMOVE_FAILED",
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * Remove all trusted devices
+ */
+exports.removeAllTrustedDevices = async (req, res) => {
+  try {
+    const userId = req.user?.sub || req.user?._id;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "USER_NOT_FOUND" });
+    }
+
+    const removedCount = user.trustedDevices?.length || 0;
+    user.trustedDevices = [];
+    await user.save();
+
+    res.json({
+      message: "Đã xóa tất cả thiết bị đã tin cậy",
+      removedCount,
+    });
+  } catch (error) {
+    console.error("❌ Remove all trusted devices error:", error);
+    res.status(500).json({
+      error: "REMOVE_ALL_FAILED",
       message: error.message,
     });
   }
