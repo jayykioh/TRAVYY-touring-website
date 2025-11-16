@@ -9,6 +9,13 @@ import { useCart } from "@/hooks/useCart";
 export default function BookingPage() {
   const location = useLocation();
   const buyNowItem = location.state?.mode === "buy-now" ? location.state?.item : null;
+  const isTourRequest = location.state?.mode === "tour-request";
+  const requestId = location.state?.requestId;
+  const itinerary = location.state?.itinerary || [];
+  const zoneName = location.state?.zoneName || '';
+  const numberOfDays = location.state?.numberOfDays || 1;
+  const numberOfGuests = location.state?.numberOfGuests || 1;
+  
   const { withAuth } = useAuth();
   const { items, loading } = useCart();
 
@@ -105,6 +112,22 @@ export default function BookingPage() {
       });
     }
 
+    // ✅ Luồng TOUR-REQUEST (custom tour with guide negotiation)
+    if (isTourRequest && location.state?.summaryItems) {
+      return location.state.summaryItems.map((it) => ({
+        id: requestId || 'tour-request',
+        name: it.name || `Tour tùy chỉnh - ${zoneName}`,
+        image: it.image || (itinerary[0]?.image) || '',
+        price: it.price || 0,
+        originalPrice: it.price || 0, // No discount for tour requests
+        numberOfDays: it.numberOfDays || numberOfDays,
+        numberOfGuests: numberOfGuests,
+        description: it.description || '',
+        itinerary: it.itinerary || itinerary, // Include itinerary for display
+        zoneName: it.zoneName || zoneName,
+      }));
+    }
+
     // ✅ Luồng BUY-NOW
     if (buyNowItem) {
       if (!quote) return []; // đợi quote xong
@@ -153,7 +176,7 @@ export default function BookingPage() {
       originalPrice,
     };
   });
-}, [buyNowItem, quote, items, retryPaymentItems]);
+}, [buyNowItem, quote, items, retryPaymentItems, isTourRequest, requestId, itinerary, zoneName, location.state?.summaryItems]);
 
   // Loading
   if (buyNowItem && quoteLoading) {
@@ -186,7 +209,7 @@ export default function BookingPage() {
            * This fixes previous mismatch where MoMo used a hardcoded fallback 100000 VND.
            */}
           <CheckoutForm
-            mode={retryPaymentItems ? "retry-payment" : (buyNowItem ? "buy-now" : "cart")}
+            mode={retryPaymentItems ? "retry-payment" : (isTourRequest ? "tour-request" : (buyNowItem ? "buy-now" : "cart"))}
             buyNowItem={buyNowItem}
             retryPaymentItems={retryPaymentItems}
             retryBookingId={retryBookingId}
@@ -194,6 +217,9 @@ export default function BookingPage() {
             summaryItems={summaryItems}
             totalAmount={summaryItems.reduce((s,it)=> s + (it.price||0), 0)}
             onVoucherChange={handleVoucherChange}
+            requestId={requestId}
+            itinerary={itinerary}
+            zoneName={zoneName}
           />
           {summaryItems.length > 0 ? (
             <PaymentSummary 

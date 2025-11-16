@@ -1,6 +1,3 @@
-// services/itinerary/optimizer.js
-// ✅ COMPLETE FIX: API key, schema, safety settings, and comprehensive logging
-
 const {
   GoogleGenerativeAI,
   HarmBlockThreshold,

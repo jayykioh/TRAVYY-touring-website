@@ -58,12 +58,14 @@ router.get(
       // (access token không cần trả ở redirect; FE sẽ gọi /refresh)
       const refreshToken = signRefresh({ jti, userId: user.id });
 
-      // Set refresh cookie theo môi trường
+      // Set refresh cookie according to environment
+      // In dev: use sameSite "lax" for localhost (Chrome blocks "none" without HTTPS)
+      // In prod: use sameSite "none" + secure for cross-origin support
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
-        secure: isProd, // dev: false, prod: true (HTTPS)
-        sameSite: isProd ? "none" : "lax", // dev: 'lax'
-        path: "/api/auth",
+        secure: isProd,
+        sameSite: isProd ? "none" : "lax",
+        path: "/",
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 ngày
       });
 
@@ -97,11 +99,13 @@ router.get(
 
       const refreshToken = signRefresh({ jti, userId: user.id });
 
+      // In dev: use sameSite "lax" for localhost (Chrome blocks "none" without HTTPS)
+      // In prod: use sameSite "none" + secure for cross-origin support
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
         secure: isProd,
         sameSite: isProd ? "none" : "lax",
-        path: "/api/auth",
+        path: "/",
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
@@ -183,27 +187,25 @@ router.post("/set-role", authJwt, async (req, res) => {
 
 router.post("/logout", async (req, res) => {
   try {
-    console.log("🚪 Logout request - clearing refresh_token cookie");
-    console.log(
-      "   Cookie before clear:",
-      req.cookies?.refresh_token ? "EXISTS" : "NOT FOUND"
-    );
-
-    // 🧹 Xoá cookie refresh_token - MUST match the exact path used when setting!
-    res.clearCookie("refresh_token", {
+    // 🧹 Xoá cookie refresh_token triệt để
+    // CRITICAL: clearCookie phải match CHÍNH XÁC các options khi set cookie
+    const cookieOptions = {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? "none" : "lax",
-      path: "/api/auth", // ✅ CRITICAL: Must match the path when cookie was set!
-    });
+      path: "/",
+    };
+    
+    // Clear cookie với đúng options
+    res.clearCookie("refresh_token", cookieOptions);
+    
+    // Set header để client biết phải clear cache
+    res.set("Clear-Site-Data", '"cache", "cookies", "storage"');
 
-    console.log("   ✅ Sent clearCookie command with path=/api/auth");
-
-    // 🧠 Có thể trả thêm header cho FE confirm
     return res.status(200).json({ ok: true, message: "Logged out" });
   } catch (e) {
     console.error("logout error:", e);
-    return res.status(200).json({ ok: false, message: "Logout error" });
+    return res.status(500).json({ ok: false, message: "Logout error" });
   }
 });
 

@@ -64,7 +64,7 @@ function Login() {
       // Step 1: Initial login to check credentials
       const response = await fetch(`${API}/api/auth/login`, {
         method: "POST",
-        credentials: "include", // ✅ CRITICAL: Send/receive cookies
+        credentials: "include", // ✅ CRITICAL: Include cookies
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: form.username,
@@ -179,11 +179,13 @@ function Login() {
   };
 
   const googleLogin = () => {
-    window.location.href = `${API}/api/auth/google`;
+    // Use relative path to leverage Vite proxy
+    window.location.href = `/api/auth/google`;
   };
 
   const facebookLogin = () => {
-    window.location.href = `${API}/api/auth/facebook`;
+    // Use relative path to leverage Vite proxy
+    window.location.href = `/api/auth/facebook`;
   };
 
   return (

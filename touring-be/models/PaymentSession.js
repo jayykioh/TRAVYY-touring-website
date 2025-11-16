@@ -24,7 +24,7 @@ const paymentSessionSchema = new mongoose.Schema(
   status: { type: String, enum: ["pending", "paid", "failed","cancelled", "expired"], default: "pending" },
   // mode indicates the origin of the payment intent. Allow 'retry-payment'
   // for retrying previously failed payments (frontend may pass this value).
-  mode: { type: String, enum: ["cart", "buy-now", "retry-payment"], default: "cart" },
+  mode: { type: String, enum: ["cart", "buy-now", "retry-payment", "custom-tour", "tour-request"], default: "cart" },
     items: [paymentItemSchema],
     voucherCode: String, // Promotion/voucher code used
     discountAmount: { type: Number, default: 0 }, // Discount amount applied
@@ -34,6 +34,8 @@ const paymentSessionSchema = new mongoose.Schema(
     payType: String,
     message: String,
     resultCode: String,
+    retryBookingId: { type: mongoose.Schema.Types.ObjectId, ref: "Booking" }, // For retry payments
+    customRequestId: { type: mongoose.Schema.Types.ObjectId }, // For custom-tour or tour-request mode
   },
   { timestamps: true }
 );

@@ -9,12 +9,37 @@ const reviewSchema = new mongoose.Schema({
     required: true,
     index: true 
   },
+  
+  // 🔄 Hỗ trợ cả tour có sẵn và custom tour
+  reviewType: {
+    type: String,
+    enum: ['regular_tour', 'custom_tour'],
+    required: true,
+    default: 'regular_tour',
+    index: true
+  },
+  
+  // Tour có sẵn (regular tour)
   tourId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: "Tour",
-    required: true,
     index: true 
   },
+  
+  // Custom tour request
+  customTourRequestId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "TourCustomRequest",
+    index: true
+  },
+  
+  // Guide (cho custom tour)
+  guideId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Guide",
+    index: true
+  },
+  
   bookingId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: "Booking",
@@ -108,13 +133,17 @@ const reviewSchema = new mongoose.Schema({
 
 // Compound indexes
 reviewSchema.index({ tourId: 1, rating: -1, createdAt: -1 });
+reviewSchema.index({ guideId: 1, rating: -1, createdAt: -1 }); // For guide reviews
+reviewSchema.index({ customTourRequestId: 1, createdAt: -1 }); // For custom tour reviews
 reviewSchema.index({ userId: 1, createdAt: -1 });
 reviewSchema.index({ tourId: 1, status: 1, createdAt: -1 });
+reviewSchema.index({ guideId: 1, status: 1, createdAt: -1 }); // For approved guide reviews
 reviewSchema.index({ rating: 1, createdAt: -1 });
+reviewSchema.index({ reviewType: 1, status: 1, createdAt: -1 }); // Filter by review type
 
-// ✅ Unique constraint: 1 user chỉ có thể review 1 tour trong 1 booking 1 lần
-// Cho phép đánh giá nhiều tours khác nhau trong cùng 1 booking
-reviewSchema.index({ userId: 1, tourId: 1, bookingId: 1 }, { unique: true });
+// ✅ Unique constraint: 1 user chỉ có thể review 1 tour/custom request trong 1 booking 1 lần
+reviewSchema.index({ userId: 1, tourId: 1, bookingId: 1 }, { unique: true, sparse: true });
+reviewSchema.index({ userId: 1, customTourRequestId: 1, bookingId: 1 }, { unique: true, sparse: true });
 
 // Virtual fields
 reviewSchema.virtual('likesCount').get(function() {
@@ -228,10 +257,110 @@ reviewSchema.statics.getUserReviews = function(userId, options = {}) {
 
   return this.find({ userId })
     .populate('tourId', 'title imageItems basePrice')
+    .populate('guideId', 'name avatar rating location')
+    .populate('customTourRequestId', 'requestNumber tourDetails')
     .populate('bookingId', 'bookingCode createdAt')
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
+};
+
+// 🎯 Get guide reviews - for guide profile page
+reviewSchema.statics.getGuideReviews = function(guideId, options = {}) {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'createdAt',
+    sortOrder = -1,
+    rating = null,
+    status = 'approved'
+  } = options;
+
+  const skip = (page - 1) * limit;
+  let matchQuery = { 
+    guideId: new mongoose.Types.ObjectId(guideId),
+    reviewType: 'custom_tour'
+  };
+  
+  if (status) matchQuery.status = status;
+  if (rating) matchQuery.rating = rating;
+
+  return this.find(matchQuery)
+    .populate('userId', 'name avatar email')
+    .populate('guideId', 'name avatar rating location')
+    .populate('customTourRequestId', 'requestNumber tourDetails')
+    .sort({ [sortBy]: sortOrder })
+    .skip(skip)
+    .limit(limit);
+};
+
+// 🎯 Get guide average rating
+reviewSchema.statics.getGuideAverageRating = function(guideId) {
+  return this.aggregate([
+    { 
+      $match: { 
+        guideId: new mongoose.Types.ObjectId(guideId),
+        reviewType: 'custom_tour',
+        status: 'approved' 
+      } 
+    },
+    {
+      $group: {
+        _id: null,
+        averageRating: { $avg: '$rating' },
+        totalReviews: { $sum: 1 },
+        ratingDistribution: {
+          $push: '$rating'
+        }
+      }
+    },
+    {
+      $addFields: {
+        ratingCounts: {
+          "1": {
+            $size: {
+              $filter: {
+                input: '$ratingDistribution',
+                cond: { $eq: ['$$this', 1] }
+              }
+            }
+          },
+          "2": {
+            $size: {
+              $filter: {
+                input: '$ratingDistribution', 
+                cond: { $eq: ['$$this', 2] }
+              }
+            }
+          },
+          "3": {
+            $size: {
+              $filter: {
+                input: '$ratingDistribution',
+                cond: { $eq: ['$$this', 3] }
+              }
+            }
+          },
+          "4": {
+            $size: {
+              $filter: {
+                input: '$ratingDistribution',
+                cond: { $eq: ['$$this', 4] }
+              }
+            }
+          },
+          "5": {
+            $size: {
+              $filter: {
+                input: '$ratingDistribution',
+                cond: { $eq: ['$$this', 5] }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]);
 };
 
 // Instance methods
@@ -264,6 +393,15 @@ reviewSchema.methods.canEdit = function(userId, timeLimit = 24 * 60 * 60 * 1000)
 
 // Pre-save middleware
 reviewSchema.pre('save', function(next) {
+  // Validate: reviewType phải match với các field tương ứng
+  if (this.reviewType === 'regular_tour' && !this.tourId) {
+    return next(new Error('tourId is required for regular_tour review'));
+  }
+  
+  if (this.reviewType === 'custom_tour' && (!this.customTourRequestId || !this.guideId)) {
+    return next(new Error('customTourRequestId and guideId are required for custom_tour review'));
+  }
+  
   // Auto-approve nếu user đã verified hoặc có booking hợp lệ
   if (this.isNew && this.isVerified) {
     this.status = 'approved';

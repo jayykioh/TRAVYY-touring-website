@@ -12,9 +12,8 @@ async function parsePreferences(text) {
       pace: parsed.pace,
       budget: parsed.budget,
       durationDays: parsed.durationDays,
-      _rawText: text // ✅ Pass raw text for semantic matching
+      _rawText: text 
     };
-    
     console.log(`   ✅ Parsed: ${normalized.vibes.length} vibes, ${normalized.avoid.length} avoid, ${normalized.keywords.length} keywords`, {
       sampleKeywords: normalized.keywords?.slice(0, 6)
     });

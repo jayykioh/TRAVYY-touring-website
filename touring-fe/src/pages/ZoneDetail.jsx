@@ -500,7 +500,6 @@ export default function ZoneDetail() {
           {/* 🔵 Search — GIỮ NGUYÊN */}
         
         </div>
-
         {/* RIGHT: Map — dùng markers đã GỘP từ Tours + POIs */}
         <div className="h-[70vh] lg:h-[78vh]">
           <Map4DPanel

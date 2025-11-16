@@ -19,13 +19,13 @@ function PreferencesSummaryInner({ prefs, onEdit }) {
     "bg-white/60 backdrop-blur-xl border border-white/20 rounded-lg p-4 shadow-sm";
   const sectionTitle =
     "text-[11px] font-semibold uppercase tracking-wide text-slate-500";
-  const label = "text-sm text-slate-600";
-  const value = "text-sm font-semibold text-slate-900";
+  // Cập nhật: Thêm class 'leading-relaxed' để dễ đọc hơn
+  const guideText = "text-xs text-slate-600 leading-relaxed";
+
   const chip =
     "px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/60 backdrop-blur border border-slate-200/60 text-slate-800 shadow-sm";
   const chipGhost =
     "px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/40 border border-slate-200/60 text-slate-600 backdrop-blur-sm";
-  const row = "flex items-center justify-between gap-3";
 
   // ⚙️ useMemo để tránh tính toán lại khi prefs không đổi
   const hasVibes = useMemo(
@@ -33,15 +33,10 @@ function PreferencesSummaryInner({ prefs, onEdit }) {
     [prefs?.vibes]
   );
 
+  // Chỉ còn kiểm tra vibes
   const missingKeys = useMemo(
-    () =>
-      [
-        !hasVibes ? "vibes" : null,
-        !prefs?.pace ? "pace" : null,
-        !prefs?.budget ? "budget" : null,
-        !(prefs?.durationDays > 0) ? "durationDays" : null,
-      ].filter(Boolean),
-    [hasVibes, prefs?.pace, prefs?.budget, prefs?.durationDays]
+    () => [!hasVibes ? "vibes" : null].filter(Boolean),
+    [hasVibes]
   );
 
   const hasMissing = missingKeys.length > 0;
@@ -62,7 +57,6 @@ function PreferencesSummaryInner({ prefs, onEdit }) {
     <motion.div
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
-      // hover nhẹ, nhưng không quá “spring” để đỡ tốn
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.99 }}
       transition={{ duration: 0.22, ease: "easeOut" }}
@@ -99,73 +93,54 @@ function PreferencesSummaryInner({ prefs, onEdit }) {
         </button>
       </div>
 
-      {/* Vibes */}
-      <div className="mt-1">
-        <p className={sectionTitle}>Vibes</p>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {hasVibes ? (
-            // 👉 animate nguyên cụm vibes, không animate từng chip để nhẹ hơn
-            <motion.div
-              initial={{ opacity: 0, y: 3 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-              className="flex flex-wrap gap-1.5"
-            >
-              {prefs.vibes.map((v, i) => (
-                <span key={i} className={chip}>
-                  {v}
-                </span>
-              ))}
-            </motion.div>
-          ) : (
-            <span className={chipGhost}>Chưa có vibes</span>
-          )}
-        </div>
-      </div>
-
-      {/* Details */}
-      <div className="border-t border-slate-200/70 my-3" />
-      <div className="space-y-1.5">
-        <div className={row}>
-          <span className={label}>Nhịp độ</span>
-          <span className={value}>
-            {prefs?.pace || <em className="text-slate-400">Chưa có</em>}
-          </span>
-        </div>
-        <div className={row}>
-          <span className={label}>Ngân sách</span>
-          <span className={value}>
-            {prefs?.budget || <em className="text-slate-400">Chưa có</em>}
-          </span>
-        </div>
-        <div className={row}>
-          <span className={label}>Thời gian</span>
-          <span className={value}>
-            {prefs?.durationDays > 0 ? (
-              `${prefs.durationDays} ngày`
-            ) : (
-              <em className="text-slate-400">Chưa có</em>
-            )}
-          </span>
-        </div>
-
+      {/* 'flex-grow' sẽ đẩy phần 'Note' xuống dưới cùng của card */}
+      <div className="flex-grow">
+        {/* Vibes */}
         <div className="mt-1">
-          <p className={sectionTitle}>Tránh</p>
+          <p className={sectionTitle}>Vibes</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {prefs?.avoid?.length > 0 ? (
-              prefs.avoid.map((a, i) => (
-                <span key={i} className={chipGhost}>
-                  -{a}
-                </span>
-              ))
+            {hasVibes ? (
+              <motion.div
+                initial={{ opacity: 0, y: 3 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="flex flex-wrap gap-1.5"
+              >
+                {prefs.vibes.map((v, i) => (
+                  <span key={i} className={chip}>
+                    {v}
+                  </span>
+                ))}
+              </motion.div>
             ) : (
-              <span className={chipGhost}>Không có mục cần tránh</span>
+              <span className={chipGhost}>Chưa có vibes</span>
             )}
           </div>
         </div>
+
+        {/* ===== CẬP NHẬT: GIẢI THÍCH RÕ HƠN + VÍ DỤ ===== */}
+        <motion.div
+          initial={{ opacity: 0, y: 3 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut", delay: 0.05 }}
+          className="mt-4"
+        >
+          <p className={sectionTitle}>Cách thức hoạt động</p>
+          <div className={`mt-1.5 space-y-1 ${guideText}`}>
+            <p>
+              Hệ thống AI sẽ đọc các <b>'vibes'</b> này để hiểu chính xác sở
+              thích của bạn.
+            </p>
+            <p>
+              <b>Ví dụ:</b> Thêm 'vibes' <b>"ẩm thực"</b> và <b>"biển"</b> sẽ
+              giúp AI ưu tiên các khu vực có nhiều đồ ăn ngon gần bãi biển.
+            </p>
+          </div>
+        </motion.div>
+        {/* ===== KẾT THÚC CẬP NHẬT ===== */}
       </div>
 
-      {/* Note — chỉ animate nhẹ, không remount bằng key nữa */}
+      {/* Note (Phần cảnh báo) */}
       <motion.div
         initial={{ opacity: 0, y: 4 }}
         animate={{
@@ -187,15 +162,8 @@ function PreferencesSummaryInner({ prefs, onEdit }) {
               <p className="font-semibold">Chưa hiểu ý bạn rõ ràng</p>
               <p>
                 Hãy bổ sung:{" "}
-                {[
-                  !hasVibes && "vibes",
-                  !prefs?.pace && "nhịp độ",
-                  !prefs?.budget && "ngân sách",
-                  !(prefs?.durationDays > 0) && "thời gian",
-                ]
-                  .filter(Boolean)
-                  .join(", ")}
-                .
+                {/* Chỉ còn hiển thị "vibes" */}
+                {missingKeys.join(", ")}.
               </p>
 
               <div className="flex gap-2 mt-1">
@@ -235,22 +203,23 @@ function PreferencesSummaryInner({ prefs, onEdit }) {
                         className="w-4 h-4"
                         style={{ color: "#02A0AA" }}
                       />
+                      {/* CẬP NHẬT: Tiêu đề rõ hơn */}
                       <p className="text-[13px] font-semibold text-slate-800">
-                        Gợi ý để hệ thống hiểu tốt hơn
+                        Gợi ý thêm 'Vibes'
                       </p>
                     </div>
+                    {/* CẬP NHẬT: Chỉ còn gợi ý vibes */}
                     <ul className="list-disc ml-4 space-y-1.5 text-[12px] text-slate-700">
                       <li>
-                        Thêm <b>vibes</b>: “biển”, “năng động”, “ẩm thực”, “thiên nhiên”
+                        <b>Chung:</b> “biển”, “năng động”, “ẩm thực”, “thiên
+                        nhiên”, “thư giãn”
                       </li>
                       <li>
-                        Chọn <b>nhịp độ</b>: “chậm rãi”, “vừa phải”, “năng động”
+                        <b>Cụ thể:</b> “leo núi”, “cà phê ngon”, “chụp ảnh”,
+                        “hoàng hôn”
                       </li>
                       <li>
-                        Đặt <b>ngân sách</b>: “thấp”, “trung bình”, “cao”
-                      </li>
-                      <li>
-                        Xác định <b>thời gian</b>: “3 ngày”, “5 ngày”, “7 ngày”
+                        <b>Tránh:</b> “ồn ào”, “đông đúc” (dùng trong ô 'Tránh')
                       </li>
                     </ul>
                   </PopoverContent>
@@ -266,9 +235,10 @@ function PreferencesSummaryInner({ prefs, onEdit }) {
             />
             <div className="space-y-1">
               <p className="font-semibold">Mẹo</p>
+              {/* CẬP NHẬT: Mẹo tập trung vào vibes */}
               <p>
-                Thêm chi tiết như “đi chậm”, “ưu tiên hoàng hôn gần biển”, “tránh leo dốc”
-                để match chuẩn hơn.
+                Hãy thêm các 'vibes' <b>cụ thể</b> hơn (ví dụ: “chụp ảnh”, “cà
+                phê ngon”, “leo núi nhẹ”) để AI tìm kiếm chính xác hơn.
               </p>
             </div>
           </>

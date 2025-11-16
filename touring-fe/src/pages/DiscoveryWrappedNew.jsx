@@ -4,13 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, TrendingUp, MapPin, Heart, Award, ChevronRight, ArrowRight, Compass } from 'lucide-react';
 import { useAuth } from '../auth/context';
 import { useNavigate } from 'react-router-dom';
-
-/**
- * Discovery Wrapped - Spotify Wrapped-style multi-slide reveal
- * Shows user's travel profile with animations
- * Final slide: "Tìm lịch trình" → Navigate to DiscoverResults with auto zones
- */
-
 // Vibe configuration (English key from backend → Vietnamese display + emoji)
 const VIBE_CONFIG = {
   'culture': { label: 'Văn hóa', emoji: '🏛️' },
@@ -85,7 +78,7 @@ const DiscoveryWrappedNew = () => {
       navigate('/intinerary-creator', {
         state: {
           fromWrapped: true,
-          message: '🎯 Bạn chưa có đủ dữ liệu. Hãy bắt đầu tạo lịch trình của bạn!'
+          message: 'Bạn chưa có đủ dữ liệu. Hãy bắt đầu tạo lịch trình của bạn!'
         }
       });
       return;

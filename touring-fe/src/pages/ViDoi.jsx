@@ -26,6 +26,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import FloatingChatButton from "../components/FloatingChatButton";
 import { useAuth } from "../auth/context";
 
 // ✅ SYNCED WITH DATABASE: Top 16 tags from zone.tags
@@ -407,7 +408,7 @@ export default function VibeSelectPage() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-b from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen relative overflow-hidden bg-linear-to-b from-slate-50 via-white to-cyan-50">
       {/* Soft animated background orbs */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <motion.div
@@ -454,10 +455,14 @@ export default function VibeSelectPage() {
             <motion.button
               {...fadeInUp}
               onClick={() => setShowHistory(true)}
-              className="inline-flex items-center gap-2 text-indigo-700 hover:text-indigo-900 bg-indigo-50/80 backdrop-blur px-3 py-1.5 rounded-full border border-indigo-200 shadow-sm"
+              className="inline-flex items-center gap-2 text-slate-700 hover:text-slate-900 bg-white/80 backdrop-blur px-3 py-1.5 rounded-full border border-slate-200 shadow-sm hover:shadow-md transition-all"
             >
-              <History className="w-4 h-4" />
-              Lịch sử {history.length > 0 && `(${history.length})`}
+              <Clock className="w-4 h-4" />
+              {history.length > 0 && (
+                <span className="px-1.5 py-0.5 text-xs font-semibold rounded-full bg-[#02A0AA] text-white">
+                  {history.length}
+                </span>
+              )}
             </motion.button>
           )}
         </div>
@@ -514,13 +519,13 @@ export default function VibeSelectPage() {
                     "group relative inline-flex items-center gap-2 px-4 py-3 rounded-2xl text-base font-semibold border transition focus:outline-none focus:ring-2 focus:ring-offset-2",
                     active
                       ? "text-white border-transparent"
-                      : "text-slate-800 bg-white border-slate-200",
+                        : "text-slate-800 bg-white border-slate-200",
                     disabled ? "opacity-50 cursor-not-allowed" : "",
                   ].join(" ")}
                   style={{
                     borderColor: active ? "transparent" : hex,
                     background: undefined,
-                    backgroundColor: active ? rgba : "white",
+                    backgroundColor: active ? rgba : "rgba(255,255,255,1)",
                     boxShadow: active ? `0 8px 26px ${rgba}` : undefined,
                   }}
                 >
@@ -650,7 +655,7 @@ export default function VibeSelectPage() {
                             className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium"
                             style={{
                               color: hex,
-                              backgroundColor: "white",
+                              backgroundColor: "rgba(255,255,255,1)",
                               border: `1px solid ${hex}20`,
                             }}
                           >
@@ -726,6 +731,9 @@ export default function VibeSelectPage() {
         )}
       </AnimatePresence>
 
+      {/* Floating Chat Button */}
+      <FloatingChatButton />
+
       {/* History Modal */}
       <AnimatePresence>
         {showHistory && (
@@ -744,9 +752,9 @@ export default function VibeSelectPage() {
               className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center justify-between">
+              <div className="bg-linear-to-r from-[#02A0AA] to-cyan-600 px-6 py-4 flex items-center justify-between">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  <History className="w-5 h-5" />
+                  <Clock className="w-5 h-5" />
                   Lịch sử tìm kiếm
                 </h3>
                 <div className="flex items-center gap-2">
@@ -755,15 +763,15 @@ export default function VibeSelectPage() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={deleteAllHistory}
-                      className="text-white/80 hover:text-white hover:bg-white/10 rounded-lg px-3 py-1.5 text-sm font-medium transition-all"
+                      className="text-white/90 hover:text-white hover:bg-white/10 rounded-lg px-3 py-1.5 text-sm font-medium transition-all flex items-center gap-1.5"
                     >
-                      <Trash2 className="w-4 h-4 inline mr-1" />
+                      <Trash2 className="w-4 h-4" />
                       Xóa tất cả
                     </motion.button>
                   )}
                   <button
                     onClick={() => setShowHistory(false)}
-                    className="text-white/80 hover:text-white"
+                    className="text-white/90 hover:text-white hover:bg-white/10 rounded-lg p-1.5 transition-all"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -788,7 +796,8 @@ export default function VibeSelectPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.05 }}
-                        className="bg-slate-50 hover:bg-slate-100 rounded-xl p-4 border border-slate-200 transition-all"
+                        className="bg-white hover:bg-slate-50 rounded-xl p-4 border border-slate-200 hover:border-[#02A0AA]/30 hover:shadow-md transition-all cursor-pointer"
+                        whileHover={{ y: -2 }}
                       >
                         {/* Timestamp */}
                         <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
@@ -815,7 +824,7 @@ export default function VibeSelectPage() {
                               return (
                                 <span
                                   key={vibe}
-                                  className="px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200"
+                                  className="px-2 py-0.5 text-xs rounded-full bg-[#02A0AA]/10 text-[#02A0AA] border border-[#02A0AA]/20 font-medium"
                                 >
                                   {vibeData?.label || vibe}
                                 </span>
@@ -849,10 +858,10 @@ export default function VibeSelectPage() {
                             whileHover={{ y: -1 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => loadFromHistory(entry)}
-                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-indigo-300 transition-all"
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-[#02A0AA] hover:text-[#02A0AA] transition-all"
                           >
                             <Sparkles className="w-3.5 h-3.5" />
-                            Tải lại vibes
+                            Tải lại
                           </motion.button>
 
                           {entry.zoneResults &&
@@ -861,7 +870,7 @@ export default function VibeSelectPage() {
                                 whileHover={{ y: -1 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={(e) => viewHistoryResults(entry, e)}
-                                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-all"
+                                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-[#02A0AA] text-white hover:bg-[#029099] transition-all shadow-sm"
                               >
                                 <MapPin className="w-3.5 h-3.5" />
                                 Xem kết quả
@@ -872,7 +881,7 @@ export default function VibeSelectPage() {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={(e) => deleteHistoryEntry(entry._id, e)}
-                            className="inline-flex items-center justify-center p-2 text-xs font-medium rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-all"
+                            className="inline-flex items-center justify-center p-2 text-xs font-medium rounded-lg bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 transition-all"
                             title="Xóa lịch sử này"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -895,7 +904,7 @@ export default function VibeSelectPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
             onClick={() =>
               setDeleteModal({ show: false, type: null, entryId: null })
             }

@@ -27,9 +27,30 @@ const notificationSchema = new mongoose.Schema({
       "booking_success", 
       "new_tour", 
       "general",
-      "password_reset",       // 🔑 Quên mật khẩu
-      "password_changed",     // 🔒 Đổi mật khẩu
-      "security_alert"        // ⚠️ Cảnh báo bảo mật
+      "password_reset",         // 🔑 Quên mật khẩu
+      "password_changed",       // 🔒 Đổi mật khẩu
+      "security_alert",         // ⚠️ Cảnh báo bảo mật
+      "tour_guide_accepted",    // ✅ Guide chấp nhận tour
+      "tour_guide_rejected",    // ❌ Guide từ chối tour
+      "deposit_paid",           // 💰 Đã đặt cọc
+      "new_message",            // 💬 Tin nhắn mới
+      "price_offer",            // 💵 Đề xuất giá mới
+      "agreement_complete",     // 🤝 Thỏa thuận hoàn tất
+      "guide_price_offer",      // 💰 Guide đề xuất giá
+      "user_price_offer",       // 💰 User đề xuất giá
+      "user_agreed",            // ✅ User đồng ý
+      "guide_agreed",           // ✅ Guide đồng ý
+      "request_cancelled",      // ❌ Yêu cầu bị hủy
+      "tour_completed",         // 🎉 Tour hoàn thành
+      "cancellation",           // ❌ Hủy booking
+      "new_request",            // 🎯 Yêu cầu tour mới
+      "new_tour_request",       // 🎯 Yêu cầu tour mới (alias)
+      "request_accepted",       // ✅ Yêu cầu được chấp nhận
+      "tour_reminder",          // ⏰ Nhắc nhở tour
+      "schedule_change",        // 📅 Thay đổi lịch trình
+      "review",                 // ⭐ Đánh giá
+      "refund_processed",       // 💸 Hoàn tiền
+      "payment_failed"          // ❌ Thanh toán thất bại
     ],
     required: true,
     index: true
@@ -81,6 +102,10 @@ const notificationSchema = new mongoose.Schema({
     // Thêm field tùy chỉnh
     additionalData: { type: mongoose.Schema.Types.Mixed }
   },
+
+  // Related document (flexible reference)
+  relatedId: { type: mongoose.Schema.Types.ObjectId },
+  relatedModel: { type: String, enum: ['Itinerary', 'TourCustomRequest', 'Booking', 'Tour', null] },
 
   // Trạng thái
   status: {

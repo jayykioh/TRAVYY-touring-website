@@ -130,24 +130,6 @@ if (freeText && freeText.trim().length > 0) {
 // contextScore -= 0.15
 ```
 
-#### 3️⃣ **Rating Bonus** (CONTEXT BONUS)
-```javascript
-if (zone.rating >= 4.0) {
-  const ratingBonus = (zone.rating - 3.0) * 0.05;  // 0.05-0.1
-  contextScore += ratingBonus;
-  reasons.push(`⭐ Rating ${zone.rating} (+${(ratingBonus*100).toFixed(0)}%)`);
-}
-
-// Example: rating 4.5 → +0.075
-```
-
-#### 4️⃣ **Gallery Bonus** (CONTEXT BONUS)
-```javascript
-if (zone.gallery?.length >= 5) {
-  contextScore += 0.05;
-  reasons.push(`🖼️ Gallery +5%`);
-}
-```
 
 #### 5️⃣ **Proximity Bonus** (CONTEXT BONUS)
 ```javascript
@@ -237,12 +219,6 @@ Zone: "My Khe Beach" (Đà Nẵng)
       - freeText contains "ồn ào"
       - zone.avoidKeywords has "ồn ào"
       - penalty = -0.15
-   
-   b) Rating bonus:
-      - 4.5 rating → (4.5 - 3.0) * 0.05 = +0.075
-   
-   c) Gallery bonus:
-      - 15 photos ≥ 5 → +0.05
    
    d) Proximity bonus:
       - 0km distance (same location) → +0.15
