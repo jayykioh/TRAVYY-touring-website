@@ -12,7 +12,7 @@ export default function LandingPage() {
   return (
     <>
       <HeroSection />
-      <AboutSection />
+   
       <TourRecommend />
       <RegionSection />
       <ExploreNow />

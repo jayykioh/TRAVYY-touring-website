@@ -115,6 +115,8 @@ app.use("/api/tours", tourRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/reviews", reviewRoutes); // ✅ FIXED: Review routes
+app.use("/api/promotions", promotionRoutes); // ✅ FIXED: Promotion routes
 app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/refunds", refundRoutes); // User refund routes

@@ -408,8 +408,10 @@ export default function BookingHistory() {
             <div className="space-y-4 pb-4">
               {bookings.map((booking) => {
                 const ui = statusUI(booking.status);
+                const refundStatus = refundStatuses[booking._id];
+                const refundUI = refundStatus ? getRefundStatusUI(refundStatus.status) : null;
                 return (
-                  <div key={booking._id} className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
+                  <div key={booking._id} className="bg-white rounded-lg border border-neutral-200 overflow-hidden">{/* Header card */}
                     {/* Header card */}
                     <div className="px-4 py-3 border-b border-neutral-200 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 items-center">
                       <div className="flex items-center gap-2 text-neutral-900">

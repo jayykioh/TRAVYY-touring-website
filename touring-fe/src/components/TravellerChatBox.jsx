@@ -29,7 +29,6 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
     sending,
     connected,
     typingUsers,
-    unreadCount,
     sendMessage: sendMessageAPI,
     sendOffer,
     agreeToTerms,
@@ -254,7 +253,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
           <div className="flex items-center gap-3">
             {/* Avatar */}
             <div className="relative">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-semibold text-lg shadow-md">
+              <div className="w-11 h-11 rounded-full bg-linear-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-semibold text-lg shadow-md">
                 {(guideName || "G")[0].toUpperCase()}
               </div>
               {connected && (
@@ -296,7 +295,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
       {/* Error Banner */}
       {error && (
         <div className="px-4 py-2 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+          <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
           <span className="text-sm text-red-700 dark:text-red-400">{error}</span>
           <button
             onClick={() => setError(null)}
@@ -310,7 +309,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
       {/* Socket Error Banner */}
       {socketError && (
         <div className="px-4 py-2 bg-orange-50 dark:bg-orange-900/20 border-b border-orange-200 dark:border-orange-800 flex items-center gap-2">
-          <WifiOff className="w-4 h-4 text-orange-500 flex-shrink-0" />
+          <WifiOff className="w-4 h-4 text-orange-500 shrink-0" />
           <span className="text-sm text-orange-700 dark:text-orange-400">
             {socketError}
             {reconnectAttempts > 0 && ` (Thử lần ${reconnectAttempts})`}
@@ -322,7 +321,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
       <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50 dark:bg-gray-800" role="log" aria-live="polite" aria-label="Chat messages">
         {/* Tour Info Card - Collapsible */}
         {tourInfo && showTourInfo && (
-          <div className="bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-xl p-3 border-2 border-teal-200 dark:border-teal-700 shadow-sm transition-all duration-300">
+          <div className="bg-linear-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-xl p-3 border-2 border-teal-200 dark:border-teal-700 shadow-sm transition-all duration-300">
             <div className="space-y-2 text-sm">
               <div className="font-semibold text-gray-900 dark:text-white text-sm">
                 {tourInfo.tourName || tourInfo.name}
@@ -396,7 +395,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
               {requestDetails.tourDetails.items.map((item, idx) => (
                 <div key={idx} className="bg-gray-50 dark:bg-gray-600 rounded-lg p-2 border border-gray-200 dark:border-gray-500">
                   <div className="flex items-start gap-2">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                    <div className="shrink-0 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
                       {idx + 1}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -434,7 +433,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
 
         {/* Request Details & Price Info Card */}
         {requestDetails && (
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-3 border-2 border-amber-200 dark:border-amber-700 shadow-sm">
+          <div className="bg-linear-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-3 border-2 border-amber-200 dark:border-amber-700 shadow-sm">
             <div className="space-y-2 text-sm">
               <div className="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
                 💰 Thông tin giá
@@ -527,7 +526,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
           });
           
           return (
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border-2 border-green-300 dark:border-green-700 shadow-md">
+            <div className="bg-linear-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border-2 border-green-300 dark:border-green-700 shadow-md">
               {/* Status Badge */}
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500 text-white">
