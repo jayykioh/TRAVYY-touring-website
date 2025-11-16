@@ -44,35 +44,3 @@ export const disable2FA = (withAuth, password) => {
     body: JSON.stringify({ password }),
   });
 };
-
-// =================== EMAIL VERIFICATION FUNCTIONS ===================
-
-export const requestEmailVerificationToggle = (withAuth, enabled) => {
-  return withAuth("/api/security/email-verification/request-toggle", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ enabled }),
-  });
-};
-
-export const toggleEmailVerification = (withAuth, token) => {
-  return withAuth("/api/security/email-verification/toggle", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token }),
-  });
-};
-
-export const sendVerificationCode = (withAuth) => {
-  return withAuth("/api/security/email-verification/send-code", {
-    method: "POST",
-  });
-};
-
-export const verifyEmailCode = (withAuth, code) => {
-  return withAuth("/api/security/email-verification/verify-code", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code }),
-  });
-};

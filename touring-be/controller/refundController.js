@@ -2044,3 +2044,345 @@ exports.handleMoMoRefundIPN = async (req, res) => {
     return res.status(500).json({ success: false, error: error.message });
   }
 };
+
+// ===== CUSTOM TOUR REFUND ENDPOINTS =====
+
+/**
+ * Request Pre-Trip Cancellation Refund for Custom Tour
+ * POST /api/refunds/custom-tour/pre-trip
+ */
+exports.requestCustomTourPreTripRefund = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { tourRequestId, requestNote } = req.body;
+
+    console.log("=== Custom tour pre-trip refund request ===");
+    console.log("User ID:", userId);
+    console.log("Tour Request ID:", tourRequestId);
+
+    // Load TourRequest model
+    const TourRequest = require("../models/guide/TourRequest");
+
+    // Validate tour request
+    const tourRequest = await TourRequest.findById(tourRequestId);
+    console.log("Tour Request found:", tourRequest ? "Yes" : "No");
+
+    if (!tourRequest) {
+      console.log("ERROR: Tour Request not found for ID:", tourRequestId);
+      return res.status(404).json({
+        success: false,
+        message: "Tour request not found",
+      });
+    }
+
+    // Check if tour request belongs to user
+    console.log("Tour Request customerId:", tourRequest.customerId);
+    console.log("Request userId:", userId.toString());
+    if (tourRequest.customerId !== userId.toString()) {
+      console.log("ERROR: Unauthorized access");
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized access to this tour request",
+      });
+    }
+
+    // Check if tour request is paid
+    console.log("Tour Request payment status:", tourRequest.paymentStatus);
+    if (tourRequest.paymentStatus !== "paid") {
+      console.log("ERROR: Tour request not paid");
+      return res.status(400).json({
+        success: false,
+        message: "Only paid tour requests can be refunded",
+      });
+    }
+
+    // Check if already refunded
+    if (tourRequest.paymentStatus === "refunded") {
+      console.log("ERROR: Already refunded");
+      return res.status(400).json({
+        success: false,
+        message: "This tour request has already been refunded",
+      });
+    }
+
+    // Check for existing pending refund
+    const existingRefund = await Refund.findOne({
+      tourRequestId,
+      status: { $in: ["pending", "under_review", "approved", "processing"] },
+    });
+    console.log("Existing refund found:", existingRefund ? "Yes" : "No");
+
+    if (existingRefund) {
+      console.log("ERROR: Refund already in progress");
+      return res.status(400).json({
+        success: false,
+        message:
+          "A refund request for this tour request is already in progress",
+      });
+    }
+
+    // Get tour start date
+    const tourStartDate = new Date(tourRequest.departureDate);
+    const now = new Date();
+    console.log("Tour start date:", tourStartDate);
+    console.log("Current date:", now);
+
+    // Check if tour has already started
+    if (tourStartDate <= now) {
+      console.log("ERROR: Tour already started");
+      return res.status(400).json({
+        success: false,
+        message:
+          "Cannot request pre-trip refund after tour has started. Please use post-trip refund instead.",
+      });
+    }
+
+    // Calculate refund amount
+    const originalAmount = tourRequest.totalPrice;
+    const refundCalc = Refund.calculatePreTripRefund(
+      tourStartDate,
+      originalAmount
+    );
+    console.log("Refund calculation:", refundCalc);
+
+    if (refundCalc.finalRefundAmount <= 0) {
+      console.log("ERROR: Final refund amount is 0 or negative");
+      return res.status(400).json({
+        success: false,
+        message: `Cancellation too close to departure date. ${refundCalc.policy}`,
+        refundDetails: refundCalc,
+      });
+    }
+
+    // Create refund request
+    const refund = new Refund({
+      tourRequestId: tourRequest._id,
+      userId: userId,
+      orderRef: tourRequest.requestId,
+      tourType: "custom_tour",
+      refundType: "pre_trip_cancellation",
+      originalAmount,
+      refundableAmount: refundCalc.refundableAmount,
+      refundPercentage: refundCalc.refundPercentage,
+      processingFee: refundCalc.processingFee,
+      finalRefundAmount: refundCalc.finalRefundAmount,
+      cancellationDetails: {
+        tourStartDate,
+        cancellationDate: now,
+        daysBeforeTour: refundCalc.daysBeforeTour,
+        cancellationPolicy: refundCalc.policy,
+      },
+      requestedBy: userId,
+      requestNote,
+      currency: "VND",
+      paymentProvider: tourRequest.paymentMethod,
+    });
+
+    // Generate unique reference
+    refund.generateRefundReference();
+
+    // Add timeline entry
+    refund.addTimelineEntry("pending", "Refund request created", userId);
+
+    await refund.save();
+    console.log("✅ Refund created:", refund._id);
+
+    // Populate for response
+    await refund.populate("userId", "name email phone");
+    await refund.populate(
+      "tourRequestId",
+      "requestId tourName departureDate totalPrice"
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Refund request submitted successfully",
+      refund,
+      refundDetails: refundCalc,
+    });
+  } catch (error) {
+    console.error("❌ Error requesting custom tour pre-trip refund:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to submit refund request",
+    });
+  }
+};
+
+/**
+ * Request Post-Trip Issue Refund for Custom Tour
+ * POST /api/refunds/custom-tour/post-trip
+ */
+exports.requestCustomTourPostTripRefund = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const {
+      tourRequestId,
+      issueCategory,
+      description,
+      severity,
+      evidence,
+      requestNote,
+    } = req.body;
+
+    console.log("=== Custom tour post-trip refund request ===");
+    console.log("User ID:", userId);
+    console.log("Tour Request ID:", tourRequestId);
+
+    // Load TourRequest model
+    const TourRequest = require("../models/guide/TourRequest");
+
+    // Validate tour request
+    const tourRequest = await TourRequest.findById(tourRequestId);
+    if (!tourRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Tour request not found",
+      });
+    }
+
+    // Check ownership
+    if (tourRequest.customerId !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized access to this tour request",
+      });
+    }
+
+    // Check if paid
+    if (tourRequest.paymentStatus !== "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Only paid tour requests can be refunded",
+      });
+    }
+
+    // Check if tour is completed
+    if (tourRequest.status !== "completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Tour must be completed to file a post-trip refund",
+      });
+    }
+
+    // Check for existing refund
+    const existingRefund = await Refund.findOne({
+      tourRequestId,
+      status: { $in: ["pending", "under_review", "approved", "processing"] },
+    });
+
+    if (existingRefund) {
+      return res.status(400).json({
+        success: false,
+        message: "A refund request is already in progress",
+      });
+    }
+
+    // Calculate refund
+    const originalAmount = tourRequest.totalPrice;
+    const refundCalc = Refund.calculatePostTripRefund(
+      originalAmount,
+      severity || "moderate"
+    );
+
+    // Create refund request
+    const refund = new Refund({
+      tourRequestId: tourRequest._id,
+      userId: userId,
+      orderRef: tourRequest.requestId,
+      tourType: "custom_tour",
+      refundType: "post_trip_issue",
+      originalAmount,
+      refundableAmount: refundCalc.refundableAmount,
+      refundPercentage: refundCalc.refundPercentage,
+      processingFee: refundCalc.processingFee,
+      finalRefundAmount: refundCalc.finalRefundAmount,
+      issueDetails: {
+        completionDate: tourRequest.departureDate,
+        issueCategory,
+        description,
+        severity: severity || "moderate",
+        evidence: evidence || [],
+      },
+      requestedBy: userId,
+      requestNote,
+      currency: "VND",
+      paymentProvider: tourRequest.paymentMethod,
+    });
+
+    refund.generateRefundReference();
+    refund.addTimelineEntry(
+      "pending",
+      "Post-trip refund request created",
+      userId
+    );
+
+    await refund.save();
+
+    // Populate for response
+    await refund.populate("userId", "name email phone");
+    await refund.populate(
+      "tourRequestId",
+      "requestId tourName departureDate totalPrice"
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Post-trip refund request submitted successfully",
+      refund,
+      refundDetails: refundCalc,
+    });
+  } catch (error) {
+    console.error("❌ Error requesting custom tour post-trip refund:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to submit refund request",
+    });
+  }
+};
+
+/**
+ * Get Custom Tour Refunds for User
+ * GET /api/refunds/custom-tour/my-refunds
+ */
+exports.getMyCustomTourRefunds = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { status, page = 1, limit = 10 } = req.query;
+
+    const query = {
+      userId,
+      tourType: "custom_tour",
+    };
+
+    if (status) {
+      query.status = status;
+    }
+
+    const refunds = await Refund.find(query)
+      .populate("userId", "name email phone")
+      .populate(
+        "tourRequestId",
+        "requestId tourName departureDate totalPrice customerName"
+      )
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const count = await Refund.countDocuments(query);
+
+    res.json({
+      success: true,
+      refunds,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      total: count,
+    });
+  } catch (error) {
+    console.error("❌ Error getting custom tour refunds:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch refunds",
+    });
+  }
+};

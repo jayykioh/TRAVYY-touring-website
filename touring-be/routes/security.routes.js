@@ -7,10 +7,6 @@ const {
   verify2FA,
   disable2FA,
   resend2FACode,
-  requestEmailVerificationToggle,
-  toggleEmailVerification,
-  sendVerificationCode,
-  verifyEmailCode,
   getSecuritySettings,
   removeTrustedDevice,
   removeAllTrustedDevices,
@@ -24,18 +20,6 @@ router.post("/2fa/enable", enable2FA); // Step 2: Confirm via email link (public
 router.post("/2fa/verify", verify2FA); // Step 3: Verify email-based OTP code
 router.post("/2fa/resend", resend2FACode); // Resend 2FA code (public - for login)
 router.post("/2fa/disable", authJwt, disable2FA);
-
-// ============================================
-// Email Verification Routes
-// ============================================
-router.post(
-  "/email-verification/request-toggle",
-  authJwt,
-  requestEmailVerificationToggle
-); // Step 1: Send email
-router.post("/email-verification/toggle", toggleEmailVerification); // Step 2: Confirm via email link (public - uses token)
-router.post("/email-verification/send", sendVerificationCode); // Public (for login)
-router.post("/email-verification/verify", verifyEmailCode); // Public (for login)
 
 // ============================================
 // Get Security Settings

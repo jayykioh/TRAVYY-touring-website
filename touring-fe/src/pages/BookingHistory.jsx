@@ -7,7 +7,9 @@ import {
   Ticket,
   CreditCard,
   Loader2,
-  Receipt, MapPin, MessageSquare,
+  Receipt,
+  MapPin,
+  MessageSquare,
   RefreshCw,
 } from "lucide-react";
 import { formatVND, formatCurrency } from "@/lib/utils";
@@ -15,19 +17,20 @@ import { Link } from "react-router-dom";
 
 export default function BookingHistory() {
   const { user, withAuth } = useAuth();
-  const [activeTab, setActiveTab] = useState('bookings'); // 'bookings' or 'requests'
+  const [activeTab, setActiveTab] = useState("bookings"); // 'bookings' or 'requests'
   const [bookings, setBookings] = useState([]);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refundStatuses, setRefundStatuses] = useState({});
+  const [customTourRefundStatuses, setCustomTourRefundStatuses] = useState({});
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = async () => {
     try {
-        setLoading(true);
-        
-        // Fetch regular bookings
+      setLoading(true);
+
+      // Fetch regular bookings
       setLoading(true);
       const bookingsResponse = await fetch(`/api/bookings/my`, {
         headers: {
@@ -37,54 +40,110 @@ export default function BookingHistory() {
         credentials: "include",
       });
 
-        if (bookingsResponse.ok) {
-          const bookingsData = await bookingsResponse.json();
-          setBookings(bookingsData.bookings || bookingsData.data || []);
-        }
+      if (bookingsResponse.ok) {
+        const bookingsData = await bookingsResponse.json();
+        const fetchedBookings =
+          bookingsData.bookings || bookingsData.data || [];
+        setBookings(fetchedBookings);
 
-        // Fetch custom tour requests
-        if (withAuth) {
-          try {
-            const requestsData = await withAuth('/api/tour-requests');
-            setRequests(requestsData.requests || []);
-          } catch (err) {
-            console.error('Error fetching tour requests:', err);
-          }
+        // Fetch refund statuses for bookings
+        if (fetchedBookings.length > 0) {
+          fetchRefundStatuses(fetchedBookings);
         }
-      } catch (err) {
-        console.error("Error fetching data:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
       }
-    };
+
+      // Fetch custom tour requests
+      if (withAuth) {
+        try {
+          const requestsData = await withAuth("/api/tour-requests");
+          const fetchedRequests = requestsData.requests || [];
+          setRequests(fetchedRequests);
+
+          // Fetch refund statuses for custom tours
+          if (fetchedRequests.length > 0) {
+            fetchCustomTourRefundStatuses(fetchedRequests);
+          }
+        } catch (err) {
+          console.error("Error fetching tour requests:", err);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (user?.token) fetchData();
   }, [user, withAuth]);
+
+  // Fetch refund statuses for custom tours
+  const fetchCustomTourRefundStatuses = async (requests) => {
+    try {
+      const statuses = {};
+
+      // Fetch custom tour refund requests for this user
+      const response = await fetch(`/api/refunds/custom-tour/my-refunds`, {
+        headers: {
+          Authorization: `Bearer ${user?.token}`,
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const refunds = data.refunds || [];
+
+        // Map refunds to tour requests
+        refunds.forEach((refund) => {
+          // Skip only cancelled refunds (user cancelled themselves)
+          if (refund.status === "cancelled") {
+            return;
+          }
+
+          const tourRequestId =
+            refund.tourRequestId?._id || refund.tourRequestId;
+          if (tourRequestId) {
+            statuses[tourRequestId] = {
+              status: refund.status,
+              refundReference: refund.refundReference,
+              finalRefundAmount: refund.finalRefundAmount,
+            };
+          }
+        });
+      }
+
+      setCustomTourRefundStatuses(statuses);
+    } catch (err) {
+      console.error("Error fetching custom tour refund statuses:", err);
+    }
+  };
 
   // Refetch when page becomes visible again (user returns from another tab/page)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && user?.token) {
         fetchRefundStatuses(bookings);
+        fetchCustomTourRefundStatuses(requests);
       }
     };
 
     // Listen for refund updates from other components
     const handleRefundUpdate = (event) => {
       console.log("Refund updated event received:", event.detail);
-      if (user?.token && bookings.length > 0) {
-        fetchRefundStatuses(bookings);
+      if (user?.token) {
+        if (bookings.length > 0) {
+          fetchRefundStatuses(bookings);
+        }
+        if (requests.length > 0) {
+          fetchCustomTourRefundStatuses(requests);
+        }
       }
     };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("refundUpdated", handleRefundUpdate);
-
-    // Only listen for visibility and refund updates here.
-    // Payment updates are handled on the guide side only to avoid
-    // triggering automatic refreshes in the traveller booking history.
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("refundUpdated", handleRefundUpdate);
 
@@ -92,7 +151,7 @@ export default function BookingHistory() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("refundUpdated", handleRefundUpdate);
     };
-  }, [user, bookings]);
+  }, [user, bookings, requests]);
 
   const fetchRefundStatuses = async (bookings) => {
     try {
@@ -211,7 +270,8 @@ export default function BookingHistory() {
       case "completed":
         return {
           text: "Đã hoàn thành",
-          className: "bg-green-50 text-green-700 ring-1 ring-inset ring-green-200",
+          className:
+            "bg-green-50 text-green-700 ring-1 ring-inset ring-green-200",
         };
       case "refunded":
         return {
@@ -286,19 +346,49 @@ export default function BookingHistory() {
   const requestStatusUI = (status) => {
     switch (status) {
       case "pending":
-        return { text: "Chờ xác nhận", className: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200", icon: "⏳" };
+        return {
+          text: "Chờ xác nhận",
+          className:
+            "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
+          icon: "⏳",
+        };
       case "negotiating":
-        return { text: "Đang thương lượng", className: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200", icon: "💬" };
+        return {
+          text: "Đang thương lượng",
+          className: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200",
+          icon: "💬",
+        };
       case "accepted":
-        return { text: "Đã chấp nhận", className: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200", icon: "✅" };
+        return {
+          text: "Đã chấp nhận",
+          className:
+            "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
+          icon: "✅",
+        };
       case "rejected":
-        return { text: "Đã từ chối", className: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200", icon: "❌" };
+        return {
+          text: "Đã từ chối",
+          className: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
+          icon: "❌",
+        };
       case "cancelled":
-        return { text: "Đã hủy", className: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200", icon: "🚫" };
+        return {
+          text: "Đã hủy",
+          className: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200",
+          icon: "🚫",
+        };
       case "expired":
-        return { text: "Đã hết hạn", className: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200", icon: "⏰" };
+        return {
+          text: "Đã hết hạn",
+          className: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200",
+          icon: "⏰",
+        };
       default:
-        return { text: status, className: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200", icon: "❓" };
+        return {
+          text: status,
+          className: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-200",
+          icon: "❓",
+        };
     }
   };
 
@@ -331,8 +421,8 @@ export default function BookingHistory() {
   }
 
   return (
-      <div className="h-screen bg-neutral-50 overflow-hidden">
-        <div className="max-w-4xl mx-auto h-full flex flex-col px-3 md:px-4 py-4 md:py-6">
+    <div className="h-screen bg-neutral-50 overflow-hidden">
+      <div className="max-w-4xl mx-auto h-full flex flex-col px-3 md:px-4 py-4 md:py-6">
         {/* Header */}
         <h1
           className="relative mb-4 md:mb-5 text-xl md:text-2xl font-semibold tracking-tight 
@@ -361,68 +451,382 @@ export default function BookingHistory() {
           </button>
         </h1>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-4 shrink-0">
-        <button
-          onClick={() => setActiveTab('bookings')}
-          className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
-            activeTab === 'bookings'
-              ? 'bg-teal-600 text-white shadow-md'
-              : 'bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200'
-          }`}
-        >
-          <Ticket className="inline w-4 h-4 mr-2" />
-          Tour có sẵn ({bookings.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('requests')}
-          className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
-            activeTab === 'requests'
-              ? 'bg-teal-600 text-white shadow-md'
-              : 'bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200'
-          }`}
-        >
-          <MapPin className="inline w-4 h-4 mr-2" />
-          Custom Tour ({requests.length})
-        </button>
-      </div>
+        {/* Tabs */}
+        <div className="flex gap-2 mb-4 shrink-0">
+          <button
+            onClick={() => setActiveTab("bookings")}
+            className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
+              activeTab === "bookings"
+                ? "bg-teal-600 text-white shadow-md"
+                : "bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200"
+            }`}
+          >
+            <Ticket className="inline w-4 h-4 mr-2" />
+            Tour có sẵn ({bookings.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("requests")}
+            className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
+              activeTab === "requests"
+                ? "bg-teal-600 text-white shadow-md"
+                : "bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200"
+            }`}
+          >
+            <MapPin className="inline w-4 h-4 mr-2" />
+            Custom Tour ({requests.length})
+          </button>
+        </div>
 
-      {/* Content */}
-      <div className="relative flex-1 overflow-hidden">
-        <div className="absolute inset-0 overflow-y-auto pr-1">
-          {activeTab === 'bookings' ? (
-            // Regular Bookings
-            bookings.length === 0 ? (
-            <div className="bg-white rounded-lg border border-neutral-200 p-8 text-center">
-              <Ticket className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-              <p className="text-neutral-700">Bạn chưa có booking nào</p>
-              <button
-                onClick={() => (window.location.href = "/")}
-                className="mt-3 px-4 py-2 rounded-md text-white text-sm"
-                style={{ backgroundColor: "#02A0AA" }}
-              >
-                Khám phá tour ngay
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4 pb-4">
-              {bookings.map((booking) => {
-                const ui = statusUI(booking.status);
-                const refundStatus = refundStatuses[booking._id];
-                const refundUI = refundStatus ? getRefundStatusUI(refundStatus.status) : null;
-                return (
-                  <div key={booking._id} className="bg-white rounded-lg border border-neutral-200 overflow-hidden">{/* Header card */}
-                    {/* Header card */}
-                    <div className="px-4 py-3 border-b border-neutral-200 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 items-center">
-                      <div className="flex items-center gap-2 text-neutral-900">
-                        <Receipt className="w-4 h-4" style={{ color: "#02A0AA" }} />
-                        <div className="leading-tight">
-                          <p className="text-[11px] text-neutral-500">Mã đặt chỗ</p>
-                          <p className="text-sm font-medium">
-                            {booking.orderRef || booking._id.substring(0, 8).toUpperCase()}
-                          </p>
+        {/* Content */}
+        <div className="relative flex-1 overflow-hidden">
+          <div className="absolute inset-0 overflow-y-auto pr-1">
+            {activeTab === "bookings" ? (
+              // Regular Bookings
+              bookings.length === 0 ? (
+                <div className="bg-white rounded-lg border border-neutral-200 p-8 text-center">
+                  <Ticket className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+                  <p className="text-neutral-700">Bạn chưa có booking nào</p>
+                  <button
+                    onClick={() => (window.location.href = "/")}
+                    className="mt-3 px-4 py-2 rounded-md text-white text-sm"
+                    style={{ backgroundColor: "#02A0AA" }}
+                  >
+                    Khám phá tour ngay
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4 pb-4">
+                  {bookings.map((booking) => {
+                    const ui = statusUI(booking.status);
+                    const refundStatus = refundStatuses[booking._id];
+                    const refundUI = refundStatus
+                      ? getRefundStatusUI(refundStatus.status)
+                      : null;
+                    return (
+                      <div
+                        key={booking._id}
+                        className="bg-white rounded-lg border border-neutral-200 overflow-hidden"
+                      >
+                        {/* Header card */}
+                        {/* Header card */}
+                        <div className="px-4 py-3 border-b border-neutral-200 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 items-center">
+                          <div className="flex items-center gap-2 text-neutral-900">
+                            <Receipt
+                              className="w-4 h-4"
+                              style={{ color: "#02A0AA" }}
+                            />
+                            <div className="leading-tight">
+                              <p className="text-[11px] text-neutral-500">
+                                Mã đặt chỗ
+                              </p>
+                              <p className="text-sm font-medium">
+                                {booking.orderRef ||
+                                  booking._id.substring(0, 8).toUpperCase()}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="sm:justify-center">
+                            <span
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ring-inset"
+                              style={{
+                                color: "#03656B",
+                                backgroundColor: "#E6F7F8",
+                                borderColor: "#C7EFF2",
+                              }}
+                              title="Ngày tạo booking"
+                            >
+                              <Calendar className="w-3.5 h-3.5" />
+                              {formatDateVN(booking.createdAt)}
+                            </span>
+                          </div>
+
+                          <div className="sm:justify-self-end flex flex-col gap-1.5">
+                            <span
+                              className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${ui.className}`}
+                            >
+                              {ui.text}
+                            </span>
+
+                            {/* Tour Status - Only show when important */}
+                            {/* Show "Tour KHÔNG khởi hành" when refund approved/completed OR booking refunded */}
+                            {(refundUI &&
+                              refundUI.tourStatus === "cancelled") ||
+                            booking.status === "refunded" ? (
+                              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 ring-1 ring-inset ring-red-200">
+                                <span>🚫</span>
+                                <span>Tour KHÔNG khởi hành</span>
+                              </div>
+                            ) : null}
+
+                            {/* Show "Tour vẫn khởi hành" only when refund rejected */}
+                            {refundUI && refundUI.tourStatus === "active" && (
+                              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 ring-1 ring-inset ring-green-200">
+                                <span>✈️</span>
+                                <span>Tour vẫn khởi hành</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-4">
+                          <div className="space-y-3 mb-4">
+                            {booking.items?.map((item, idx) => (
+                              <div
+                                key={idx}
+                                className="flex gap-3 pb-3 border-b border-neutral-200 last:border-b-0"
+                              >
+                                {item.image && (
+                                  <img
+                                    src={item.image}
+                                    alt={item.name}
+                                    className="w-14 h-14 object-cover rounded-md border border-neutral-200"
+                                  />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="text-sm font-medium text-neutral-900 mb-1 line-clamp-1">
+                                    {item.name || "Tour"}
+                                  </h3>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[13px]">
+                                    <div className="flex items-center gap-1.5 text-neutral-600">
+                                      <Calendar className="w-3.5 h-3.5" />
+                                      <span className="truncate">
+                                        {item.date}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-neutral-600">
+                                      <Users className="w-3.5 h-3.5" />
+                                      <span className="truncate">
+                                        {item.adults > 0 &&
+                                          `${item.adults} người lớn`}
+                                        {item.adults > 0 &&
+                                          item.children > 0 &&
+                                          ", "}
+                                        {item.children > 0 &&
+                                          `${item.children} trẻ em`}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="mt-1 text-[12px] text-neutral-500">
+                                    Giá {formatVND(item.unitPriceAdult || 0)}
+                                    /người lớn
+                                    {item.children > 0 &&
+                                      ` · ${formatVND(
+                                        item.unitPriceChild || 0
+                                      )}/trẻ em`}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="pt-3 border-t border-neutral-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div className="flex items-center gap-2 text-neutral-700">
+                              <CreditCard className="w-4 h-4" />
+                              <div className="text-sm">
+                                <span className="text-neutral-500">
+                                  Thanh toán:&nbsp;
+                                </span>
+                                <span className="font-semibold text-neutral-900">
+                                  {booking.payment?.provider || "N/A"}
+                                </span>
+                                {booking.payment?.orderId && (
+                                  <span className="ml-2 text-[12px] text-neutral-500">
+                                    (ID: {booking.payment.orderId})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              {/* Retry Payment Button for Failed Bookings */}
+                              {booking.status === "cancelled" &&
+                                !refundStatus && (
+                                  <button
+                                    onClick={() => handleRetryPayment(booking)}
+                                    className="px-3 py-1.5 rounded-md text-white text-xs font-medium transition-colors hover:opacity-90"
+                                    style={{ backgroundColor: "#02A0AA" }}
+                                    title="Thanh toán lại"
+                                  >
+                                    Thanh toán lại
+                                  </button>
+                                )}
+
+                              {/* Request Refund Button for Paid Bookings */}
+                              {/* Show if: no refund OR refund was rejected (can request again) */}
+                              {booking.status === "paid" &&
+                                (!refundStatus ||
+                                  refundStatus.status === "rejected") && (
+                                  <Link
+                                    to={`/refund-request/${booking._id}`}
+                                    className="px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
+                                    title="Yêu cầu hoàn tiền"
+                                  >
+                                    <RefreshCw className="w-3.5 h-3.5" />
+                                    {refundStatus?.status === "rejected"
+                                      ? "Tạo Request Mới"
+                                      : "Yêu Cầu Hoàn Tiền"}
+                                  </Link>
+                                )}
+
+                              {/* Show Refund in Progress for active refunds */}
+                              {refundStatus &&
+                                refundStatus.status !== "completed" &&
+                                refundStatus.status !== "rejected" && (
+                                  <Link
+                                    to="/profile/refunds"
+                                    className="px-3 py-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
+                                    title="Xem chi tiết refund"
+                                  >
+                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                    Refund đang xử lý
+                                  </Link>
+                                )}
+
+                              {/* Show View Refund for completed refunds (no new request allowed) */}
+                              {/* Also show for bookings with status "refunded" */}
+                              {(refundStatus &&
+                                refundStatus.status === "completed") ||
+                              booking.status === "refunded" ? (
+                                <Link
+                                  to="/profile/refunds"
+                                  className="px-3 py-1.5 rounded-md bg-teal-500 hover:bg-teal-600 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
+                                  title="Xem chi tiết refund đã hoàn tất"
+                                >
+                                  <Receipt className="w-3.5 h-3.5" />
+                                  Xem Chi Tiết
+                                </Link>
+                              ) : null}
+
+                              {/* Show View Refund for rejected (with new request option shown above) */}
+                              {refundStatus &&
+                                refundStatus.status === "rejected" && (
+                                  <Link
+                                    to="/profile/refunds"
+                                    className="px-3 py-1.5 rounded-md bg-gray-500 hover:bg-gray-600 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
+                                    title="Xem lý do từ chối"
+                                  >
+                                    <Receipt className="w-3.5 h-3.5" />
+                                    Xem Lý Do
+                                  </Link>
+                                )}
+
+                              {/* Write Review Button for Completed Tours */}
+                              {booking.status === "completed" && (
+                                <Link
+                                  to="/profile/reviews"
+                                  className="px-3 py-1.5 rounded-md bg-purple-500 hover:bg-purple-600 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
+                                  title="Viết đánh giá cho tour"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                  Viết đánh giá
+                                </Link>
+                              )}
+
+                              <div className="text-right">
+                                {/* Hiển thị giá gốc và discount nếu có */}
+                                {booking.discountAmount > 0 && (
+                                  <div className="mb-1 space-y-0.5">
+                                    <div className="flex items-center justify-end gap-2 text-xs text-neutral-500">
+                                      <span>Tổng tiền:</span>
+                                      <span className="line-through">
+                                        {formatCurrency(
+                                          booking.originalAmount || 0,
+                                          booking.currency || "VND"
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div
+                                      className="flex items-center justify-end gap-2 text-xs font-medium"
+                                      style={{ color: "#02A0AA" }}
+                                    >
+                                      <span className="bg-teal-50 px-2 py-0.5 rounded text-[11px] uppercase font-semibold">
+                                        {booking.voucherCode || "VOUCHER"}
+                                      </span>
+                                      <span>
+                                        -
+                                        {formatCurrency(
+                                          booking.discountAmount || 0,
+                                          booking.currency || "VND"
+                                        )}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+                                <p
+                                  className="text-base font-semibold tracking-tight"
+                                  style={{ color: "#02A0AA" }}
+                                >
+                                  {formatCurrency(
+                                    booking.totalVND || booking.totalUSD || 0,
+                                    booking.currency || "VND"
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {booking.qrCode && (
+                            <div className="mt-4 text-center">
+                              <img
+                                src={booking.qrCode}
+                                alt="QR Code"
+                                className="w-24 h-24 mx-auto rounded border border-neutral-200"
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
+              )
+            ) : // Custom Tour Requests
+            requests.length === 0 ? (
+              <div className="bg-white rounded-lg border border-neutral-200 p-8 text-center">
+                <MapPin className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+                <p className="text-neutral-700">
+                  Bạn chưa có yêu cầu custom tour nào
+                </p>
+                <button
+                  onClick={() => (window.location.href = "/discover")}
+                  className="mt-3 px-4 py-2 rounded-md text-white text-sm"
+                  style={{ backgroundColor: "#02A0AA" }}
+                >
+                  Tạo hành trình mới
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4 pb-4">
+                {requests.map((request) => {
+                  const statusInfo = requestStatusUI(request.status);
+                  const refundStatus = customTourRefundStatuses[request._id];
+                  const refundUI = refundStatus
+                    ? getRefundStatusUI(refundStatus.status)
+                    : null;
+                  return (
+                    <div
+                      key={request._id}
+                      className="bg-white rounded-lg border border-neutral-200 overflow-hidden"
+                    >
+                      {/* Header */}
+                      <div className="px-4 py-3 border-b border-neutral-200 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 items-center">
+                        <div className="flex items-center gap-2 text-neutral-900">
+                          <Receipt
+                            className="w-4 h-4"
+                            style={{ color: "#02A0AA" }}
+                          />
+                          <div className="leading-tight">
+                            <p className="text-[11px] text-neutral-500">
+                              Mã yêu cầu
+                            </p>
+                            <p className="text-sm font-medium">
+                              {request.requestNumber ||
+                                request._id.substring(0, 8).toUpperCase()}
+                            </p>
+                          </div>
+                        </div>
 
                         <div className="sm:justify-center">
                           <span
@@ -432,31 +836,28 @@ export default function BookingHistory() {
                               backgroundColor: "#E6F7F8",
                               borderColor: "#C7EFF2",
                             }}
-                            title="Ngày tạo booking"
                           >
                             <Calendar className="w-3.5 h-3.5" />
-                            {formatDateVN(booking.createdAt)}
+                            {formatDateVN(request.createdAt)}
                           </span>
                         </div>
 
                         <div className="sm:justify-self-end flex flex-col gap-1.5">
                           <span
-                            className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${ui.className}`}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${statusInfo.className}`}
                           >
-                            {ui.text}
+                            <span>{statusInfo.icon}</span>
+                            <span>{statusInfo.text}</span>
                           </span>
 
-                          {/* Tour Status - Only show when important */}
-                          {/* Show "Tour KHÔNG khởi hành" when refund approved/completed OR booking refunded */}
-                          {(refundUI && refundUI.tourStatus === "cancelled") ||
-                          booking.status === "refunded" ? (
+                          {/* Tour Status for Custom Tours */}
+                          {refundUI && refundUI.tourStatus === "cancelled" && (
                             <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 ring-1 ring-inset ring-red-200">
                               <span>🚫</span>
                               <span>Tour KHÔNG khởi hành</span>
                             </div>
-                          ) : null}
+                          )}
 
-                          {/* Show "Tour vẫn khởi hành" only when refund rejected */}
                           {refundUI && refundUI.tourStatus === "active" && (
                             <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 ring-1 ring-inset ring-green-200">
                               <span>✈️</span>
@@ -468,95 +869,120 @@ export default function BookingHistory() {
 
                       {/* Content */}
                       <div className="p-4">
-                        <div className="space-y-3 mb-4">
-                          {booking.items?.map((item, idx) => (
-                            <div
-                              key={idx}
-                              className="flex gap-3 pb-3 border-b border-neutral-200 last:border-b-0"
-                            >
-                              {item.image && (
-                                <img
-                                  src={item.image}
-                                  alt={item.name}
-                                  className="w-14 h-14 object-cover rounded-md border border-neutral-200"
-                                />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <h3 className="text-sm font-medium text-neutral-900 mb-1 line-clamp-1">
-                                  {item.name || "Tour"}
-                                </h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[13px]">
-                                  <div className="flex items-center gap-1.5 text-neutral-600">
-                                    <Calendar className="w-3.5 h-3.5" />
-                                    <span className="truncate">
-                                      {item.date}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5 text-neutral-600">
-                                    <Users className="w-3.5 h-3.5" />
-                                    <span className="truncate">
-                                      {item.adults > 0 &&
-                                        `${item.adults} người lớn`}
-                                      {item.adults > 0 &&
-                                        item.children > 0 &&
-                                        ", "}
-                                      {item.children > 0 &&
-                                        `${item.children} trẻ em`}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="mt-1 text-[12px] text-neutral-500">
-                                  Giá {formatVND(item.unitPriceAdult || 0)}
-                                  /người lớn
-                                  {item.children > 0 &&
-                                    ` · ${formatVND(
-                                      item.unitPriceChild || 0
-                                    )}/trẻ em`}
+                        <div className="mb-4">
+                          <h3 className="text-base font-semibold text-neutral-900 mb-2">
+                            {request.tourDetails?.zoneName || "Custom Tour"}
+                          </h3>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            {/* Guide Info */}
+                            {request.guideId && (
+                              <div className="flex items-center gap-2 text-neutral-700">
+                                <User className="w-4 h-4" />
+                                <div>
+                                  <span className="text-neutral-500">
+                                    Hướng dẫn viên:{" "}
+                                  </span>
+                                  <span className="font-medium">
+                                    {request.guideId.name || "N/A"}
+                                  </span>
                                 </div>
                               </div>
+                            )}
+
+                            {/* Number of Guests */}
+                            <div className="flex items-center gap-2 text-neutral-700">
+                              <Users className="w-4 h-4" />
+                              <div>
+                                <span className="text-neutral-500">
+                                  Số khách:{" "}
+                                </span>
+                                <span className="font-medium">
+                                  {request.tourDetails?.numberOfGuests || 1}{" "}
+                                  người
+                                </span>
+                              </div>
                             </div>
-                          ))}
+
+                            {/* Preferred Date */}
+                            {request.preferredDates?.[0] && (
+                              <div className="flex items-center gap-2 text-neutral-700">
+                                <Calendar className="w-4 h-4" />
+                                <div>
+                                  <span className="text-neutral-500">
+                                    Ngày mong muốn:{" "}
+                                  </span>
+                                  <span className="font-medium">
+                                    {new Date(
+                                      request.preferredDates[0].startDate
+                                    ).toLocaleDateString("vi-VN")}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Messages Count */}
+                            {request.messages?.length > 0 && (
+                              <div className="flex items-center gap-2 text-neutral-700">
+                                <MessageSquare className="w-4 h-4" />
+                                <div>
+                                  <span className="text-neutral-500">
+                                    Tin nhắn:{" "}
+                                  </span>
+                                  <span className="font-medium">
+                                    {request.messages.length} tin
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="pt-3 border-t border-neutral-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          <div className="flex items-center gap-2 text-neutral-700">
-                            <CreditCard className="w-4 h-4" />
-                            <div className="text-sm">
-                              <span className="text-neutral-500">
-                                Thanh toán:&nbsp;
-                              </span>
-                              <span className="font-semibold text-neutral-900">
-                                {booking.payment?.provider || "N/A"}
-                              </span>
-                              {booking.payment?.orderId && (
-                                <span className="ml-2 text-[12px] text-neutral-500">
-                                  (ID: {booking.payment.orderId})
-                                </span>
+                        {/* Budget & Actions */}
+                        <div className="pt-3 border-t border-neutral-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div className="flex flex-col gap-1">
+                            <div className="text-xs text-neutral-500">
+                              {request.paymentStatus === "paid"
+                                ? "Đã thanh toán:"
+                                : "Ngân sách ban đầu:"}
+                            </div>
+                            <div
+                              className="text-lg font-semibold"
+                              style={{ color: "#02A0AA" }}
+                            >
+                              {formatCurrency(
+                                request.totalPrice ||
+                                  request.initialBudget?.amount ||
+                                  0,
+                                request.initialBudget?.currency || "VND"
                               )}
                             </div>
+
+                            {/* Show latest offer if available and not paid */}
+                            {!request.totalPrice &&
+                              request.priceOffers?.length > 0 && (
+                                <div className="text-xs text-neutral-600">
+                                  Đề xuất mới nhất:{" "}
+                                  {formatCurrency(
+                                    request.priceOffers[
+                                      request.priceOffers.length - 1
+                                    ].amount,
+                                    request.priceOffers[
+                                      request.priceOffers.length - 1
+                                    ].currency || "VND"
+                                  )}
+                                </div>
+                              )}
                           </div>
 
-                          <div className="flex items-center gap-3">
-                            {/* Retry Payment Button for Failed Bookings */}
-                            {booking.status === "cancelled" &&
-                              !refundStatus && (
-                                <button
-                                  onClick={() => handleRetryPayment(booking)}
-                                  className="px-3 py-1.5 rounded-md text-white text-xs font-medium transition-colors hover:opacity-90"
-                                  style={{ backgroundColor: "#02A0AA" }}
-                                  title="Thanh toán lại"
-                                >
-                                  Thanh toán lại
-                                </button>
-                              )}
-
-                            {/* Request Refund Button for Paid Bookings */}
-                            {/* Show if: no refund OR refund was rejected (can request again) */}
-                            {booking.status === "paid" &&
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Request Refund Button for Paid Custom Tours */}
+                            {request.paymentStatus === "paid" &&
                               (!refundStatus ||
                                 refundStatus.status === "rejected") && (
                                 <Link
-                                  to={`/refund-request/${booking._id}`}
+                                  to={`/refund-request/custom-tour/${request._id}`}
                                   className="px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
                                   title="Yêu cầu hoàn tiền"
                                 >
@@ -581,22 +1007,20 @@ export default function BookingHistory() {
                                 </Link>
                               )}
 
-                            {/* Show View Refund for completed refunds (no new request allowed) */}
-                            {/* Also show for bookings with status "refunded" */}
-                            {(refundStatus &&
-                              refundStatus.status === "completed") ||
-                            booking.status === "refunded" ? (
-                              <Link
-                                to="/profile/refunds"
-                                className="px-3 py-1.5 rounded-md bg-teal-500 hover:bg-teal-600 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
-                                title="Xem chi tiết refund đã hoàn tất"
-                              >
-                                <Receipt className="w-3.5 h-3.5" />
-                                Xem Chi Tiết
-                              </Link>
-                            ) : null}
+                            {/* Show View Refund for completed refunds */}
+                            {refundStatus &&
+                              refundStatus.status === "completed" && (
+                                <Link
+                                  to="/profile/refunds"
+                                  className="px-3 py-1.5 rounded-md bg-teal-500 hover:bg-teal-600 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
+                                  title="Xem chi tiết refund đã hoàn tất"
+                                >
+                                  <Receipt className="w-3.5 h-3.5" />
+                                  Xem Chi Tiết
+                                </Link>
+                              )}
 
-                            {/* Show View Refund for rejected (with new request option shown above) */}
+                            {/* Show View Refund for rejected */}
                             {refundStatus &&
                               refundStatus.status === "rejected" && (
                                 <Link
@@ -609,214 +1033,23 @@ export default function BookingHistory() {
                                 </Link>
                               )}
 
-                            {/* Write Review Button for Completed Tours */}
-                            {booking.status === "completed" && (
-                              <Link
-                                to="/profile/reviews"
-                                className="px-3 py-1.5 rounded-md bg-purple-500 hover:bg-purple-600 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
-                                title="Viết đánh giá cho tour"
-                              >
-                                <MessageSquare className="w-3.5 h-3.5" />
-                                Viết đánh giá
-                              </Link>
-                            )}
-
-                            <div className="text-right">
-                              {/* Hiển thị giá gốc và discount nếu có */}
-                              {booking.discountAmount > 0 && (
-                                <div className="mb-1 space-y-0.5">
-                                  <div className="flex items-center justify-end gap-2 text-xs text-neutral-500">
-                                    <span>Tổng tiền:</span>
-                                    <span className="line-through">
-                                      {formatCurrency(
-                                        booking.originalAmount || 0,
-                                        booking.currency || "VND"
-                                      )}
-                                    </span>
-                                  </div>
-                                  <div
-                                    className="flex items-center justify-end gap-2 text-xs font-medium"
-                                    style={{ color: "#02A0AA" }}
-                                  >
-                                    <span className="bg-teal-50 px-2 py-0.5 rounded text-[11px] uppercase font-semibold">
-                                      {booking.voucherCode || "VOUCHER"}
-                                    </span>
-                                    <span>
-                                      -
-                                      {formatCurrency(
-                                        booking.discountAmount || 0,
-                                        booking.currency || "VND"
-                                      )}
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-                              <p
-                                className="text-base font-semibold tracking-tight"
-                                style={{ color: "#02A0AA" }}
-                              >
-                                {formatCurrency(
-                                  booking.totalVND || booking.totalUSD || 0,
-                                  booking.currency || "VND"
-                                )}
-                              </p>
-                            </div>
+                            {/* View Details Button */}
+                            <button
+                              onClick={() =>
+                                (window.location.href = `/my-tour-requests`)
+                              }
+                              className="px-4 py-2 rounded-md text-white text-sm font-medium transition-colors hover:opacity-90"
+                              style={{ backgroundColor: "#02A0AA" }}
+                            >
+                              Xem chi tiết
+                            </button>
                           </div>
-                        </div>
-
-                        {booking.qrCode && (
-                          <div className="mt-4 text-center">
-                            <img
-                              src={booking.qrCode}
-                              alt="QR Code"
-                              className="w-24 h-24 mx-auto rounded border border-neutral-200"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-          )
-          ) : (
-            // Custom Tour Requests
-            requests.length === 0 ? (
-              <div className="bg-white rounded-lg border border-neutral-200 p-8 text-center">
-                <MapPin className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-                <p className="text-neutral-700">Bạn chưa có yêu cầu custom tour nào</p>
-                <button
-                  onClick={() => (window.location.href = "/discover")}
-                  className="mt-3 px-4 py-2 rounded-md text-white text-sm"
-                  style={{ backgroundColor: "#02A0AA" }}
-                >
-                  Tạo hành trình mới
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4 pb-4">
-                {requests.map((request) => {
-                  const statusInfo = requestStatusUI(request.status);
-                  return (
-                    <div key={request._id} className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
-                      {/* Header */}
-                      <div className="px-4 py-3 border-b border-neutral-200 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 items-center">
-                        <div className="flex items-center gap-2 text-neutral-900">
-                          <Receipt className="w-4 h-4" style={{ color: "#02A0AA" }} />
-                          <div className="leading-tight">
-                            <p className="text-[11px] text-neutral-500">Mã yêu cầu</p>
-                            <p className="text-sm font-medium">
-                              {request.requestNumber || request._id.substring(0, 8).toUpperCase()}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="sm:justify-center">
-                          <span
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ring-inset"
-                            style={{ color: "#03656B", backgroundColor: "#E6F7F8", borderColor: "#C7EFF2" }}
-                          >
-                            <Calendar className="w-3.5 h-3.5" />
-                            {formatDateVN(request.createdAt)}
-                          </span>
-                        </div>
-
-                        <div className="sm:justify-self-end">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${statusInfo.className}`}>
-                            <span>{statusInfo.icon}</span>
-                            <span>{statusInfo.text}</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      <div className="p-4">
-                        <div className="mb-4">
-                          <h3 className="text-base font-semibold text-neutral-900 mb-2">
-                            {request.tourDetails?.zoneName || 'Custom Tour'}
-                          </h3>
-                          
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                            {/* Guide Info */}
-                            {request.guideId && (
-                              <div className="flex items-center gap-2 text-neutral-700">
-                                <User className="w-4 h-4" />
-                                <div>
-                                  <span className="text-neutral-500">Hướng dẫn viên: </span>
-                                  <span className="font-medium">{request.guideId.name || 'N/A'}</span>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Number of Guests */}
-                            <div className="flex items-center gap-2 text-neutral-700">
-                              <Users className="w-4 h-4" />
-                              <div>
-                                <span className="text-neutral-500">Số khách: </span>
-                                <span className="font-medium">{request.tourDetails?.numberOfGuests || 1} người</span>
-                              </div>
-                            </div>
-
-                            {/* Preferred Date */}
-                            {request.preferredDates?.[0] && (
-                              <div className="flex items-center gap-2 text-neutral-700">
-                                <Calendar className="w-4 h-4" />
-                                <div>
-                                  <span className="text-neutral-500">Ngày mong muốn: </span>
-                                  <span className="font-medium">
-                                    {new Date(request.preferredDates[0].startDate).toLocaleDateString('vi-VN')}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Messages Count */}
-                            {request.messages?.length > 0 && (
-                              <div className="flex items-center gap-2 text-neutral-700">
-                                <MessageSquare className="w-4 h-4" />
-                                <div>
-                                  <span className="text-neutral-500">Tin nhắn: </span>
-                                  <span className="font-medium">{request.messages.length} tin</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Budget & Actions */}
-                        <div className="pt-3 border-t border-neutral-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                          <div className="flex flex-col gap-1">
-                            <div className="text-xs text-neutral-500">Ngân sách ban đầu:</div>
-                            <div className="text-lg font-semibold" style={{ color: "#02A0AA" }}>
-                              {formatCurrency(request.initialBudget?.amount || 0, request.initialBudget?.currency || 'VND')}
-                            </div>
-                            
-                            {/* Show latest offer if available */}
-                            {request.priceOffers?.length > 0 && (
-                              <div className="text-xs text-neutral-600">
-                                Đề xuất mới nhất: {formatCurrency(
-                                  request.priceOffers[request.priceOffers.length - 1].amount,
-                                  request.priceOffers[request.priceOffers.length - 1].currency || 'VND'
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Action Button */}
-                          <button
-                            onClick={() => window.location.href = `/my-tour-requests`}
-                            className="px-4 py-2 rounded-md text-white text-sm font-medium transition-colors hover:opacity-90"
-                            style={{ backgroundColor: "#02A0AA" }}
-                          >
-                            Xem chi tiết
-                          </button>
                         </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            )
             )}
           </div>
         </div>
