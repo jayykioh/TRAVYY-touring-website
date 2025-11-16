@@ -107,6 +107,8 @@ export default function VibeSelectPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [checkingItinerary, setCheckingItinerary] = useState(false);
+  const [itinerariesCache, setItinerariesCache] = useState(null);
   const [deleteModal, setDeleteModal] = useState({
     show: false,
     type: null,
@@ -233,6 +235,12 @@ export default function VibeSelectPage() {
       const data = await withAuth("/api/discover/history");
       if (data.ok) {
         setHistory(data.history || []);
+        
+        // ✅ Pre-fetch itineraries to check which history entries have itineraries
+        const itinerariesData = await withAuth('/api/itinerary');
+        if (itinerariesData?.success) {
+          setItinerariesCache(itinerariesData.itineraries || []);
+        }
       }
     } catch (error) {
       console.error("Failed to load history:", error);
@@ -249,71 +257,123 @@ export default function VibeSelectPage() {
     toast.success("Đã tải lại lựa chọn cũ!");
   }
 
-  // 👁️ View history results
-  function viewHistoryResults(entry, e) {
+  // 👁️ View history results - Smart routing like MyTourRequests.jsx
+  async function viewHistoryResults(entry, e) {
     e.stopPropagation();
-
-    // Group zones by province for byProvince field
-    const byProvince = {};
-
-    // Reconstruct data object to match discover results format
-    const zones =
-      entry.zoneResults?.map((zr) => {
-        const zoneData = zr.zoneId || {};
-        const zone = {
-          id: zoneData.id || zoneData._id || zr.zoneId, // Prioritize 'id' (slug) over '_id'
-          _id: zoneData._id || zoneData.id || zr.zoneId,
-          name: zr.zoneName || zoneData.name,
-          province: zoneData.province || "Unknown",
-          heroImg: zoneData.heroImg,
-          gallery: zoneData.gallery || [],
-          desc: zoneData.desc,
-          tags: zoneData.tags || [],
-          center: zoneData.center,
-          poly: zoneData.poly,
-          polyComputed: zoneData.polyComputed,
-          bestTime: zoneData.bestTime,
-          funActivities: zoneData.funActivities || [],
-          tips: zoneData.tips || [],
-          donts: zoneData.donts || [],
-          rating: zoneData.rating,
-          // Scoring fields
-          finalScore: zr.matchScore || 0,
-          matchScore: zr.matchScore || 0,
-          embedScore: zr.embedScore || 0,
-          ruleScore: zr.ruleScore || 0,
-          ruleReasons: zr.ruleReasons || [],
-        };
-
-        // Group by province
-        if (!byProvince[zone.province]) {
-          byProvince[zone.province] = [];
-        }
-        byProvince[zone.province].push(zone);
-
-        return zone;
-      }) || [];
-
-    const data = {
-      ok: true,
-      prefs: entry.parsedPrefs || {},
-      zones,
-      byProvince,
-      strategy: entry.strategy || "history",
-      reason: `Lịch sử tìm kiếm - ${zones.length} zones`,
-      fallback: false,
-    };
-
-    // Save to sessionStorage
+    
+    if (checkingItinerary) return;
+    
     try {
-      window.sessionStorage.setItem("discover_result", JSON.stringify(data));
-    } catch (err) {
-      console.error("SessionStorage error:", err);
-    }
+      setCheckingItinerary(true);
+      
+      // ✅ Try to find existing itinerary for this discovery
+      const firstZone = entry.zoneResults?.[0];
+      if (!firstZone?.zoneId) {
+        toast.error('Không tìm thấy thông tin zone');
+        return;
+      }
 
-    // Navigate to results (skip wrapped for history view)
-    setShowHistory(false);
-    navigate("/discover-results", { state: { data } });
+      // ✅ Use cached itineraries or fetch fresh
+      let itineraries = itinerariesCache;
+      if (!itineraries) {
+        const itinerariesData = await withAuth('/api/itinerary');
+        if (itinerariesData?.success) {
+          itineraries = itinerariesData.itineraries || [];
+          setItinerariesCache(itineraries);
+        }
+      }
+
+      if (itineraries && itineraries.length > 0) {
+        const zoneIdToMatch = firstZone.zoneId._id || firstZone.zoneId.id || firstZone.zoneId;
+        const matchingItinerary = itineraries.find(
+          (itin) => itin.zoneId === zoneIdToMatch || itin.zoneId === firstZone.zoneId.id
+        );
+
+        if (matchingItinerary) {
+          console.log('[ViDoi] Found itinerary:', matchingItinerary._id, 'for zone:', zoneIdToMatch);
+          setShowHistory(false);
+          // ✅ USE CORRECT ROUTE: /itinerary/result/{id} (same as MyTourRequests)
+          navigate(`/itinerary/result/${matchingItinerary._id}`);
+          toast.success('Đang mở hành trình đã tối ưu...');
+          return;
+        }
+      }
+
+      // ❌ No itinerary found, fallback to discover-results
+      console.log('[ViDoi] No itinerary found, showing discover results');
+      
+      // Build zones data from history entry
+      const byProvince = {};
+      const zones =
+        entry.zoneResults?.map((zr) => {
+          const zoneData = zr.zoneId || {};
+          const zone = {
+            id: zoneData.id || zoneData._id || zr.zoneId,
+            _id: zoneData._id || zoneData.id || zr.zoneId,
+            name: zr.zoneName || zoneData.name,
+            province: zoneData.province || "Unknown",
+            heroImg: zoneData.heroImg,
+            gallery: zoneData.gallery || [],
+            desc: zoneData.desc,
+            tags: zoneData.tags || [],
+            center: zoneData.center,
+            poly: zoneData.poly,
+            polyComputed: zoneData.polyComputed,
+            bestTime: zoneData.bestTime,
+            funActivities: zoneData.funActivities || [],
+            tips: zoneData.tips || [],
+            donts: zoneData.donts || [],
+            rating: zoneData.rating,
+            finalScore: zr.matchScore || 0,
+            matchScore: zr.matchScore || 0,
+            embedScore: zr.embedScore || 0,
+            ruleScore: zr.ruleScore || 0,
+            ruleReasons: zr.ruleReasons || [],
+          };
+
+          if (!byProvince[zone.province]) {
+            byProvince[zone.province] = [];
+          }
+          byProvince[zone.province].push(zone);
+
+          return zone;
+        }) || [];
+
+      const data = {
+        ok: true,
+        prefs: entry.parsedPrefs || {},
+        zones,
+        byProvince,
+        strategy: entry.strategy || "history",
+        reason: `Lịch sử tìm kiếm - ${zones.length} zones`,
+        fallback: false,
+      };
+
+      try {
+        window.sessionStorage.setItem("discover_result", JSON.stringify(data));
+      } catch (err) {
+        console.error("SessionStorage error:", err);
+      }
+
+      setShowHistory(false);
+      navigate("/discover-results", { state: { data } });
+      toast.info('Chưa có hành trình tối ưu. Hãy chọn zone để tạo mới.');
+    } catch (error) {
+      console.error('[ViDoi] Error viewing history results:', error);
+      toast.error('Không thể xem kết quả');
+    } finally {
+      setCheckingItinerary(false);
+    }
+  }
+  
+  // Helper: Check if history entry has itinerary
+  function hasItinerary(entry) {
+    if (!itinerariesCache || !entry.zoneResults?.[0]) return false;
+    const firstZone = entry.zoneResults[0];
+    const zoneIdToMatch = firstZone.zoneId?._id || firstZone.zoneId?.id || firstZone.zoneId;
+    return itinerariesCache.some(
+      (itin) => itin.zoneId === zoneIdToMatch || itin.zoneId === firstZone.zoneId?.id
+    );
   }
 
   // 🗑️ Delete single history entry
@@ -799,18 +859,30 @@ export default function VibeSelectPage() {
                         className="bg-white hover:bg-slate-50 rounded-xl p-4 border border-slate-200 hover:border-[#02A0AA]/30 hover:shadow-md transition-all cursor-pointer"
                         whileHover={{ y: -2 }}
                       >
-                        {/* Timestamp */}
-                        <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-                          <Clock className="w-3 h-3" />
-                          {new Date(entry.createdAt).toLocaleDateString(
-                            "vi-VN",
-                            {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
+                        {/* Timestamp + Badge */}
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2 text-xs text-slate-500">
+                            <Clock className="w-3 h-3" />
+                            {new Date(entry.createdAt).toLocaleDateString(
+                              "vi-VN",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
+                          </div>
+                          
+                          {/* Itinerary status badge */}
+                          {hasItinerary(entry) && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Đã tối ưu
+                            </span>
                           )}
                         </div>
 
@@ -870,10 +942,25 @@ export default function VibeSelectPage() {
                                 whileHover={{ y: -1 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={(e) => viewHistoryResults(entry, e)}
-                                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-[#02A0AA] text-white hover:bg-[#029099] transition-all shadow-sm"
+                                disabled={checkingItinerary}
+                                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-[#02A0AA] text-white hover:bg-[#029099] transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                               >
-                                <MapPin className="w-3.5 h-3.5" />
-                                Xem kết quả
+                                {checkingItinerary ? (
+                                  <>
+                                    <motion.div
+                                      animate={{ rotate: 360 }}
+                                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    >
+                                      <Compass className="w-3.5 h-3.5" />
+                                    </motion.div>
+                                    Đang kiểm tra...
+                                  </>
+                                ) : (
+                                  <>
+                                    <MapPin className="w-3.5 h-3.5" />
+                                    Xem hành trình
+                                  </>
+                                )}
                               </motion.button>
                             )}
 

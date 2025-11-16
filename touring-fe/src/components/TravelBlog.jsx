@@ -33,7 +33,7 @@ const TravelBlog = () => {
     : blogPosts.filter(post => post.category === selectedCategory);
 
   return (
-    <section id="blog" className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <section id="blog" className="min-h-screen ">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
        {/* Header Section */}
@@ -179,29 +179,6 @@ const TravelBlog = () => {
             <p className="text-gray-500">Hãy thử chọn chủ đề khác</p>
           </div>
         )}
-
-        {/* Footer CTA */}
-        {filteredPosts.length > 0 && (
-          <div className="text-center py-16 border-t border-gray-200">
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">
-              Theo dõi để không bỏ lỡ bài viết mới
-            </h3>
-            <p className="text-gray-600 mb-8 max-w-xl mx-auto">
-              Cập nhật thường xuyên các bài viết về du lịch, cẩm nang, kinh nghiệm và tips hữu ích
-            </p>
-            <div className="flex gap-4 justify-center">
-              <button className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3.5 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
-                <Users className="w-5 h-5" />
-                Theo dõi Page
-              </button>
-              <button className="inline-flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold px-8 py-3.5 rounded-full transition-all duration-300 shadow-md border-2 border-gray-200">
-                <Share2 className="w-5 h-5" />
-                Chia sẻ
-              </button>
-            </div>
-          </div>
-        )}
-
       </div>
     </section>
   );

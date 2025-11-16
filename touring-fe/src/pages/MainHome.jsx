@@ -4,12 +4,7 @@ import TourHeroSection from "../components/TourHeroSection";
 import TourPromotions from "../components/TourRecommend";
 import AboutSection from "../components/AboutSection";
 import TravelBlog from "../components/TravelBlog";
-import FAQ from "../components/FAQ";
-import VietnamDestinations from "../components/VietnamDestinations";
-import TrustedPartners from "../components/TrustedPartners";
 import QuickBooking from "../components/QuickBooking";
-import WhyChooseUs from "../components/WhyChooseUs";
-import TourDetailPage from "../pages/TourDetailPage";
 import Explore from "../components/ExploreNow";
 import RegionSection from "../components/RegionSection";
 
@@ -63,34 +58,37 @@ export default function MainHome() {
     );
   }
   return (
-    <>
+    <div className="min-h-screen bg-gradient-to-b from-white via-blue-50/30 to-white">
       {/* Hero section với tour slider */}
       <TourHeroSection />
 
       {/* Quick Booking Bar - sticky booking form */}
       <QuickBooking />
 
-      {/* Tour promotions với điều hướng tới trang mã giảm giá */}
+      {/* Tour promotions - Featured tours với wishlist */}
+      <div className="">
+        <TourPromotions />
+      </div>
 
-      <TourPromotions />
-      <RegionSection />
+      {/* Regional Tours - Explore by regions */}
+      <div className="bg-white">
+        <RegionSection />
+      </div>
 
-      <Explore />
+      {/* Call to Action - Explore Now */}
+      <div className="">
+        <Explore />
+      </div>
 
-      {/* Why Choose Us */}
-      {/* <WhyChooseUs /> */}
+      {/* Travel Blog & Travel Tips */}
+      <div className="bg-white">
+        <TravelBlog />
+      </div>
 
-      {/* FAQ */}
-      {/* <FAQ/> */}
-
-      {/* Travel Blog & Guides */}
-      <TravelBlog />
-
-      {/* Vietnam Destinations */}
-      {/* <VietnamDestinations /> */}
-
-      {/* About Section */}
-      <AboutSection />
-    </>
+      {/* About Section - Company info & features */}
+      <div className="">
+        <AboutSection />
+      </div>
+    </div>
   );
 }
