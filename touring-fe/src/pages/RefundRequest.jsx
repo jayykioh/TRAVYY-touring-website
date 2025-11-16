@@ -6,12 +6,13 @@ import ConfirmModal from "../components/ConfirmModal";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
-const RefundRequest = () => {
-  const { bookingId } = useParams();
+const RefundRequest = ({ isCustomTour = false }) => {
+  const { bookingId, tourRequestId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(null);
+  const [tourRequest, setTourRequest] = useState(null);
   const [refundType, setRefundType] = useState("pre_trip_cancellation");
   const [refundPreview, setRefundPreview] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -26,8 +27,12 @@ const RefundRequest = () => {
   const [evidence, setEvidence] = useState([]);
 
   useEffect(() => {
-    loadBooking();
-  }, [bookingId]);
+    if (isCustomTour) {
+      loadTourRequest();
+    } else {
+      loadBooking();
+    }
+  }, [bookingId, tourRequestId, isCustomTour]);
 
   const loadBooking = async () => {
     try {
@@ -66,19 +71,87 @@ const RefundRequest = () => {
     }
   };
 
+  const loadTourRequest = async () => {
+    try {
+      const token = user?.token;
+      if (!token) {
+        toast.error("Authentication required");
+        navigate("/login");
+        return;
+      }
+
+      const response = await fetch(
+        `${API_URL}/api/tour-requests/${tourRequestId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to load tour request");
+
+      const data = await response.json();
+      setTourRequest(data);
+
+      // Auto-detect refund type based on tour date
+      if (data.departureDate) {
+        const tourDate = new Date(data.departureDate);
+        const now = new Date();
+        setRefundType(
+          tourDate > now ? "pre_trip_cancellation" : "post_trip_issue"
+        );
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error("Error loading tour request:", error);
+      toast.error("Error loading tour request details");
+      setLoading(false);
+    }
+  };
+
   // Check if tour has already happened (for enabling post-trip option)
   const isTourCompleted = () => {
-    if (!booking?.items?.[0]?.date) return false;
-    const tourDate = new Date(booking.items[0].date);
-    const now = new Date();
-    return tourDate < now;
+    if (isCustomTour) {
+      if (!tourRequest?.departureDate) return false;
+      const tourDate = new Date(tourRequest.departureDate);
+      const now = new Date();
+      return tourDate < now;
+    } else {
+      if (!booking?.items?.[0]?.date) return false;
+      const tourDate = new Date(booking.items[0].date);
+      const now = new Date();
+      return tourDate < now;
+    }
+  };
+
+  const getTourDate = () => {
+    if (isCustomTour) {
+      return tourRequest?.departureDate
+        ? new Date(tourRequest.departureDate)
+        : null;
+    } else {
+      return booking?.items?.[0]?.date ? new Date(booking.items[0].date) : null;
+    }
+  };
+
+  const getTotalAmount = () => {
+    if (isCustomTour) {
+      return tourRequest?.totalPrice || 0;
+    } else {
+      return booking?.totalAmount || 0;
+    }
   };
 
   const calculateRefundPreview = () => {
-    if (!booking) return;
+    const tourData = isCustomTour ? tourRequest : booking;
+    if (!tourData) return;
 
-    const originalAmount = booking.totalAmount;
-    const tourDate = new Date(booking.items[0].date);
+    const originalAmount = getTotalAmount();
+    const tourDate = getTourDate();
+    if (!tourDate) return;
+
     const now = new Date();
     const daysBeforeTour = Math.ceil((tourDate - now) / (1000 * 60 * 60 * 24));
 
@@ -151,10 +224,10 @@ const RefundRequest = () => {
   };
 
   useEffect(() => {
-    if (booking) {
+    if (booking || tourRequest) {
       calculateRefundPreview();
     }
-  }, [booking, refundType, severity]);
+  }, [booking, tourRequest, refundType, severity]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -178,11 +251,12 @@ const RefundRequest = () => {
 
   const handleConfirmSubmit = async () => {
     console.log("=== Starting refund submission ===");
+    console.log("Is Custom Tour:", isCustomTour);
     console.log("Refund Type:", refundType);
     console.log("Booking ID from params:", bookingId);
+    console.log("Tour Request ID from params:", tourRequestId);
     console.log("Booking object:", booking);
-    console.log("Booking._id:", booking?._id);
-    console.log("Booking.id:", booking?.id);
+    console.log("Tour Request object:", tourRequest);
 
     try {
       const token = user?.token;
@@ -195,32 +269,63 @@ const RefundRequest = () => {
 
       console.log("Token exists:", token ? "Yes" : "No");
 
-      const endpoint =
-        refundType === "pre_trip_cancellation"
-          ? `${API_URL}/api/refunds/pre-trip`
-          : `${API_URL}/api/refunds/post-trip`;
+      let endpoint, payload;
 
-      // ✅ Try multiple ways to get booking ID
-      const actualBookingId = booking?._id || booking?.id || bookingId;
-      console.log("Actual booking ID to send:", actualBookingId);
+      if (isCustomTour) {
+        // Custom tour refund
+        endpoint =
+          refundType === "pre_trip_cancellation"
+            ? `${API_URL}/api/refunds/custom-tour/pre-trip`
+            : `${API_URL}/api/refunds/custom-tour/post-trip`;
 
-      if (!actualBookingId) {
-        console.error("❌ No booking ID found!");
-        toast.error("Không tìm thấy booking ID");
-        return;
+        const actualTourRequestId = tourRequest?._id || tourRequestId;
+        console.log("Actual tour request ID to send:", actualTourRequestId);
+
+        if (!actualTourRequestId) {
+          console.error("❌ No tour request ID found!");
+          toast.error("Không tìm thấy tour request ID");
+          return;
+        }
+
+        payload =
+          refundType === "pre_trip_cancellation"
+            ? { tourRequestId: actualTourRequestId, requestNote }
+            : {
+                tourRequestId: actualTourRequestId,
+                issueCategory,
+                description,
+                severity,
+                evidence,
+                requestNote,
+              };
+      } else {
+        // Regular booking refund
+        endpoint =
+          refundType === "pre_trip_cancellation"
+            ? `${API_URL}/api/refunds/pre-trip`
+            : `${API_URL}/api/refunds/post-trip`;
+
+        const actualBookingId = booking?._id || booking?.id || bookingId;
+        console.log("Actual booking ID to send:", actualBookingId);
+
+        if (!actualBookingId) {
+          console.error("❌ No booking ID found!");
+          toast.error("Không tìm thấy booking ID");
+          return;
+        }
+
+        payload =
+          refundType === "pre_trip_cancellation"
+            ? { bookingId: actualBookingId, requestNote }
+            : {
+                bookingId: actualBookingId,
+                issueCategory,
+                description,
+                severity,
+                evidence,
+                requestNote,
+              };
       }
-
-      const payload =
-        refundType === "pre_trip_cancellation"
-          ? { bookingId: actualBookingId, requestNote }
-          : {
-              bookingId: actualBookingId,
-              issueCategory,
-              description,
-              severity,
-              evidence,
-              requestNote,
-            };
 
       console.log("Endpoint:", endpoint);
       console.log("Payload:", payload);
@@ -276,17 +381,22 @@ const RefundRequest = () => {
     );
   }
 
-  if (!booking) {
+  if (!booking && !tourRequest) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-800">
-            Booking not found
+            {isCustomTour ? "Tour request not found" : "Booking not found"}
           </h2>
         </div>
       </div>
     );
   }
+
+  const currentData = isCustomTour ? tourRequest : booking;
+  const displayId = isCustomTour
+    ? tourRequest?.requestId || tourRequest?._id
+    : booking?.payment?.orderId || booking?.orderRef || booking?._id;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#02A0AA]/5 via-white to-[#02A0AA]/10 py-6">
@@ -320,11 +430,9 @@ const RefundRequest = () => {
                   Request Refund
                 </h1>
                 <p className="text-sm text-gray-600 mt-1">
-                  Booking:{" "}
+                  {isCustomTour ? "Custom Tour:" : "Booking:"}{" "}
                   <span className="font-semibold text-gray-800">
-                    {booking.payment?.orderId ||
-                      booking.orderRef ||
-                      booking._id}
+                    {displayId}
                   </span>
                 </p>
               </div>
@@ -363,36 +471,60 @@ const RefundRequest = () => {
                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
               />
             </svg>
-            Booking Info
+            {isCustomTour ? "Tour Info" : "Booking Info"}
           </h3>
           <div className="space-y-2">
-            {booking.items?.map((item, index) => (
-              <div
-                key={index}
-                className="p-3 bg-[#02A0AA]/5 rounded-lg text-sm"
-              >
-                <p className="font-semibold text-gray-800 mb-1">{item.name}</p>
+            {isCustomTour ? (
+              <div className="p-3 bg-[#02A0AA]/5 rounded-lg text-sm">
+                <p className="font-semibold text-gray-800 mb-1">
+                  {tourRequest.tourName}
+                </p>
                 <div className="flex items-center gap-4 text-xs text-gray-600">
                   <span>
                     📅{" "}
-                    {new Date(item.date).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                    {new Date(tourRequest.departureDate).toLocaleDateString(
+                      "en-US",
+                      {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      }
+                    )}
                   </span>
-                  <span>
-                    👥 {item.adults}A · {item.children}C
-                  </span>
+                  <span>👥 {tourRequest.numberOfGuests} guests</span>
                 </div>
               </div>
-            ))}
+            ) : (
+              booking.items?.map((item, index) => (
+                <div
+                  key={index}
+                  className="p-3 bg-[#02A0AA]/5 rounded-lg text-sm"
+                >
+                  <p className="font-semibold text-gray-800 mb-1">
+                    {item.name}
+                  </p>
+                  <div className="flex items-center gap-4 text-xs text-gray-600">
+                    <span>
+                      📅{" "}
+                      {new Date(item.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                    <span>
+                      👥 {item.adults}A · {item.children}C
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
             <div className="pt-2 border-t border-gray-200 flex justify-between items-center">
               <span className="text-sm font-semibold text-gray-700">
                 Total Paid:
               </span>
               <span className="text-lg font-bold text-[#02A0AA]">
-                {booking.totalAmount?.toLocaleString()} VND
+                {getTotalAmount()?.toLocaleString()} VND
               </span>
             </div>
           </div>
@@ -713,9 +845,9 @@ const RefundRequest = () => {
         <ConfirmModal
           isOpen={showConfirmModal}
           title="Xác nhận gửi yêu cầu hoàn tiền"
-          message={`Bạn có chắc chắn muốn gửi yêu cầu hoàn tiền cho booking ${
-            booking.payment?.orderId || booking.orderRef || booking._id
-          }? Sau khi gửi, yêu cầu sẽ được chuyển đến bộ phận xem xét.`}
+          message={`Bạn có chắc chắn muốn gửi yêu cầu hoàn tiền cho ${
+            isCustomTour ? "tour request" : "booking"
+          } ${displayId}? Sau khi gửi, yêu cầu sẽ được chuyển đến bộ phận xem xét.`}
           confirmText="Gửi Yêu Cầu"
           cancelText="Hủy"
           confirmStyle="primary"

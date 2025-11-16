@@ -21,7 +21,6 @@ import ProfileReviews from "./components/ProfileReviews";
 import ProfilePromotions from "./components/ProfilePromotions";
 import ProfileSecurity from "./pages/ProfileSecurity";
 import Confirm2FA from "./pages/Confirm2FA";
-import ConfirmEmailVerification from "./pages/ConfirmEmailVerification";
 import RolePopup from "./components/RolePopUp";
 import OAuthCallback from "./pages/OAuthCallback";
 import HelpCenter from "./components/HelpCenter";
@@ -61,7 +60,7 @@ import GuideRoutes from "./guide/routes/guideRoutes";
 // Route guard
 function ProtectedRoute({ children }) {
   const { isAuth, booting } = useAuth();
-  if (booting) return 
+  if (booting) return;
   if (!isAuth) return <Navigate to="/login" replace />;
   return children;
 }
@@ -175,12 +174,20 @@ export default function App() {
             <Route path="change-password" element={<ChangePassword />} />
             <Route path="security" element={<ProfileSecurity />} />
           </Route>
-          {/* Refund Request Route */}
+          {/* Refund Request Routes */}
           <Route
             path="/refund-request/:bookingId"
             element={
               <ProtectedRoute>
                 <RefundRequest />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/refund-request/custom-tour/:tourRequestId"
+            element={
+              <ProtectedRoute>
+                <RefundRequest isCustomTour={true} />
               </ProtectedRoute>
             }
           />
@@ -303,10 +310,6 @@ export default function App() {
 
         {/* ----- Security confirmation routes (public with token) ----- */}
         <Route path="/confirm-2fa" element={<Confirm2FA />} />
-        <Route
-          path="/confirm-email-verification"
-          element={<ConfirmEmailVerification />}
-        />
 
         {/* ----- Payment callback ----- */}
         <Route
