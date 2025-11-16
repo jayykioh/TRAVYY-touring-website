@@ -13,9 +13,13 @@ async function syncZones(isAutomatic = false) {
   try {
     console.log('🔄 Syncing zones to embedding service...\n');
     
-    // Connect MongoDB
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('✅ Connected to MongoDB');
+    // Connect MongoDB only if not already connected
+    if (mongoose.connection.readyState !== 1) {
+      await mongoose.connect(process.env.MONGO_URI);
+      console.log('✅ Connected to MongoDB');
+    } else {
+      console.log('ℹ️ MongoDB already connected (reusing existing connection)');
+    }
     
     // Get all active zones
     const zones = await Zone.find({ isActive: true }).lean();

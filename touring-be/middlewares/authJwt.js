@@ -63,7 +63,6 @@ const verifyToken = async (req, res, next) => {
       // Get user from DB to get role
       const user = await User.findById(refreshPayload.sub).select("role");
       if (!user) {
-        a;
         console.log("   ❌ User not found for refresh token");
         return res.status(401).json({
           message: "User not found",

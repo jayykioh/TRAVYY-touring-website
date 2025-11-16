@@ -32,15 +32,20 @@ const refundRoutes = require("./routes/refund.routes");
 const { setupRefundScheduler } = require("./utils/refundScheduler");
 const app = express();
 const server = http.createServer(app);
+
+// ✅ CORS Origins Configuration - Support Docker deployment
+const allowedOrigins = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+  : ["http://localhost:5173", "http://localhost:5174"];
+
 const io = new Server(server, {
-  cors: {
-    // ✅ SỬA: Đồng bộ origin với Express
-    origin: ["http://localhost:5173", "http://localhost:5174"],
-    credentials: true,
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-  },
-  transports: ['websocket', 'polling']
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+  },
+  transports: ['websocket', 'polling']
 });
 const isProd = process.env.NODE_ENV === "production";
 const MONGO_URI =
@@ -85,17 +90,14 @@ app.use(express.json({ limit: "1mb" }));
 app.use(morgan(isProd ? "combined" : "dev"));
 app.use(cookieParser());
 app.use(
-  cors({
-    // ✅ SỬA: Đồng bộ origin với Socket.IO
-    origin: ["http://localhost:5173", "http://localhost:5174"],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    exposedHeaders: ["Content-Type", "Cross-Origin-Resource-Policy"],
-  })
-);
-
-// Add Cross-Origin-Resource-Policy header for all responses
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["Content-Type", "Cross-Origin-Resource-Policy"],
+  })
+);// Add Cross-Origin-Resource-Policy header for all responses
 app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   next();

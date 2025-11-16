@@ -1,0 +1,179 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # MongoDB Database
+  # ==========================================
+  mongodb:
+    image: mongo:6
+    container_name: travyy-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-admin123}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - travyy-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # AI Embedding Service (Python + FastAPI)
+  # ==========================================
+  ai-service:
+    build:
+      context: ./ai
+      dockerfile: Dockerfile
+    container_name: travyy-ai-service
+    restart: unless-stopped
+    environment:
+      PORT: 8088
+      EMBEDDING_MODEL: AITeamVN/Vietnamese_Embedding_v2
+      INDEX_TYPE: FLAT
+      INDEX_DIR: /app/index
+    ports:
+      - "8088:8088"
+    volumes:
+      - ai_index:/app/index
+    networks:
+      - travyy-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8088/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ==========================================
+  # Backend API (Node.js + Express)
+  # ==========================================
+  backend:
+    build:
+      context: ./touring-be
+      dockerfile: Dockerfile
+    container_name: travyy-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 4000
+      
+      # Database
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongodb:27017/travelApp?authSource=admin
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-admin123}@mongodb:27017/travelApp?authSource=admin
+      
+      # JWT Secrets
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      ACCESS_TTL: ${ACCESS_TTL:-30m}
+      REFRESH_TTL: ${REFRESH_TTL:-30d}
+      
+      # OAuth (Google)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
+      
+      # OAuth (Facebook)
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
+      FACEBOOK_CALLBACK_URL: ${FACEBOOK_CALLBACK_URL}
+      
+      # PayPal
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET}
+      PAYPAL_MODE: ${PAYPAL_MODE:-sandbox}
+      
+      # Email (SMTP)
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      MAIL_FROM: ${MAIL_FROM}
+      
+      # AI Services
+      EMBED_SERVICE_URL: http://ai-service:8088
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      
+      # Map APIs
+      GOONG_API_KEY: ${GOONG_API_KEY}
+      MAP4D_API_KEY: ${MAP4D_API_KEY}
+      
+      # PostHog Analytics
+      POSTHOG_API_KEY: ${POSTHOG_API_KEY}
+      POSTHOG_HOST: ${POSTHOG_HOST:-https://app.posthog.com}
+      
+      # MoMo Payment
+      MOMO_PARTNER_CODE: ${MOMO_PARTNER_CODE}
+      MOMO_ACCESS_KEY: ${MOMO_ACCESS_KEY}
+      MOMO_SECRET_KEY: ${MOMO_SECRET_KEY}
+      
+      # Exchange Rate
+      FX_VND_USD: ${FX_VND_USD:-0.000039}
+      
+    ports:
+      - "4000:4000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    networks:
+      - travyy-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/api/auth/healthz', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); });"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # ==========================================
+  # Frontend (React + Vite + Nginx)
+  # ==========================================
+  frontend:
+    build:
+      context: ./touring-fe
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
+        VITE_POSTHOG_KEY: ${VITE_POSTHOG_KEY}
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY}
+        VITE_GOONG_API_KEY: ${VITE_GOONG_API_KEY}
+        VITE_MAP4D_API_KEY: ${VITE_MAP4D_API_KEY}
+    container_name: travyy-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    networks:
+      - travyy-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+# ==========================================
+# Networks
+# ==========================================
+networks:
+  travyy-network:
+    driver: bridge
+
+# ==========================================
+# Volumes
+# ==========================================
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  ai_index:
+    driver: local
