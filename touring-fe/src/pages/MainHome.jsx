@@ -2,7 +2,7 @@ import React from "react";
 import { useAuth } from "../auth/context";
 import TourHeroSection from "../components/TourHeroSection";
 import TourPromotions from "../components/TourRecommend";
-import AboutSection from "../components/AboutSection";
+import WhyChooseUs from "../components/WhyChooseUs"
 import TravelBlog from "../components/TravelBlog";
 import QuickBooking from "../components/QuickBooking";
 import Explore from "../components/ExploreNow";
@@ -87,7 +87,7 @@ export default function MainHome() {
 
       {/* About Section - Company info & features */}
       <div className="">
-        <AboutSection />
+          <WhyChooseUs />
       </div>
     </div>
   );

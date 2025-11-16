@@ -6,21 +6,17 @@ import {
   Database,
   FileText,
   Settings,
-  ChevronDown,
   ChevronRight,
-  Users,
-  LogOut,
+  ChevronDown,
   Tag,
   RefreshCw,
+  Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAdminAuth } from "../../../context/AdminAuthContext";
 
 export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
   const navigate = useNavigate();
-  const { admin: user, logout } = useAdminAuth();
   const [expandedMenu, setExpandedMenu] = useState(null);
-  const [profileOpen, setProfileOpen] = useState(false);
 
   // Auto-expand menu if a submenu item is active
   React.useEffect(() => {
@@ -96,30 +92,8 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
     },
   ];
 
-  const adminData = user || {
-    name: "Melissa Peters",
-    email: "admin@travyy.com",
-    adminRole: "Super Admin",
-    avatar:
-      "https://ui-avatars.com/api/?name=Melissa+Peters&background=3B82F6&color=fff",
-  };
-
   const toggleSubmenu = (menuId) => {
     setExpandedMenu(expandedMenu === menuId ? null : menuId);
-  };
-
-  const handleNavigate = (path) => {
-    console.log("🔄 Navigating to:", path);
-    navigate(path);
-    if (window.innerWidth < 1024) {
-      setIsOpen(false);
-    }
-  };
-
-  const handleLogout = () => {
-    setProfileOpen(false);
-    logout();
-    navigate("/");
   };
 
   return (
@@ -169,7 +143,7 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
                     onClick={() => {
                       // Luôn navigate đến path khi click vào menu item
                       if (item.path) {
-                        handleNavigate(item.path);
+                        handleNavigation(item.path);
                       }
                       // Nếu có submenu, toggle expand/collapse
                       if (hasSubItems) {
@@ -233,7 +207,7 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
                         return (
                           <button
                             key={subItem.id}
-                            onClick={() => handleNavigate(subItem.path)}
+                            onClick={() => handleNavigation(subItem.path)}
                             className={`w-full text-left px-4 py-2.5 text-sm rounded-lg transition-all duration-150 hover:translate-x-1 ${
                               isSubItemActive
                                 ? "bg-[#007980]/10 text-[#007980] font-semibold"
@@ -260,83 +234,6 @@ export default function AdminSidebar({ isOpen, setIsOpen, activePage }) {
             })}
           </div>
         </nav>
-
-        {/* User Profile */}
-        <div className="p-3 border-t border-gray-200/80 bg-white/50 backdrop-blur-sm">
-          <div className="relative">
-            <button
-              onClick={() => setProfileOpen(!profileOpen)}
-              className="w-full flex items-center gap-3 p-3 hover:bg-gradient-to-r hover:from-[#007980]/10 hover:to-[#005f65]/10 rounded-xl transition-all duration-200 group"
-            >
-              <div className="relative">
-                <img
-                  src={adminData.avatar}
-                  alt={adminData.name}
-                  className="w-11 h-11 rounded-full ring-2 ring-gray-200 group-hover:ring-[#007980] transition-all duration-200"
-                />
-                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
-              </div>
-              {isOpen && (
-                <>
-                  <div className="flex-1 text-left min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-[#007980] transition-colors">
-                      {adminData.name}
-                    </p>
-                    <p className="text-xs text-gray-500 truncate flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#007980]"></span>
-                      {adminData.adminRole || adminData.role}
-                    </p>
-                  </div>
-                  <ChevronDown
-                    className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
-                      profileOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </>
-              )}
-            </button>
-
-            {/* Profile Dropdown */}
-            {profileOpen && isOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setProfileOpen(false)}
-                ></div>
-                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden animate-in slide-in-from-bottom-2 duration-200">
-                  <button
-                    onClick={() => {
-                      setProfileOpen(false);
-                      handleNavigate("/admin/settings");
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#007980]/10 hover:to-[#005f65]/10 hover:text-[#007980] transition-all duration-150"
-                  >
-                    <Users className="w-4 h-4" />
-                    <span className="font-medium">Profile</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setProfileOpen(false);
-                      handleNavigate("/admin/settings");
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#007980]/10 hover:to-[#005f65]/10 hover:text-[#007980] transition-all duration-150"
-                  >
-                    <Settings className="w-4 h-4" />
-                    <span className="font-medium">Settings</span>
-                  </button>
-                  <div className="border-t border-gray-100"></div>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-all duration-150 font-medium"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
       </aside>
     </>
   );
