@@ -11,7 +11,9 @@ const isProd = process.env.NODE_ENV === "production";
  */
 exports.adminLogin = async (req, res) => {
   try {
-    const { username: email, password } = req.body;
+    // Accept both 'email' and 'username' fields
+    const email = req.body.email || req.body.username;
+    const { password } = req.body;
 
     // Tìm theo email và role
     const admin = await User.findOne({ email, role: "Admin" });

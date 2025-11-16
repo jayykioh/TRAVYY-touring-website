@@ -6,8 +6,18 @@ const refundSchema = new mongoose.Schema(
     bookingId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Booking",
-      required: true,
       index: true,
+    },
+    tourRequestId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TourRequest",
+      index: true,
+    },
+    tourType: {
+      type: String,
+      enum: ["regular_booking", "custom_tour"],
+      required: true,
+      default: "regular_booking",
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -189,11 +199,45 @@ const refundSchema = new mongoose.Schema(
   }
 );
 
+// ===== VALIDATION =====
+refundSchema.pre("validate", function (next) {
+  // Ensure exactly one of bookingId or tourRequestId is provided
+  const hasBookingId = !!this.bookingId;
+  const hasTourRequestId = !!this.tourRequestId;
+
+  if (!hasBookingId && !hasTourRequestId) {
+    return next(
+      new Error("Either bookingId or tourRequestId must be provided")
+    );
+  }
+
+  if (hasBookingId && hasTourRequestId) {
+    return next(new Error("Cannot have both bookingId and tourRequestId"));
+  }
+
+  // Validate tourType matches the provided reference
+  if (hasBookingId && this.tourType !== "regular_booking") {
+    return next(
+      new Error('tourType must be "regular_booking" when bookingId is provided')
+    );
+  }
+
+  if (hasTourRequestId && this.tourType !== "custom_tour") {
+    return next(
+      new Error('tourType must be "custom_tour" when tourRequestId is provided')
+    );
+  }
+
+  next();
+});
+
 // ===== INDEXES =====
 refundSchema.index({ userId: 1, createdAt: -1 });
 refundSchema.index({ status: 1, createdAt: -1 });
 refundSchema.index({ refundType: 1 });
 refundSchema.index({ bookingId: 1 });
+refundSchema.index({ tourRequestId: 1 });
+refundSchema.index({ tourType: 1 });
 
 // ===== METHODS =====
 
@@ -305,6 +349,18 @@ refundSchema.statics.calculatePostTripRefund = function (
 // Find by booking ID
 refundSchema.statics.findByBookingId = function (bookingId) {
   return this.find({ bookingId }).sort({ createdAt: -1 });
+};
+
+// Find by tour request ID
+refundSchema.statics.findByTourRequestId = function (tourRequestId) {
+  return this.find({ tourRequestId }).sort({ createdAt: -1 });
+};
+
+// Find by reference (works for both bookingId and tourRequestId)
+refundSchema.statics.findByReferenceId = function (id, tourType) {
+  const query =
+    tourType === "custom_tour" ? { tourRequestId: id } : { bookingId: id };
+  return this.find(query).sort({ createdAt: -1 });
 };
 
 const Refund = mongoose.model("Refund", refundSchema);

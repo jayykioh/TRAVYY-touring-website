@@ -64,31 +64,25 @@ exports.register = async (req, res) => {
 
     // Uniqueness checks
     if (await User.exists({ email })) {
-      return res
-        .status(409)
-        .json({
-          error: "EMAIL_TAKEN",
-          field: "email",
-          message: "Email đã được sử dụng.",
-        });
+      return res.status(409).json({
+        error: "EMAIL_TAKEN",
+        field: "email",
+        message: "Email đã được sử dụng.",
+      });
     }
     if (username && (await User.exists({ username }))) {
-      return res
-        .status(409)
-        .json({
-          error: "USERNAME_TAKEN",
-          field: "username",
-          message: "Username đã được sử dụng.",
-        });
+      return res.status(409).json({
+        error: "USERNAME_TAKEN",
+        field: "username",
+        message: "Username đã được sử dụng.",
+      });
     }
     if (phone && (await User.exists({ phone }))) {
-      return res
-        .status(409)
-        .json({
-          error: "PHONE_TAKEN",
-          field: "phone",
-          message: "Số điện thoại đã được sử dụng.",
-        });
+      return res.status(409).json({
+        error: "PHONE_TAKEN",
+        field: "phone",
+        message: "Số điện thoại đã được sử dụng.",
+      });
     }
 
     const passwordHash = await bcrypt.hash(payload.password, 10);
@@ -144,29 +138,23 @@ exports.register = async (req, res) => {
     }
     if (e?.code === 11000) {
       if (e?.keyPattern?.email)
-        return res
-          .status(409)
-          .json({
-            error: "EMAIL_TAKEN",
-            field: "email",
-            message: "Email đã được sử dụng.",
-          });
+        return res.status(409).json({
+          error: "EMAIL_TAKEN",
+          field: "email",
+          message: "Email đã được sử dụng.",
+        });
       if (e?.keyPattern?.username)
-        return res
-          .status(409)
-          .json({
-            error: "USERNAME_TAKEN",
-            field: "username",
-            message: "Username đã được sử dụng.",
-          });
+        return res.status(409).json({
+          error: "USERNAME_TAKEN",
+          field: "username",
+          message: "Username đã được sử dụng.",
+        });
       if (e?.keyPattern?.phone)
-        return res
-          .status(409)
-          .json({
-            error: "PHONE_TAKEN",
-            field: "phone",
-            message: "Số điện thoại đã được sử dụng.",
-          });
+        return res.status(409).json({
+          error: "PHONE_TAKEN",
+          field: "phone",
+          message: "Số điện thoại đã được sử dụng.",
+        });
     }
     console.error(e);
     return res
@@ -177,16 +165,16 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { username, password } = req.body;
-    
+    const { username, password, trustedDeviceToken } = req.body;
+
     // ✅ Allow login with email OR username
     const user = await User.findOne({
       $or: [
         { email: username?.toLowerCase().trim() },
-        { username: username?.toLowerCase().trim() }
-      ]
+        { username: username?.toLowerCase().trim() },
+      ],
     });
-    
+
     if (!user)
       return res.status(400).json({ message: "Invalid email or password" });
 
@@ -202,12 +190,106 @@ exports.login = async (req, res) => {
       });
     }
 
-    // ✅ tạo refresh cookie + access token như các flow khác
+    // ============================================
+    // ✅ 2FA CHECK - If user has 2FA enabled
+    // ============================================
+    if (user.twoFactorEnabled) {
+      console.log(`🔐 2FA enabled for user: ${user.email}`);
+
+      // ✅ Check if user has a valid trusted device token
+      let isTrustedDevice = false;
+      if (trustedDeviceToken && user.trustedDevices) {
+        const device = user.trustedDevices.find(
+          (d) =>
+            d.deviceToken === trustedDeviceToken && new Date() < d.expiresAt
+        );
+
+        if (device) {
+          // Update last used time
+          device.lastUsed = new Date();
+          await user.save();
+          isTrustedDevice = true;
+          console.log(`✅ Trusted device verified for user: ${user.email}`);
+        }
+      }
+
+      // ✅ If not trusted device, require 2FA verification
+      if (!isTrustedDevice) {
+        // Generate 6-digit code
+        const twoFactorCode = Math.floor(
+          100000 + Math.random() * 900000
+        ).toString();
+        user.twoFactorCode = twoFactorCode;
+        user.twoFactorCodeExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+        await user.save();
+
+        // Send email with 2FA code
+        try {
+          await sendMail(
+            user.email,
+            "Mã xác thực 2FA - TRAVYY",
+            `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
+                  <h1 style="color: white; margin: 0; font-size: 28px;">🔐 Mã 2FA</h1>
+                </div>
+                
+                <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">
+                    Xin chào <strong>${user.name || user.username}</strong>,
+                  </p>
+                  
+                  <p style="font-size: 16px; color: #374151; margin-bottom: 30px;">
+                    Mã xác thực 2FA của bạn là:
+                  </p>
+                  
+                  <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 30px;">
+                    <h2 style="color: #1f2937; font-size: 36px; letter-spacing: 8px; margin: 0; font-family: monospace;">
+                      ${twoFactorCode}
+                    </h2>
+                  </div>
+                  
+                  <p style="font-size: 14px; color: #6b7280; margin-bottom: 20px;">
+                    ⏰ Mã này sẽ hết hạn sau <strong>10 phút</strong>
+                  </p>
+                  
+                  <p style="font-size: 14px; color: #6b7280; margin-bottom: 0;">
+                    Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.
+                  </p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                  <p style="font-size: 12px; color: #9ca3af; margin: 0;">
+                    © ${new Date().getFullYear()} TRAVYY. All rights reserved.
+                  </p>
+                </div>
+              </div>
+            `
+          );
+
+          console.log(`📧 2FA code sent to: ${user.email}`);
+        } catch (emailError) {
+          console.error("❌ Failed to send 2FA email:", emailError);
+          return res.status(500).json({
+            message: "Không thể gửi mã 2FA. Vui lòng thử lại sau.",
+          });
+        }
+
+        // Return response indicating 2FA is required
+        return res.json({
+          requires2FA: true,
+          userId: user._id.toString(),
+          message: "Mã xác thực đã được gửi đến email của bạn",
+        });
+      }
+
+      // ✅ Trusted device - skip 2FA
+      console.log(`✅ Trusted device - skipping 2FA for: ${user.email}`);
+    }
+
+    // ✅ No 2FA or trusted device - proceed with login
     const jti = newId();
     const refresh = signRefresh({ jti, userId: user.id });
-    // Set refresh cookie for entire site so it is available to refresh endpoints
-    // In dev: use sameSite "lax" for localhost (Chrome blocks "none" without HTTPS)
-    // In prod: use sameSite "none" + secure for cross-origin support
     res.cookie("refresh_token", refresh, {
       httpOnly: true,
       secure: isProd,
@@ -221,7 +303,7 @@ exports.login = async (req, res) => {
       role: user.role || "Traveler",
     });
 
-    return res.json({
+    const response = {
       accessToken,
       user: {
         _id: user.id,
@@ -232,7 +314,14 @@ exports.login = async (req, res) => {
         phone: user.phone || "",
         location: user.location,
       },
-    });
+    };
+
+    // ✅ Add flag if trusted device was used
+    if (user.twoFactorEnabled && trustedDeviceToken) {
+      response.trustedDevice = true;
+    }
+
+    return res.json(response);
   } catch (err) {
     console.error("LOGIN_ERROR:", err);
     res
@@ -461,11 +550,9 @@ exports.resetPassword = async (req, res) => {
     });
 
     if (!user) {
-      return res
-        .status(400)
-        .json({
-          message: "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn",
-        });
+      return res.status(400).json({
+        message: "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn",
+      });
     }
 
     // Cập nhật mật khẩu mới
