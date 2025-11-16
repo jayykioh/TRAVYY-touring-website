@@ -6,11 +6,13 @@ import {
   TrendingUp, Users
 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useAuth } from '@/auth/context';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
 const NotificationBell = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     notifications,
     unreadCount,
@@ -21,6 +23,9 @@ const NotificationBell = () => {
   } = useNotifications();
 
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Check if user is a tour guide (they have a dedicated notifications page)
+  const isGuide = user?.role === 'TourGuide';
 
   // Memoize icon getter to avoid recreating on every render
   const getNotificationIcon = useCallback((type) => {
@@ -84,6 +89,14 @@ const NotificationBell = () => {
 
   // Memoize notification click handler
   const handleNotificationClick = useCallback(async (notification) => {
+    console.log('[NotificationBell] Clicked notification:', {
+      id: notification._id,
+      type: notification.type,
+      relatedId: notification.relatedId,
+      relatedModel: notification.relatedModel,
+      data: notification.data
+    });
+
     if (notification.status !== 'read' && !notification.read) {
       await markAsRead([notification._id]);
     }
@@ -95,11 +108,17 @@ const NotificationBell = () => {
     
     setIsOpen(false);
     
-    // Message notifications -> navigate to chat/tour request
+    // Message notifications -> navigate to tour request (chat is embedded in request page)
     if (type === 'new_message' && relatedId) {
-      if (relatedModel === 'TourCustomRequest' || notification.tourId) {
-        navigate(`/tour-request/${relatedId || notification.tourId}`);
+      if (relatedModel === 'TourCustomRequest') {
+        console.log('[NotificationBell] Navigating to tour request:', relatedId);
+        navigate(`/tour-request/${relatedId}`);
+      } else if (relatedModel === 'Itinerary') {
+        console.log('[NotificationBell] Navigating to itinerary:', relatedId);
+        navigate(`/itinerary/${relatedId}`);
       } else {
+        // Generic chat - may need to update based on your chat routing
+        console.log('[NotificationBell] Navigating to chat:', relatedId);
         navigate(`/chat/${relatedId}`);
       }
       return;
@@ -109,43 +128,67 @@ const NotificationBell = () => {
     if (
       ['new_request', 'new_tour_request', 'price_offer', 'guide_price_offer', 
        'user_price_offer', 'user_agreed', 'guide_agreed', 'agreement_complete',
-       'request_accepted', 'request_cancelled'].includes(type) && 
-      (relatedId || notification.tourId)
+       'request_accepted', 'request_cancelled'].includes(type) && relatedId
     ) {
-      navigate(`/tour-request/${relatedId || notification.tourId}`);
+      if (relatedModel === 'TourCustomRequest') {
+        navigate(`/tour-request/${relatedId}`);
+      } else if (relatedModel === 'Itinerary') {
+        navigate(`/itinerary/${relatedId}`);
+      } else {
+        // Fallback
+        navigate(`/tour-request/${relatedId}`);
+      }
       return;
     }
     
-    // Payment/Booking related -> navigate to booking history or booking detail
+    // Payment/Booking related -> navigate to booking history
     if (
       ['payment_success', 'booking_success', 'deposit_paid', 'tour_completed', 
        'cancellation', 'refund_processed', 'payment_failed'].includes(type)
     ) {
-      if (notification.data?.bookingId || relatedId) {
-        navigate(`/profile/booking-history`);
-      } else {
-        navigate('/profile/booking-history');
-      }
+      // Always go to booking history for payment-related notifications
+      console.log('[NotificationBell] Navigating to booking history for payment notification');
+      navigate('/profile/booking-history');
       return;
     }
     
     // Guide acceptance/rejection -> navigate to tour requests
     if (['tour_guide_accepted', 'tour_guide_rejected'].includes(type)) {
+      console.log('[NotificationBell] Navigating to tour requests');
       navigate('/tour-requests');
       return;
     }
     
     // Security/Password -> no navigation, just mark as read
     if (['password_reset', 'password_changed', 'security_alert'].includes(type)) {
+      console.log('[NotificationBell] Security notification, no navigation');
       return;
     }
     
-    // Default: try to navigate based on data
-    if (notification.data?.bookingId) {
+    // Register notification -> go to home/tours
+    if (type === 'register') {
+      console.log('[NotificationBell] Navigating to tours page');
+      navigate('/tours');
+      return;
+    }
+    
+    // Default: if has relatedId, try to navigate based on relatedModel
+    if (relatedId && relatedModel) {
+      console.log('[NotificationBell] Default navigation with relatedModel:', relatedModel);
+      if (relatedModel === 'TourCustomRequest') {
+        navigate(`/tour-request/${relatedId}`);
+      } else if (relatedModel === 'Booking') {
+        navigate('/profile/booking-history');
+      } else if (relatedModel === 'Tour') {
+        navigate(`/tour/${relatedId}`);
+      } else if (relatedModel === 'Itinerary') {
+        navigate(`/itinerary/${relatedId}`);
+      }
+    } else if (notification.data?.bookingId) {
+      console.log('[NotificationBell] Navigating to booking history via data.bookingId');
       navigate('/profile/booking-history');
-    } else if (relatedId) {
-      // Generic fallback
-      navigate(`/notifications`);
+    } else {
+      console.log('[NotificationBell] No navigation handler for this notification');
     }
   }, [navigate, markAsRead]);
 
@@ -313,7 +356,7 @@ const NotificationBell = () => {
             </div>
 
             {/* Footer */}
-            {hasNotifications && (
+            {hasNotifications && isGuide && (
               <div className="p-3 border-t border-gray-200">
                 <button
                   onClick={() => {

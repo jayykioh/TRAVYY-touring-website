@@ -1,0 +1,23 @@
+# ==========================================
+# Docker Compose Override for Development
+# ==========================================
+# Use this file to override docker-compose.yml settings for local development
+# Copy this to docker-compose.override.yml (which is gitignored)
+
+version: '3.8'
+
+services:
+  backend:
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./touring-be:/app
+      - /app/node_modules
+    command: npm run dev
+
+  ai-service:
+    volumes:
+      - ./ai:/app
+      - /app/.venv
+    environment:
+      DEBUG: "true"

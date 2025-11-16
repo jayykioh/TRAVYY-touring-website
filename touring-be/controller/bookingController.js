@@ -129,9 +129,12 @@ exports.getUserBookings = async (req, res) => {
     // 4️⃣ Merge kết quả thủ công
     const enrichedBookings = bookings.map((booking) => {
       const items = booking.items?.map((item) => {
-        const t = tours.find(
-          (x) => x._id.toString() === item.tourId.toString()
-        );
+        // ✅ Safe check: item.tourId might be undefined
+        const t = item.tourId
+          ? tours.find(
+              (x) => x._id.toString() === item.tourId.toString()
+            )
+          : null;
         return {
           ...item,
           name: item.name || t?.title || "",
