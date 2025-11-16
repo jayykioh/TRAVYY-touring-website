@@ -249,6 +249,70 @@ export default function CustomerAccountsPage() {
     }));
   };
 
+  // ✅ Export customers to CSV
+  const handleExportData = () => {
+    try {
+      // Prepare CSV headers
+      const headers = [
+        "ID",
+        "Tên",
+        "Email",
+        "Số điện thoại",
+        "Vai trò",
+        "Trạng thái",
+        "Tổng đã chi",
+        "Số đơn",
+        "Lý do khóa",
+        "Ngày tham gia",
+      ];
+
+      // Prepare CSV rows
+      const rows = filteredCustomers.map((customer) => [
+        customer.id,
+        customer.name,
+        customer.email,
+        customer.phone || "N/A",
+        STATUS_LABELS[customer.role] || customer.role,
+        STATUS_LABELS[customer.accountStatus] || customer.accountStatus,
+        formatCurrency(customer.totalSpent),
+        customer.totalOrders,
+        customer.lockInfo?.reason || "",
+        formatDate(customer.createdAt),
+      ]);
+
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(","),
+        ...rows.map((row) =>
+          row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+        ),
+      ].join("\n");
+
+      // Create blob and download
+      const blob = new Blob(["\uFEFF" + csvContent], {
+        type: "text/csv;charset=utf-8;",
+      });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute(
+        "download",
+        `customer-accounts_${new Date().toISOString().split("T")[0]}.csv`
+      );
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success(
+        `Đã xuất ${filteredCustomers.length} khách hàng thành công`
+      );
+    } catch (error) {
+      console.error("❌ Export error:", error);
+      toast.error("Có lỗi xảy ra khi xuất dữ liệu");
+    }
+  };
+
   const getActionConfig = () => {
     const configs = {
       lock: {
@@ -282,11 +346,12 @@ export default function CustomerAccountsPage() {
           </p>
         </div>
         <button
-          onClick={() => toast.info("Chức năng xuất báo cáo đang phát triển")}
-          className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+          onClick={handleExportData}
+          disabled={filteredCustomers.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Download className="w-4 h-4" />
-          Xuất báo cáo
+          Xuất dữ liệu ({filteredCustomers.length})
         </button>
       </div>
 
