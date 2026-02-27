@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: travyy-touring-be
+    env: node
+    plan: free
+    rootDir: touring-be
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8080
+      - key: MONGO_URI
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://travyytouring.page,https://www.travyytouring.page
