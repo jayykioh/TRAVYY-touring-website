@@ -20,6 +20,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { GOOGLE_MAPS_API_KEY } from "@/config/clientEnv";
 
 const getAddress = (it) =>
   it?.address || it?.formatted_address || it?.vicinity || "—";
@@ -299,7 +300,7 @@ function SortableItem({ item, index, onRemove }) {
   const getPhotoUrl = (photoRef) => {
     if (!photoRef) return null;
     if (photoRef.startsWith('http')) return photoRef;
-    const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    const GOOGLE_API_KEY = GOOGLE_MAPS_API_KEY;
     return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${photoRef}&key=${GOOGLE_API_KEY}`;
   };
 

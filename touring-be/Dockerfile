@@ -29,9 +29,9 @@ USER nodejs
 # Expose the port
 EXPOSE 4000
 
-# Health check
+# Health check — use public simple health endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:4000/api/auth/healthz', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); });"
+  CMD node -e "require('http').get('http://localhost:4000/healthz', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); });"
 
 # Use dumb-init to handle signals
 ENTRYPOINT ["dumb-init", "--"]

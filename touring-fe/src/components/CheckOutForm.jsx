@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Lock, CreditCard, Wallet, MapPin, User, Phone, Mail, Tag, Map, Calendar, Users, Clock } from "lucide-react";
 import { useAuth } from "@/auth/context";
+import { API_URL } from '@/config/api';
+import { IS_PROD } from "@/config/clientEnv";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import useLocationOptions from "../hooks/useLocation";
 import { useLocation } from "react-router-dom";
 import VoucherSelector from "./VoucherSelector";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = API_URL;
 
 export default function CheckoutForm({ 
   mode: modeProp, 
@@ -279,7 +281,8 @@ export default function CheckoutForm({
         // Prefer server-provided error message/body when available
         const serverBody = error?.body || (error && error.detail) || null;
         const userMsg = serverBody?.error || serverBody?.message || error.message || 'Lỗi khi tạo đơn PayPal';
-        if (serverBody && !import.meta.env.PROD) {
+        
+        if (serverBody && !IS_PROD) {
           alert(`Lỗi thanh toán: ${userMsg}\n\nChi tiết (dev): ${JSON.stringify(serverBody)}`);
         } else {
           alert(`Lỗi thanh toán: ${userMsg}`);
@@ -361,7 +364,7 @@ export default function CheckoutForm({
         console.log('MoMo response:', data);
         if (!data?.payUrl) {
           const serverMsg = data?.error || data?.message || 'Tạo phiên thanh toán MoMo thất bại';
-          if (!import.meta.env.PROD) {
+          if (!IS_PROD) {
             alert(`${serverMsg}\n\nChi tiết (dev): ${JSON.stringify(data)}`);
           } else {
             alert(serverMsg);
@@ -375,7 +378,7 @@ export default function CheckoutForm({
         console.error("MoMo error", err, err?.body || err?.stack || null);
         const serverBody = err?.body || (err && err.detail) || null;
         const userMsg = serverBody?.error || serverBody?.message || err.message || 'Lỗi khi tạo MoMo payment';
-        if (serverBody && !import.meta.env.PROD) {
+        if (serverBody && !IS_PROD) {
           alert(`Lỗi MoMo: ${userMsg}\n\nChi tiết (dev): ${JSON.stringify(serverBody)}`);
         } else {
           alert(`Lỗi MoMo: ${userMsg}`);
@@ -683,7 +686,7 @@ export default function CheckoutForm({
             </div>
             
             {/* ⚠️ Test Environment Warning */}
-            {selectedPayment === "momo" && import.meta.env.DEV && totalAmount > 10000000 && (
+            {selectedPayment === "momo" && IS_PROD === false && totalAmount > 10000000 && (
               <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div className="flex gap-2 text-sm text-yellow-800">
                   <span>⚠️</span>

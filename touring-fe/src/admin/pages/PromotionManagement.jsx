@@ -4,7 +4,8 @@ import { useNotifications } from "../context/NotificationContext";
 import toast, { Toaster } from "react-hot-toast";
 import Modal from "../components/Common/Modal";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+import { API_URL as CONFIG_API_URL } from "@/config/api";
+const API_URL = `${CONFIG_API_URL}/api`;
 
 const PromotionManagement = () => {
   const { token } = useAdminAuth();

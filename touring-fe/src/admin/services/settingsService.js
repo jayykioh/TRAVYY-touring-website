@@ -1,5 +1,6 @@
 // services/settingsService.js
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+import { API_URL as CONFIG_API_URL } from "@/config/api";
+const API_URL = CONFIG_API_URL;
 
 // Helper: Get admin token
 const getAdminToken = () => {

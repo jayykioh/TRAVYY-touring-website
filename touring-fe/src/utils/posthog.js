@@ -10,6 +10,7 @@
  */
 
 import posthog from 'posthog-js';
+import { POSTHOG_KEY } from "@/config/clientEnv";
 
 let isInitialized = false;
 
@@ -20,7 +21,7 @@ let isInitialized = false;
 export function initPostHog() {
   if (isInitialized) return;
 
-  const apiKey = import.meta.env.VITE_POSTHOG_KEY;
+  const apiKey = POSTHOG_KEY || process.env.POSTHOG_KEY || process.env.POSTHOG_API_KEY;
   const apiHost = "https://us.posthog.com"; // luôn dùng host chính, không dùng us.i.posthog.com nữa
 
   if (!apiKey) {

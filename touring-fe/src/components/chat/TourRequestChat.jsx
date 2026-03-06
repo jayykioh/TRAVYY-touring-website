@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import axios from 'axios';
 import { useSocket } from '../../context/SocketContext';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { API_URL } from "@/config/api";
 
 export default function TourRequestChat({ requestId, currentUser, tourRequest }) {
   const [messages, setMessages] = useState([]);

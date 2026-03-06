@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Clock, MapPin, TrendingUp, X } from "lucide-react";
+import { API_URL } from "@/config/api";
 
 const SearchBar = ({
   onSearch,
@@ -131,7 +132,7 @@ const SearchBar = ({
   useEffect(() => {
     const fetchSuggestions = async () => {
       try {
-        const res = await fetch("http://localhost:4000/api/locations");
+        const res = await fetch(`${API_URL}/api/locations`);
         const data = await res.json();
         setSuggestions(data); // [{ name: "Hội An" }, { name: "Đà Nẵng" }, ...]
       } catch (err) {

@@ -1,5 +1,6 @@
 // services/adminAPI.js
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+import { API_URL } from "@/config/api";
+const API_BASE_URL = API_URL;
 // Toggle to use real backend vs mock data. Set to false to fetch real data from the API.
 const USE_MOCK_DATA = false; // was true during development
 

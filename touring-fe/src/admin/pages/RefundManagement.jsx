@@ -3,7 +3,7 @@ import { useAdminAuth } from "../context/AdminAuthContext";
 import toast, { Toaster } from "react-hot-toast";
 import Modal from "../components/Common/Modal";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+import { API_URL } from "@/config/api";
 
 const RefundManagement = () => {
   const { token } = useAdminAuth();

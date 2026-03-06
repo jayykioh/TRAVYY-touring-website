@@ -4,7 +4,7 @@ import { toast } from "react-hot-toast";
 import { useAuth } from "../auth/context";
 import ConfirmModal from "../components/ConfirmModal";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+import { API_URL } from "@/config/api";
 
 const RefundRequest = ({ isCustomTour = false }) => {
   const { bookingId, tourRequestId } = useParams();

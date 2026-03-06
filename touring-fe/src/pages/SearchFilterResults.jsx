@@ -4,6 +4,7 @@ import { ArrowLeft, MapPin, Calendar } from "lucide-react";
 import TourCard from "../components/TourCard";
 import { useAuth } from "../auth/context";
 import { toast } from "sonner";
+import { API_URL } from "@/config/api";
 
 const SearchFilterResults = () => {
   const location = useLocation();
@@ -16,20 +17,22 @@ const SearchFilterResults = () => {
   // ✅ Load wishlist từ server
   useEffect(() => {
     if (!user?.token) return;
-
-    fetch("/api/wishlist", {
-      headers: { Authorization: `Bearer ${user.token}` },
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setFavorites(
-            new Set(data.data.map((item) => String(item.tourId._id)))
-          );
-        }
+    // Use explicit API_URL
+    import("@/config/api").then(({ API_URL }) => {
+      fetch(`${API_URL}/api/wishlist`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+        credentials: "include",
       })
-      .catch((err) => console.error("Error fetching wishlist:", err));
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setFavorites(
+              new Set(data.data.map((item) => String(item.tourId._id)))
+            );
+          }
+        })
+        .catch((err) => console.error("Error fetching wishlist:", err));
+    });
   }, [user?.token]);
 
   const handleFavoriteToggle = async (tourId) => {
@@ -148,7 +151,8 @@ const SearchFilterResults = () => {
   // ==========================
   const fetchTours = async (destination = "") => {
     try {
-      let url = "http://localhost:4000/api/tours";
+      const { API_URL } = await import("@/config/api");
+      let url = `${API_URL}/api/tours`;
       if (destination.trim()) {
         url += `?search=${encodeURIComponent(destination)}`;
       }
@@ -160,7 +164,7 @@ const SearchFilterResults = () => {
       setFilteredTours(visibleTours);
 
       if (visibleTours.length === 0) {
-        const resAll = await fetch("http://localhost:4000/api/tours");
+        const resAll = await fetch(`${API_URL}/api/tours`);
         const all = await resAll.json();
         const visibleSuggested = all.filter((tour) => !tour.isHidden);
         setSuggestedTours(visibleSuggested.slice(0, 8));

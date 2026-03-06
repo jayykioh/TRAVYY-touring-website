@@ -3,7 +3,7 @@ import { Star, X, Upload, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { API_URL } from "@/config/api";
 
 export default function GuideReviewForm({ reviewItem, onSuccess, onCancel }) {
   const [rating, setRating] = useState(0);

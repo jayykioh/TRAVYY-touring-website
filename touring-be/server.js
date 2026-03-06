@@ -1,11 +1,15 @@
 const path = require("path");
+
+
 // Load .env explicitly relative to this file to avoid CWD issues
 require("dotenv").config({ path: path.join(__dirname, ".env") });
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 8080;
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const mongoose = require("mongoose");
+// Import connections used by models so health checks reflect actual model connections
+const { mainConn } = require("./config/db");
 const passport = require("passport");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -34,24 +38,46 @@ const app = express();
 const server = http.createServer(app);
 
 // ✅ CORS Origins Configuration - Support Docker deployment
-const allowedOrigins = process.env.CORS_ORIGINS 
-  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
-  : ["http://localhost:5173", "http://localhost:5174"];
+// Determine production vs development early so we can include localhost for dev
+const isProd = process.env.NODE_ENV === "production";
 
+const defaultProdOrigins = [
+  "https://travyytouring.page",
+  "https://www.travyytouring.page",
+  "https://travvytouring.page",
+  "https://www.travvytouring.page",
+];
+const defaultDevLocal = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+];
+
+// Build allowed origins list. In production only allow the two official domains.
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? Array.from(new Set(process.env.CORS_ORIGINS.split(',').map((o) => o.trim())))
+  : (isProd ? defaultProdOrigins : Array.from(new Set([...defaultProdOrigins, ...defaultDevLocal])));
+
+// Socket.IO - restrict origins similar to HTTP CORS
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: function (origin, callback) {
+      // Allow non-browser (tools, mobile apps) requests with no origin
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("Origin not allowed by CORS"));
+    },
     credentials: true,
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type", "Authorization"]
   },
   transports: ['websocket', 'polling']
 });
-const isProd = process.env.NODE_ENV === "production";
 const MONGO_URI =
-  process.env.MONGO_URI ||
-  process.env.MONGODB_URI ||
-  "mongodb://127.0.0.1:27017/travelApp";
+  process.env.MONGO_URI ||
+  process.env.MONGODB_URI ||
+  "mongodb://mongo:27017/travelApp";
 const notifyRoutes = require("./routes/notifyRoutes");
 const paymentRoutes = require("./routes/payment.routes");
 // Guide Routes
@@ -62,23 +88,23 @@ const tourRequestRoutes = require("./routes/tourRequest.routes");
 const itineraryRoutes = require("./routes/itinerary.routes");
 // Quick visibility of PayPal env presence (not actual secrets)
 console.log("[Boot] PayPal env present:", {
-  hasClient: !!process.env.PAYPAL_CLIENT_ID,
-  hasSecret: !!(process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET),
-  mode: process.env.PAYPAL_MODE,
+  hasClient: !!process.env.PAYPAL_CLIENT_ID,
+  hasSecret: !!(process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET),
+  mode: process.env.PAYPAL_MODE,
 });
 // Deep diagnostics: list any env keys containing 'PAYPAL'
 try {
-  const paypalLike = Object.keys(process.env)
-    .filter((k) => k.toUpperCase().includes("PAYPAL"))
-    .map((k) => ({
-      key: k,
-      length: k.length,
-      codes: k.split("").map((c) => c.charCodeAt(0)),
-      valuePreview: (process.env[k] || "").slice(0, 6) + "...",
-    }));
-  console.log("[Boot] PayPal related raw keys:", paypalLike);
+  const paypalLike = Object.keys(process.env)
+    .filter((k) => k.toUpperCase().includes("PAYPAL"))
+    .map((k) => ({
+      key: k,
+      length: k.length,
+      codes: k.split("").map((c) => c.charCodeAt(0)),
+      valuePreview: (process.env[k] || "").slice(0, 6) + "...",
+    }));
+  console.log("[Boot] PayPal related raw keys:", paypalLike);
 } catch (e) {
-  console.warn("Diag paypal keys failed", e);
+  console.warn("Diag paypal keys failed", e);
 }
 
 // --- location tour for RegionTour ---
@@ -91,7 +117,12 @@ app.use(morgan(isProd ? "combined" : "dev"));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: function (origin, callback) {
+      // Allow server-to-server or tools without origin
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('Origin not allowed by CORS'));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -99,8 +130,8 @@ app.use(
   })
 );// Add Cross-Origin-Resource-Policy header for all responses
 app.use((req, res, next) => {
-  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-  next();
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  next();
 });
 app.use("/api/location-tours", locationTourRoutes);
 
@@ -164,36 +195,39 @@ app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
 // Lightweight ping to verify credentials loaded (non-sensitive)
 app.get("/api/paypal/ping", (_req, res) => {
-  res.json({
-    ok: true,
-    hasClient: !!process.env.PAYPAL_CLIENT_ID,
-    hasSecret: !!(
-      process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET
-    ),
-    mode: process.env.PAYPAL_MODE || "sandbox",
-  });
+  res.json({
+    ok: true,
+    hasClient: !!process.env.PAYPAL_CLIENT_ID,
+    hasSecret: !!(
+      process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET
+    ),
+    mode: process.env.PAYPAL_MODE || "sandbox",
+  });
 });
 
 // Health endpoint
 app.get("/api/health", async (req, res) => {
-  const { health } = require("./services/ai/libs/embedding-client");
-  const embedHealth = await health();
-  res.json({
-    backend: "ok",
-    mongo: mongoose.connection.readyState === 1 ? "ok" : "error",
-    embedding: embedHealth,
-  });
+  const { health } = require("./services/ai/libs/embedding-client");
+  const embedHealth = await health();
+  // Check the connection that models actually use (mainConn) first,
+  // fall back to the default mongoose connection if necessary.
+  const mongoReady = (mainConn && mainConn.readyState === 1) || mongoose.connection.readyState === 1;
+  res.json({
+    backend: "ok",
+    mongo: mongoReady ? "ok" : "error",
+    embedding: embedHealth,
+  });
 });
 
 // --- Global error handler ---
 app.use((err, _req, res, _next) => {
-  console.error(err && err.stack ? err.stack : err);
-  const payload = {
-    error: "INTERNAL_ERROR",
-    message: err.message || "Server error",
-  };
-  if (!isProd && err && err.stack) payload.stack = err.stack;
-  res.status(500).json(payload);
+  console.error(err && err.stack ? err.stack : err);
+  const payload = {
+    error: "INTERNAL_ERROR",
+    message: err.message || "Server error",
+  };
+  if (!isProd && err && err.stack) payload.stack = err.stack;
+  res.status(500).json(payload);
 });
 
 
@@ -213,70 +247,70 @@ const { health, isAvailable } = require("./services/ai/libs/embedding-client");
 const { syncZones } = require("./services/embedding-sync-zones");
 
 async function checkServices() {
-  console.log("\n🔍 Checking services...");
+  console.log("\n🔍 Checking services...");
 
-  // MongoDB
-  try {
+  // MongoDB
+  try {
     // ✅ SỬA: Chỉ kết nối Mongo 1 lần duy nhất ở đây
-    await mongoose.connect(MONGO_URI);
-    console.log("✅ MongoDB connected");
+    await mongoose.connect(MONGO_URI);
+    console.log("✅ MongoDB connected");
 
     // ✅ SỬA: Chuyển logic khởi tạo (scheduler, cron, sockets) vào đây
     // Chỉ chạy sau khi Mongo kết nối thành công
-    
-    // Setup refund scheduler
-    setupRefundScheduler();
 
-    // Start weekly PostHog sync cron
-    const { startWeeklySyncCron } = require("./jobs/weeklyProfileSync");
-    startWeeklySyncCron();
+    // Setup refund scheduler
+    setupRefundScheduler();
+
+    // Start weekly PostHog sync cron
+    const { startWeeklySyncCron } = require("./jobs/weeklyProfileSync");
+    startWeeklySyncCron();
 
     // Initialize WebSocket handlers and collection watchers
-    const setupSockets = require('./socket');
-    setupSockets(io);
+    const setupSockets = require('./socket');
+    setupSockets(io);
 
-  } catch (error) {
-    console.error("❌ MongoDB failed:", error.message);
-    process.exit(1);
-  }
+  } catch (error) {
+    console.error("❌ MongoDB failed:", error.message);
+    process.exit(1);
+  }
 
-  // Embedding service
-  try {
-    const available = await isAvailable();
-    if (available) {
-      const healthData = await health();
-      console.log("✅ Embedding service OK:", {
-        model: healthData.model,
-        vectors: healthData.vectors,
-        url: process.env.EMBED_SERVICE_URL || "http://localhost:8088",
-      });
-      
-      // ✅ Auto-sync zones if embedding service is available
-      console.log("\n🔄 Auto-syncing zones with embedding service...");
-      try {
-        await syncZones(true);
-        console.log("✅ Zone sync complete");
-      } catch (syncError) {
-        console.warn("⚠️ Zone sync failed:", syncError.message);
-        console.warn("   Continuing without embedding sync...");
-      }
-    } else {
-      console.warn("⚠️ Embedding service not available");
-      console.warn(
-        "   URL:",
-        process.env.EMBED_SERVICE_URL || "http://localhost:8088"
-      );
-      console.warn("   Will use keyword fallback for zone matching");
-    }
-  } catch (error) {
-    console.warn("⚠️ Embedding check failed:", error.message);
-  }
+  // Embedding service
+  try {
+    const available = await isAvailable();
+    if (available) {
+      const healthData = await health();
+      console.log("✅ Embedding service OK:", {
+        model: healthData.model,
+        vectors: healthData.vectors,
+        url: process.env.AI_EMBED_URL || "https://ai-embed.travyytouring.page",
+      });
+
+      // ✅ Auto-sync zones if embedding service is available
+      console.log("\n🔄 Auto-syncing zones with embedding service...");
+      try {
+        await syncZones(true);
+        console.log("✅ Zone sync complete");
+      } catch (syncError) {
+        console.warn("⚠️ Zone sync failed:", syncError.message);
+        console.warn("   Continuing without embedding sync...");
+      }
+    } else {
+      console.warn("⚠️ Embedding service not available");
+      console.warn(
+        "   URL:",
+        process.env.AI_EMBED_URL || "https://ai-embed.travyytouring.page"
+      );
+      console.warn("   Will use keyword fallback for zone matching");
+    }
+  } catch (error) {
+    console.warn("⚠️ Embedding check failed:", error.message);
+  }
 }
 
 checkServices().then(() => {
-  // ✅ SỬA: Đổi 'app.listen' thành 'server.listen'
+  // ✅ SỬA: Đổi 'app.listen' thành 'server.listen'
   // Đây là điểm khởi động DUY NHẤT của server
-  server.listen(PORT, () => {
-    console.log(`\n🚀 Backend (HTTP + WS) running on port ${PORT}`);
-  });
+  server.listen(PORT, () => {
+    console.log(`\n🚀 Backend (HTTP + WS) running on port ${PORT}`);
+  });
 });

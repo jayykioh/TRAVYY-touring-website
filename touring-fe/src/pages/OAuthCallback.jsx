@@ -1,6 +1,7 @@
 // src/pages/OAuthCallback.jsx
 import { useEffect } from "react";
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+import { API_URL } from "@/config/api";
+const API_BASE = API_URL;
 import { useNavigate } from "react-router-dom";
 
 export default function OAuthCallback() {

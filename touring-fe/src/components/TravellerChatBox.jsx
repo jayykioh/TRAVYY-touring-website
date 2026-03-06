@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, MapPin, X, Paperclip, Download, Edit2, Trash2, AlertCircle, ChevronDown, ChevronUp, Calendar, CheckCheck, Check, Users, Clock, Map } from 'lucide-react';
 import { useAuth } from '../auth/context';
+import { API_URL } from '@/config/api';
 import { useNavigate } from 'react-router-dom';
 import { useTourRequestChat } from '../hooks/useTourRequestChat';
 import PriceAgreementCard from './chat/PriceAgreementCard';
@@ -129,7 +130,7 @@ const TravellerChatBox = ({ requestId, guideName, tourInfo }) => {
   const downloadFile = async (fileId, filename) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/chat/${requestId}/file/${fileId}`, {
+      const response = await fetch(`${API_URL}/api/chat/${requestId}/file/${fileId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

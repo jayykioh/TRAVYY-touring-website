@@ -4,8 +4,9 @@ import { Lock, Eye, EyeOff, Shield, CheckCircle, AlertCircle, Info } from "lucid
 import { toast, Toaster } from "sonner";
 import axios from "axios";
 import { useAuth } from "../auth/context";
+import { API_URL } from "@/config/api";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API = API_URL;
 
 export default function ChangePassword() {
   const navigate = useNavigate();

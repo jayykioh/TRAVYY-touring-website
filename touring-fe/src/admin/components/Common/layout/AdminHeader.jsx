@@ -1,3 +1,4 @@
+import { API_URL } from "@/config/api";
 import React, { useState, useEffect } from "react";
 import {
   Search,
@@ -269,8 +270,7 @@ export default function AdminHeader({ toggleSidebar, isSidebarOpen }) {
                   src={
                     user?._id
                       ? `${
-                          import.meta.env.VITE_API_URL ||
-                          "http://localhost:4000"
+                          API_URL
                         }/api/profile/avatar/${user._id}?v=${Date.now()}`
                       : `https://ui-avatars.com/api/?name=${encodeURIComponent(
                           user?.name || "Admin"
@@ -308,8 +308,7 @@ export default function AdminHeader({ toggleSidebar, isSidebarOpen }) {
                         src={
                           user?._id
                             ? `${
-                                import.meta.env.VITE_API_URL ||
-                                "http://localhost:4000"
+                                API_URL
                               }/api/profile/avatar/${user._id}?v=${Date.now()}`
                             : `https://ui-avatars.com/api/?name=${encodeURIComponent(
                                 user?.name || "Admin"

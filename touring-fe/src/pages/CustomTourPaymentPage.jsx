@@ -4,7 +4,8 @@ import { useAuth } from "@/auth/context";
 import { ArrowLeft, Lock, CreditCard, Wallet, Calendar, Users, MapPin, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+import { API_URL } from '@/config/api';
+const API_BASE = API_URL;
 
 export default function CustomTourPaymentPage() {
   const { bookingId } = useParams();

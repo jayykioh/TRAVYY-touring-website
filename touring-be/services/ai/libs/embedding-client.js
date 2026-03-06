@@ -1,4 +1,4 @@
-const EMBED_URL = process.env.EMBED_SERVICE_URL || 'http://localhost:8088';
+const EMBED_URL = process.env.AI_EMBED_URL || 'https://ai-embed.travvytouring.page';
 
 async function fetchWithTimeout(url, options = {}, timeout = 10000) {
   const controller = new AbortController();

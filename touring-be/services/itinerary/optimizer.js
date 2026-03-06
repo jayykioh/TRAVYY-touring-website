@@ -4,7 +4,7 @@ const {
   HarmCategory,
 } = require("@google/generative-ai");
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_API_KEY || "";
 const PRIMARY_MODEL = "gemini-2.0-flash";
 const FALLBACK_MODEL = "gemini-2.5-flash";
 

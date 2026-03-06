@@ -6,7 +6,7 @@ import RefundDetailModal from "./RefundDetailModal";
 import ConfirmModal from "./ConfirmModal";
 import BankInfoModal from "./BankInfoModal";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+import { API_URL } from "@/config/api";
 
 const UserRefundList = () => {
   const { user } = useAuth();

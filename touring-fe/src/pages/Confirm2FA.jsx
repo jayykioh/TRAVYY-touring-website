@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import { useAuth } from "../auth/context";
+import { API_URL } from "@/config/api";
 
 const Confirm2FA = () => {
   const [searchParams] = useSearchParams();
@@ -32,8 +33,7 @@ const Confirm2FA = () => {
     // Call API to enable 2FA (no QR code needed anymore)
     const confirm2FA = async () => {
       try {
-        const response = await fetch(
-          "http://localhost:4000/api/security/2fa/enable",
+        const response = await fetch(`${API_URL}/api/security/2fa/enable`,
           {
             method: "POST",
             headers: {
