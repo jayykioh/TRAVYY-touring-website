@@ -8,43 +8,37 @@ const axios = require("axios");
 const { sendMail } = require("../utils/emailService");
 
 const isProd = process.env.NODE_ENV === "production";
-const ALLOWED_ROLES = ["Traveler", "TourGuide", "TravelAgency"];
 
-const VN_PHONE = /^(03|05|07|08|09)\d{8}$/;
-const USERNAME = /^[\p{L}\p{N}_]{3,20}$/u;
+const USERNAME = /^[a-z0-9_]{3,20}$/i;
+const VN_PHONE = /^(?:\+?84|0)\d{9,10}$/;
+const ALLOWED_ROLES = ["Traveler", "Guide", "Agency", "Admin"];
 
 const RegisterSchema = z.object({
-  email: z
-    .string()
-    .email("Email không hợp lệ")
-    .transform((v) => v.trim().toLowerCase()),
-  password: z.string().min(8, "Mật khẩu tối thiểu 8 ký tự"),
-  name: z.string().trim().optional().nullable(),
+  name: z.string().trim().optional().nullable().transform((v) => (v == null ? "" : v)),
+  email: z.string().trim().email(),
+  password: z.string().min(8),
   username: z
     .string()
     .trim()
     .optional()
     .nullable()
-    .transform((v) => (v == null ? "" : v.toLowerCase()))
-    .refine(
-      (v) => v === "" || USERNAME.test(v),
-      "Username 3–20 ký tự; chỉ a-z, 0-9, _"
-    ),
+    .transform((v) => (v == null ? "" : v))
+    .refine((v) => v === "" || USERNAME.test(v), "Username 3–20 ký tự; chỉ a-z, 0-9, _"),
   phone: z
     .string()
     .trim()
     .optional()
     .nullable()
     .transform((v) => (v == null ? "" : v))
-    .refine(
-      (v) => v === "" || VN_PHONE.test(v),
-      "Số điện thoại VN không hợp lệ"
-    ),
+    .refine((v) => v === "" || VN_PHONE.test(v), "Số điện thoại VN không hợp lệ"),
   role: z.enum(ALLOWED_ROLES).optional().default("Traveler"),
   provinceId: z.string().min(1, "Chưa chọn tỉnh/thành"),
   wardId: z.string().min(1, "Chưa chọn phường/xã"),
   addressLine: z.string().trim().optional().nullable(),
 });
+
+// Default notify endpoint for sending password-change notifications
+const notifyUrl = process.env.NOTIFY_URL || process.env.API_URL || "https://api.travvytouring.page";
 
 const normalizePhone = (p) => {
   if (!p) return "";
@@ -384,22 +378,14 @@ exports.changePassword = async (req, res) => {
 
     // Gửi email thông báo
     try {
-      await axios.post(
-        `http://localhost:${
-          process.env.PORT || 4000
-        }/api/notify/password-changed`,
-        {
-          email: user.email,
-          name: user.name,
-          ipAddress: req.ip,
-          userAgent: req.get("user-agent"),
-        }
-      );
+      await axios.post(`${notifyUrl}/api/notify/password-changed`, {
+        email: user.email,
+        name: user.name,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
     } catch (emailErr) {
-      console.error(
-        "Failed to send password change notification:",
-        emailErr.message
-      );
+      console.error("Failed to send password change notification:", emailErr.message);
     }
 
     res.json({ success: true, message: "Đổi mật khẩu thành công" });
@@ -446,9 +432,7 @@ exports.forgotPassword = async (req, res) => {
     await user.save();
 
     // Tạo reset link
-    const resetLink = `${
-      process.env.FRONTEND_URL || "http://localhost:5173"
-    }/reset-password?token=${resetToken}`;
+    const resetLink = `${process.env.FRONTEND_URL || process.env.CLIENT_URL || "https://travvytouring.page"}/reset-password?token=${resetToken}`;
 
     console.log(`📧 Sending reset email to: ${user.email}`);
     console.log(`🔗 Reset link: ${resetLink}`);
@@ -586,7 +570,7 @@ exports.resetPassword = async (req, res) => {
         </div>
 
         <div style="text-align: center; margin: 30px 0;">
-          <a href="http://localhost:5173/login" 
+           <a href="${process.env.CLIENT_URL || 'https://travvytouring.page'}/login" 
              style="display: inline-block; padding: 14px 28px; background: #16a34a; color: #fff; 
                     font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 16px;">
             🔐 Đăng nhập ngay

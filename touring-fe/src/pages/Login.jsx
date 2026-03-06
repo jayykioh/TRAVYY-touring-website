@@ -17,8 +17,10 @@ import {
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { useAuth } from "../auth/context";
-const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
-const isDev = import.meta.env.DEV; // Vite's built-in dev mode check
+import { API_URL } from "@/config/api";
+const API = API_URL;
+import { IS_DEV } from "@/config/clientEnv";
+const isDev = IS_DEV; // runtime dev mode check
 
 function Login() {
   const [form, setForm] = useState({ username: "", password: "" });

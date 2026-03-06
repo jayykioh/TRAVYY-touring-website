@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "@/config/api";
 import PropTypes from "prop-types";
 import { useAuth } from "../auth/context";
 
@@ -91,10 +92,7 @@ const BankInfoModal = ({ isOpen, onClose, refundId, onSuccess }) => {
         return;
       }
 
-      const response = await fetch(
-        `${
-          import.meta.env.VITE_API_URL || "http://localhost:4000"
-        }/api/refunds/${refundId}/bank-info`,
+      const response = await fetch(`${API_URL}/api/refunds/${refundId}/bank-info`,
         {
           method: "POST",
           headers: {

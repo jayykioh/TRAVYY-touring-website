@@ -288,7 +288,7 @@ router.get("/place/detail", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Missing placeId" });
     }
 
-    const key = process.env.MAP4D_API_KEY;
+    const key = process.env.MAP4D_API_KEY || process.env.VITE_MAP4D_API_KEY;
     const url = `https://api.map4d.vn/map/place/detail?key=${encodeURIComponent(key)}&place_id=${encodeURIComponent(placeId)}`;
     const r = await fetch(url);
     const j = await r.json();

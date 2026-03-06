@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, MapPin, Calendar, Users } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
+import { API_URL } from "@/config/api";
 
 const QuickBooking = () => {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ const QuickBooking = () => {
     const normalizedCheckIn = normalizeDate(checkIn);
 
     try {
-      let url = "http://localhost:4000/api/tours";
+      let url = `${API_URL}/api/tours`;
       const keyword = destination.trim();
       if (keyword) url += `?search=${encodeURIComponent(keyword)}`;
 

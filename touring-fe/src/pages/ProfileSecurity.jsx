@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../auth/context";
 import * as userSecurityService from "../services/userSecurityService";
+import { API_URL as FRONTEND_API_URL } from "@/config/api";
 
 export default function ProfileSecurity() {
   const { withAuth } = useAuth();
@@ -39,7 +40,7 @@ export default function ProfileSecurity() {
   const [deviceToDelete, setDeviceToDelete] = useState(null);
 
   // API URL
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+  const API_URL = FRONTEND_API_URL;
 
   // ✅ Fetch security settings (có thể gọi lại)
   const fetchSecuritySettings = async () => {

@@ -5,7 +5,7 @@ import { Button } from '../components/ui/button';
 import TourRequestChat from '../components/chat/TourRequestChat';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { API_URL } from '@/config/api';
 
 export default function TourRequestDetailsPage() {
   const { requestId } = useParams();

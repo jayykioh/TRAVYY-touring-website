@@ -1,5 +1,6 @@
 // admin/services/customerService.js
-const API_URL = "http://localhost:4000/api";
+import { API_URL as CONFIG_API_URL } from "@/config/api";
+const API_URL = `${CONFIG_API_URL}/api`;
 
 // Helper to get auth token
 const getAuthToken = () => {

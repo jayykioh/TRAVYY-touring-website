@@ -55,7 +55,11 @@ app = FastAPI(
 # Cho phép các trang web khác (ví dụ: React app) gọi API này
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Cho phép tất cả
+    allow_origins=[
+        "https://travvytouring.page",
+        "https://www.travvytouring.page",
+        "https://api.travvytouring.page",
+    ],
     allow_credentials=True,
     allow_methods=["*"], # Cho phép tất cả các phương thức (GET, POST,...)
     allow_headers=["*"], # Cho phép tất cả các header
@@ -219,7 +223,7 @@ def upsert(req: UpsertRequest):
         global metadata, index
         
         logger.start_operation("Upsert")
-        logger.log_upsert_start("http://localhost:8088/upsert", len(req.items))
+        logger.log_upsert_start(os.getenv("AI_EMBED_URL", "https://ai-embed.travvytouring.page") + "/upsert", len(req.items))
         
         # --- Step 1: Cập nhật metadata ---
         # Tạo 1 set chứa các ID mới (để tìm kiếm nhanh)

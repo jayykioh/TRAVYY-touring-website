@@ -71,7 +71,7 @@ passport.use(
         if (isNewUser && user.email) {
           try {
             // Gọi API internal để gửi email chào mừng
-            await axios.post(`http://localhost:${process.env.PORT || 4000}/api/notify/register`, {
+            await axios.post(process.env.API_URL ? `${process.env.API_URL.replace(/\/+$/,'')}/api/notify/register` : `https://api.travvytouring.page/api/notify/register`, {
               email: user.email,
               fullName: user.name || 'Bạn'
             });
@@ -135,7 +135,7 @@ passport.use(
         // 📨 Gửi email chào mừng khi user mới
         if (isNewUser && user.email) {
           try {
-            await axios.post(`http://localhost:${process.env.PORT || 4000}/api/notify/register`, {
+            await axios.post(process.env.API_URL ? `${process.env.API_URL.replace(/\/+$/,'')}/api/notify/register` : `https://api.travvytouring.page/api/notify/register`, {
               email: user.email,
               fullName: user.name || 'Bạn'
             });

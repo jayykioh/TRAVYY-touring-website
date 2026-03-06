@@ -5,7 +5,8 @@ import { useCart } from "@/hooks/useCart";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { useSocket } from '@/context/SocketContext';
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+import { API_URL } from "@/config/api";
+const API_BASE = API_URL;
 // Normalize API base: some envs include trailing '/api', avoid '/api/api' when concatenating
 const API_BASE_ROOT = String(API_BASE).replace(/\/api\/?$/i, '');
 

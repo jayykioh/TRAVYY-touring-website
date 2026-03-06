@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from '../auth/context';
+import { API_URL } from '@/config/api';
 
 const SocketContext = createContext(null);
 
@@ -10,11 +11,7 @@ export function SocketProvider({ children }) {
   const auth = useAuth();
 
   useEffect(() => {
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-  // Socket.IO server should be the API host root. Some envs set VITE_API_URL to
-  // include a path like '/api' (e.g. 'http://localhost:4000/api') which makes
-  // socket.io attempt to connect to an invalid namespace (resulting in
-  // "Invalid namespace"). Strip any trailing '/api' segment to get the host.
+  // Socket.IO server should be the API host root. Strip any trailing '/api'.
   const socketUrl = API_URL.replace(/\/api\/?$/, '');
 
     // If there is an existing socket, disconnect it before creating a new one
@@ -40,17 +37,12 @@ export function SocketProvider({ children }) {
     });
 
     const socket = io(socketUrl, {
+      transports: ['websocket'],
       withCredentials: true,
-      // Use polling first to allow a stable handshake in environments where
-      // websocket upgrades can be blocked or proxied. Polling will then
-      // upgrade to websocket when possible.
-      transports: ['polling', 'websocket'],
-      // Ensure we talk to the server's default Socket.IO path
       path: '/socket.io',
       auth: token ? { token } : undefined,
       reconnectionAttempts: 8,
       reconnectionDelay: 1000,
-      // Force new connection object to avoid reusing a stale manager
       forceNew: true,
     });
 

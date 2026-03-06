@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import TourCard from "../components/TourCard";
 import { MapPin, Package, ChevronLeft } from "lucide-react";
 
-const API_BASE = "http://localhost:4000/api"; // như file 1
+import { API_URL } from "@/config/api";
+const API_BASE = `${API_URL}/api`;
 
 export default function RegionTours() {
   const { slug } = useParams(); // slug = locationId trong MongoDB

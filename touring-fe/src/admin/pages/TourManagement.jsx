@@ -27,6 +27,9 @@ import {
   downloadCSV,
 } from "../utils/tourHelpers";
 
+import { API_URL as CONFIG_API_URL } from "@/config/api";
+const API_URL = CONFIG_API_URL;
+
 // Items Per Page Selector
 const ItemsPerPageSelector = ({ value, onChange }) => {
   return (
@@ -72,7 +75,6 @@ const TourManagement = () => {
     setError(null);
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
       const response = await fetch(`${API_URL}/api/tours`);
 
       if (!response.ok) {
@@ -215,7 +217,6 @@ const TourManagement = () => {
   // Handle Toggle Visibility
   const handleToggleVisibility = async (tour) => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
       const response = await fetch(`${API_URL}/api/tours/${tour._id}`, {
         method: "PUT",
         headers: {
@@ -252,7 +253,6 @@ const TourManagement = () => {
   const confirmDeleteTour = async () => {
     const tour = deleteModal.tour;
     try {
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
       const response = await fetch(`${API_URL}/api/tours/${tour._id}`, {
         method: "DELETE",
       });
@@ -277,8 +277,6 @@ const TourManagement = () => {
   // Handle Form Submit
   const handleFormSubmit = async (formData) => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
-
       if (editingTour) {
         // Update existing tour
         const response = await fetch(

@@ -3,7 +3,7 @@ import { Star, ThumbsUp, Calendar, MapPin } from 'lucide-react';
 import { Button } from '../ui/button';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { API_URL } from "@/config/api";
 
 export default function GuideReviewSection({ guideId }) {
   const [reviews, setReviews] = useState([]);

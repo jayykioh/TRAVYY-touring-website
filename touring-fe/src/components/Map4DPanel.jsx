@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 import React, { useEffect, useMemo, useState, memo } from "react";
+import { MAP4D_API_KEY } from "@/config/clientEnv";
 import { MFMap, MFMarker, MFPolygon } from "react-map4d-map";
 
 /**
@@ -22,7 +23,7 @@ function Map4DPanel({
   fillOpacity = 0.25,
   strokeColor = "#2E7D32",
 }) {
-  const accessKey = import.meta.env.VITE_MAP4D_API_KEY;
+  const accessKey = MAP4D_API_KEY;
 
   // ========= View state (để fly/zoom) =========
   const [viewCenter, setViewCenter] = useState(center);

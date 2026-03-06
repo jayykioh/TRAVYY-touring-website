@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useRef } from "react";
 import { AuthCtx } from "./context";
 import { identifyUser, resetPostHog } from '../utils/posthog';
-const API_BASE = "http://localhost:4000";
+import { API_URL } from "@/config/api";
+const API_BASE = API_URL;
 
 // helper fetch: luôn gửi cookie (để BE đọc refresh_token)
 

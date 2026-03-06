@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Lock, Eye, EyeOff, KeyRound, CheckCircle, AlertCircle, Shield } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import axios from "axios";
+import { API_URL } from "@/config/api";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API = API_URL;
 
 export default function ResetPassword() {
   const navigate = useNavigate();

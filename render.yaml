@@ -1,18 +1,38 @@
 services:
+  # ==========================================
+  # AI Embed Service (Python FastAPI)
+  # Domain: ai-embed.travyytouring.page
+  # ==========================================
   - type: web
-    name: travyy-touring-be
-    env: node
+    name: travyy-ai-embed
+    env: python
     plan: free
-    rootDir: touring-be
-    buildCommand: npm install
-    startCommand: node server.js
+    rootDir: ai-embed
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 8080
-      - key: MONGO_URI
+      - key: EMBED_PROVIDER
+        value: hf_inference
+      - key: MODEL_NAME
+        value: sentence-transformers/all-MiniLM-L6-v2
+      - key: HF_TOKEN
         sync: false
-      - key: CORS_ORIGINS
-        value: https://travyytouring.page,https://www.travyytouring.page
-      # Add other necessary env vars from your .env here
+
+  # ==========================================
+  # AI Search Service (Python FastAPI + FAISS)
+  # Domain: ai-search.travyytouring.page
+  # ==========================================
+  - type: web
+    name: travyy-ai-search
+    env: python
+    plan: free
+    rootDir: ai-search
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: AI_EMBED_URL
+        value: https://ai-embed.travyytouring.page
+      - key: FAISS_INDEX_PATH
+        value: ""
+      - key: VECTOR_DIM
+        value: "384"

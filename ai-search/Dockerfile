@@ -7,9 +7,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENV PORT=7860
+ENV PORT=8089
 
-# Hugging Face Spaces uses port 7860 by default
-EXPOSE 7860
+# Render injects $PORT dynamically
+EXPOSE 8089
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-8089}"]

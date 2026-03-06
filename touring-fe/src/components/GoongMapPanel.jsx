@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useRef } from "react";
+import { GOONG_MAPTILES_KEY } from "@/config/clientEnv";
 import goongjs from "@goongmaps/goong-js";
 import "@goongmaps/goong-js/dist/goong-js.css";
 
@@ -55,7 +56,7 @@ export default function GoongMapPanel({
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
 
-    const mapTilesKey = import.meta.env.VITE_GOONG_MAPTILES_KEY;
+    const mapTilesKey = GOONG_MAPTILES_KEY;
     goongjs.accessToken = mapTilesKey;
 
     const map = new goongjs.Map({

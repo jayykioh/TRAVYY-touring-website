@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { API_URL as CONFIG_API_URL } from "@/config/api";
 import {
   ArrowLeft,
   MapPin,
@@ -73,8 +74,6 @@ const TourDetailPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
-
         const [tourRes, reviewRes] = await Promise.all([
           fetch(`${API_URL}/api/tours/${id}`),
           fetch(`${API_URL}/api/reviews/tour/${id}`),

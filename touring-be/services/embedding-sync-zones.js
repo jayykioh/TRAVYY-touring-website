@@ -7,7 +7,7 @@ require('dotenv').config({
 
 const Zone = require('../models/Zones');
 
-const EMBED_URL = 'http://localhost:8088';
+const EMBED_URL = process.env.AI_EMBED_URL || 'https://ai-embed.travvytouring.page';
 
 async function syncZones(isAutomatic = false) {
   try {

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Filter, Search } from "lucide-react";
 import TourCard from "../components/TourCard";
 import { useAuth } from "../auth/context";
+import { API_URL } from "@/config/api";
 import { optimizeImage } from "@/utils/imageUrl";
 import { toast } from "sonner";
 
@@ -20,7 +21,7 @@ export default function ToursPage() {
   useEffect(() => {
     if (!user?.token) return;
 
-    fetch("/api/wishlist", {
+    fetch(`${API_URL}/api/wishlist`, {
       headers: { Authorization: `Bearer ${user.token}` },
       credentials: "include",
     })
@@ -55,7 +56,7 @@ export default function ToursPage() {
     });
 
     try {
-      const res = await fetch("/api/wishlist/toggle", {
+      const res = await fetch(`${API_URL}/api/wishlist/toggle`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -98,7 +99,7 @@ export default function ToursPage() {
   };
 
   useEffect(() => {
-    fetch("api/tours")
+    fetch(`${API_URL}/api/tours`)
       .then((res) => res.json())
       .then((data) => {
         console.log("Tours from API:", data);

@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { useAuth } from "@/auth/context";
 import { CheckCircle2, XCircle, Loader2, ArrowLeft } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+import { API_URL } from "@/config/api";
+const API_BASE = API_URL;
 
 export default function ItineraryPaymentResult() {
   const [searchParams] = useSearchParams();

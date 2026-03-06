@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useRef } from "react";
+import { GOONG_MAPTILES_KEY } from "@/config/clientEnv";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -27,7 +28,7 @@ export default function MapLibrePanel({
   const map = useRef(null);
   const markersRef = useRef(new Map());
 
-  const GOONG_KEY = import.meta.env.VITE_GOONG_MAPTILES_KEY;
+  const GOONG_KEY = GOONG_MAPTILES_KEY;
   const styleUrl = `https://tiles.goong.io/assets/goong_map_web.json?api_key=${GOONG_KEY}`;
 
   // --- Decode polyline auto precision ---
