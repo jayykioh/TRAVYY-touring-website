@@ -1,15 +1,54 @@
 services:
   # ==========================================
+  # Backend API (Node.js + Express)
+  # Domain: api.travyytouring.page
+  # ==========================================
+  - type: web
+    name: travyy-be
+    env: node
+    plan: free
+    rootDir: touring-be
+    buildCommand: npm ci --only=production
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      - key: CLIENT_URL
+        value: https://www.travyytouring.page
+      - key: FRONTEND_URL
+        value: https://www.travyytouring.page
+      - key: SERVER_URL
+        value: https://api.travyytouring.page
+      - key: CORS_ORIGINS
+        value: https://www.travyytouring.page,https://travyytouring.page
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        value: https://api.travyytouring.page/api/auth/google/callback
+      - key: PAYPAL_MODE
+        value: sandbox
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: AI_SERVICE_URL
+        value: https://ai-embed.travyytouring.page
+      - key: EMBED_SERVICE_URL
+        value: https://ai-embed.travyytouring.page
+
+  # ==========================================
   # AI Embed Service (Python FastAPI)
   # Domain: ai-embed.travyytouring.page
   # ==========================================
   - type: web
     name: travyy-ai-embed
-    env: python
+    env: docker
     plan: free
     rootDir: ai-embed
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: EMBED_PROVIDER
         value: hf_inference
@@ -20,15 +59,14 @@ services:
 
   # ==========================================
   # AI Search Service (Python FastAPI + FAISS)
-  # Domain: ai-search.travyytouring.page
+  # URL: https://travyy-ai-search.onrender.com
   # ==========================================
   - type: web
     name: travyy-ai-search
-    env: python
+    env: docker
     plan: free
     rootDir: ai-search
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: AI_EMBED_URL
         value: https://ai-embed.travyytouring.page
