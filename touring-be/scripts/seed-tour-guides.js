@@ -104,7 +104,7 @@ function generateLicenseNumber(province, index) {
 function generateCertificate(cert, issueYearsAgo = 2) {
   const issueDate = new Date();
   issueDate.setFullYear(issueDate.getFullYear() - issueYearsAgo);
-  
+
   const expiryDate = new Date();
   expiryDate.setFullYear(expiryDate.getFullYear() + 3);
 
@@ -160,11 +160,11 @@ async function seedTourGuides() {
         const name = generateGuideName();
         const email = generateEmail(name, totalCreated + 1);
         const phone = generatePhone();
-        const password = "Guide@123"; // Default password
+        const password = process.env.DEFAULT_GUIDE_PASSWORD || "your_default_guide_password"; // Default password from .env
         const experience = randomItem(experiences);
         const languages = randomItem(languageSets);
         const guideSpecialties = randomItems(specialties, 2, 4);
-        
+
         // Coverage areas - this province + maybe nearby
         const coverageAreas = [province];
         if (Math.random() > 0.5 && provinceZoneList.length > 1) {
@@ -176,7 +176,7 @@ async function seedTourGuides() {
         try {
           // Check if user exists
           let user = await User.findOne({ email });
-          
+
           if (!user) {
             // Create user account
             const hashedPassword = await bcrypt.hash(password, 10);
@@ -274,11 +274,11 @@ async function seedTourGuides() {
     console.log("=".repeat(80));
     console.log(`✅ Total guides created: ${totalCreated}`);
     console.log(`📧 Total accounts: ${guideCredentials.length}`);
-    
+
     console.log("\n" + "=".repeat(80));
     console.log("🔐 GUIDE LOGIN CREDENTIALS");
     console.log("=".repeat(80));
-    
+
     // Group by province for display
     const credsByProvince = {};
     guideCredentials.forEach(cred => {
@@ -305,7 +305,7 @@ async function seedTourGuides() {
 
     console.log("\n" + "=".repeat(80));
     console.log("💡 NOTES:");
-    console.log("- All guides have default password: Guide@123");
+    console.log(`- All guides have default password: ${process.env.DEFAULT_GUIDE_PASSWORD || "Guide@123"}`);
     console.log("- Guides can login at: http://localhost:5173/login");
     console.log("- Each guide has 2-4 certificates uploaded");
     console.log("- ~70% of guides are verified and approved");
@@ -322,7 +322,7 @@ async function seedTourGuides() {
     const txtPath = path.join(__dirname, "guide-credentials.txt");
     let txtContent = "TOUR GUIDE CREDENTIALS\n";
     txtContent += "=".repeat(80) + "\n\n";
-    
+
     for (const [province, creds] of Object.entries(credsByProvince)) {
       txtContent += `📍 ${province}\n`;
       txtContent += "-".repeat(80) + "\n";
@@ -336,7 +336,7 @@ async function seedTourGuides() {
       });
       txtContent += "\n";
     }
-    
+
     fs.writeFileSync(txtPath, txtContent);
     console.log(`📄 Text file saved to: ${txtPath}\n`);
 
