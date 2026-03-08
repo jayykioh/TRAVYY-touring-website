@@ -11,7 +11,7 @@ const MOCK_ADMINS = [
   {
     id: 1,
     email: "admin@travyy.com",
-    password: "Admin@123",
+    password: import.meta.env.VITE_MOCK_ADMIN_PASSWORD || "your_mock_admin_password",
     name: "Melissa Peters",
     role: "admin", // ⬅️ Đánh dấu đây là admin
     adminRole: "Super Admin",
@@ -25,7 +25,7 @@ const MOCK_ADMINS = [
 async function api(input, init = {}) {
   const isFormData = init.body instanceof FormData;
   const headers = { Accept: "application/json", ...(init.headers || {}) };
-  
+
   // If body is a string (JSON stringified), ensure Content-Type is set
   if (typeof init.body === 'string' && !isFormData) {
     headers['Content-Type'] = 'application/json';
@@ -96,7 +96,7 @@ export default function AuthProvider({ children }) {
     if (res?.user) {
       // 👇 gộp token vào user luôn
       setUser({ ...res.user, token: res.accessToken });
-      
+
       // ✅ Identify user in PostHog for tracking
       identifyUser(res.user._id, {
         email: res.user.email,
@@ -123,7 +123,7 @@ export default function AuthProvider({ children }) {
 
     if (res?.user) {
       setUser({ ...res.user, token: res.accessToken, role: "admin" });
-      
+
       // ✅ Identify admin in PostHog
       identifyUser(res.user._id, {
         email: res.user.email,
@@ -304,7 +304,7 @@ export default function AuthProvider({ children }) {
               setUser({ ...me, token: r.accessToken });
               setBannedInfo(null);
               sessionStorage.removeItem("bannedInfo");
-              
+
               // ✅ Identify user in PostHog (OAuth login)
               identifyUser(me._id, {
                 email: me.email,
@@ -389,7 +389,7 @@ export default function AuthProvider({ children }) {
 
       // Clear other session data
       sessionStorage.clear();
-      
+
       // ✅ Reset PostHog session (clear user identity)
       resetPostHog();
 

@@ -5,11 +5,10 @@ services:
   # ==========================================
   - type: web
     name: travyy-be
-    env: node
+    env: docker
     plan: free
     rootDir: touring-be
-    buildCommand: npm ci --only=production
-    startCommand: node server.js
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz
     envVars:
       - key: NODE_ENV
@@ -26,18 +25,82 @@ services:
         value: https://www.travyytouring.page,https://travyytouring.page
       - key: MONGO_URI
         sync: false
-      - key: JWT_SECRET
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_CALLBACK_URL
         value: https://api.travyytouring.page/api/auth/google/callback
+      - key: FACEBOOK_APP_ID
+        sync: false
+      - key: FACEBOOK_APP_SECRET
+        sync: false
+      - key: FACEBOOK_CALLBACK_URL
+        value: https://api.travyytouring.page/api/auth/facebook/callback
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
       - key: PAYPAL_MODE
         value: sandbox
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
       - key: GEMINI_MODEL
-        value: gemini-2.5-flash
+        value: gemini-2.0-flash
+      - key: GOONG_API_KEY
+        sync: false
+      - key: MAP4D_API_KEY
+        sync: false
       - key: AI_SERVICE_URL
         value: https://ai-embed.travyytouring.page
       - key: EMBED_SERVICE_URL
         value: https://ai-embed.travyytouring.page
+      - key: DEFAULT_GUIDE_PASSWORD
+        sync: false
+      - key: VITE_MOCK_ADMIN_PASSWORD
+        sync: false
+
+  # ==========================================
+  # Frontend Application (React + Vite)
+  # Domain: www.travyytouring.page
+  # ==========================================
+  - type: web
+    name: travyy-fe
+    env: docker
+    plan: free
+    rootDir: touring-fe
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    dockerContext: .
+    envVars:
+      - key: VITE_API_URL
+        value: https://api.travyytouring.page
+      - key: VITE_AI_EMBED_URL
+        value: https://ai-embed.travyytouring.page
+      - key: VITE_AI_SEARCH_URL
+        value: https://travyy-ai-search.onrender.com
+      - key: VITE_POSTHOG_KEY
+        sync: false
+      - key: VITE_GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: VITE_GOONG_API_KEY
+        sync: false
+      - key: VITE_MAP4D_API_KEY
+        sync: false
 
   # ==========================================
   # AI Embed Service (Python FastAPI)
