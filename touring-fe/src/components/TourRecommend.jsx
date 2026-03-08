@@ -4,6 +4,7 @@ import TourCard from "./TourCard";
 import { useAuth } from "../auth/context";
 import { toast, Toaster } from "sonner";
 import { optimizeImage } from "../utils/imageUrl";
+import { API_URL } from "../config/api";
 
 const TourPromotions = () => {
   const { user } = useAuth(); // 👈 lấy user.token
@@ -12,7 +13,7 @@ const TourPromotions = () => {
   const [featuredTours, setFeaturedTours] = useState([]);
 
   useEffect(() => {
-    fetch("/api/tours")
+    fetch(`${API_URL}/api/tours`)
       .then((res) => res.json())
       .then((data) => {
         console.log("Tours from API:", data);
@@ -26,7 +27,7 @@ const TourPromotions = () => {
   // 👉 Lấy wishlist từ server
   useEffect(() => {
     if (!user?.token) return;
-    fetch("/api/wishlist", {
+    fetch(`${API_URL}/api/wishlist`, {
       headers: { Authorization: `Bearer ${user.token}` },
     })
       .then((res) => res.json())
@@ -66,7 +67,7 @@ const TourPromotions = () => {
     });
 
     try {
-      const res = await fetch("/api/wishlist/toggle", {
+      const res = await fetch(`${API_URL}/api/wishlist/toggle`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
