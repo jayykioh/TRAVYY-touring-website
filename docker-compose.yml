@@ -145,6 +145,8 @@ services:
         VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY}
         VITE_GOONG_API_KEY: ${VITE_GOONG_API_KEY}
         VITE_MAP4D_API_KEY: ${VITE_MAP4D_API_KEY}
+        VITE_AI_EMBED_URL: ${VITE_AI_EMBED_URL:-https://ai-embed.travyytouring.page}
+        VITE_AI_SEARCH_URL: ${VITE_AI_SEARCH_URL:-https://ai-search.travyytouring.page}
     container_name: travyy-frontend
     restart: unless-stopped
     ports:

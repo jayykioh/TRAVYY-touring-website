@@ -1,0 +1,114 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # ==========================================
+  # Run backend tests before deploying
+  # ==========================================
+  test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: touring-be
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: npm
+          cache-dependency-path: touring-be/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --coverage
+
+  # ==========================================
+  # Deploy frontend to Vercel
+  # Requires secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+  # ==========================================
+  deploy-frontend:
+    name: Deploy Frontend (Vercel)
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: touring-fe
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+          cache-dependency-path: touring-fe/package-lock.json
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build project artifacts
+        run: |
+          vercel build --prod --token=${{ secrets.VERCEL_TOKEN }} \
+            --build-env VITE_API_URL=https://api.travyytouring.page \
+            --build-env VITE_AI_EMBED_URL=https://ai-embed.travyytouring.page \
+            --build-env VITE_AI_SEARCH_URL=https://ai-search.travyytouring.page
+
+      - name: Deploy to Vercel
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+  # ==========================================
+  # Trigger Render.com deploys via deploy hooks
+  # Requires secrets: RENDER_DEPLOY_HOOK_BACKEND,
+  #                   RENDER_DEPLOY_HOOK_AI_EMBED,
+  #                   RENDER_DEPLOY_HOOK_AI_SEARCH
+  # ==========================================
+  deploy-backend:
+    name: Deploy Backend (Render)
+    runs-on: ubuntu-latest
+    needs: test
+    permissions: {}
+    steps:
+      - name: Trigger backend deploy
+        run: |
+          curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}" \
+            || { echo "Backend deploy hook failed"; exit 1; }
+
+  deploy-ai-embed:
+    name: Deploy AI Embed (Render)
+    runs-on: ubuntu-latest
+    needs: test
+    permissions: {}
+    steps:
+      - name: Trigger ai-embed deploy
+        run: |
+          curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_AI_EMBED }}" \
+            || { echo "AI Embed deploy hook failed"; exit 1; }
+
+  deploy-ai-search:
+    name: Deploy AI Search (Render)
+    runs-on: ubuntu-latest
+    needs: test
+    permissions: {}
+    steps:
+      - name: Trigger ai-search deploy
+        run: |
+          curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_AI_SEARCH }}" \
+            || { echo "AI Search deploy hook failed"; exit 1; }

@@ -26,10 +26,14 @@ services:
         value: https://www.travyytouring.page,https://travyytouring.page
       - key: MONGO_URI
         sync: false
-      - key: JWT_SECRET
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
         sync: false
       - key: GOOGLE_CALLBACK_URL
         value: https://api.travyytouring.page/api/auth/google/callback
+      - key: FACEBOOK_CALLBACK_URL
+        value: https://api.travyytouring.page/api/auth/facebook/callback
       - key: PAYPAL_MODE
         value: sandbox
       - key: GEMINI_MODEL
