@@ -30,13 +30,16 @@ passport.use(
 // =========================
 // Google Strategy
 // =========================
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+const gClientId = process.env.GOOGLE_CLIENT_ID;
+const gClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+if (gClientId && gClientSecret && gClientId !== "undefined" && gClientSecret !== "undefined") {
   passport.use(
     new GoogleStrategy(
       {
-        clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL,
+        clientID: gClientId,
+        clientSecret: gClientSecret,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL || "/api/auth/google/callback",
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
@@ -99,13 +102,16 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 // =========================
 // Facebook Strategy
 // =========================
-if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
+const fbAppId = process.env.FACEBOOK_APP_ID;
+const fbAppSecret = process.env.FACEBOOK_APP_SECRET;
+
+if (fbAppId && fbAppSecret && fbAppId !== "undefined" && fbAppSecret !== "undefined") {
   passport.use(
     new FacebookStrategy(
       {
-        clientID: process.env.FACEBOOK_APP_ID,
-        clientSecret: process.env.FACEBOOK_APP_SECRET,
-        callbackURL: process.env.FACEBOOK_CALLBACK_URL,
+        clientID: fbAppId,
+        clientSecret: fbAppSecret,
+        callbackURL: process.env.FACEBOOK_CALLBACK_URL || "/api/auth/facebook/callback",
         profileFields: ["id", "displayName", "emails"],
       },
       async (accessToken, refreshToken, profile, done) => {
