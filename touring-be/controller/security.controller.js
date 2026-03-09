@@ -298,6 +298,7 @@ exports.verify2FA = async (req, res) => {
         sameSite: isProd ? "none" : "lax",
         path: "/api/auth",
         maxAge: 30 * 24 * 60 * 60 * 1000,
+        ...(isProd && { domain: ".travyytouring.page" }),
       });
 
       const accessToken = signAccess({

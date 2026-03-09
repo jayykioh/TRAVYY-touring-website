@@ -108,6 +108,7 @@ exports.register = async (req, res) => {
       sameSite: isProd ? "none" : "lax",
       path: "/",
       maxAge: 30 * 24 * 60 * 60 * 1000,
+      ...(isProd && { domain: ".travyytouring.page" }),
     });
 
     const accessToken = signAccess({ id: user.id, role: user.role });
@@ -290,6 +291,7 @@ exports.login = async (req, res) => {
       sameSite: isProd ? "none" : "lax",
       path: "/",
       maxAge: 30 * 24 * 60 * 60 * 1000,
+      ...(isProd && { domain: ".travyytouring.page" }),
     });
 
     const accessToken = signAccess({
