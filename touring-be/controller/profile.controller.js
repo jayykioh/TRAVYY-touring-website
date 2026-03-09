@@ -225,9 +225,6 @@ exports.getAvatar = async (req, res) => {
     if (!user) return res.status(404).send("Not found");
 
     if (user.avatar?.data) {
-      // Set CORS headers for image response
-      res.set("Access-Control-Allow-Origin", "http://localhost:5173");
-      res.set("Access-Control-Allow-Credentials", "true");
       res.set("Content-Type", user.avatar.contentType);
       res.set("Cross-Origin-Resource-Policy", "cross-origin");
       return res.send(user.avatar.data);

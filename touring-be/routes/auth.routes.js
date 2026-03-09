@@ -47,7 +47,7 @@ router.get(
   "/google/callback",
   passport.authenticate("google", {
     session: false,
-    failureRedirect: process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/login` : "https://travvytouring.page/login",
+    failureRedirect: process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/login` : "https://travyytouring.page/login",
   }),
   async (req, res) => {
     try {
@@ -55,22 +55,18 @@ router.get(
       const user = req.user; // mongoose doc hoặc plain object
       const jti = newId();
 
-      // (access token không cần trả ở redirect; FE sẽ gọi /refresh)
       const refreshToken = signRefresh({ jti, userId: user.id });
-      return res.redirect(process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/oauth/callback` : "https://travvytouring.page/oauth/callback");
-      // Set refresh cookie according to environment
-      // In dev: use sameSite "lax" for localhost (Chrome blocks "none" without HTTPS)
-      // In prod: use sameSite "none" + secure for cross-origin support
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
         secure: isProd,
         sameSite: isProd ? "none" : "lax",
         path: "/",
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 ngày
+        ...(isProd && { domain: ".travyytouring.page" }),
       });
 
       // Redirect sạch -> FE gọi POST /api/auth/refresh để lấy access
-      return res.redirect(process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/oauth/callback` : "https://travvytouring.page/oauth/callback");
+      return res.redirect(process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/oauth/callback` : "https://travyytouring.page/oauth/callback");
     } catch (e) {
       console.error("google/callback error:", e);
       return res.status(500).json({ message: "OAuth callback error" });
@@ -90,7 +86,7 @@ router.get(
   "/facebook/callback",
   passport.authenticate("facebook", {
     session: false,
-    failureRedirect: process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/login` : "https://travvytouring.page/login",
+    failureRedirect: process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/login` : "https://travyytouring.page/login",
   }),
   async (req, res) => {
     try {
@@ -99,17 +95,16 @@ router.get(
 
       const refreshToken = signRefresh({ jti, userId: user.id });
 
-      // In dev: use sameSite "lax" for localhost (Chrome blocks "none" without HTTPS)
-      // In prod: use sameSite "none" + secure for cross-origin support
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
         secure: isProd,
         sameSite: isProd ? "none" : "lax",
         path: "/",
         maxAge: 30 * 24 * 60 * 60 * 1000,
+        ...(isProd && { domain: ".travyytouring.page" }),
       });
 
-      return res.redirect(process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/oauth/callback` : "https://travvytouring.page/oauth/callback");
+      return res.redirect(process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/oauth/callback` : "https://travyytouring.page/oauth/callback");
     } catch (e) {
       console.error("facebook/callback error:", e);
       return res.status(500).json({ message: "OAuth callback error" });

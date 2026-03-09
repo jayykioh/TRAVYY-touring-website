@@ -54,6 +54,7 @@ exports.adminLogin = async (req, res) => {
       sameSite: isProd ? "none" : "lax",
       path: "/api/admin",
       maxAge: 30 * 24 * 60 * 60 * 1000,
+      ...(isProd && { domain: ".travyytouring.page" }),
     });
 
     const accessToken = signAccess({ id: admin.id, role: "Admin" });

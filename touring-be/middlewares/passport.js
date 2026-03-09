@@ -75,7 +75,7 @@ if (gClientId && gClientSecret && gClientId !== "undefined" && gClientSecret !==
           if (isNewUser && user.email) {
             try {
               // Priority: NOTIFY_URL > API_URL > env fallback
-              const baseUrl = process.env.NOTIFY_URL || process.env.API_URL || "https://api.travvytouring.page";
+              const baseUrl = process.env.NOTIFY_URL || process.env.API_URL || "https://api.travyytouring.page";
               await axios.post(`${baseUrl}/api/notify/register`, {
                 email: user.email,
                 fullName: user.name || 'Bạn'
@@ -147,7 +147,7 @@ if (fbAppId && fbAppSecret && fbAppId !== "undefined" && fbAppSecret !== "undefi
           // 📨 Gửi email chào mừng khi user mới
           if (isNewUser && user.email) {
             try {
-              await axios.post(process.env.API_URL ? `${process.env.API_URL.replace(/\/+$/, '')}/api/notify/register` : `https://api.travvytouring.page/api/notify/register`, {
+              await axios.post(process.env.API_URL ? `${process.env.API_URL.replace(/\/+$/, '')}/api/notify/register` : `https://api.travyytouring.page/api/notify/register`, {
                 email: user.email,
                 fullName: user.name || 'Bạn'
               });

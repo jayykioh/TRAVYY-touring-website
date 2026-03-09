@@ -44,8 +44,6 @@ const isProd = process.env.NODE_ENV === "production";
 const defaultProdOrigins = [
   "https://travyytouring.page",
   "https://www.travyytouring.page",
-  "https://travvytouring.page",
-  "https://www.travvytouring.page",
 ];
 const defaultDevLocal = [
   "http://localhost:3000",

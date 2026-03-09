@@ -879,7 +879,7 @@ const sendApprovalEmail = async (user, refund, booking) => {
 
     <div style="text-align: center; margin: 30px 0;">
       <a href="${
-        process.env.FRONTEND_URL || "https://travvytouring.page"
+        process.env.FRONTEND_URL || "https://travyytouring.page"
       }/profile/refunds" class="cta-button">
         📝 Cung Cấp Thông Tin Ngân Hàng
       </a>
@@ -1519,7 +1519,7 @@ const sendRefundCompletionEmail = async (refund, booking, user) => {
 
     <div style="text-align: center;">
       <a href="${
-        process.env.FRONTEND_URL || "https://travvytouring.page"
+        process.env.FRONTEND_URL || "https://travyytouring.page"
       }/profile/refunds" class="button">
         Xem Chi Tiết Refund
       </a>
@@ -1616,10 +1616,10 @@ exports.createManualRefundPayment = async (req, res) => {
       "https://test-payment.momo.vn/v2/gateway/api/create";
     // Redirect back with payment success flag for auto-verification
     const redirectUrl = `${
-      process.env.FRONTEND_URL || "https://travvytouring.page"
+      process.env.FRONTEND_URL || "https://travyytouring.page"
     }/admin/refunds?paymentSuccess=true&refundId=${refund._id}`;
     const ipnUrl = `${
-      process.env.BACKEND_URL || "https://api.travvytouring.page"
+      process.env.BACKEND_URL || "https://api.travyytouring.page"
     }/api/refunds/momo-refund-ipn`;
 
     console.log("MoMo Config:", {
