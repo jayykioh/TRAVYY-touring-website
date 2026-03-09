@@ -335,17 +335,15 @@ exports.getUserRefunds = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
-    // ✅ Auto-update orderRef for refunds missing it (for old refunds)
-    let updatedCount = 0;
-    for (const refund of refunds) {
-      if (!refund.orderRef && refund.bookingId?.orderRef) {
-        refund.orderRef = refund.bookingId.orderRef;
-        await refund.save();
-        updatedCount++;
-      }
-    }
-    if (updatedCount > 0) {
-      console.log(`✅ Auto-updated orderRef for ${updatedCount} refunds`);
+    // ✅ Auto-update orderRef for refunds missing it (batch, not per-row)
+    const toUpdate = refunds.filter(r => !r.orderRef && r.bookingId?.orderRef);
+    if (toUpdate.length > 0) {
+      await Refund.bulkWrite(
+        toUpdate.map(r => ({
+          updateOne: { filter: { _id: r._id }, update: { $set: { orderRef: r.bookingId.orderRef } } }
+        }))
+      );
+      console.log(`✅ Auto-updated orderRef for ${toUpdate.length} refunds`);
     }
 
     const total = await Refund.countDocuments(query);
@@ -1227,33 +1225,28 @@ exports.autoExpireRefunds = async () => {
     console.log("=== Auto-expiring refunds ===");
     console.log("Checking refunds created before:", sevenDaysAgo);
 
-    // Find all pending refunds older than 7 days
-    const expiredRefunds = await Refund.find({
-      status: "pending",
-      createdAt: { $lt: sevenDaysAgo },
-    });
+    const now = new Date();
+    const result = await Refund.updateMany(
+      { status: "pending", createdAt: { $lt: sevenDaysAgo } },
+      {
+        $set: {
+          status: "rejected",
+          rejectedAt: now,
+          reviewNote:
+            "Yêu cầu hoàn tiền đã hết hạn sau 7 ngày chờ xử lý. Vui lòng tạo yêu cầu mới hoặc liên hệ bộ phận hỗ trợ.",
+        },
+        $push: {
+          timeline: {
+            status: "rejected",
+            note: "Auto-rejected: Request expired after 7 days without review",
+            timestamp: now,
+          },
+        },
+      }
+    );
 
-    console.log(`Found ${expiredRefunds.length} expired refunds`);
-
-    let expiredCount = 0;
-
-    for (const refund of expiredRefunds) {
-      refund.status = "rejected";
-      refund.rejectedAt = new Date();
-      refund.reviewNote =
-        "Yêu cầu hoàn tiền đã hết hạn sau 7 ngày chờ xử lý. Vui lòng tạo yêu cầu mới hoặc liên hệ bộ phận hỗ trợ.";
-      refund.addTimelineEntry(
-        "rejected",
-        "Auto-rejected: Request expired after 7 days without review",
-        null // System action, no admin user
-      );
-
-      await refund.save();
-      expiredCount++;
-
-      console.log(`Expired refund ${refund.refundReference}`);
-    }
-
+    const expiredCount = result.modifiedCount;
+    console.log(`Found ${expiredCount} expired refunds`);
     console.log(`✅ Auto-expired ${expiredCount} refunds`);
 
     return {

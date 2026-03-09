@@ -159,6 +159,7 @@ bookingSchema.index({ "payment.orderId": 1 });
 bookingSchema.index({ "payment.transactionId": 1 });
 // orderRef already has unique index in schema definition
 bookingSchema.index({ status: 1, createdAt: -1 });
+bookingSchema.index({ guideId: 1, status: 1 }); // guide dashboard queries
 
 // ===== METHODS =====
 

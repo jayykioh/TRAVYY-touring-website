@@ -40,7 +40,7 @@ EXPOSE 8088
 
 # Health check (production endpoint)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider https://ai-embed.travvytouring.page/healthz || exit 1
+  CMD wget --no-verbose --tries=1 --spider https://ai-embed.travyytouring.page/healthz || exit 1
 
 # Start the service
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8088"]

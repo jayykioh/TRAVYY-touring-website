@@ -6,12 +6,10 @@ const refundSchema = new mongoose.Schema(
     bookingId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Booking",
-      index: true,
     },
     tourRequestId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "TourRequest",
-      index: true,
     },
     tourType: {
       type: String,

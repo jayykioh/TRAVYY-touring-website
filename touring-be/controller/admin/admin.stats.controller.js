@@ -708,45 +708,43 @@ exports.getTopPopularTours = async (req, res) => {
       popularTours.map((t) => ({ id: t._id, bookings: t.bookings }))
     );
 
-    // Manually populate tour info and reviews
-    const formattedTours = await Promise.all(
-      popularTours.map(async (item, index) => {
-        // Get tour info
-        const tourInfo = await Tour.findById(item._id);
-        console.log(
-          `🔍 Tour ${item._id}:`,
-          tourInfo ? tourInfo.title : "NOT FOUND"
-        );
+    // Batch-fetch tour info and reviews (avoid N+1)
+    const tourIds = popularTours.map((item) => item._id);
+    const [tourInfos, allReviews] = await Promise.all([
+      Tour.find({ _id: { $in: tourIds } }, { title: 1, imageItems: 1 }).lean(),
+      Review.find({ tourId: { $in: tourIds } }, { tourId: 1, rating: 1 }).lean(),
+    ]);
 
-        // Get thumbnail from imageItems array
-        const thumbnail = tourInfo?.imageItems?.[0]?.imageUrl || "";
-        console.log(
-          `🖼️  Thumbnail for ${tourInfo?.title}:`,
-          thumbnail || "NO IMAGE"
-        );
+    const tourMap = Object.fromEntries(tourInfos.map((t) => [t._id.toString(), t]));
+    const reviewMap = {};
+    for (const r of allReviews) {
+      const key = r.tourId.toString();
+      if (!reviewMap[key]) reviewMap[key] = [];
+      reviewMap[key].push(r.rating || 0);
+    }
 
-        // Get average rating from reviews
-        const reviews = await Review.find({ tourId: item._id });
-        const avgRating =
-          reviews.length > 0
-            ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) /
-              reviews.length
-            : 0;
+    const formattedTours = popularTours.map((item, index) => {
+      const tourInfo = tourMap[item._id.toString()];
+      const thumbnail = tourInfo?.imageItems?.[0]?.imageUrl || "";
+      const ratings = reviewMap[item._id.toString()] || [];
+      const avgRating =
+        ratings.length > 0
+          ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+          : 0;
 
-        return {
-          rank: index + 1,
-          tourId: item._id,
-          title: tourInfo?.title || "Unknown Tour",
-          thumbnail: thumbnail,
-          bookings: item.bookings,
-          revenue: item.totalRevenue,
-          totalGuests: item.totalGuests,
-          rating: avgRating.toFixed(1),
-          reviewCount: reviews.length,
-          trend: index === 0 ? "up" : index < 3 ? "stable" : "down",
-        };
-      })
-    );
+      return {
+        rank: index + 1,
+        tourId: item._id,
+        title: tourInfo?.title || "Unknown Tour",
+        thumbnail,
+        bookings: item.bookings,
+        revenue: item.totalRevenue,
+        totalGuests: item.totalGuests,
+        rating: avgRating.toFixed(1),
+        reviewCount: ratings.length,
+        trend: index === 0 ? "up" : index < 3 ? "stable" : "down",
+      };
+    });
 
     console.log(
       "✅ Formatted tours:",

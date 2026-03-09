@@ -39,9 +39,8 @@ const TourSchema = new mongoose.Schema(
     // ⬇️ NEW: gắn zoneId cố định để query nhanh
       zoneIds: [
       {
-        type: mongoose.Schema.Types.ObjectId, 
+        type: mongoose.Schema.Types.ObjectId,
         ref: "Zone",
-        index: true,
       },
     ],
 
