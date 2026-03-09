@@ -38,7 +38,7 @@ const RegisterSchema = z.object({
 });
 
 // Default notify endpoint for sending password-change notifications
-const notifyUrl = process.env.NOTIFY_URL || process.env.API_URL || "https://api.travvytouring.page";
+const notifyUrl = process.env.NOTIFY_URL || process.env.API_URL || "https://api.travyytouring.page";
 
 const normalizePhone = (p) => {
   if (!p) return "";
@@ -434,7 +434,7 @@ exports.forgotPassword = async (req, res) => {
     await user.save();
 
     // Tạo reset link
-    const resetLink = `${process.env.FRONTEND_URL || process.env.CLIENT_URL || "https://travvytouring.page"}/reset-password?token=${resetToken}`;
+    const resetLink = `${process.env.FRONTEND_URL || process.env.CLIENT_URL || "https://travyytouring.page"}/reset-password?token=${resetToken}`;
 
     console.log(`📧 Sending reset email to: ${user.email}`);
     console.log(`🔗 Reset link: ${resetLink}`);
@@ -572,7 +572,7 @@ exports.resetPassword = async (req, res) => {
         </div>
 
         <div style="text-align: center; margin: 30px 0;">
-           <a href="${process.env.CLIENT_URL || 'https://travvytouring.page'}/login" 
+           <a href="${process.env.CLIENT_URL || 'https://travyytouring.page'}/login" 
              style="display: inline-block; padding: 14px 28px; background: #16a34a; color: #fff; 
                     font-weight: bold; text-decoration: none; border-radius: 8px; font-size: 16px;">
             🔐 Đăng nhập ngay

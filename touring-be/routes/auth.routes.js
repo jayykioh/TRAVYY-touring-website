@@ -47,7 +47,7 @@ router.get(
   "/google/callback",
   passport.authenticate("google", {
     session: false,
-    failureRedirect: process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/login` : "https://travvytouring.page/login",
+    failureRedirect: process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/login` : "https://travyytouring.page/login",
   }),
   async (req, res) => {
     try {
@@ -86,7 +86,7 @@ router.get(
   "/facebook/callback",
   passport.authenticate("facebook", {
     session: false,
-    failureRedirect: process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/login` : "https://travvytouring.page/login",
+    failureRedirect: process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/login` : "https://travyytouring.page/login",
   }),
   async (req, res) => {
     try {
@@ -104,7 +104,7 @@ router.get(
         ...(isProd && { domain: ".travyytouring.page" }),
       });
 
-      return res.redirect(process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/oauth/callback` : "https://travvytouring.page/oauth/callback");
+      return res.redirect(process.env.CLIENT_URL ? `${process.env.CLIENT_URL.replace(/\/+$/,'')}/oauth/callback` : "https://travyytouring.page/oauth/callback");
     } catch (e) {
       console.error("facebook/callback error:", e);
       return res.status(500).json({ message: "OAuth callback error" });
