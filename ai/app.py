@@ -56,9 +56,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://travvytouring.page",
-        "https://www.travvytouring.page",
-        "https://api.travvytouring.page",
+        "https://travyytouring.page",
+        "https://www.travyytouring.page",
+        "https://api.travyytouring.page",
     ],
     allow_credentials=True,
     allow_methods=["*"], # Cho phép tất cả các phương thức (GET, POST,...)
