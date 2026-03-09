@@ -36,9 +36,6 @@ PORT = int(os.getenv("PORT", "8088"))
 INDEX_TYPE = os.getenv("INDEX_TYPE", "FLAT").upper()
 # Thư mục để lưu trữ các file index
 INDEX_DIR = Path(os.getenv("INDEX_DIR", "./index"))
-# Số chiều của vector (model này là 1024)
-DIM = 1024
-
 # Tạo thư mục index nếu nó chưa tồn tại
 INDEX_DIR.mkdir(exist_ok=True)
 
@@ -72,7 +69,9 @@ print(f"📦 Loading model: {MODEL_NAME}")
 t0 = time.time()
 # Đây là lúc model AI được tải vào bộ nhớ (RAM/VRAM)
 model = SentenceTransformer(MODEL_NAME)
-print(f"✅ Model loaded in {time.time() - t0:.2f}s")
+# Tự động phát hiện số chiều vector từ model (không hardcode)
+DIM = model.get_sentence_embedding_dimension()
+print(f"✅ Model loaded in {time.time() - t0:.2f}s | dim={DIM}")
 
 # =================== FAISS Index ===================
 # Khởi tạo "database" vector (FAISS) và metadata

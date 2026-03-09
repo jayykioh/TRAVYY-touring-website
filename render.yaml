@@ -115,7 +115,7 @@ services:
     dockerfilePath: ./Dockerfile
     envVars:
       - key: EMBEDDING_MODEL
-        value: AITeamVN/Vietnamese_Embedding_v2
+        value: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
       - key: INDEX_TYPE
         value: FLAT
       - key: INDEX_DIR

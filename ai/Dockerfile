@@ -20,8 +20,9 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download the embedding model at build time
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('AITeamVN/Vietnamese_Embedding_v2')"
+# Download the embedding model at build time (cached in image layer)
+# Model: paraphrase-multilingual-MiniLM-L12-v2 (~120 MB, supports Vietnamese)
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')"
 
 # Copy application code
 COPY . .
