@@ -241,7 +241,6 @@ const TourCustomRequestSchema = new mongoose.Schema({
   // Expiry time for pending requests (24 hours default)
   expiresAt: {
     type: Date,
-    index: true
   },
   
   // Timestamps

@@ -60,4 +60,7 @@ const guideTourSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+guideTourSchema.index({ guideId: 1, departureDate: -1 });
+guideTourSchema.index({ guideId: 1, status: 1 });
+
 module.exports = mongoose.model("GuideTour", guideTourSchema);

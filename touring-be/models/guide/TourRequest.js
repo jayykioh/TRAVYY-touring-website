@@ -48,4 +48,7 @@ const tourRequestSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+tourRequestSchema.index({ guideId: 1, status: 1 });
+tourRequestSchema.index({ userId: 1, status: 1 });
+
 module.exports = mongoose.model("TourRequest", tourRequestSchema);
