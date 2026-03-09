@@ -105,21 +105,22 @@ services:
   # ==========================================
   # AI Embed Service (Python FastAPI + FAISS)
   # Domain: ai-embed.travyytouring.page
-  # Full service: /embed, /upsert, /hybrid-search, /search
+  # Embeddings: HuggingFace Inference API (no local model = low RAM)
+  # Storage: FAISS IndexFlatIP in-memory (~80 MB total)
   # ==========================================
   - type: web
     name: travyy-ai-embed
     env: docker
     plan: free
-    rootDir: ai
+    rootDir: ai-embed
     dockerfilePath: ./Dockerfile
     envVars:
-      - key: EMBEDDING_MODEL
+      - key: EMBED_PROVIDER
+        value: hf_inference
+      - key: MODEL_NAME
         value: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
-      - key: INDEX_TYPE
-        value: FLAT
-      - key: INDEX_DIR
-        value: ./index
+      - key: HF_TOKEN
+        sync: false
 
   # ==========================================
   # AI Search Service (Python FastAPI + FAISS)

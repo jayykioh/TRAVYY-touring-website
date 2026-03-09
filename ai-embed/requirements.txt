@@ -2,4 +2,5 @@ fastapi
 uvicorn[standard]
 httpx
 pydantic
-sentence-transformers
+faiss-cpu
+numpy

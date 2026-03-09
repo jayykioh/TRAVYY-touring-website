@@ -9,7 +9,7 @@ COPY . .
 
 ENV PORT=8088
 ENV EMBED_PROVIDER=hf_inference
-ENV MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
+ENV MODEL_NAME=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 
 # Render injects $PORT dynamically
 EXPOSE 8088
