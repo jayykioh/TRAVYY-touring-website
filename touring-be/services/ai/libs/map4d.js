@@ -175,8 +175,8 @@ async function getPlaceDetails(placeId) {
   console.log(`   🔍 Fetching place details: ${placeId}`);
 
   try {
-    const response = await map4dClient.get(`/place/detail/${placeId}`, {
-      params: { key: MAP4D_API_KEY },
+    const response = await map4dClient.get(`/place/detail`, {
+      params: { key: MAP4D_API_KEY, place_id: placeId },
     });
 
     const data = response.data;

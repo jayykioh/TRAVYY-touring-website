@@ -390,7 +390,7 @@ async function searchNearbyPOIs(lat, lng, radius, options = {}) {
  */
 async function getDistanceMatrix(origins, destinations) {
   const cacheKey = `matrix_${origins.join("|")}_${destinations.join("|")}`;
-  const cached = cache.get(cacheKey);
+  const cached = poiCache.get(cacheKey);
 
   if (cached) {
     console.log("   💾 Distance matrix cache hit");
@@ -415,7 +415,7 @@ async function getDistanceMatrix(origins, destinations) {
     const data = response.data;
 
     if (data.status === "OK") {
-      cache.set(cacheKey, data);
+      poiCache.set(cacheKey, data);
       console.log(
         `   ✅ Distance matrix: ${origins.length}x${destinations.length}`
       );
