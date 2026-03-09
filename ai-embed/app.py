@@ -76,6 +76,7 @@ class UpsertItem(BaseModel):
     id: str
     type: Optional[str] = "zone"
     text: str
+    vector: Optional[List[float]] = None  # pre-computed — skips HF API call
     payload: Optional[Dict[str, Any]] = {}
 
 
@@ -112,8 +113,10 @@ def _normalize_texts(texts: List[str]) -> List[str]:
     return out
 
 
+import asyncio
+
 async def _get_embeddings(texts: List[str]) -> List[List[float]]:
-    """Embed texts via HuggingFace Inference API. Returns list of float vectors."""
+    """Embed texts via HuggingFace Inference API with retry. Returns list of float vectors."""
     texts = _normalize_texts(texts)
 
     if not HF_TOKEN:
@@ -123,31 +126,32 @@ async def _get_embeddings(texts: List[str]) -> List[List[float]]:
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
     payload = {"model": MODEL_NAME, "input": texts}
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    last_err = None
+    for attempt in range(3):
         try:
-            r = await client.post(url, json=payload, headers=headers)
-            r.raise_for_status()
-            data = r.json()
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                r = await client.post(url, json=payload, headers=headers)
+                r.raise_for_status()
+                data = r.json()
 
-            # Handle various HF response shapes
-            if isinstance(data, dict) and "data" in data:
-                return [item.get("embedding") or item.get("vector") for item in data["data"]]
-            elif isinstance(data, dict) and "embedding" in data:
-                return [data["embedding"]]
-            elif isinstance(data, list):
-                if data and isinstance(data[0], list):
-                    return data  # List[List[float]]
-                elif data and isinstance(data[0], (int, float)):
-                    return [data]  # Single vector wrapped in list
-            raise HTTPException(
-                status_code=500,
-                detail=f"Unexpected HF response shape: {str(data)[:200]}",
-            )
-        except httpx.HTTPError as e:
-            logger.error("HF inference request failed: %s", str(e))
-            raise HTTPException(
-                status_code=502, detail=f"HuggingFace inference failed: {str(e)}"
-            )
+                if isinstance(data, dict) and "data" in data:
+                    return [item.get("embedding") or item.get("vector") for item in data["data"]]
+                elif isinstance(data, dict) and "embedding" in data:
+                    return [data["embedding"]]
+                elif isinstance(data, list):
+                    if data and isinstance(data[0], list):
+                        return data
+                    elif data and isinstance(data[0], (int, float)):
+                        return [data]
+                raise ValueError(f"Unexpected HF response shape: {str(data)[:200]}")
+        except (httpx.HTTPError, ValueError) as e:
+            last_err = e
+            if attempt < 2:
+                await asyncio.sleep(2 ** attempt)  # 1s, 2s backoff
+            continue
+
+    logger.error("HF inference failed after 3 attempts: %s", str(last_err))
+    raise HTTPException(status_code=502, detail=f"HuggingFace inference failed: {str(last_err)}")
 
 
 # =================== FAISS helpers ===================
@@ -170,7 +174,7 @@ async def healthz():
     return {
         "status": "ok",
         "service": "ai-embed",
-        "ready": True,
+        "ready": vectors > 0,   # only ready once index is populated
         "model": MODEL_NAME,
         "vectors": vectors,
         "metadata": len(_meta),
@@ -195,17 +199,36 @@ async def upsert(req: UpsertRequest):
     if not items:
         return {"added": 0, "removed": 0, "total": 0}
 
-    texts = [item.text for item in items]
-    vectors = await _get_embeddings(texts)
+    # Partition: items with pre-computed vectors vs items needing HF API
+    items_with_vec = [i for i in items if i.vector]
+    items_need_embed = [i for i in items if not i.vector]
 
-    vecs = np.array(vectors, dtype=np.float32)
+    all_vecs: List[List[float]] = []
+    all_items: List[UpsertItem] = []
+
+    # Use pre-computed vectors (no HF API call)
+    for item in items_with_vec:
+        all_vecs.append(item.vector)
+        all_items.append(item)
+
+    # Call HF API only for items without cached vectors
+    if items_need_embed:
+        texts = [i.text for i in items_need_embed]
+        new_vecs = await _get_embeddings(texts)
+        all_vecs.extend(new_vecs)
+        all_items.extend(items_need_embed)
+
+    vecs = np.array(all_vecs, dtype=np.float32)
     faiss.normalize_L2(vecs)
 
     _rebuild_index(vecs)
-    _meta = [{"id": item.id, "type": item.type, "payload": item.payload} for item in items]
+    _meta = [{"id": i.id, "type": i.type, "payload": i.payload} for i in all_items]
 
-    logger.info(f"Upserted {len(items)} items into FAISS index (dim={_dim})")
-    return {"added": len(items), "removed": 0, "total": len(items)}
+    logger.info(
+        f"Upserted {len(all_items)} items (cached={len(items_with_vec)}, "
+        f"embedded={len(items_need_embed)}) dim={_dim}"
+    )
+    return {"added": len(all_items), "removed": 0, "total": len(all_items)}
 
 
 @app.post("/search")

@@ -81,6 +81,12 @@ const zoneSchema = new mongoose.Schema(
     /** ===== SYSTEM META ===== **/
     scorePriority: { type: Number, default: 0.5 },
     isActive: { type: Boolean, default: true },
+
+    /** ===== EMBEDDING CACHE ===== **/
+    // Cached FAISS vector — excluded from normal queries (select: false)
+    // Allows FAISS index to be rebuilt without calling HuggingFace API on restart
+    embedding: { type: [Number], default: undefined, select: false },
+    embeddingText: { type: String, default: undefined, select: false }, // hash of text used for cache invalidation
   },
   {
     timestamps: true,
