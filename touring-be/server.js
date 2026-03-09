@@ -305,10 +305,29 @@ async function checkServices() {
   }
 }
 
-checkServices().then(() => {
-  // ✅ SỬA: Đổi 'app.listen' thành 'server.listen'
-  // Đây là điểm khởi động DUY NHẤT của server
-  server.listen(PORT, () => {
-    console.log(`\n🚀 Backend (HTTP + WS) running on port ${PORT}`);
-  });
+// Start server immediately — do NOT block on embedding sync
+server.listen(PORT, () => {
+  console.log(`\n🚀 Backend (HTTP + WS) running on port ${PORT}`);
+  // MongoDB + sockets init runs in background after port is open
+  checkServices().catch((e) =>
+    console.error("❌ checkServices error:", e.message)
+  );
 });
+
+// Periodic zone re-sync every 30 min:
+// Render free tier sleeps after 15 min → ai-embed FAISS index is wiped.
+// This cron detects empty index and re-syncs automatically.
+const RESYNC_INTERVAL_MS = 30 * 60 * 1000;
+setInterval(async () => {
+  try {
+    const available = await isAvailable();
+    if (!available) return;
+    const healthData = await health();
+    if ((healthData.vectors || 0) > 0) return; // already populated
+    console.log("🔄 [Cron] FAISS empty — re-syncing zones...");
+    await syncZones(true);
+    console.log("✅ [Cron] Zone re-sync complete");
+  } catch (e) {
+    console.warn("⚠️ [Cron] Zone re-sync failed:", e.message);
+  }
+}, RESYNC_INTERVAL_MS);
