@@ -20,8 +20,9 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download the embedding model at build time
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('AITeamVN/Vietnamese_Embedding_v2')"
+# Download the embedding model at build time (cached in image layer)
+# Model: paraphrase-multilingual-MiniLM-L12-v2 (~120 MB, supports Vietnamese)
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')"
 
 # Copy application code
 COPY . .
@@ -38,9 +39,9 @@ USER appuser
 # Expose the port
 EXPOSE 8088
 
-# Health check (production endpoint)
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider https://ai-embed.travyytouring.page/healthz || exit 1
+# Health check (local container port)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8088/healthz || exit 1
 
 # Start the service
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8088"]
