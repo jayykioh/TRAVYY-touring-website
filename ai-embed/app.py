@@ -122,27 +122,38 @@ async def _get_embeddings(texts: List[str]) -> List[List[float]]:
     if not HF_TOKEN:
         raise HTTPException(status_code=500, detail="HF_TOKEN is not configured")
 
-    url = "https://api-inference.huggingface.co/embeddings"
+    # HF Inference API for feature-extraction (embeddings)
+    # POST /models/{model_id} with {"inputs": [...]} returns list of vectors directly
+    url = f"https://api-inference.huggingface.co/models/{MODEL_NAME}"
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    payload = {"model": MODEL_NAME, "input": texts}
+    payload = {"inputs": texts}
 
     last_err = None
     for attempt in range(3):
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=60.0) as client:
                 r = await client.post(url, json=payload, headers=headers)
+                # 503 = model loading, retry with backoff
+                if r.status_code == 503:
+                    retry_after = int(r.headers.get("X-Wait-For-Model", "20"))
+                    logger.warning(f"HF model loading, waiting {retry_after}s (attempt {attempt+1})")
+                    await asyncio.sleep(min(retry_after, 30))
+                    last_err = Exception(f"503 model loading (attempt {attempt+1})")
+                    continue
                 r.raise_for_status()
                 data = r.json()
 
-                if isinstance(data, dict) and "data" in data:
-                    return [item.get("embedding") or item.get("vector") for item in data["data"]]
-                elif isinstance(data, dict) and "embedding" in data:
-                    return [data["embedding"]]
-                elif isinstance(data, list):
+                # Feature-extraction endpoint returns list of vectors directly
+                if isinstance(data, list):
                     if data and isinstance(data[0], list):
                         return data
                     elif data and isinstance(data[0], (int, float)):
                         return [data]
+                # Fallback: OpenAI-compatible format (some HF endpoints)
+                elif isinstance(data, dict) and "data" in data:
+                    return [item.get("embedding") or item.get("vector") for item in data["data"]]
+                elif isinstance(data, dict) and "embedding" in data:
+                    return [data["embedding"]]
                 raise ValueError(f"Unexpected HF response shape: {str(data)[:200]}")
         except (httpx.HTTPError, ValueError) as e:
             last_err = e
