@@ -32,7 +32,7 @@ EMBED_PROVIDER = os.getenv("EMBED_PROVIDER", "hf_inference")
 HF_TOKEN = os.getenv("HF_TOKEN")
 MODEL_NAME = os.getenv(
     "MODEL_NAME",
-    "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "intfloat/multilingual-e5-small",
 )
 PORT = int(os.getenv("PORT", 8088))
 
@@ -122,11 +122,15 @@ async def _get_embeddings(texts: List[str]) -> List[List[float]]:
     if not HF_TOKEN:
         raise HTTPException(status_code=500, detail="HF_TOKEN is not configured")
 
-    # HF Inference API for feature-extraction (embeddings)
-    # POST /models/{model_id} with {"inputs": [...]} returns list of vectors directly
-    url = f"https://api-inference.huggingface.co/models/{MODEL_NAME}"
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    payload = {"inputs": texts}
+    # HF Inference Providers router — OpenAI-compatible /v1/embeddings endpoint
+    # This replaced the deprecated api-inference.huggingface.co endpoints (410 Gone)
+    url = f"https://router.huggingface.co/hf-inference/models/{MODEL_NAME}/v1/embeddings"
+    headers = {
+        "Authorization": f"Bearer {HF_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    # OpenAI-compatible body: "input" key (not "inputs")
+    payload = {"input": texts, "model": MODEL_NAME}
 
     last_err = None
     for attempt in range(3):
@@ -143,17 +147,15 @@ async def _get_embeddings(texts: List[str]) -> List[List[float]]:
                 r.raise_for_status()
                 data = r.json()
 
-                # Feature-extraction endpoint returns list of vectors directly
+                # OpenAI-compatible response: {"data": [{"embedding": [...], "index": 0}, ...]}
+                if isinstance(data, dict) and "data" in data:
+                    return [item["embedding"] for item in data["data"]]
+                # Pipeline format fallback: [[float, ...], ...]
                 if isinstance(data, list):
                     if data and isinstance(data[0], list):
                         return data
                     elif data and isinstance(data[0], (int, float)):
                         return [data]
-                # Fallback: OpenAI-compatible format (some HF endpoints)
-                elif isinstance(data, dict) and "data" in data:
-                    return [item.get("embedding") or item.get("vector") for item in data["data"]]
-                elif isinstance(data, dict) and "embedding" in data:
-                    return [data["embedding"]]
                 raise ValueError(f"Unexpected HF response shape: {str(data)[:200]}")
         except (httpx.HTTPError, ValueError) as e:
             last_err = e
