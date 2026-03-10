@@ -118,7 +118,7 @@ services:
       - key: EMBED_PROVIDER
         value: hf_inference
       - key: MODEL_NAME
-        value: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+        value: intfloat/multilingual-e5-small
       - key: HF_TOKEN
         sync: false
 
